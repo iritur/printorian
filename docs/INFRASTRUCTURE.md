@@ -407,21 +407,41 @@ Nothing else in this document is meaningful until this is done.
 **Exit criterion:** a green CI run exists on a remote, and the working tree can be
 reconstructed on another machine from `git clone` alone.
 
-### Stage 1 — The artifact · **~3 days**
+### Stage 1 — The artifact · **done**
 
-* `backend/Dockerfile`, multi-stage: builder → `python:3.13-slim`, non-root user,
-  no build toolchain in the runtime layer, base image pinned **by digest**.
-* `frontend/Dockerfile` for the console bundle (Caddy + built assets); storefront
-  bundle as a CI tarball artifact.
-* `compose.prod.yml` — api · workers · caddy · postgres · redis, with the on-prem
-  PostgreSQL tuning from RUNBOOK §3 rather than the dev figures in the root
-  `docker-compose.yml`.
-* Wire the CI additions: buildx with layer cache, SBOM, trivy, cosign, GHCR push.
-* The **release gate** job (§6).
+* [`backend/Dockerfile`](../backend/Dockerfile) — multi-stage, `python:3.13-slim`
+  pinned by digest, non-root uid 10001, no build toolchain in the runtime layer.
+  One image, three commands (§4.2). 460 MB.
+* [`frontend/Dockerfile`](../frontend/Dockerfile) — context is the **repository
+  root**, because the API client is generated from the backend's schema *inside
+  the build* (ADR-0005). Targets: `console` (Caddy + bundle) and `web-dist` (the
+  storefront bundle alone, for the edge).
+* [`deploy/compose.prod.yml`](../deploy/compose.prod.yml) — postgres · redis ·
+  migrate · api · workers · console. PostgreSQL tuning parameterised against
+  RUNBOOK §3 rather than hardcoded, because the right value is a property of the
+  box.
+* [`deploy/console.Caddyfile`](../deploy/console.Caddyfile) — serves the SPA and
+  proxies `/api` same-origin, stripping the prefix exactly as the Vite dev proxy
+  does.
+* CI `image` job: buildx with layer cache, the release gate, trivy, SBOM, GHCR
+  push and keyless cosign signing — push and sign only from `main`.
 
-**Exit criterion:** `docker compose -f compose.prod.yml up` on a clean machine
-brings up a working system from GHCR images alone, and the release gate fails a
-deliberately broken Dockerfile.
+**Exit criterion met.** The stack comes up from built images with `--wait`
+returning 0 and every service healthy; `alembic downgrade base` → `upgrade head`
+→ `check` round-trips inside the image; `/health/ready` reports `database: ok`;
+the console serves its bundle and proxies `/api/health` on one origin.
+
+Two things this stage found, which is the point of it:
+
+* The image's HTTP healthcheck is inherited by all three commands, so the
+  **workers container reported unhealthy while sweeping correctly**. Left in
+  place, Stage 4's deploy gate would have rolled back good releases. Disabled
+  rather than replaced with a process check — a signal that cannot tell working
+  from wedged is the objection ADR-0007 raises against a driver returning
+  plausible data. Stage 5's `/metrics` makes an honest check possible.
+* The suite passed locally for a reason unrelated to the code: `python -m pytest`
+  puts `backend/` on `sys.path`, the bare `pytest` console script CI runs does
+  not. Fixed as `pythonpath` in `pyproject.toml`.
 
 ### Stage 2 — The farm host as code · **~1 week**
 

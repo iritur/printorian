@@ -1,0 +1,50 @@
+# The farm console, served from the on-prem server on the LAN (ADR-0016).
+#
+# Caddy serves the SPA bundle and proxies the API from the same origin, which is
+# the whole point: same-origin means the httpOnly session cookie travels with
+# every request and with the WebSocket handshake, so the console needs no CORS
+# entry, no bearer token, and no second auth path. ADR-0016 records what the
+# cross-origin alternative cost when the console was an Electron app.
+#
+# Plain HTTP on 8080. TLS terminates at the edge for the storefront; the console
+# never leaves the LAN, and giving it a certificate for a name only the farm
+# resolves buys a warning rather than a guarantee. Revisit if the LAN stops being
+# trusted — that is a network decision, not a Caddy one.
+
+:8080 {
+	encode zstd gzip
+
+	# `handle_path` strips the /api prefix before proxying, which is exactly what
+	# the Vite dev proxy does (frontend/apps/console/vite.config.ts). Development
+	# and production disagreeing about the prefix is a class of bug that only
+	# appears after deploy, so they are kept identical on purpose.
+	#
+	# WebSockets need no special handling: /api/ws/events arrives as an upgrade
+	# request and Caddy proxies it as one.
+	handle_path /api/* {
+		reverse_proxy api:8000 {
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle {
+		root * /srv
+
+		# Vite emits content-hashed asset filenames, so those may be cached hard.
+		# index.html must not be: it is the document naming the current hashes,
+		# and a cached copy pins a browser to a deploy that no longer exists.
+		@immutable path /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		header /index.html Cache-Control "no-cache"
+
+		header {
+			X-Content-Type-Options nosniff
+			Referrer-Policy same-origin
+			-Server
+		}
+
+		# SPA routing: unknown paths are client-side routes, not 404s.
+		try_files {path} /index.html
+		file_server
+	}
+}

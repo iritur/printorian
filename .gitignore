@@ -31,6 +31,10 @@ backend/var/
 .claude/worktrees/
 .claude/settings.local.json
 
+# Rendered by the release gate and by the farm's deploy timer from the
+# SOPS-encrypted store — never committed.
+deploy/.env
+
 # Local
 .env
 # Printer LAN access codes — credentials, never committed (ADR-0014).

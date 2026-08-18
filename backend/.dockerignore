@@ -1,0 +1,32 @@
+# The build context is `backend/`. Everything here is either rebuilt inside the
+# image, machine-specific, or a credential — and a large context is also a slow
+# one, because Docker uploads it in full before the first instruction runs.
+
+# Virtualenv: the image builds its own, for its own platform. Copying a Windows
+# venv into a Linux image produces something that looks installed and cannot run.
+.venv/
+venv/
+
+# Caches and build residue
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.import_linter_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Runtime state. The object store is a volume in production (core.config
+# storage_root); baking it in would ship someone's uploaded meshes.
+var/
+
+# Credentials. ADR-0014 — printer access codes never leave the machine.
+.env
+.env.local
+printers.local.toml
+
+# Generated at build time by tools/export_openapi.py, never copied in — a stale
+# committed copy is exactly the drift ADR-0005 exists to prevent.
+openapi.json

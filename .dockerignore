@@ -1,0 +1,39 @@
+# Build context for frontend/Dockerfile is the repository root, because the
+# frontend cannot be built without the backend: the API client is generated from
+# the backend's OpenAPI schema (ADR-0005). Everything below is either rebuilt in
+# the image, machine-specific, or a credential.
+
+.git/
+.github/
+.claude/
+
+# Node and Python build state — rebuilt inside the image for the image's platform.
+**/node_modules/
+**/dist/
+**/.vite/
+**/*.tsbuildinfo
+**/__pycache__/
+**/*.py[cod]
+backend/.venv/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.pytest_cache/
+backend/.import_linter_cache/
+backend/*.egg-info/
+
+# Generated: regenerated during the build, never copied in. A stale committed
+# copy is the drift ADR-0005 exists to prevent.
+frontend/packages/api-client/src/generated/
+backend/openapi.json
+
+# Runtime state and credentials
+backend/var/
+**/.env
+**/.env.local
+backend/printers.local.toml
+
+# Not needed to build either app
+design/
+docs/
+data/
+*.bat
