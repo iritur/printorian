@@ -119,6 +119,13 @@ disallow_untyped_defs = false
 # ---------------------------------------------------------------- pytest
 
 [tool.pytest.ini_options]
+# `tests` is imported as a package (`from tests.factories import ...`) but has no
+# __init__.py, so it is only importable when `backend/` is on sys.path. Invoking
+# as `python -m pytest` puts it there as a side effect of `-m`; the bare `pytest`
+# console script does not, which is why CI failed on a suite that passed locally.
+# Stating it here makes the import root a property of the project rather than of
+# how someone happened to launch the runner.
+pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
