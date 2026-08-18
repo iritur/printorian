@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Материалы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Склад :: Материалы</span>
+      <div class="hv-meta">
+        <span>CODE :: <strong>48JQFB3A9X2GNB08</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>PRESET :: <strong>ALL_MATERIALS</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>INVENTORY.SPECS[<strong>24</strong>] · LOTS[<strong>61</strong>]</span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/INVENTORY/MATERIALS.DB</div>
+      <div class="hv-path__status">STATUS :: <b>ONLINE</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="dashboard.html">Сводка</a>
+      <a class="hv-appbar__link" href="orders.html">Заказы</a>
+      <a class="hv-appbar__link" href="fleet.html">Принтеры</a>
+      <a class="hv-appbar__link" href="postproduction.html">Постобработка</a>
+      <a class="hv-appbar__link" href="packaging.html">Упаковка</a>
+      <a class="hv-appbar__link" href="service.html">Сервис</a>
+      <a class="hv-appbar__link" href="store.html">Склад</a>
+      <a class="hv-appbar__link" href="purchasing.html">Закупки</a>
+      <a class="hv-appbar__link" href="logistics.html">Логистика</a>
+      <a class="hv-appbar__link" href="settings.html">Настройки</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">ДЧ</span>boss@printorian.example</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main">
+    <div class="hv-cols hv-cols--2l">
+
+      <!-- ============================================ family sidebar ---- -->
+      <aside class="hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Семейства</span><span class="hv-panel__aside">24</span></div>
+          <nav class="hv-nav">
+            <a class="hv-nav__item" href="#" aria-current="page">
+              <span class="hv-nav__lead"><span>Все материалы</span><span class="hv-nav__dot"></span></span>
+              <span class="hv-nav__chev">›</span>
+            </a>
+            <a class="hv-nav__item" href="#"><span class="hv-nav__lead">PLA</span><span class="hv-nav__chev">7</span></a>
+            <a class="hv-nav__item" href="#"><span class="hv-nav__lead">PETG</span><span class="hv-nav__chev">5</span></a>
+            <a class="hv-nav__item" href="#"><span class="hv-nav__lead">ABS / ASA</span><span class="hv-nav__chev">4</span></a>
+            <a class="hv-nav__item" href="#"><span class="hv-nav__lead">TPU</span><span class="hv-nav__chev">2</span></a>
+            <a class="hv-nav__item" href="#"><span class="hv-nav__lead">Нейлон · CF</span><span class="hv-nav__chev">3</span></a>
+            <a class="hv-nav__item" href="#"><span class="hv-nav__lead">Смолы</span><span class="hv-nav__chev">3</span></a>
+          </nav>
+          <div class="hv-panel__foot"><span>ВСЕГО НА СКЛАДЕ :: 84.6 КГ</span></div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Разделы</span></div>
+          <nav class="hv-tree" style="padding:var(--hv-2) 0">
+            <button class="hv-tree__item" type="button" aria-current="true">Таблица материалов <span class="hv-nav__chev">›</span></button>
+            <button class="hv-tree__item" type="button">Партии и остатки</button>
+            <button class="hv-tree__item" type="button">Размещение · склад</button>
+            <button class="hv-tree__item" type="button">Размещение · AMS</button>
+            <button class="hv-tree__item" type="button">Заказы поставщикам</button>
+            <button class="hv-tree__item" type="button">История закупок</button>
+            <button class="hv-tree__item" type="button">Расход по заказам</button>
+            <button class="hv-tree__item" type="button">Совместимость с принтерами</button>
+          </nav>
+          <div class="hv-panel__foot"><span>1 858 298 ЗАПИСЕЙ</span></div>
+        </section>
+      </aside>
+
+      <!-- ============================================ main content ------ -->
+      <div class="hv-stack">
+
+        <!-- glyph cards: the periodic-element treatment ----------------- -->
+        <div class="hv-grid hv-grid--4">
+          <button class="hv-frame hv-glyph" type="button" data-open="mat-detail">
+            <span class="hv-glyph__mark">PLA</span>
+            <span class="hv-stack hv-stack--2">
+              <span class="hv-glyph__stats"><span>ПЛОТН 1.24</span><span>СКЛАД 24.8 КГ</span></span>
+              <span class="hv-glyph__name">Полилактид</span>
+            </span>
+          </button>
+          <button class="hv-frame hv-glyph" type="button" data-open="mat-detail">
+            <span class="hv-glyph__mark">PETG</span>
+            <span class="hv-stack hv-stack--2">
+              <span class="hv-glyph__stats"><span>ПЛОТН 1.27</span><span>СКЛАД 31.4 КГ</span></span>
+              <span class="hv-glyph__name">Полиэфир</span>
+            </span>
+          </button>
+          <button class="hv-frame hv-glyph" type="button" data-open="mat-detail">
+            <span class="hv-glyph__mark">ASA</span>
+            <span class="hv-stack hv-stack--2">
+              <span class="hv-glyph__stats"><span>ПЛОТН 1.07</span><span>СКЛАД 1.1 КГ</span></span>
+              <span class="hv-glyph__name">Акрилонитрил</span>
+            </span>
+          </button>
+          <button class="hv-frame hv-glyph" type="button" data-status="none" data-open="mat-detail">
+            <span class="hv-glyph__mark">TPU</span>
+            <span class="hv-stack hv-stack--2">
+              <span class="hv-glyph__stats"><span>ПЛОТН 1.21</span><span>НЕТ В НАЛИЧИИ</span></span>
+              <span class="hv-glyph__name">Полиуретан</span>
+            </span>
+          </button>
+        </div>
+
+        <!-- status tags + toolbar --------------------------------------- -->
+        <div class="hv-row hv-row--between">
+          <div class="hv-tags" data-filter-group="#mat-table">
+            <button class="hv-tag" type="button" data-filter="all" aria-pressed="true">
+              <span class="hv-tag__k">Все</span><span class="hv-tag__n">24</span>
+            </button>
+            <button class="hv-tag" type="button" data-filter="stock" data-tone="good" aria-pressed="false">
+              <span class="hv-tag__k">На складе</span><span class="hv-tag__n">14</span>
+            </button>
+            <button class="hv-tag" type="button" data-filter="in_printer" data-tone="live" aria-pressed="false">
+              <span class="hv-tag__k">В принтере</span><span class="hv-tag__n">6</span>
+            </button>
+            <button class="hv-tag" type="button" data-filter="ordered" data-tone="warn" aria-pressed="false">
+              <span class="hv-tag__k">Заказан</span><span class="hv-tag__n">2</span>
+            </button>
+            <button class="hv-tag" type="button" data-filter="none" aria-pressed="false">
+              <span class="hv-tag__k">Нет в наличии</span><span class="hv-tag__n">2</span>
+            </button>
+          </div>
+          <div class="hv-row">
+            <input class="hv-input" type="search" placeholder="ПОИСК :: КОД / НАЗВАНИЕ" style="width:240px">
+            <button class="hv-btn" type="button">Добавить материал</button>
+          </div>
+        </div>
+
+        <!-- table ------------------------------------------------------- -->
+        <div class="hv-table-wrap">
+          <table class="hv-table" id="mat-table" data-sortable>
+            <thead>
+              <tr>
+                <th><button class="hv-table__sort" data-sort>Код <span class="hv-table__ind"></span></button></th>
+                <th><button class="hv-table__sort" data-sort>Название <span class="hv-table__ind"></span></button></th>
+                <th><button class="hv-table__sort" data-sort>Семейство <span class="hv-table__ind"></span></button></th>
+                <th><button class="hv-table__sort" data-sort>Статус <span class="hv-table__ind"></span></button></th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Остаток <span class="hv-table__ind"></span></button></th>
+                <th><button class="hv-table__sort" data-sort>Расположение <span class="hv-table__ind"></span></button></th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Закупка / 1000 м <span class="hv-table__ind"></span></button></th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Цена / см³ <span class="hv-table__ind"></span></button></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-status="in_printer" data-activatable data-open="mat-detail" aria-selected="true">
+                <td class="hv-table__id">PETG-CF-BLK</td>
+                <td><b>PETG Carbon</b> · чёрный</td>
+                <td>PETG</td>
+                <td><span class="hv-state" data-state="printing">В принтере</span></td>
+                <td data-align="end" data-sort-value="4200">4.20 кг</td>
+                <td>P-01 · AMS.A1</td>
+                <td data-align="end">2 940 ₽</td>
+                <td data-align="end">3.74 ₽</td>
+              </tr>
+              <tr data-status="stock" data-activatable data-open="mat-detail">
+                <td class="hv-table__id">PLA-BAS-WHT</td>
+                <td><b>PLA Basic</b> · белый</td>
+                <td>PLA</td>
+                <td><span class="hv-state" data-state="idle">На складе</span></td>
+                <td data-align="end" data-sort-value="12800">12.80 кг</td>
+                <td>Склад A · полка 3</td>
+                <td data-align="end">1 480 ₽</td>
+                <td data-align="end">1.84 ₽</td>
+              </tr>
+              <tr data-status="stock" data-activatable data-open="mat-detail">
+                <td class="hv-table__id">PLA-SLK-GLD</td>
+                <td><b>PLA Silk</b> · золото</td>
+                <td>PLA</td>
+                <td><span class="hv-state" data-state="idle">На складе</span></td>
+                <td data-align="end" data-sort-value="3400">3.40 кг</td>
+                <td>Склад A · полка 3</td>
+                <td data-align="end">2 210 ₽</td>
+                <td data-align="end">2.74 ₽</td>
+              </tr>
+              <tr data-status="in_printer" data-activatable data-open="mat-detail">
+                <td class="hv-table__id">PETG-CF-RED</td>
+                <td><b>PETG Carbon</b> · красный</td>
+                <td>PETG</td>
+                <td><span class="hv-state" data-state="printing">В принтере</span></td>
+                <td data-align="end" data-sort-value="340" class="hv-warn">0.34 кг</td>
+                <td>P-01 · AMS.A3</td>
+                <td data-align="end">2 940 ₽</td>
+                <td data-align="end">3.74 ₽</td>
+              </tr>
+              <tr data-status="stock" data-activatable data-open="mat-detail">
+                <td class="hv-table__id">ASA-STD-BLK</td>
+                <td><b>ASA</b> · чёрный</td>
+                <td>ABS / ASA</td>
+                <td><span class="hv-state" data-state="idle">На складе</span></td>
+                <td data-align="end" data-sort-value="1100" class="hv-warn">1.10 кг</td>
+                <td>Склад B · полка 1</td>
+                <td data-align="end">3 100 ₽</td>
+                <td data-align="end">4.02 ₽</td>
+              </tr>
+              <tr data-status="ordered" data-activatable data-open="mat-detail">
+                <td class="hv-table__id">TPU-95A-BLK</td>
+                <td><b>TPU 95A</b> · чёрный</td>
+                <td>TPU</td>
+                <td><span class="hv-state" data-state="maintenance">Заказан</span></td>
+                <td data-align="end" data-sort-value="0">—</td>
+                <td class="hv-warn">Ожидается 12.08</td>
+                <td data-align="end">4 250 ₽</td>
+                <td data-align="end">5.18 ₽</td>
+              </tr>
+              <tr data-status="ordered" data-activatable data-open="mat-detail">
+                <td class="hv-table__id">PA6-CF-BLK</td>
+                <td><b>PA6-CF</b> · чёрный</td>
+                <td>Нейлон · CF</td>
+                <td><span class="hv-state" data-state="maintenance">Заказан</span></td>
+                <td data-align="end" data-sort-value="0">—</td>
+                <td class="hv-warn">Ожидается 15.08</td>
+                <td data-align="end">7 900 ₽</td>
+                <td data-align="end">9.40 ₽</td>
+              </tr>
+              <tr data-status="none" data-activatable data-open="mat-detail">
+                <td class="hv-table__id">ABS-STD-GRY</td>
+                <td><b>ABS</b> · серый</td>
+                <td>ABS / ASA</td>
+                <td><span class="hv-state" data-state="offline">Нет в наличии</span></td>
+                <td data-align="end" data-sort-value="0">—</td>
+                <td class="hv-faint">Использовался ранее</td>
+                <td data-align="end" class="hv-faint">2 640 ₽</td>
+                <td data-align="end" class="hv-faint">3.40 ₽</td>
+              </tr>
+              <tr data-status="stock" data-activatable data-open="mat-detail">
+                <td class="hv-table__id">RES-STD-GRY</td>
+                <td><b>Смола Standard</b> · серый</td>
+                <td>Смолы</td>
+                <td><span class="hv-state" data-state="idle">На складе</span></td>
+                <td data-align="end" data-sort-value="5000">5.00 л</td>
+                <td>Склад B · шкаф 2</td>
+                <td data-align="end">5 400 ₽</td>
+                <td data-align="end">6.90 ₽</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hv-panel__foot" style="border:var(--hv-hair) solid var(--hv-line);border-top:0">
+          <span>ПОКАЗАНО 9 ИЗ 24</span>
+          <span>ЗАМОРОЖЕНО В ОСТАТКАХ :: 186 400 ₽</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ====================================================== material detail -->
+<div class="hv-overlay" id="mat-detail" hidden>
+  <div class="hv-modal" role="dialog" aria-modal="true" aria-labelledby="mat-t">
+    <div class="hv-chrome" style="position:static;padding:var(--hv-3) var(--hv-3) 0">
+      <div class="hv-chrome__row">
+        <span class="hv-tab" id="mat-t">Материал :: PETG-CF-BLK</span>
+        <div class="hv-meta">
+          <span>SPEC :: <strong>PETG.CARBON.BLACK</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>LOTS :: <strong>3</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>VENDOR :: <strong>BAMBU LAB</strong></span>
+        </div>
+        <div class="hv-os">
+          <span class="hv-os__label">В ПРИНТЕРЕ</span>
+        <button class="hv-os__x" type="button" data-close aria-label="Закрыть">✕</button>
+        </div>
+      </div>
+      <div class="hv-path">
+        <div class="hv-path__crumbs">C:/PRINTORIAN/INVENTORY/SPEC/PETG-CF-BLK</div>
+        <div class="hv-path__status">STATUS :: <b>OPEN</b></div>
+      </div>
+    </div>
+
+    <div class="hv-modal__body hv-stack">
+
+      <div class="hv-cols hv-cols--2">
+        <div class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <h2 class="hv-display" style="font-size:clamp(1.8rem,5vw,3.2rem)">PETG-CF</h2>
+            <p class="hv-micro" style="margin:var(--hv-2) 0 0">
+              ПОЛИЭТИЛЕНТЕРЕФТАЛАТ-ГЛИКОЛЬ · УГЛЕВОЛОКНО 15%
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Свойства</span></div>
+            <div class="hv-panel__body hv-panel__body--tight">
+              <ul class="hv-leaders">
+                <li class="hv-leader"><span class="hv-leader__k">Плотность</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1.27 г/см³</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Сопло</span><span class="hv-leader__fill"></span><span class="hv-leader__v">250–265 °C</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Стол</span><span class="hv-leader__fill"></span><span class="hv-leader__v">70–80 °C</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Температура размягчения</span><span class="hv-leader__fill"></span><span class="hv-leader__v">78 °C</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Прочность на разрыв</span><span class="hv-leader__fill"></span><span class="hv-leader__v">52 МПа</span></li>
+                <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Абразивность</span><span class="hv-leader__fill"></span><span class="hv-leader__v">Требует стального сопла</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Сушка перед печатью</span><span class="hv-leader__fill"></span><span class="hv-leader__v">65 °C · 6 ч</span></li>
+              </ul>
+            </div>
+          </section>
+        </div>
+
+        <div class="hv-stack">
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Партии и размещение</span><span class="hv-panel__aside">3 ПАРТИИ</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Партия</th><th>Где</th><th data-align="end">Остаток</th></tr></thead>
+                <tbody>
+                  <tr><td class="hv-table__id">LOT.4471</td><td>P-01 · AMS.A1</td><td data-align="end">820 г</td></tr>
+                  <tr><td class="hv-table__id">LOT.4470</td><td>Склад A · полка 5</td><td data-align="end">1 000 г</td></tr>
+                  <tr><td class="hv-table__id">LOT.4469</td><td>Склад A · полка 5</td><td data-align="end">2 380 г</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="hv-panel__foot"><span>ИТОГО</span><span class="hv-hot">4 200 Г</span></div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Цена</span></div>
+            <div class="hv-panel__body hv-panel__body--tight">
+              <ul class="hv-leaders">
+                <li class="hv-leader"><span class="hv-leader__k">Последняя закупка · 1000 м</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2 940 ₽</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Себестоимость · 1 г</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2.94 ₽</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Для заказчика · 1 см³</span><span class="hv-leader__fill"></span><span class="hv-leader__v">3.74 ₽</span></li>
+              </ul>
+              <hr class="hv-hr">
+              <div class="hv-slab"><span>Стоимость остатка</span><span class="hv-slab__v">12 348 ₽</span></div>
+            </div>
+          </section>
+
+          <div class="hv-row">
+            <button class="hv-btn" type="button">Заказать ещё</button>
+            <button class="hv-btn" type="button">Списать</button>
+            <button class="hv-btn" type="button">История расхода</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="hv-panel">
+        <div class="hv-panel__head"><span>Совместимые принтеры</span><span class="hv-panel__aside">7 ИЗ 12</span></div>
+        <div class="hv-panel__body hv-row">
+          <span class="hv-state" data-state="idle">P-01</span>
+          <span class="hv-state" data-state="idle">P-02</span>
+          <span class="hv-state" data-state="idle">P-03</span>
+          <span class="hv-state" data-state="idle">P-04</span>
+          <span class="hv-state" data-state="idle">P-07</span>
+          <span class="hv-state" data-state="idle">P-09</span>
+          <span class="hv-state" data-state="idle">P-10</span>
+          <span class="hv-spacer"></span>
+          <span class="hv-micro">ТРЕБУЕТСЯ ЗАКАЛЁННОЕ СОПЛО — P-05/06 (СМОЛА) И P-08 ИСКЛЮЧЕНЫ</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="hv-panel__foot">
+      <span>ЗАПИСЬ :: INVENTORY.SPEC · ИЗМЕНЕНА 06.08.2026</span>
+      <button class="hv-btn hv-btn--sm" type="button" data-close>Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

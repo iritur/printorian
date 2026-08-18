@@ -1,0 +1,21 @@
+# Copy to `printers.local.toml` and fill in. That filename is git-ignored;
+# this example is committed so the format is discoverable (ADR-0014).
+#
+# Find both values on the printer: Settings > Network (access code, 8 digits)
+# and Settings > Device info (serial). The printer must be reachable on the LAN.
+#
+# Spike tooling only. From Phase 3 the fleet context owns printers as database
+# records with their access codes encrypted at rest.
+
+[printers.p1s-01]
+host = "192.168.0.180"
+serial = "20PXXXXXXXXXXXX"
+access_code = "XXXXXXXX"
+model = "P1S"
+notes = "bench unit"
+
+# [printers.x1c-02]
+# host = "192.168.0.181"
+# serial = "00MXXXXXXXXXXXX"
+# access_code = "XXXXXXXX"
+# model = "X1C"

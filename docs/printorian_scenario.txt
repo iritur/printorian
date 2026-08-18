@@ -1,0 +1,31 @@
+Production flow of Printorian system (PS)
+
+I am developing the full featured system (web, frontend, backend, database) for fully automatic on last phase 3D printing farm of mainly Bambulab and Elegoo 3D printers.
+
+Customers workflow:
+1. Customer selects existing 3d model from base or upload the own one.
+2. Customer can choose options:
+- material type (filament, resine) or usage scenario from dialog (system will choose the most appropriate materails ourself)
+- single material color or up to 4 colors for multicolor models
+- resize model (will add engineer labor time to price)
+- extra quick production (extra price)
+- postproduction options list (add different values to price)
+- quantity (discont to different values, like each 10 become chipper)
+3. System evaluates all costs (material, time, labor, eletricity, amortization, speed, logistics(if customer registered and provided adress), profit, etc) and give customer the transparent price structure of model production. Or price value + undefined values like logistics (after registration)
+4. Customer can finetune the price of model production by choosing another options or values. Price content items list can show the pros and cons of new option selection (+120 P in labor, -260 P in material, etc).
+5. Customer register. Customer pay for the model.
+6. System see new order and find free appropriate printer. 
+7. If system does not have free printers it pate order in wate list.
+8. System upload model for printing.
+9. Customer see all progress from personal cabinet. If we come away from time budget (wait too long) model becomes chipper for customer.
+10. When printer finishes system alarms personel to move model to postproduction or packaging (personel dashboard). Customer see all progress (as an overall workflow with progress) from personal cabinet.
+11. 
+
+
+Management:
+1. Table of all available meterials, their properties, quantity and where it locates (stock + shelf, place or in printer + ams port), last price to buy per 1000m, price for customers per 1 cm. We see table with parameters with sorting options in table headers. We can see popup window with detailed information. We can add new one. I can order new material or from base (with `none` status). I should see material ststus: stock, in printer, ordered, none (no in stock and no need, but used before, so in base).  Above table i should see status tags with the number of materials in it.
+2. Table of all printers. We see printer's status (ex., printing+time to finish, idle, on service, need attention) with sorting options in table headers. We can see popup window with detailed information about each printer (properties, price, amortization(idle+printing), overall printing time, next service from card, etc). We can add new one. Above table i should see number of printers in all state/status.
+3. Printers service card: operations list, periodicity of each, materials used (from popup).
+4. Table of all orders.
+
+All data should be interconnected.

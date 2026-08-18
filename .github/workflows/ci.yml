@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PRINTORIAN_ENVIRONMENT: test
+  PRINTORIAN_DATABASE_URL: postgresql+asyncpg://printorian:printorian@localhost:5432/printorian
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: printorian
+          POSTGRES_PASSWORD: printorian
+          POSTGRES_DB: printorian
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U printorian -d printorian"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # --- governance gates (ARCHITECTURE §11) -------------------------
+      # Each of these encodes a specific way V1 rotted. They run before the
+      # tests so a structural regression fails fast and unambiguously.
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Format check (ruff)
+        run: ruff format --check .
+
+      - name: Types (mypy --strict)
+        run: mypy
+
+      - name: Architecture contracts (import-linter)
+        run: lint-imports
+
+      - name: Context isolation
+        run: python tools/check_context_isolation.py
+
+      - name: File length
+        run: python tools/check_file_length.py
+
+      # --- tests -------------------------------------------------------
+
+      - name: Tests
+        run: pytest -q
+
+      - name: Migrations apply from scratch
+        run: alembic upgrade head
+
+      - name: Migrations match the ORM models
+        run: alembic check
+
+      # --- API contract -------------------------------------------------
+      # The TypeScript client is generated, never hand-edited (ADR-0005).
+      # Regenerating must produce no diff, or the client has been tampered with.
+
+      - name: Export OpenAPI schema
+        run: python tools/export_openapi.py --out openapi.json
+
+      - name: Upload OpenAPI schema
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi
+          path: backend/openapi.json
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    # The API client is generated from the schema the backend job exports, so the
+    # frontend cannot typecheck against a contract that does not exist yet.
+    needs: backend
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # ADR-0005: the client is generated, never committed. Regenerating here and
+      # then typechecking is what makes a breaking backend change fail the build
+      # at the commit that caused it.
+      - name: Download OpenAPI schema
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi
+          path: backend
+
+      - name: Generate API client
+        run: npm run generate:api
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build

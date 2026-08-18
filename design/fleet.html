@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Парк принтеров</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Производство :: Парк</span>
+      <div class="hv-meta">
+        <span>FARM :: <strong>KN-SOL.21</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>NODES :: <strong>12</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>STREAM :: <strong>SSE / EVENTS.LIVE</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/PRODUCTION/FLEET/ALL_PRINTERS[12]</div>
+      <div class="hv-path__status">В РЕАЛЬНОМ ВРЕМЕНИ :: <b>ONLINE</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="dashboard.html">Сводка</a>
+      <a class="hv-appbar__link" href="orders.html">Заказы</a>
+      <a class="hv-appbar__link" href="fleet.html" aria-current="page">Принтеры</a>
+      <a class="hv-appbar__link" href="postproduction.html">Постобработка</a>
+      <a class="hv-appbar__link" href="packaging.html">Упаковка</a>
+      <a class="hv-appbar__link" href="service.html">Сервис</a>
+      <a class="hv-appbar__link" href="store.html">Склад</a>
+      <a class="hv-appbar__link" href="purchasing.html">Закупки</a>
+      <a class="hv-appbar__link" href="logistics.html">Логистика</a>
+      <a class="hv-appbar__link" href="settings.html">Настройки</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">ДЧ</span>boss@printorian.example</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main hv-stack">
+
+    <!-- =========================================== farm-level instruments -->
+    <div class="hv-grid hv-grid--4">
+      <div class="hv-frame hv-stat" data-tone="live">
+        <span class="hv-label">Печатают сейчас</span>
+        <span class="hv-stat__v">07<small> / 12</small></span>
+        <span class="hv-micro">ЗАГРУЗКА ПАРКА 58%</span>
+      </div>
+      <div class="hv-frame hv-stat">
+        <span class="hv-label">Наработка за сутки</span>
+        <span class="hv-stat__v">148<small> Ч</small></span>
+        <span class="hv-micro">СРЕДНЕЕ 12.3 Ч / ПРИНТЕР</span>
+      </div>
+      <div class="hv-frame hv-stat" data-tone="warn">
+        <span class="hv-label">Требуют внимания</span>
+        <span class="hv-stat__v">02</span>
+        <span class="hv-micro">P-04 ОШИБКА · P-11 ФИЛАМЕНТ</span>
+      </div>
+      <div class="hv-frame hv-stat" data-tone="warn">
+        <span class="hv-label">Нужно обслуживание</span>
+        <span class="hv-stat__v">03</span>
+        <span class="hv-micro">ЗАМЕНА СОПЛА · СМАЗКА</span>
+      </div>
+    </div>
+
+    <!-- ========================================================== toolbar -->
+    <div class="hv-row hv-row--between">
+      <div class="hv-tags" data-filter-group="#fleet-table">
+        <button class="hv-tag" type="button" data-filter="all" aria-pressed="true">
+          <span class="hv-tag__k">Все</span><span class="hv-tag__n">12</span>
+        </button>
+        <button class="hv-tag" type="button" data-filter="printing" data-tone="live" aria-pressed="false">
+          <span class="hv-tag__k">Печатает</span><span class="hv-tag__n">7</span>
+        </button>
+        <button class="hv-tag" type="button" data-filter="idle" data-tone="good" aria-pressed="false">
+          <span class="hv-tag__k">Свободен</span><span class="hv-tag__n">2</span>
+        </button>
+        <button class="hv-tag" type="button" data-filter="maintenance" data-tone="warn" aria-pressed="false">
+          <span class="hv-tag__k">Обслуживание</span><span class="hv-tag__n">1</span>
+        </button>
+        <button class="hv-tag" type="button" data-filter="error" data-tone="bad" aria-pressed="false">
+          <span class="hv-tag__k">Ошибка</span><span class="hv-tag__n">1</span>
+        </button>
+        <button class="hv-tag" type="button" data-filter="offline" aria-pressed="false">
+          <span class="hv-tag__k">Не в сети</span><span class="hv-tag__n">1</span>
+        </button>
+      </div>
+      <div class="hv-row">
+        <input class="hv-input" type="search" placeholder="ПОИСК :: ИМЯ / СЕРИЙНЫЙ / ЗАКАЗ" style="width:280px">
+        <button class="hv-btn" type="button">Добавить принтер</button>
+      </div>
+    </div>
+
+    <!-- ============================================================ table -->
+    <div class="hv-table-wrap">
+      <table class="hv-table" id="fleet-table" data-sortable>
+        <thead>
+          <tr>
+            <th><button class="hv-table__sort" data-sort>Принтер <span class="hv-table__ind"></span></button></th>
+            <th><button class="hv-table__sort" data-sort>Состояние <span class="hv-table__ind"></span></button></th>
+            <th><button class="hv-table__sort" data-sort>Задание <span class="hv-table__ind"></span></button></th>
+            <th style="min-width:200px"><button class="hv-table__sort" data-sort>Прогресс <span class="hv-table__ind"></span></button></th>
+            <th><button class="hv-table__sort" data-sort>Готово к <span class="hv-table__ind"></span></button></th>
+            <th><button class="hv-table__sort" data-sort>На связи <span class="hv-table__ind"></span></button></th>
+            <th><button class="hv-table__sort" data-sort>Расположение <span class="hv-table__ind"></span></button></th>
+            <th data-align="end"><button class="hv-table__sort" data-sort>Наработка <span class="hv-table__ind"></span></button></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-status="printing" data-activatable data-open="p-detail" aria-selected="true">
+            <td><b>P-01</b> <span class="hv-micro">BAMBU X1C</span></td>
+            <td><span class="hv-state" data-state="printing">Печатает</span></td>
+            <td class="hv-table__id">ORD-2147 · BRACKET_V4</td>
+            <td data-sort-value="63">
+              <div class="hv-meter-row">
+                <div class="hv-meter" data-tone="live"><div class="hv-meter__fill" style="width:63%"></div></div>
+                <span class="hv-meter-row__pct">63%</span>
+              </div>
+            </td>
+            <td data-sort-value="248">21:48</td>
+            <td class="hv-live">сейчас</td>
+            <td>Цех A · стойка 1</td>
+            <td data-align="end" data-sort-value="2418">2 418 ч</td>
+          </tr>
+          <tr data-status="printing" data-activatable data-open="p-detail">
+            <td><b>P-02</b> <span class="hv-micro">BAMBU X1C</span></td>
+            <td><span class="hv-state" data-state="printing">Печатает</span></td>
+            <td class="hv-table__id">ORD-2149 · HOUSING_B</td>
+            <td data-sort-value="12">
+              <div class="hv-meter-row">
+                <div class="hv-meter" data-tone="live"><div class="hv-meter__fill" style="width:12%"></div></div>
+                <span class="hv-meter-row__pct">12%</span>
+              </div>
+            </td>
+            <td data-sort-value="612">06:12 +1</td>
+            <td class="hv-live">сейчас</td>
+            <td>Цех A · стойка 1</td>
+            <td data-align="end" data-sort-value="1902">1 902 ч</td>
+          </tr>
+          <tr data-status="printing" data-activatable data-open="p-detail">
+            <td><b>P-03</b> <span class="hv-micro">BAMBU P1S</span></td>
+            <td><span class="hv-state" data-state="printing">Печатает</span></td>
+            <td class="hv-table__id">ORD-2150 · GEAR_SET</td>
+            <td data-sort-value="91">
+              <div class="hv-meter-row">
+                <div class="hv-meter" data-tone="live"><div class="hv-meter__fill" style="width:91%"></div></div>
+                <span class="hv-meter-row__pct">91%</span>
+              </div>
+            </td>
+            <td data-sort-value="1934">19:34</td>
+            <td class="hv-live">сейчас</td>
+            <td>Цех A · стойка 2</td>
+            <td data-align="end" data-sort-value="884">884 ч</td>
+          </tr>
+          <tr data-status="error" data-activatable data-open="p-detail">
+            <td><b>P-04</b> <span class="hv-micro">BAMBU P1S</span></td>
+            <td><span class="hv-state" data-state="error">Ошибка</span></td>
+            <td class="hv-table__id hv-bad">HMS_0300 · СЛОМ ФИЛАМЕНТА</td>
+            <td data-sort-value="38">
+              <div class="hv-meter-row">
+                <div class="hv-meter" data-tone="bad"><div class="hv-meter__fill" style="width:38%"></div></div>
+                <span class="hv-meter-row__pct">38%</span>
+              </div>
+            </td>
+            <td data-sort-value="9999" class="hv-faint">—</td>
+            <td>2 мин</td>
+            <td>Цех A · стойка 2</td>
+            <td data-align="end" data-sort-value="1140">1 140 ч</td>
+          </tr>
+          <tr data-status="idle" data-activatable data-open="p-detail">
+            <td><b>P-05</b> <span class="hv-micro">ELEGOO SAT.4</span></td>
+            <td><span class="hv-state" data-state="idle">Свободен</span></td>
+            <td class="hv-faint">—</td>
+            <td data-sort-value="0" class="hv-faint">—</td>
+            <td data-sort-value="9999" class="hv-faint">—</td>
+            <td>сейчас</td>
+            <td>Цех B · смола</td>
+            <td data-align="end" data-sort-value="640">640 ч</td>
+          </tr>
+          <tr data-status="idle" data-activatable data-open="p-detail">
+            <td><b>P-06</b> <span class="hv-micro">ELEGOO SAT.4</span></td>
+            <td><span class="hv-state" data-state="idle">Свободен</span></td>
+            <td class="hv-faint">—</td>
+            <td data-sort-value="0" class="hv-faint">—</td>
+            <td data-sort-value="9999" class="hv-faint">—</td>
+            <td>сейчас</td>
+            <td>Цех B · смола</td>
+            <td data-align="end" data-sort-value="512">512 ч</td>
+          </tr>
+          <tr data-status="maintenance" data-activatable data-open="p-detail">
+            <td><b>P-07</b> <span class="hv-micro">BAMBU X1C</span></td>
+            <td><span class="hv-state" data-state="maintenance">Обслуживание</span></td>
+            <td class="hv-warn">Замена сопла · просрочено 40 ч</td>
+            <td data-sort-value="0" class="hv-faint">—</td>
+            <td data-sort-value="9999" class="hv-faint">—</td>
+            <td>14 мин</td>
+            <td>Цех A · стойка 3</td>
+            <td data-align="end" data-sort-value="3040">3 040 ч</td>
+          </tr>
+          <tr data-status="offline" data-activatable data-open="p-detail">
+            <td><b>P-08</b> <span class="hv-micro">MANUAL / ANYCUBIC</span></td>
+            <td><span class="hv-state" data-state="offline">Не в сети</span></td>
+            <td class="hv-faint">—</td>
+            <td data-sort-value="0" class="hv-faint">—</td>
+            <td data-sort-value="9999" class="hv-faint">—</td>
+            <td class="hv-faint">4 ч 12 мин</td>
+            <td>Цех C · ручной</td>
+            <td data-align="end" data-sort-value="220">220 ч</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="hv-panel__foot" style="border:var(--hv-hair) solid var(--hv-line);border-top:0">
+      <span>ПОКАЗАНО 8 ИЗ 12 · ПОТОК СОБЫТИЙ АКТИВЕН</span>
+      <span>ОБНОВЛЕНО :: <span data-clock></span></span>
+    </div>
+  </main>
+</div>
+
+<!-- ======================================================= printer detail -->
+<div class="hv-overlay" id="p-detail" hidden>
+  <div class="hv-modal" role="dialog" aria-modal="true" aria-labelledby="p-detail-t">
+    <div class="hv-chrome" style="position:static;padding:var(--hv-3) var(--hv-3) 0">
+      <div class="hv-chrome__row">
+        <span class="hv-tab" id="p-detail-t">Принтер :: P-01</span>
+        <div class="hv-meta">
+          <span>SERIAL :: <strong>01P00A382900412</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>LAN :: <strong>10.0.4.21</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>DRIVER :: <strong>BAMBU.LAN</strong></span>
+        </div>
+        <div class="hv-os">
+          <span class="hv-os__label">BAMBU LAB X1 CARBON</span>
+        <button class="hv-os__x" type="button" data-close aria-label="Закрыть">✕</button>
+        </div>
+      </div>
+      <div class="hv-path">
+        <div class="hv-path__crumbs">C:/PRINTORIAN/PRODUCTION/FLEET/P-01.NODE</div>
+        <div class="hv-path__status">STATUS :: <b>PRINTING</b></div>
+      </div>
+    </div>
+
+    <div class="hv-modal__body hv-stack">
+
+      <div class="hv-tabs" data-tabs="#p-detail">
+        <button class="hv-tabs__btn" type="button" data-tab-target="now" aria-selected="true">Сейчас</button>
+        <button class="hv-tabs__btn" type="button" data-tab-target="spec" aria-selected="false">Параметры</button>
+        <button class="hv-tabs__btn" type="button" data-tab-target="svc" aria-selected="false">Обслуживание</button>
+        <button class="hv-tabs__btn" type="button" data-tab-target="ams" aria-selected="false">Слоты AMS</button>
+      </div>
+
+      <!-- now ...................................................... -->
+      <div data-tab-panel="now" class="hv-stack">
+        <div class="hv-frame hv-frame--live">
+          <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-2)">
+            <span class="hv-h">ORD-2147 :: BRACKET_V4.3MF</span>
+            <span class="hv-micro">СЛОЙ 412 / 654</span>
+          </div>
+          <div class="hv-meter-row">
+            <div class="hv-meter" data-tone="live"><div class="hv-meter__fill" style="width:63%"></div></div>
+            <span class="hv-meter-row__pct">63%</span>
+          </div>
+          <div class="hv-row hv-row--between" style="margin-top:var(--hv-2)">
+            <span class="hv-micro">НАЧАТО 14:22 · ОСТАЛОСЬ 7 Ч 26 М</span>
+            <button class="hv-btn hv-btn--sm hv-btn--danger" type="button">Остановить</button>
+          </div>
+        </div>
+
+        <div class="hv-grid hv-grid--4">
+          <div class="hv-frame hv-stat"><span class="hv-label">Сопло</span><span class="hv-stat__v">255<small> °C</small></span></div>
+          <div class="hv-frame hv-stat"><span class="hv-label">Стол</span><span class="hv-stat__v">70<small> °C</small></span></div>
+          <div class="hv-frame hv-stat"><span class="hv-label">Камера</span><span class="hv-stat__v">41<small> °C</small></span></div>
+          <div class="hv-frame hv-stat"><span class="hv-label">Обдув</span><span class="hv-stat__v">88<small> %</small></span></div>
+        </div>
+      </div>
+
+      <!-- spec ..................................................... -->
+      <div data-tab-panel="spec" hidden class="hv-grid hv-grid--2">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Характеристики</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <dl class="hv-kv">
+              <dt>Производитель</dt><dd>Bambu Lab</dd>
+              <dt>Модель</dt><dd>X1 Carbon</dd>
+              <dt>Область печати</dt><dd>256 × 256 × 256 мм</dd>
+              <dt>Сопло</dt><dd>0.4 мм · закалённая сталь</dd>
+              <dt>Подключение</dt><dd>По локальной сети</dd>
+              <dt>Код доступа</dt><dd class="hv-faint">Код сохранён</dd>
+              <dt>Расположение</dt><dd>Цех A · стойка 1</dd>
+            </dl>
+          </div>
+        </section>
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Экономика</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Стоимость покупки</span><span class="hv-leader__fill"></span><span class="hv-leader__v">142 000 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Ресурс</span><span class="hv-leader__fill"></span><span class="hv-leader__v">10 000 ч</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Наработка</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2 418 ч</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Амортизация · печать</span><span class="hv-leader__fill"></span><span class="hv-leader__v">41.00 ₽/ч</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Амортизация · простой</span><span class="hv-leader__fill"></span><span class="hv-leader__v">6.20 ₽/ч</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Потребление</span><span class="hv-leader__fill"></span><span class="hv-leader__v">0.32 кВт·ч</span></li>
+            </ul>
+            <hr class="hv-hr">
+            <div class="hv-slab"><span>Окупаемость</span><span class="hv-slab__v">24%</span></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- service .................................................. -->
+      <div data-tab-panel="svc" hidden>
+        <div class="hv-table-wrap">
+          <table class="hv-table">
+            <thead><tr><th>Операция</th><th>Периодичность</th><th>Выполнено</th><th>Осталось</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Замена сопла</td><td>1 000 ч</td><td>1 820 ч наработки</td>
+                <td class="hv-warn">Пора выполнить · −40 ч</td>
+                <td><button class="hv-btn hv-btn--sm" type="button">Отметить</button></td>
+              </tr>
+              <tr>
+                <td>Натяжение ремней</td><td>500 ч</td><td>2 200 ч наработки</td>
+                <td>282 ч</td>
+                <td><button class="hv-btn hv-btn--sm" type="button">Отметить</button></td>
+              </tr>
+              <tr>
+                <td>Смазка</td><td>250 ч</td><td>2 300 ч наработки</td>
+                <td>132 ч</td>
+                <td><button class="hv-btn hv-btn--sm" type="button">Отметить</button></td>
+              </tr>
+              <tr>
+                <td>Калибровка стола</td><td>200 ч</td><td>2 390 ч наработки</td>
+                <td>172 ч</td>
+                <td><button class="hv-btn hv-btn--sm" type="button">Отметить</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="hv-row hv-row--end" style="margin-top:var(--hv-3)">
+          <button class="hv-btn" type="button">Добавить операцию</button>
+        </div>
+      </div>
+
+      <!-- ams ...................................................... -->
+      <div data-tab-panel="ams" hidden class="hv-grid hv-grid--4">
+        <div class="hv-frame hv-stack hv-stack--2" style="--ink:var(--hv-line)">
+          <span class="hv-micro">СЛОТ A1</span>
+          <div class="hv-slot" style="--hv-swatch:#1b1b1e;border:0;background:none;padding:0">
+            <span class="hv-slot__chip"></span>
+            <span class="hv-slot__body"><span class="hv-h">PETG-CF</span><span class="hv-slot__n">ЧЁРНЫЙ · LOT.4471</span></span>
+          </div>
+          <div class="hv-meter hv-meter--thin"><div class="hv-meter__fill" style="width:82%"></div></div>
+          <span class="hv-micro">820 Г ИЗ 1000 Г</span>
+        </div>
+        <div class="hv-frame hv-stack hv-stack--2">
+          <span class="hv-micro">СЛОТ A2</span>
+          <div class="hv-slot" style="--hv-swatch:#f2f2f0;border:0;background:none;padding:0">
+            <span class="hv-slot__chip"></span>
+            <span class="hv-slot__body"><span class="hv-h">PETG-CF</span><span class="hv-slot__n">БЕЛЫЙ · LOT.4468</span></span>
+          </div>
+          <div class="hv-meter hv-meter--thin"><div class="hv-meter__fill" style="width:47%"></div></div>
+          <span class="hv-micro">470 Г ИЗ 1000 Г</span>
+        </div>
+        <div class="hv-frame hv-stack hv-stack--2">
+          <span class="hv-micro">СЛОТ A3</span>
+          <div class="hv-slot" style="--hv-swatch:#d64545;border:0;background:none;padding:0">
+            <span class="hv-slot__chip"></span>
+            <span class="hv-slot__body"><span class="hv-h">PETG-CF</span><span class="hv-slot__n">КРАСНЫЙ · LOT.4402</span></span>
+          </div>
+          <div class="hv-meter hv-meter--thin" data-tone="warn"><div class="hv-meter__fill" style="width:34%"></div></div>
+          <span class="hv-micro hv-warn">340 Г — НИЖЕ ПОРОГА</span>
+        </div>
+        <div class="hv-frame hv-stack hv-stack--2">
+          <span class="hv-micro">СЛОТ A4</span>
+          <span class="hv-h hv-faint">Пусто</span>
+          <div class="hv-meter hv-meter--thin"><div class="hv-meter__fill" style="width:0%"></div></div>
+          <span class="hv-micro">СЛОТ СВОБОДЕН</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hv-panel__foot">
+      <span>УЗЕЛ :: P-01 · ДРАЙВЕР BAMBU.LAN · ПОСЛЕДНИЙ ОТВЕТ 0.4 С</span>
+      <button class="hv-btn hv-btn--sm" type="button" data-close>Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

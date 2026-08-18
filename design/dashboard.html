@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Сводка фермы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Сводка :: Ферма</span>
+      <div class="hv-meta">
+        <span>FARM :: <strong>KN-SOL.21</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>NODES :: <strong>12</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>STREAM :: <strong>SSE / EVENTS.LIVE</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/DASHBOARD/FARM.OVERVIEW</div>
+      <div class="hv-path__status">В РЕАЛЬНОМ ВРЕМЕНИ :: <b>ONLINE</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="dashboard.html" aria-current="page">Сводка</a>
+      <a class="hv-appbar__link" href="orders.html">Заказы</a>
+      <a class="hv-appbar__link" href="fleet.html">Принтеры</a>
+      <a class="hv-appbar__link" href="postproduction.html">Постобработка</a>
+      <a class="hv-appbar__link" href="packaging.html">Упаковка</a>
+      <a class="hv-appbar__link" href="service.html">Сервис</a>
+      <a class="hv-appbar__link" href="store.html">Склад</a>
+      <a class="hv-appbar__link" href="purchasing.html">Закупки</a>
+      <a class="hv-appbar__link" href="logistics.html">Логистика</a>
+      <a class="hv-appbar__link" href="settings.html">Настройки</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">ДЧ</span>boss@printorian.example</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main hv-stack hv-stack--4">
+
+    <!-- =================================================== period switch -->
+    <div class="hv-row hv-row--between">
+      <div class="hv-row">
+        <span class="hv-label" style="margin:0">Период</span>
+        <span class="hv-seg" data-toggle-group="single">
+          <button class="hv-seg__btn" type="button" data-toggle aria-pressed="true">Сегодня</button>
+          <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">Неделя</button>
+          <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">Месяц</button>
+          <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">Квартал</button>
+        </span>
+      </div>
+      <span class="hv-micro">СРАВНЕНИЕ С ПРЕДЫДУЩИМ ПЕРИОДОМ · ОБНОВЛЕНО <span data-clock></span></span>
+    </div>
+
+    <!-- ================================================= ORDERS overview -->
+    <section>
+      <div class="hv-row" style="margin-bottom:var(--hv-2)">
+        <h2 class="hv-h">Заказы</h2>
+        <span class="hv-micro">ORDERING · ЗА СЕГОДНЯ И НАРАСТАЮЩИМ ИТОГОМ</span>
+        <span class="hv-spacer"></span>
+        <a class="hv-btn hv-btn--sm" href="orders.html">Диспетчерская ›</a>
+      </div>
+      <div class="hv-grid hv-grid--4">
+        <div class="hv-frame hv-kpi">
+          <span class="hv-label">Новых сегодня</span>
+          <span class="hv-kpi__v">14 <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+27%</span></span>
+          <span class="hv-micro">ВЧЕРА 11 · СРЕДНЕЕ ЗА 30 ДН 12.4</span>
+          <span class="hv-kpi__foot"><span>ОПЛАЧЕНО 12</span><span>ЖДУТ ОПЛАТЫ 2</span></span>
+        </div>
+        <div class="hv-frame hv-kpi">
+          <span class="hv-label">За месяц</span>
+          <span class="hv-kpi__v">248 <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+9%</span></span>
+          <span class="hv-micro">ИЮЛЬ 227 · ПЛАН 260</span>
+          <span class="hv-kpi__foot"><span>ВЫПОЛНЕНИЕ ПЛАНА</span><span class="hv-hot">95%</span></span>
+        </div>
+        <div class="hv-frame hv-kpi" data-tone="live">
+          <span class="hv-label">В работе сейчас</span>
+          <span class="hv-kpi__v hv-live">18</span>
+          <span class="hv-micro">7 ПЕЧАТЬ · 4 ПОСТОБРАБОТКА · 3 ОЧЕРЕДЬ · 3 УПАКОВКА</span>
+          <span class="hv-kpi__foot"><span>ЛИСТ ОЖИДАНИЯ</span><span class="hv-warn">3</span></span>
+        </div>
+        <div class="hv-frame hv-kpi">
+          <span class="hv-label">Средний чек</span>
+          <span class="hv-kpi__v">6 840 <small>₽</small> <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+4%</span></span>
+          <span class="hv-micro">МЕДИАНА 4 210 ₽</span>
+          <span class="hv-kpi__foot"><span>ПОЗИЦИЙ В ЗАКАЗЕ</span><span>7.2</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================= PRINTER WALL + attention feed -->
+    <section class="hv-cols hv-cols--2">
+
+      <div class="hv-panel">
+        <div class="hv-panel__head">
+          <span>Парк · состояние в реальном времени</span>
+          <span class="hv-panel__aside">НАЖМИТЕ НА КВАДРАТ</span>
+        </div>
+
+        <div class="hv-panel__body hv-stack">
+          <div class="hv-legend">
+            <span><i style="background:var(--hv-live)"></i> Печатает 7</span>
+            <span><i style="background:var(--hv-good)"></i> Свободен 2</span>
+            <span><i style="background:var(--hv-warn)"></i> Обслуживание 1</span>
+            <span><i style="background:var(--hv-bad)"></i> Ошибка 1</span>
+            <span><i style="background:var(--hv-line)"></i> Не в сети 1</span>
+          </div>
+
+          <!-- Zone A --------------------------------------------------- -->
+          <div class="hv-zone">
+            <div class="hv-zone__head"><span>ЦЕХ A · FDM · 8 МАШИН</span><span>ЗАГРУЗКА 75%</span></div>
+            <div class="hv-matrix">
+              <button class="hv-node" type="button" data-state="printing" data-open="p-detail">
+                <span class="hv-node__id">P-01</span><span class="hv-node__pct">63%</span>
+                <span class="hv-node__fill" style="--p:63%"></span>
+              </button>
+              <button class="hv-node" type="button" data-state="printing" data-open="p-detail">
+                <span class="hv-node__id">P-02</span><span class="hv-node__pct">12%</span>
+                <span class="hv-node__fill" style="--p:12%"></span>
+              </button>
+              <button class="hv-node" type="button" data-state="printing" data-open="p-detail">
+                <span class="hv-node__id">P-03</span><span class="hv-node__pct">91%</span>
+                <span class="hv-node__fill" style="--p:91%"></span>
+              </button>
+              <button class="hv-node" type="button" data-state="error" data-open="p-detail">
+                <span class="hv-node__id">P-04</span><span class="hv-node__pct">ОШИБКА</span>
+                <span class="hv-node__fill" style="--p:38%"></span>
+              </button>
+              <button class="hv-node" type="button" data-state="maintenance" data-open="p-detail">
+                <span class="hv-node__id">P-07</span><span class="hv-node__pct">СЕРВИС</span>
+              </button>
+              <button class="hv-node" type="button" data-state="printing" data-open="p-detail">
+                <span class="hv-node__id">P-09</span><span class="hv-node__pct">45%</span>
+                <span class="hv-node__fill" style="--p:45%"></span>
+              </button>
+              <button class="hv-node" type="button" data-state="printing" data-open="p-detail">
+                <span class="hv-node__id">P-10</span><span class="hv-node__pct">78%</span>
+                <span class="hv-node__fill" style="--p:78%"></span>
+              </button>
+              <button class="hv-node" type="button" data-state="printing" data-open="p-detail">
+                <span class="hv-node__id">P-11</span><span class="hv-node__pct">34%</span>
+                <span class="hv-node__fill" style="--p:34%"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Zone B --------------------------------------------------- -->
+          <div class="hv-zone">
+            <div class="hv-zone__head"><span>ЦЕХ B · ФОТОПОЛИМЕР · 3 МАШИНЫ</span><span>ЗАГРУЗКА 33%</span></div>
+            <div class="hv-matrix">
+              <button class="hv-node" type="button" data-state="idle" data-open="p-detail">
+                <span class="hv-node__id">P-05</span><span class="hv-node__pct">СВОБОДЕН</span>
+              </button>
+              <button class="hv-node" type="button" data-state="idle" data-open="p-detail">
+                <span class="hv-node__id">P-06</span><span class="hv-node__pct">СВОБОДЕН</span>
+              </button>
+              <button class="hv-node" type="button" data-state="printing" data-open="p-detail">
+                <span class="hv-node__id">P-12</span><span class="hv-node__pct">55%</span>
+                <span class="hv-node__fill" style="--p:55%"></span>
+              </button>
+              <span class="hv-node hv-node--empty"><span class="hv-micro">СВОБОДНО</span></span>
+            </div>
+          </div>
+
+          <!-- Zone C --------------------------------------------------- -->
+          <div class="hv-zone">
+            <div class="hv-zone__head"><span>ЦЕХ C · РУЧНЫЕ · 1 МАШИНА</span><span>НЕ В СЕТИ</span></div>
+            <div class="hv-matrix">
+              <button class="hv-node" type="button" data-state="offline" data-open="p-detail">
+                <span class="hv-node__id">P-08</span><span class="hv-node__pct">4 Ч 12 М</span>
+              </button>
+              <span class="hv-node hv-node--empty"><span class="hv-micro">СВОБОДНО</span></span>
+              <span class="hv-node hv-node--empty"><span class="hv-micro">СВОБОДНО</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hv-panel__foot">
+          <span>ПОЛОЖЕНИЕ КВАДРАТА СООТВЕТСТВУЕТ МЕСТУ В ЦЕХЕ</span>
+          <span>ПОТОК СОБЫТИЙ АКТИВЕН</span>
+        </div>
+      </div>
+
+      <!-- attention ------------------------------------------------------ -->
+      <div class="hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Требует внимания</span><span class="hv-panel__aside">4</span></div>
+          <div class="hv-panel__body--none">
+            <div class="hv-alert" data-tone="bad">
+              <span class="hv-alert__t">19:12</span>
+              <span class="hv-alert__b"><b>P-04 · слом филамента</b> <em>HMS_0300 · ORD-2148 остановлен на 38%</em></span>
+              <button class="hv-btn hv-btn--sm" type="button" data-open="p-detail">Открыть</button>
+            </div>
+            <div class="hv-alert" data-tone="warn">
+              <span class="hv-alert__t">18:40</span>
+              <span class="hv-alert__b"><b>PETG-CF красный · 340 г</b> <em>ниже порога 400 г · хватит на 1 заказ</em></span>
+              <button class="hv-btn hv-btn--sm" type="button">Заказать</button>
+            </div>
+            <div class="hv-alert" data-tone="warn">
+              <span class="hv-alert__t">14:05</span>
+              <span class="hv-alert__b"><b>P-07 · замена сопла просрочена</b> <em>на 40 ч наработки</em></span>
+              <button class="hv-btn hv-btn--sm" type="button">В работу</button>
+            </div>
+            <div class="hv-alert" data-tone="live">
+              <span class="hv-alert__t">15:02</span>
+              <span class="hv-alert__b"><b>P-08 не отвечает 4 ч</b> <em>ручная машина · драйвер manual</em></span>
+              <button class="hv-btn hv-btn--sm" type="button">Проверить</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="hv-grid hv-grid--2">
+          <div class="hv-frame hv-kpi" data-tone="live">
+            <span class="hv-label">Загрузка парка</span>
+            <span class="hv-kpi__v">58<small>%</small> <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+6</span></span>
+            <span class="hv-micro">7 ИЗ 12 В ПЕЧАТИ</span>
+          </div>
+          <div class="hv-frame hv-kpi">
+            <span class="hv-label">Эффективность</span>
+            <span class="hv-kpi__v">93.9<small>%</small> <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+1.2</span></span>
+            <span class="hv-micro">УДАЧНЫХ ПЕЧАТЕЙ · БРАК 6.1%</span>
+          </div>
+          <div class="hv-frame hv-kpi">
+            <span class="hv-label">Наработка за сутки</span>
+            <span class="hv-kpi__v">148 <small>Ч</small></span>
+            <span class="hv-micro">ИЗ 288 ВОЗМОЖНЫХ</span>
+          </div>
+          <div class="hv-frame hv-kpi" data-tone="warn">
+            <span class="hv-label">Простой</span>
+            <span class="hv-kpi__v">32 <small>Ч</small> <span class="hv-kpi__d" data-dir="down" data-sentiment="good">−11</span></span>
+            <span class="hv-micro">СТОИМОСТЬ ПРОСТОЯ 198 ₽</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================ FINANCE overview -->
+    <section>
+      <div class="hv-row" style="margin-bottom:var(--hv-2)">
+        <h2 class="hv-h">Финансы</h2>
+        <span class="hv-micro">АВГУСТ 2026 · НАРАСТАЮЩИМ ИТОГОМ</span>
+        <span class="hv-spacer"></span>
+        <span class="hv-micro">ДАННЫЕ :: PAYMENTS · PRICING</span>
+      </div>
+
+      <div class="hv-cols hv-cols--2">
+        <div class="hv-grid hv-grid--3">
+          <div class="hv-frame hv-kpi">
+            <span class="hv-label">Поступило</span>
+            <span class="hv-kpi__v">1.24 <small>МЛН ₽</small></span>
+            <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+12% К ИЮЛЮ</span>
+            <span class="hv-kpi__foot"><span>СЕГОДНЯ</span><span class="hv-hot">86 400 ₽</span></span>
+          </div>
+          <div class="hv-frame hv-kpi">
+            <span class="hv-label">Расходы</span>
+            <span class="hv-kpi__v">781 <small>ТЫС ₽</small></span>
+            <span class="hv-kpi__d" data-dir="up" data-sentiment="bad">+8% К ИЮЛЮ</span>
+            <span class="hv-kpi__foot"><span>СЕГОДНЯ</span><span>52 100 ₽</span></span>
+          </div>
+          <div class="hv-frame hv-kpi" data-tone="good">
+            <span class="hv-label">Прибыль</span>
+            <span class="hv-kpi__v hv-good">459 <small>ТЫС ₽</small></span>
+            <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+19% К ИЮЛЮ</span>
+            <span class="hv-kpi__foot"><span>МАРЖА</span><span class="hv-hot">37%</span></span>
+          </div>
+        </div>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Куда ушли деньги</span><span class="hv-panel__aside">781 ТЫС ₽</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <div class="hv-funnel">
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Материал</span><span class="hv-funnel__bar"><i style="width:38%"></i></span><span class="hv-funnel__n">297к</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Труд</span><span class="hv-funnel__bar"><i style="width:31%"></i></span><span class="hv-funnel__n">242к</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Амортизация</span><span class="hv-funnel__bar"><i style="width:14%"></i></span><span class="hv-funnel__n">109к</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Логистика</span><span class="hv-funnel__bar"><i style="width:8%"></i></span><span class="hv-funnel__n">62к</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Накладные</span><span class="hv-funnel__bar"><i style="width:6%"></i></span><span class="hv-funnel__n">47к</span></div>
+              <div class="hv-funnel__row" data-tone="bad"><span class="hv-funnel__k">Брак и возвраты</span><span class="hv-funnel__bar"><i style="width:3%"></i></span><span class="hv-funnel__n">24к</span></div>
+            </div>
+          </div>
+          <div class="hv-panel__foot">
+            <span>ВОЗВРАТОВ ЗА МЕСЯЦ :: 4 НА 18 200 ₽</span>
+            <span>К ПОЛУЧЕНИЮ :: 32 400 ₽</span>
+          </div>
+        </section>
+      </div>
+
+      <div class="hv-frame" style="margin-top:var(--hv-3)">
+        <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-2)">
+          <span class="hv-label">Выручка по дням · 30 суток</span>
+          <span class="hv-micro">ПИК 09.08 :: 86 400 ₽ · МИНИМУМ 21.07 :: 12 100 ₽</span>
+        </div>
+        <svg class="hv-spark" viewBox="0 0 600 60" preserveAspectRatio="none" role="img" aria-label="Выручка по дням за 30 суток">
+          <polygon points="0,60 0,44 20,46 40,38 60,41 80,30 100,34 120,27 140,33 160,22 180,28 200,19 220,24 240,31 260,20 280,26 300,15 320,21 340,29 360,17 380,23 400,12 420,18 440,25 460,14 480,20 500,9 520,16 540,22 560,11 580,6 600,8 600,60"/>
+          <polyline points="0,44 20,46 40,38 60,41 80,30 100,34 120,27 140,33 160,22 180,28 200,19 220,24 240,31 260,20 280,26 300,15 320,21 340,29 360,17 380,23 400,12 420,18 440,25 460,14 480,20 500,9 520,16 540,22 560,11 580,6 600,8"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ======================================================= SCHEDULE -->
+    <section class="hv-panel">
+      <div class="hv-panel__head">
+        <span>Расписание · ближайшие 12 часов</span>
+        <span class="hv-panel__aside">КОГДА ОСВОБОДЯТСЯ МАШИНЫ</span>
+      </div>
+      <div class="hv-panel__body hv-gantt-scroll">
+        <div class="hv-gantt">
+          <div class="hv-gantt__scale">
+            <span class="hv-gantt__who">МАШИНА</span>
+            <div class="hv-gantt__hours">
+              <span>20:00</span><span>22:00</span><span>00:00</span><span>02:00</span><span>04:00</span><span>06:00</span><span>08:00</span>
+            </div>
+          </div>
+
+          <div class="hv-gantt__row"><span class="hv-gantt__who">P-01</span>
+            <div class="hv-gantt__track">
+              <span class="hv-gantt__bar" data-kind="printing" style="left:0;width:62%">ORD-2147 · BRACKET_V4</span>
+              <span class="hv-gantt__bar" data-kind="queued" style="left:63%;width:34%">ORD-2151</span>
+              <span class="hv-gantt__now" style="left:4%"></span>
+            </div>
+          </div>
+          <div class="hv-gantt__row"><span class="hv-gantt__who">P-02</span>
+            <div class="hv-gantt__track">
+              <span class="hv-gantt__bar" data-kind="printing" style="left:0;width:88%">ORD-2149 · HOUSING_B</span>
+              <span class="hv-gantt__now" style="left:4%"></span>
+            </div>
+          </div>
+          <div class="hv-gantt__row"><span class="hv-gantt__who">P-03</span>
+            <div class="hv-gantt__track">
+              <span class="hv-gantt__bar" data-kind="printing" style="left:0;width:9%">ORD-2150</span>
+              <span class="hv-gantt__bar" data-kind="service" style="left:10%;width:6%">СЕРВИС</span>
+              <span class="hv-gantt__bar" data-kind="queued" style="left:17%;width:44%">ORD-2154</span>
+              <span class="hv-gantt__now" style="left:4%"></span>
+            </div>
+          </div>
+          <div class="hv-gantt__row"><span class="hv-gantt__who">P-04</span>
+            <div class="hv-gantt__track">
+              <span class="hv-gantt__bar" data-kind="blocked" style="left:0;width:100%">ОСТАНОВЛЕН · ТРЕБУЕТСЯ ОПЕРАТОР</span>
+              <span class="hv-gantt__now" style="left:4%"></span>
+            </div>
+          </div>
+          <div class="hv-gantt__row"><span class="hv-gantt__who">P-05</span>
+            <div class="hv-gantt__track">
+              <span class="hv-gantt__bar" data-kind="queued" style="left:12%;width:40%">ORD-2152 · ЖДЁТ TPU</span>
+              <span class="hv-gantt__now" style="left:4%"></span>
+            </div>
+          </div>
+          <div class="hv-gantt__row"><span class="hv-gantt__who">P-09</span>
+            <div class="hv-gantt__track">
+              <span class="hv-gantt__bar" data-kind="printing" style="left:0;width:41%">ORD-2145</span>
+              <span class="hv-gantt__bar" data-kind="queued" style="left:42%;width:30%">ORD-2153</span>
+              <span class="hv-gantt__now" style="left:4%"></span>
+            </div>
+          </div>
+          <div class="hv-gantt__row"><span class="hv-gantt__who">P-10</span>
+            <div class="hv-gantt__track">
+              <span class="hv-gantt__bar" data-kind="printing" style="left:0;width:24%">ORD-2143</span>
+              <span class="hv-gantt__bar" data-kind="queued" style="left:25%;width:52%">ORD-2155</span>
+              <span class="hv-gantt__now" style="left:4%"></span>
+            </div>
+          </div>
+          <div class="hv-gantt__row"><span class="hv-gantt__who">P-11</span>
+            <div class="hv-gantt__track">
+              <span class="hv-gantt__bar" data-kind="printing" style="left:0;width:70%">ORD-2146 · STATUE_XL</span>
+              <span class="hv-gantt__now" style="left:4%"></span>
+            </div>
+          </div>
+          <div class="hv-gantt__row"><span class="hv-gantt__who">P-12</span>
+            <div class="hv-gantt__track">
+              <span class="hv-gantt__bar" data-kind="printing" style="left:0;width:36%">ORD-2144 · PANEL_C</span>
+              <span class="hv-gantt__now" style="left:4%"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hv-panel__foot">
+        <div class="hv-legend">
+          <span><i style="background:var(--hv-live)"></i> Печатается</span>
+          <span><i style="border:1px dashed var(--hv-line)"></i> В очереди</span>
+          <span><i style="background:var(--hv-warn)"></i> Обслуживание</span>
+          <span><i style="background:var(--hv-bad)"></i> Заблокировано</span>
+        </div>
+        <span>ПЕРВАЯ СВОБОДНАЯ МАШИНА :: P-03 В 21:10</span>
+      </div>
+    </section>
+
+    <!-- ======================================= MATERIALS + ORDER FUNNEL -->
+    <section class="hv-cols hv-cols--2">
+
+      <div class="hv-panel">
+        <div class="hv-panel__head">
+          <span>Филамент в работе</span>
+          <span class="hv-panel__aside">ЗАГРУЖЕНО · СКЛАД · ЗАРЕЗЕРВИРОВАНО</span>
+        </div>
+        <div class="hv-panel__body hv-stack">
+          <div class="hv-legend">
+            <span><i style="background:var(--hv-live)"></i> В принтерах</span>
+            <span><i style="background:var(--hv-text-faint)"></i> На складе</span>
+            <span><i style="background:repeating-linear-gradient(45deg,var(--hv-warn) 0 3px,transparent 3px 6px)"></i> Зарезервировано очередью</span>
+          </div>
+
+          <div>
+            <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-1)">
+              <span class="hv-h"><span class="hv-ams" style="display:inline-flex;vertical-align:-1px"><i style="--hv-slot:#1b1b1e"></i></span> PETG-CF · чёрный</span>
+              <span class="hv-mono">4 200 г</span>
+            </div>
+            <div class="hv-stack-bar">
+              <span data-part="loaded" style="width:20%"></span>
+              <span data-part="stock" style="width:52%"></span>
+              <span data-part="committed" style="width:22%"></span>
+            </div>
+            <div class="hv-micro" style="margin-top:2px">P-01 · P-09 · P-10 · ХВАТИТ НА 9 ЗАКАЗОВ</div>
+          </div>
+
+          <div>
+            <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-1)">
+              <span class="hv-h"><span class="hv-ams" style="display:inline-flex;vertical-align:-1px"><i style="--hv-slot:#d64545"></i></span> PETG-CF · красный</span>
+              <span class="hv-mono hv-warn">340 г</span>
+            </div>
+            <div class="hv-stack-bar">
+              <span data-part="loaded" style="width:34%"></span>
+              <span data-part="committed" style="width:58%"></span>
+            </div>
+            <div class="hv-micro hv-warn" style="margin-top:2px">P-01 · СКЛАД ПУСТ · ОЧЕРЕДЬ ЗАБРАЛА 58% ОСТАТКА</div>
+          </div>
+
+          <div>
+            <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-1)">
+              <span class="hv-h"><span class="hv-ams" style="display:inline-flex;vertical-align:-1px"><i style="--hv-slot:#f2f2f0"></i></span> PLA Basic · белый</span>
+              <span class="hv-mono">12 800 г</span>
+            </div>
+            <div class="hv-stack-bar">
+              <span data-part="loaded" style="width:12%"></span>
+              <span data-part="stock" style="width:74%"></span>
+              <span data-part="committed" style="width:9%"></span>
+            </div>
+            <div class="hv-micro" style="margin-top:2px">P-02 · P-11 · ХВАТИТ НА 31 ЗАКАЗ</div>
+          </div>
+
+          <div>
+            <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-1)">
+              <span class="hv-h"><span class="hv-ams" style="display:inline-flex;vertical-align:-1px"><i style="--hv-slot:#e0a53c"></i></span> PLA Silk · золото</span>
+              <span class="hv-mono">3 400 г</span>
+            </div>
+            <div class="hv-stack-bar">
+              <span data-part="loaded" style="width:24%"></span>
+              <span data-part="stock" style="width:61%"></span>
+              <span data-part="committed" style="width:6%"></span>
+            </div>
+            <div class="hv-micro" style="margin-top:2px">P-03 · ХВАТИТ НА 12 ЗАКАЗОВ</div>
+          </div>
+
+          <div>
+            <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-1)">
+              <span class="hv-h"><span class="hv-ams" style="display:inline-flex;vertical-align:-1px"><i data-empty></i></span> TPU 95A · чёрный</span>
+              <span class="hv-mono hv-bad">нет в наличии</span>
+            </div>
+            <div class="hv-stack-bar">
+              <span data-part="committed" style="width:100%"></span>
+            </div>
+            <div class="hv-micro hv-bad" style="margin-top:2px">ORD-2152 ЖДЁТ ЗАГРУЗКИ · ПОСТАВКА 12.08</div>
+          </div>
+        </div>
+        <div class="hv-panel__foot">
+          <span>ЗАМОРОЖЕНО В ОСТАТКАХ :: 186 400 ₽</span>
+          <a class="hv-mono" href="materials.html" style="color:inherit;text-decoration:none">СКЛАД ›</a>
+        </div>
+      </div>
+
+      <div class="hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Заказы по этапам</span><span class="hv-panel__aside">18 В РАБОТЕ</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <div class="hv-funnel">
+              <div class="hv-funnel__row" data-tone="warn"><span class="hv-funnel__k">Ожидает оплаты</span><span class="hv-funnel__bar"><i style="width:11%"></i></span><span class="hv-funnel__n">2</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Подготовка</span><span class="hv-funnel__bar"><i style="width:6%"></i></span><span class="hv-funnel__n">1</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">В очереди</span><span class="hv-funnel__bar"><i style="width:17%"></i></span><span class="hv-funnel__n">3</span></div>
+              <div class="hv-funnel__row" data-tone="live"><span class="hv-funnel__k">Печатается</span><span class="hv-funnel__bar"><i style="width:39%"></i></span><span class="hv-funnel__n">7</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Постобработка</span><span class="hv-funnel__bar"><i style="width:22%"></i></span><span class="hv-funnel__n">4</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Контроль</span><span class="hv-funnel__bar"><i style="width:6%"></i></span><span class="hv-funnel__n">1</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Упаковка</span><span class="hv-funnel__bar"><i style="width:17%"></i></span><span class="hv-funnel__n">3</span></div>
+              <div class="hv-funnel__row" data-tone="good"><span class="hv-funnel__k">Отправлен</span><span class="hv-funnel__bar"><i style="width:6%"></i></span><span class="hv-funnel__n">1</span></div>
+              <div class="hv-funnel__row" data-tone="bad"><span class="hv-funnel__k">Пересмотр цены</span><span class="hv-funnel__bar"><i style="width:6%"></i></span><span class="hv-funnel__n">1</span></div>
+            </div>
+          </div>
+          <div class="hv-panel__foot"><span>УЗКОЕ МЕСТО :: ПЕЧАТЬ</span><span>СРЕДНИЙ ЦИКЛ 3.1 СУТ</span></div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Загрузка по часам</span><span class="hv-panel__aside">7 СУТОК × 24 Ч</span></div>
+          <div class="hv-panel__body hv-heat-scroll">
+            <div class="hv-heat">
+              <div class="hv-heat__row"><span class="hv-heat__d">ПН</span>
+                <i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i>
+              </div>
+              <div class="hv-heat__row"><span class="hv-heat__d">ВТ</span>
+                <i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.6"></i>
+              </div>
+              <div class="hv-heat__row"><span class="hv-heat__d">СР</span>
+                <i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i>
+              </div>
+              <div class="hv-heat__row"><span class="hv-heat__d">ЧТ</span>
+                <i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.7"></i>
+              </div>
+              <div class="hv-heat__row"><span class="hv-heat__d">ПТ</span>
+                <i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 1"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.9"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.8"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i>
+              </div>
+              <div class="hv-heat__row"><span class="hv-heat__d">СБ</span>
+                <i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i>
+              </div>
+              <div class="hv-heat__row"><span class="hv-heat__d">ВС</span>
+                <i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.3"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.4"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.5"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.6"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i><i class="hv-heat__c" style="--v: 0.7"></i>
+              </div>
+            </div>
+          </div>
+          <div class="hv-panel__foot">
+            <span>00 — 23 Ч · ЯРЧЕ = ВЫШЕ ЗАГРУЗКА</span>
+            <span>НОЧНАЯ ЗАГРУЗКА 61%</span>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hv-panel__foot" style="border-top:1px solid var(--hv-line)">
+    <span>FARM.OVERVIEW · PRINTORIAN OS ./v2.0</span>
+    <span data-clock></span>
+  </footer>
+</div>
+
+<!-- ======================================= printer + task detail popup -->
+<div class="hv-overlay" id="p-detail" hidden>
+  <div class="hv-modal" role="dialog" aria-modal="true" aria-labelledby="pd-t">
+    <div class="hv-chrome" style="position:static;padding:var(--hv-3) var(--hv-3) 0">
+      <div class="hv-chrome__row">
+        <span class="hv-tab" id="pd-t">Принтер :: P-01</span>
+        <div class="hv-meta">
+          <span>SERIAL :: <strong>01P00A382900412</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>LAN :: <strong>10.0.4.21</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>ЦЕХ A · СТОЙКА 1</span>
+        </div>
+        <div class="hv-os">
+          <span class="hv-os__label">BAMBU LAB X1 CARBON</span>
+        <button class="hv-os__x" type="button" data-close aria-label="Закрыть">✕</button>
+        </div>
+      </div>
+      <div class="hv-path">
+        <div class="hv-path__crumbs">C:/PRINTORIAN/PRODUCTION/FLEET/P-01.NODE</div>
+        <div class="hv-path__status">STATUS :: <b>PRINTING</b></div>
+      </div>
+    </div>
+
+    <div class="hv-modal__body hv-stack">
+
+      <!-- current task ------------------------------------------------- -->
+      <section class="hv-frame hv-frame--live">
+        <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-2)">
+          <span class="hv-h hv-live">Текущее задание</span>
+          <span class="hv-micro">СЛОЙ 412 / 654</span>
+        </div>
+        <div class="hv-cols hv-cols--2">
+          <div>
+            <div class="hv-h" style="font-size:var(--hv-size-lead)">ORD-2147 · BRACKET_V4.3MF</div>
+            <div class="hv-micro" style="margin-top:var(--hv-1)">
+              ЗАКАЗЧИК :: BOSS@PRINTORIAN.EXAMPLE · SILVER
+            </div>
+            <div class="hv-meter-row" style="margin-top:var(--hv-3)">
+              <div class="hv-meter" data-tone="live"><div class="hv-meter__fill" style="width:63%"></div></div>
+              <span class="hv-meter-row__pct">63%</span>
+            </div>
+            <div class="hv-micro" style="margin-top:var(--hv-2)">
+              НАЧАТО 14:22 · ОСТАЛОСЬ 7 Ч 26 М · ГОТОВО К 21:48
+            </div>
+          </div>
+          <ul class="hv-leaders">
+            <li class="hv-leader"><span class="hv-leader__k">Количество</span><span class="hv-leader__fill"></span><span class="hv-leader__v">10 шт</span></li>
+            <li class="hv-leader"><span class="hv-leader__k">Материал</span><span class="hv-leader__fill"></span><span class="hv-leader__v">PETG-CF</span></li>
+            <li class="hv-leader"><span class="hv-leader__k">Цвета</span><span class="hv-leader__fill"></span><span class="hv-leader__v">Чёрный · Красный</span></li>
+            <li class="hv-leader"><span class="hv-leader__k">Расход материала</span><span class="hv-leader__fill"></span><span class="hv-leader__v">475 г</span></li>
+            <li class="hv-leader"><span class="hv-leader__k">Сумма заказа</span><span class="hv-leader__fill"></span><span class="hv-leader__v">5 776 ₽</span></li>
+            <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Обещанный срок</span><span class="hv-leader__fill"></span><span class="hv-leader__v">в графике</span></li>
+          </ul>
+        </div>
+        <div class="hv-row" style="margin-top:var(--hv-3)">
+          <a class="hv-btn" href="cabinet.html">Открыть заказ</a>
+          <button class="hv-btn" type="button">Пауза</button>
+          <button class="hv-btn hv-btn--danger" type="button">Остановить</button>
+        </div>
+      </section>
+
+      <!-- live telemetry ------------------------------------------------ -->
+      <div class="hv-grid hv-grid--4">
+        <div class="hv-frame hv-stat"><span class="hv-label">Сопло</span><span class="hv-stat__v">255<small> °C</small></span></div>
+        <div class="hv-frame hv-stat"><span class="hv-label">Стол</span><span class="hv-stat__v">70<small> °C</small></span></div>
+        <div class="hv-frame hv-stat"><span class="hv-label">Камера</span><span class="hv-stat__v">41<small> °C</small></span></div>
+        <div class="hv-frame hv-stat"><span class="hv-label">Скорость</span><span class="hv-stat__v">118<small> %</small></span></div>
+      </div>
+
+      <div class="hv-cols hv-cols--2">
+        <!-- AMS ---------------------------------------------------------- -->
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Слоты AMS</span><span class="hv-panel__aside">ЗАГРУЖЕННЫЙ ФИЛАМЕНТ</span></div>
+          <div class="hv-panel__body--none">
+            <table class="hv-table">
+              <thead><tr><th>Слот</th><th>Материал</th><th>Партия</th><th data-align="end">Остаток</th></tr></thead>
+              <tbody>
+                <tr><td><span class="hv-ams"><i style="--hv-slot:#1b1b1e"></i></span> A1</td><td>PETG-CF чёрный</td><td class="hv-table__id">LOT.4471</td><td data-align="end">820 г</td></tr>
+                <tr><td><span class="hv-ams"><i style="--hv-slot:#f2f2f0"></i></span> A2</td><td>PETG-CF белый</td><td class="hv-table__id">LOT.4468</td><td data-align="end">470 г</td></tr>
+                <tr><td><span class="hv-ams"><i style="--hv-slot:#d64545" data-low></i></span> A3</td><td>PETG-CF красный</td><td class="hv-table__id">LOT.4402</td><td data-align="end" class="hv-warn">340 г</td></tr>
+                <tr><td><span class="hv-ams"><i data-empty></i></span> A4</td><td class="hv-faint">Пусто</td><td class="hv-faint">—</td><td data-align="end" class="hv-faint">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hv-panel__foot"><span>ЗАДАНИЕ ИСПОЛЬЗУЕТ A1 И A3</span><span class="hv-warn">A3 НИЖЕ ПОРОГА</span></div>
+        </section>
+
+        <!-- machine ------------------------------------------------------ -->
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Машина</span><span class="hv-panel__aside">РЕСУРС И ЭКОНОМИКА</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Наработка</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2 418 / 10 000 ч</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Загрузка за 30 дней</span><span class="hv-leader__fill"></span><span class="hv-leader__v">71%</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Удачных печатей</span><span class="hv-leader__fill"></span><span class="hv-leader__v">96.2%</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Амортизация</span><span class="hv-leader__fill"></span><span class="hv-leader__v">41.00 ₽/ч</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Заработано за месяц</span><span class="hv-leader__fill"></span><span class="hv-leader__v">148 200 ₽</span></li>
+              <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Замена сопла через</span><span class="hv-leader__fill"></span><span class="hv-leader__v">182 ч</span></li>
+            </ul>
+            <hr class="hv-hr">
+            <div class="hv-slab"><span>Окупаемость</span><span class="hv-slab__v">24%</span></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- queue on this machine ----------------------------------------- -->
+      <section class="hv-panel">
+        <div class="hv-panel__head"><span>Очередь на этой машине</span><span class="hv-panel__aside">2 ЗАДАНИЯ</span></div>
+        <div class="hv-panel__body--none">
+          <table class="hv-table">
+            <thead><tr><th>Заказ</th><th>Модель</th><th>Материал</th><th>Начало</th><th data-align="end">Длительность</th></tr></thead>
+            <tbody>
+              <tr data-activatable><td class="hv-table__id">ORD-2151</td><td>CLIP_A · 25 шт</td><td>PETG-CF чёрный</td><td>21:48</td><td data-align="end">6 ч 10 м</td></tr>
+              <tr data-activatable><td class="hv-table__id">ORD-2157</td><td>MOUNT_S · 4 шт</td><td>PETG-CF чёрный</td><td>04:00 +1</td><td data-align="end">2 ч 40 м</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="hv-panel__foot">
+      <span>ДРАЙВЕР BAMBU.LAN · ПОСЛЕДНИЙ ОТВЕТ 0.4 С · ТЕЛЕМЕТРИЯ КАЖДЫЕ 5 С</span>
+      <button class="hv-btn hv-btn--sm" type="button" data-close>Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

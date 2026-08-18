@@ -1,0 +1,25 @@
+/* ============================================================================
+   The Harvester visual language — one import for both apps.
+   ----------------------------------------------------------------------------
+   Order matters: tokens define the variables everything else references, so a
+   component file loaded first would resolve every `var(--hv-*)` to nothing.
+
+   `screens.css` (kit sections 15–20) carries the journal, settings, dashboard,
+   catalogue, account and shop-floor components. It used to be omitted here on
+   the grounds that it styles screens which do not exist yet — but an unimported
+   stylesheet is one nobody can see drift, and every rule in it keys off a class
+   no current screen uses, so loading it changes nothing and keeps it honest.
+
+   `realm.css` is last of the component files, because it deliberately overrides
+   the base appbar and ground: it is the public/control split, and it can only
+   do its job from on top.
+   ========================================================================= */
+
+@import './fonts.css';
+@import './tokens.css';
+@import './system.css';
+@import './menu.css';
+@import './components.css';
+@import './screens.css';
+@import './tabs.css';
+@import './realm.css';

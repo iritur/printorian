@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Постобработка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Цех :: Постобработка</span>
+      <div class="hv-meta">
+        <span>ПОСТ :: <strong>PP-01</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>СМЕНА :: <strong>ДНЕВНАЯ · 09:00–21:00</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ОПЕРАТОР :: <strong>FLOOR@PRINTORIAN</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/PRODUCTION/POSTPROCESS/QUEUE</div>
+      <div class="hv-path__status">ПОТОК СОБЫТИЙ :: <b>ONLINE</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="dashboard.html">Сводка</a>
+      <a class="hv-appbar__link" href="orders.html">Заказы</a>
+      <a class="hv-appbar__link" href="fleet.html">Принтеры</a>
+      <a class="hv-appbar__link" href="postproduction.html" aria-current="page">Постобработка</a>
+      <a class="hv-appbar__link" href="packaging.html">Упаковка</a>
+      <a class="hv-appbar__link" href="service.html">Сервис</a>
+      <a class="hv-appbar__link" href="store.html">Склад</a>
+      <a class="hv-appbar__link" href="purchasing.html">Закупки</a>
+      <a class="hv-appbar__link" href="logistics.html">Логистика</a>
+      <a class="hv-appbar__link" href="settings.html">Настройки</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">АС</span>a.smirnov@printorian</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main hv-stack hv-stack--4">
+
+    <!-- ================================================== shift indicators -->
+    <div class="hv-grid hv-grid--4">
+      <div class="hv-frame hv-kpi" data-tone="live">
+        <span class="hv-label">В очереди на пост</span>
+        <span class="hv-kpi__v hv-live">7</span>
+        <span class="hv-micro">4 ШЛИФОВКА · 2 ГРУНТ · 1 ОКРАСКА</span>
+        <span class="hv-kpi__foot"><span>СРОЧНЫХ</span><span class="hv-bad">2</span></span>
+      </div>
+      <div class="hv-frame hv-kpi">
+        <span class="hv-label">Сделано за смену</span>
+        <span class="hv-kpi__v">11 <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+3</span></span>
+        <span class="hv-micro">НОРМА СМЕНЫ 12 · ОСТАЛОСЬ 4 Ч</span>
+        <span class="hv-kpi__foot"><span>ВЫПОЛНЕНИЕ</span><span class="hv-hot">92%</span></span>
+      </div>
+      <div class="hv-frame hv-kpi" data-tone="good">
+        <span class="hv-label">Качество</span>
+        <span class="hv-kpi__v hv-good">98.4<small>%</small></span>
+        <span class="hv-micro">1 ВОЗВРАТ С КОНТРОЛЯ ИЗ 62</span>
+        <span class="hv-kpi__foot"><span>ЗА 30 ДНЕЙ</span><span>97.1%</span></span>
+      </div>
+      <div class="hv-frame hv-kpi">
+        <span class="hv-label">Темп к норме</span>
+        <span class="hv-kpi__v">104<small>%</small> <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+4</span></span>
+        <span class="hv-micro">ФАКТ 6.2 МИН ПРОТИВ НОРМЫ 6.5</span>
+        <span class="hv-kpi__foot"><span>СРЕДНЕЕ ПО ЦЕХУ</span><span>99%</span></span>
+      </div>
+    </div>
+
+    <!-- ============================================================ board -->
+    <section class="hv-panel">
+      <div class="hv-panel__head">
+        <span>Задания смены</span>
+        <span class="hv-panel__aside">ПОРЯДОК ПО СРОКУ ЗАКАЗА · НАЖМИТЕ ЗАДАНИЕ</span>
+      </div>
+      <div class="hv-panel__body">
+        <div class="hv-board">
+
+          <div class="hv-col">
+            <div class="hv-col__h"><span>Ожидает</span><span class="hv-col__n">4</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="rush" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2148</span><span class="hv-due" data-state="late">ПРОСРОЧКА 40 М</span></span>
+                <span class="hv-task__t">Шлифовка · PANEL_C</span>
+                <span class="hv-task__m"><span>ORD-2144</span><span>6 ШТ</span><span>НОРМА 38 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="rush" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2151</span><span class="hv-due" data-state="soon">ЧЕРЕЗ 1 Ч 10 М</span></span>
+                <span class="hv-task__t">Окраска · ROVER_M</span>
+                <span class="hv-task__m"><span>ORD-2150</span><span>1 ШТ</span><span>НОРМА 1 Ч 36 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2153</span><span class="hv-due" data-state="ok">ЗАВТРА 12:00</span></span>
+                <span class="hv-task__t">Шлифовка · CLIP_A</span>
+                <span class="hv-task__m"><span>ORD-2151</span><span>25 ШТ</span><span>НОРМА 52 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2154</span><span class="hv-due" data-state="ok">13.08 18:00</span></span>
+                <span class="hv-task__t">Грунтовка · HOUSING_B</span>
+                <span class="hv-task__m"><span>ORD-2149</span><span>4 ШТ</span><span>НОРМА 44 М</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col hv-col--wip">
+            <div class="hv-col__h"><span>В работе</span><span class="hv-col__n">1</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="live" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2147</span><span class="hv-due" data-state="ok">14 М ИЗ 38 М</span></span>
+                <span class="hv-task__t">Шлифовка · BRACKET_V4</span>
+                <span class="hv-task__m"><span>ORD-2147</span><span>10 ШТ</span><span>ШАГ 3 ИЗ 6</span></span>
+                <span class="hv-meter hv-meter--thin" style="margin-top:var(--hv-1)"><span class="hv-meter__fill" style="width:37%"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col">
+            <div class="hv-col__h"><span>Сушка · выдержка</span><span class="hv-col__n">2</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="soon" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2142</span><span class="hv-due" data-state="soon">ГОТОВО ЧЕРЕЗ 22 М</span></span>
+                <span class="hv-task__t">Грунт сохнет · VASE_T</span>
+                <span class="hv-task__m"><span>ORD-2140</span><span>3 ШТ</span><span>ВЫДЕРЖКА 2 Ч</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2139</span><span class="hv-due" data-state="ok">ГОТОВО В 22:40</span></span>
+                <span class="hv-task__t">Краска сохнет · MOUNT_S</span>
+                <span class="hv-task__m"><span>ORD-2138</span><span>2 ШТ</span><span>ВЫДЕРЖКА 6 Ч</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col hv-col--done">
+            <div class="hv-col__h"><span>На контроль</span><span class="hv-col__n">3</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="normal" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2136</span><span>17:42</span></span>
+                <span class="hv-task__t">Шлифовка · GEAR_SET</span>
+                <span class="hv-task__m"><span>ORD-2128</span><span>32 М · НОРМА 35 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2134</span><span>16:05</span></span>
+                <span class="hv-task__t">Окраска · TRAY_6</span>
+                <span class="hv-task__m"><span>ORD-2126</span><span>1 Ч 48 М · НОРМА 1 Ч 40 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2131</span><span>14:20</span></span>
+                <span class="hv-task__t">Шлифовка · HOOK_H</span>
+                <span class="hv-task__m"><span>ORD-2124</span><span>26 М · НОРМА 30 М</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col">
+            <div class="hv-col__h" style="color:var(--hv-bad)"><span>Возврат с контроля</span><span class="hv-col__n">1</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="rush" data-open="t-detail">
+                <span class="hv-task__top"><span>PP-2129</span><span class="hv-due" data-state="late">ПОВТОР</span></span>
+                <span class="hv-task__t">Окраска · STATUE_XL</span>
+                <span class="hv-task__m"><span>ORD-2146</span><span class="hv-bad">ПОДТЁК НА ГРАНИ</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hv-panel__foot">
+        <span>ЗАДАНИЕ СОЗДАЁТСЯ АВТОМАТИЧЕСКИ, КОГДА ПРИНТЕР ЗАКОНЧИЛ ПЕЧАТЬ</span>
+        <span>ОБНОВЛЕНО :: <span data-clock></span></span>
+      </div>
+    </section>
+
+    <!-- ============================================== analytics + people -->
+    <section class="hv-cols hv-cols--2">
+
+      <div class="hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Операции за 30 дней</span><span class="hv-panel__aside">ФАКТ ПРОТИВ НОРМЫ</span></div>
+          <div class="hv-panel__body--none">
+            <table class="hv-table">
+              <thead><tr><th>Операция</th><th data-align="end">Сделано</th><th data-align="end">Норма</th><th data-align="end">Факт</th><th>Темп</th><th data-align="end">Возвраты</th></tr></thead>
+              <tbody>
+                <tr><td>Шлифовка</td><td data-align="end">148</td><td data-align="end">0.40 ч</td><td data-align="end">0.37 ч</td>
+                  <td><span class="hv-blocks" data-tone="good"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><b>9</b></span></td>
+                  <td data-align="end">2</td></tr>
+                <tr><td>Грунтовка</td><td data-align="end">64</td><td data-align="end">0.70 ч</td><td data-align="end">0.71 ч</td>
+                  <td><span class="hv-blocks"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><i></i><i></i><b>7</b></span></td>
+                  <td data-align="end">1</td></tr>
+                <tr><td>Окраска</td><td data-align="end">31</td><td data-align="end">1.60 ч</td><td data-align="end">1.78 ч</td>
+                  <td><span class="hv-blocks" data-tone="warn"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><i></i><i></i><i></i><i></i><b>5</b></span></td>
+                  <td data-align="end" class="hv-warn">4</td></tr>
+                <tr><td>Удаление поддержек</td><td data-align="end">203</td><td data-align="end">0.15 ч</td><td data-align="end">0.12 ч</td>
+                  <td><span class="hv-blocks" data-tone="good"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><b>10</b></span></td>
+                  <td data-align="end">0</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hv-panel__foot">
+            <span>ОКРАСКА ОТСТАЁТ ОТ НОРМЫ НА 11% — ПЕРЕСМОТРЕТЬ НОРМАТИВ ИЛИ ОБУЧИТЬ</span>
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Смены</span><span class="hv-panel__aside">ВЫРАБОТКА ПО ДНЯМ</span></div>
+          <div class="hv-panel__body">
+            <svg class="hv-spark" viewBox="0 0 600 60" preserveAspectRatio="none" role="img" aria-label="Выработка по сменам">
+              <polygon points="0,60 0,38 43,32 86,40 129,26 172,34 215,22 258,30 301,18 344,28 387,20 430,14 473,24 516,16 559,10 600,18 600,60"/>
+              <polyline points="0,38 43,32 86,40 129,26 172,34 215,22 258,30 301,18 344,28 387,20 430,14 473,24 516,16 559,10 600,18"/>
+            </svg>
+            <div class="hv-row hv-row--between" style="margin-top:var(--hv-2)">
+              <span class="hv-micro">14 СМЕН · СРЕДНЯЯ ВЫРАБОТКА 11.4</span>
+              <span class="hv-micro">ЛУЧШАЯ :: 07.08 · 16 ЗАДАНИЙ</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="hv-stack">
+        <!-- badges: the accumulated evaluation ------------------------- -->
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Мои отметки</span><span class="hv-panel__aside">A. СМИРНОВ · 5 ИЗ 8</span></div>
+          <div class="hv-panel__body">
+            <div class="hv-badges">
+              <div class="hv-badge" data-tier="3">
+                <span class="hv-badge__g">100</span>
+                <span class="hv-badge__k">Сто смен</span>
+                <span class="hv-badge__n">104 СМЕНЫ</span>
+              </div>
+              <div class="hv-badge" data-tier="3">
+                <span class="hv-badge__g">Q</span>
+                <span class="hv-badge__k">Без возвратов</span>
+                <span class="hv-badge__n">31 ДЕНЬ ПОДРЯД</span>
+              </div>
+              <div class="hv-badge" data-tier="2">
+                <span class="hv-badge__g">↑</span>
+                <span class="hv-badge__k">Быстрее нормы</span>
+                <span class="hv-badge__n">104% ТЕМП</span>
+              </div>
+              <div class="hv-badge" data-tier="2">
+                <span class="hv-badge__g">ШЛ</span>
+                <span class="hv-badge__k">Мастер шлифовки</span>
+                <span class="hv-badge__n">148 ОПЕРАЦИЙ</span>
+              </div>
+              <div class="hv-badge" data-tier="1">
+                <span class="hv-badge__g">ОК</span>
+                <span class="hv-badge__k">Окраска</span>
+                <span class="hv-badge__n">31 ИЗ 50</span>
+              </div>
+              <div class="hv-badge" data-tier="0">
+                <span class="hv-badge__g">★</span>
+                <span class="hv-badge__k">Наставник</span>
+                <span class="hv-badge__n">НУЖНО ОБУЧИТЬ 1</span>
+              </div>
+            </div>
+            <p class="hv-micro" style="margin-top:var(--hv-3)">
+              ОТМЕТКИ НАЧИСЛЯЮТСЯ АВТОМАТИЧЕСКИ ПО ФАКТУ РАБОТЫ · РУЧНОГО НАЗНАЧЕНИЯ НЕТ
+            </p>
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Цех сегодня</span><span class="hv-panel__aside">3 ОПЕРАТОРА В СМЕНЕ</span></div>
+          <div class="hv-panel__body--none">
+            <div class="hv-score">
+              <span class="hv-avatar hv-avatar--sm">АС</span>
+              <span>
+                <span class="hv-score__n">А. Смирнов <span class="hv-micro">· ВЫ</span></span>
+                <span class="hv-score__m">11 ЗАДАНИЙ · ТЕМП 104% · ВОЗВРАТОВ 0</span>
+              </span>
+              <span class="hv-blocks" data-tone="good"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><b>9.2</b></span>
+            </div>
+            <div class="hv-score">
+              <span class="hv-avatar hv-avatar--sm">МК</span>
+              <span>
+                <span class="hv-score__n">М. Ковалёв</span>
+                <span class="hv-score__m">9 ЗАДАНИЙ · ТЕМП 96% · ВОЗВРАТОВ 1</span>
+              </span>
+              <span class="hv-blocks"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><i></i><b>8.1</b></span>
+            </div>
+            <div class="hv-score">
+              <span class="hv-avatar hv-avatar--sm">ЕЛ</span>
+              <span>
+                <span class="hv-score__n">Е. Лапина <span class="hv-micro">· СТАЖЁР</span></span>
+                <span class="hv-score__m">5 ЗАДАНИЙ · ТЕМП 78% · ВОЗВРАТОВ 0</span>
+              </span>
+              <span class="hv-blocks" data-tone="warn"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><i></i><i></i><i></i><b>6.4</b></span>
+            </div>
+          </div>
+          <div class="hv-panel__foot">
+            <span>ОЦЕНКА :: ТЕМП × КАЧЕСТВО × ОБЪЁМ</span>
+            <span>СТАЖЁРУ НОРМА СНИЖЕНА НА 30%</span>
+          </div>
+        </section>
+
+        <section class="hv-frame" style="--ink:var(--hv-warn)">
+          <span class="hv-h hv-warn">Расходники поста</span>
+          <ul class="hv-leaders" style="margin-top:var(--hv-2)">
+            <li class="hv-leader"><span class="hv-leader__k">Шкурка P400</span><span class="hv-leader__fill"></span><span class="hv-leader__v">28 листов</span></li>
+            <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Грунт-спрей серый</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2 баллона</span></li>
+            <li class="hv-leader" data-tone="bad"><span class="hv-leader__k">Перчатки нитрил M</span><span class="hv-leader__fill"></span><span class="hv-leader__v">закончились</span></li>
+            <li class="hv-leader"><span class="hv-leader__k">Изопропанол</span><span class="hv-leader__fill"></span><span class="hv-leader__v">3.4 л</span></li>
+          </ul>
+          <a class="hv-btn hv-btn--block" href="purchasing.html" style="margin-top:var(--hv-3)">Заявка на закупку</a>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hv-panel__foot" style="border-top:1px solid var(--hv-line)">
+    <span>POSTPROCESS.QUEUE · PRINTORIAN OS ./v2.0</span>
+    <span data-clock></span>
+  </footer>
+</div>
+
+<!-- ================================================= task + instruction -->
+<div class="hv-overlay" id="t-detail" hidden>
+  <div class="hv-modal" role="dialog" aria-modal="true" aria-labelledby="td-t">
+    <div class="hv-chrome" style="position:static;padding:var(--hv-3) var(--hv-3) 0">
+      <div class="hv-chrome__row">
+        <span class="hv-tab" id="td-t">Задание :: PP-2147</span>
+        <div class="hv-meta">
+          <span>ЗАКАЗ :: <strong>ORD-2147</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>ОПЕРАЦИЯ :: <strong>POSTPROCESS.SANDED</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>НОРМА :: <strong>38 МИН</strong></span>
+        </div>
+        <div class="hv-os">
+          <span class="hv-os__label">В РАБОТЕ · 14 МИН</span>
+        <button class="hv-os__x" type="button" data-close aria-label="Закрыть">✕</button>
+        </div>
+      </div>
+      <div class="hv-path">
+        <div class="hv-path__crumbs">C:/PRINTORIAN/PRODUCTION/POSTPROCESS/PP-2147</div>
+        <div class="hv-path__status">STATUS :: <b>IN PROGRESS</b></div>
+      </div>
+    </div>
+
+    <div class="hv-modal__body hv-stack">
+
+      <div class="hv-vs">
+        <div><span class="hv-vs__k">Норма</span><span class="hv-vs__v">38:00</span></div>
+        <div><span class="hv-vs__k">Прошло</span><span class="hv-vs__v hv-live">14:12</span></div>
+        <div><span class="hv-vs__k">Прогноз</span><span class="hv-vs__v hv-good">35:40</span></div>
+      </div>
+
+      <div class="hv-cols hv-cols--2">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Что делаем</span><span class="hv-panel__aside">BRACKET_V4 · 10 ШТ</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Материал</span><span class="hv-leader__fill"></span><span class="hv-leader__v">PETG-CF</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Цвета</span><span class="hv-leader__fill"></span><span class="hv-leader__v">Чёрный · Красный</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Габарит</span><span class="hv-leader__fill"></span><span class="hv-leader__v">128 × 64.5 × 22.4 мм</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Снято с принтера</span><span class="hv-leader__fill"></span><span class="hv-leader__v">P-01 · 17:26</span></li>
+              <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Тонкие стенки</span><span class="hv-leader__fill"></span><span class="hv-leader__v">0.6 мм · 2 участка</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Срок заказа</span><span class="hv-leader__fill"></span><span class="hv-leader__v">11.08 18:00</span></li>
+            </ul>
+          </div>
+          <div class="hv-panel__foot"><span>ЗАКАЗЧИК ВЫБРАЛ :: ШЛИФОВКА</span><a class="hv-mono" href="cabinet.html" style="color:inherit;text-decoration:none">ЗАКАЗ ›</a></div>
+        </section>
+
+        <div class="hv-frame" style="padding:var(--hv-2)">
+          <div class="hv-model__view" style="aspect-ratio:4/3">
+            <span class="hv-model__tag hv-model__tag--tl">УЧАСТКИ ШЛИФОВКИ</span>
+            <svg viewBox="0 0 200 150" aria-label="Схема детали с участками обработки" role="img">
+              <path data-face d="M30 100 L100 60 L170 100 L100 140 Z"/>
+              <path data-edge d="M30 100 L100 60 L170 100 L100 140 Z"/>
+              <path data-edge d="M30 100 L30 62 L100 22 L170 62 L170 100"/>
+              <path data-edge d="M100 60 L100 22"/>
+              <path data-accent stroke-width="2.5" d="M62 81 L100 59 L138 81"/>
+              <path data-accent stroke-width="2.5" d="M30 82 L30 62"/>
+            </svg>
+            <span class="hv-model__tag hv-model__tag--br">ГОЛУБЫМ · ОБРАБОТАТЬ</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="hv-panel">
+        <div class="hv-panel__head"><span>Инструкция</span><span class="hv-panel__aside">ШАГ 3 ИЗ 6 · НОРМЫ НА ПАРТИЮ 10 ШТ</span></div>
+        <div class="hv-steps">
+          <div class="hv-step" data-done="true">
+            <span>
+              <span class="hv-step__t">Снять поддержки, проверить комплектность</span>
+              <span class="hv-step__d">10 деталей, каждая с маркировкой на нижней грани.</span>
+            </span>
+            <span class="hv-step__n">3 МИН<br>ФАКТ 3</span>
+          </div>
+          <div class="hv-step" data-done="true">
+            <span>
+              <span class="hv-step__t">Черновая шлифовка P240 по слоям</span>
+              <span class="hv-step__d">Только внешние грани. Движение вдоль слоя, не поперёк.</span>
+            </span>
+            <span class="hv-step__n">12 МИН<br>ФАКТ 11</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Чистовая шлифовка P400</span>
+              <span class="hv-step__d">Скруглить кромки радиусом ~0.3 мм. Проверять на просвет.</span>
+              <span class="hv-step__warn">
+                <b>Осторожно:</b> две стенки толщиной 0.6 мм — отмечены голубым на схеме.
+                Не давить, иначе продавите насквозь. Это причина 3 из 4 возвратов по этой модели.
+              </span>
+            </span>
+            <span class="hv-step__n">14 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Обеспылить сжатым воздухом</span>
+              <span class="hv-step__d">2 бар, дистанция 20 см.</span>
+            </span>
+            <span class="hv-step__n">2 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Протереть изопропанолом</span>
+              <span class="hv-step__d">Безворсовая салфетка. Дать высохнуть 3 минуты.</span>
+            </span>
+            <span class="hv-step__n">5 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Сфотографировать партию и передать на контроль</span>
+              <span class="hv-step__d">Снимок прикладывается к заказу и виден заказчику.</span>
+            </span>
+            <span class="hv-step__n">2 МИН</span>
+          </div>
+        </div>
+        <div class="hv-panel__foot">
+          <span>ИНСТРУКЦИЯ ВЕРСИИ 4.2 · ОБНОВЛЕНА 28.07.2026</span>
+          <span>ПРОШЛО 14:12 ИЗ 38:00</span>
+        </div>
+      </section>
+
+      <div class="hv-row">
+        <button class="hv-btn hv-btn--primary hv-btn--lg" type="button">Отметить шаг выполненным</button>
+        <button class="hv-btn" type="button">Пауза</button>
+        <span class="hv-spacer"></span>
+        <button class="hv-btn hv-btn--danger" type="button">Сообщить о браке</button>
+      </div>
+    </div>
+
+    <div class="hv-panel__foot">
+      <span>PP-2147 · ОПЕРАТОР A. СМИРНОВ · ПОСТ PP-01</span>
+      <button class="hv-btn hv-btn--sm" type="button" data-close>Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

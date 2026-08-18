@@ -1,0 +1,24 @@
+# Line endings are normalised to LF in the repository.
+#
+# This is not cosmetic. Development happens on Windows and production is Linux
+# containers (docs/INFRASTRUCTURE.md), and `core.autocrlf=true` would commit
+# CRLF into files that are executed there. `backend/scripts/backup.sh` is the
+# clearest casualty: its shebang becomes `#!/usr/bin/env bash\r`, and the kernel
+# then reports "no such file or directory" naming an interpreter that plainly
+# exists — an hour lost to a character nobody can see.
+* text=auto eol=lf
+
+# Windows-only launchers. cmd.exe is the one consumer that genuinely wants CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary. Never diffed, never normalised, never corrupted by an eol rule.
+*.stl   binary
+*.3mf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.dump  binary

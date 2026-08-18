@@ -1,0 +1,153 @@
+/* ============================================================================
+   PRINTORIAN OS — realms
+   ----------------------------------------------------------------------------
+   Two territories, one system.
+
+     data-realm="public"   ВИТРИНА  — what a customer sees. A product.
+     data-realm="control"  ПУЛЬТ    — what the farm runs on. An instrument.
+
+   The hard constraint: colour is already spoken for. In this system a coloured
+   pixel means machine state, so spending live/good/warn/bad on "which realm am
+   I in" would make every screen lie a little. The realms are separated on
+   channels that are still free:
+
+     1  TEXTURE     control carries a hazard rail down the left edge of every
+                    screen — diagonal hatch, no colour, unmistakable
+     2  GROUND      the graph paper is a machine-room floor, so it belongs to
+                    control only
+     3  DENSITY     public nav is larger and airier; control nav is tabular
+     4  BADGE       a realm chip in the bar naming the side you are on, and
+                    crossing over is a deliberate gesture through it
+
+   Both realms keep the black chrome and the C:/ path strip: the instrument
+   look is the brand, and a storefront that abandons it reads as a different
+   product rather than the same one facing outward.
+
+   The rail does most of the work: it is fixed to the viewport, so it sits in
+   peripheral vision no matter where the operator has scrolled, at any zoom, in
+   both themes — while every button, table and panel underneath stays identical.
+   ========================================================================= */
+
+:root {
+  /* The hazard hatch. A texture, not a colour — it survives both themes and
+     costs nothing semantically. */
+  --hv-hatch: repeating-linear-gradient(
+    45deg,
+    var(--hv-line) 0 5px,
+    transparent 5px 11px
+  );
+  --hv-rail-w: 14px;
+}
+
+/* ==========================================================================
+   ПУЛЬТ — control
+   ========================================================================== */
+
+/* The rail. Fixed to the viewport rather than the document, so it is present
+   in peripheral vision no matter how far the operator has scrolled. */
+[data-realm='control'] body::before {
+  content: '';
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: var(--hv-rail-w);
+  z-index: 90;
+  background-color: var(--hv-bg);
+  background-image: var(--hv-hatch);
+  border-right: 1px solid var(--hv-line);
+  pointer-events: none;
+}
+
+/* The rail's legend, set vertically. Decorative — the realm is also announced
+   in the chrome badge below, which is the copy a screen reader reaches. */
+[data-realm='control'] body::after {
+  content: 'ПУЛЬТ · CONTROL · ТРЕБУЕТСЯ РОЛЬ';
+  position: fixed;
+  left: 0;
+  bottom: var(--hv-5);
+  width: var(--hv-rail-w);
+  z-index: 91;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  text-align: left;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+  background: var(--hv-bg);
+  padding: var(--hv-3) 0;
+  pointer-events: none;
+}
+
+[data-realm='control'] .hv-shell { padding-left: var(--hv-rail-w); }
+
+/* The realm badge, injected into the chrome by menu.js. Hatched, so it reads
+   as the same object as the rail. */
+.hv-realm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-2);
+  padding: 0 var(--hv-3);
+  border: 1px solid var(--hv-line);
+  background-color: var(--hv-bg-inset);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.hv-realm:hover { border-color: var(--hv-text); color: var(--hv-text); }
+
+.hv-realm__flag {
+  width: 22px;
+  height: 12px;
+  flex: none;
+  border: 1px solid var(--hv-line);
+  background-image: var(--hv-hatch);
+}
+
+[data-realm='public'] .hv-realm__flag { background-image: none; background-color: var(--hv-bg-invert); }
+
+/* ==========================================================================
+   ВИТРИНА — public
+   ========================================================================== */
+
+/* No machine-room floor. */
+[data-realm='public'] body.hv-graph { background-image: none; }
+
+/* The masthead stays black in both realms — the instrument look is the brand,
+   and inverting it for customers made the storefront read as a different
+   product rather than the same one facing outward. Public keeps only the
+   density difference: a larger, airier nav.
+
+   The path strip stays in both realms too. `C:/PRINTORIAN/...` is part of the
+   identity, not internal plumbing, and customers recognise it as such. */
+
+[data-realm='public'] .hv-appbar { padding: var(--hv-3); gap: var(--hv-5); }
+
+[data-realm='public'] .hv-appbar__brand {
+  font-size: var(--hv-size-lead);
+  letter-spacing: 0.12em;
+}
+
+[data-realm='public'] .hv-appbar__nav { gap: var(--hv-2); }
+
+[data-realm='public'] .hv-appbar__link {
+  padding: var(--hv-1) var(--hv-3);
+  font-size: var(--hv-size-small);
+  letter-spacing: var(--hv-track-label);
+}
+
+/* ------------------------------------------------------------- responsive */
+
+@media (max-width: 900px) {
+  /* The rail narrows but never disappears — losing it on a phone would lose
+     the one signal that says "you are operating the farm right now". */
+  :root { --hv-rail-w: 8px; }
+  [data-realm='control'] body::after { display: none; }
+  [data-realm='public'] .hv-appbar { padding: var(--hv-2); gap: var(--hv-3); }
+  [data-realm='public'] .hv-appbar__brand { font-size: var(--hv-size-base); }
+}

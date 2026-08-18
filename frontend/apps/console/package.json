@@ -1,0 +1,19 @@
+{
+  "name": "@printorian/console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@printorian/api-client": "*",
+    "@printorian/events": "*",
+    "@printorian/ui": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

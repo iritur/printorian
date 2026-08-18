@@ -1,0 +1,89 @@
+/*
+ * The bridge from `--pr-*` to Harvester, for the length of Slice B.
+ *
+ * Every `--pr-*` token is now an alias onto its `--hv-*` counterpart. Nothing
+ * outside this file changes, and every existing rule — the DataTable below, both
+ * apps' stylesheets, every component not yet converted — picks up the Harvester
+ * palette at once.
+ *
+ * The alternative was worse. `system.css` sets `body` to true black, so the
+ * moment it is imported an app still styled in the old light values is a set of
+ * pale panels floating on black. Aliasing means there is no broken intermediate
+ * state: the language arrives coherently, and conversion to `.hv-*` classes
+ * happens component by component afterwards.
+ *
+ * **These aliases are deleted when Slice B closes.** Their existence is what
+ * "no `--pr-*` left in a shipped stylesheet" is measuring, so a token still
+ * pointing here is a conversion that has not happened yet.
+ *
+ * The dark-mode media query is gone with them: Harvester's two themes are Void
+ * and Paper, switched by `data-theme` on the root, not by the OS preference.
+ * Two theming mechanisms disagreeing is how a screen ends up half-inverted.
+ */
+
+:root {
+  --pr-bg: var(--hv-bg);
+  --pr-bg-raised: var(--hv-bg-raised);
+  --pr-bg-hover: var(--hv-bg-hover);
+  --pr-border: var(--hv-line);
+  --pr-text: var(--hv-text);
+  --pr-text-muted: var(--hv-text-dim);
+  /* Harvester has no decorative accent — colour means machine state. `live` is
+     the nearest honest match for "the thing you are pointing at". */
+  --pr-accent: var(--hv-live);
+
+  --pr-tone-neutral: var(--hv-text-dim);
+  --pr-tone-good: var(--hv-good);
+  --pr-tone-warn: var(--hv-warn);
+  --pr-tone-bad: var(--hv-bad);
+
+  --pr-space-1: var(--hv-1);
+  --pr-space-2: var(--hv-2);
+  --pr-space-3: var(--hv-3);
+  --pr-space-4: var(--hv-4);
+
+  /* Nothing is rounded in this system. */
+  --pr-radius: var(--hv-radius);
+  --pr-font: var(--hv-font-ui);
+  --pr-font-mono: var(--hv-font-mono);
+}
+
+/* ---------------------------------------------------------------------------
+   Bare controls, for the length of Slice B.
+
+   `system.css` resets `button { color: inherit }` but deliberately leaves the
+   background alone — Harvester expects `.hv-btn`. A bare `<button>` therefore
+   inherits near-white text onto the browser's default light button face, which
+   is white on white and completely unreadable. Both apps are full of bare
+   buttons that have not been converted yet.
+
+   These rules give an unconverted control a legible Harvester surface. They are
+   deliberately plain — no bracket corners, no tracking — so a converted `.hv-btn`
+   is visibly the finished thing and this is visibly not.
+
+   Deleted with the aliases above when the last bare control is converted.
+   ------------------------------------------------------------------------- */
+
+button:not([class*='hv-']),
+select:not([class*='hv-']),
+input:not([type='checkbox']):not([type='radio']):not([class*='hv-']),
+textarea:not([class*='hv-']) {
+  background-color: var(--hv-bg-inset);
+  color: var(--hv-text);
+  border: var(--hv-hair) solid var(--hv-line);
+  border-radius: 0;
+  padding: var(--hv-1) var(--hv-3);
+}
+
+button:not([class*='hv-']) { cursor: pointer; }
+
+button:not([class*='hv-']):hover,
+button:not([class*='hv-'])[aria-pressed='true'] {
+  background-color: var(--hv-bg-hover);
+  border-color: var(--hv-line-hot);
+}
+
+button:not([class*='hv-']):disabled {
+  color: var(--hv-text-faint);
+  cursor: not-allowed;
+}

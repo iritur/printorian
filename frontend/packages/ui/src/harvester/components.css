@@ -1,0 +1,172 @@
+/* ============================================================================
+   What the components need and the kit does not draw.
+   ----------------------------------------------------------------------------
+   The kit was authored as static screens, so it has no rules for the few
+   structural pieces that only exist once these are React components — a table
+   that owns its own status-tag row, a "no rows" cell, the totals block under a
+   breakdown.
+
+   Deliberately a separate file rather than an edit to `system.css`: that one is
+   promoted verbatim from `design/`, and keeping it verbatim is what lets the two
+   be diffed when the kit changes. Everything here is additive and uses only
+   `--hv-*` tokens.
+   ========================================================================= */
+
+/* The DataTable owns its filter row and its table together, so they can be
+   spaced as one object rather than by whatever encloses them. */
+.hv-datatable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hv-3);
+}
+
+/* "Loading" and "no rows". Centred and quiet — it is the absence of data, not
+   an error, and styling it like one teaches people to distrust empty tables. */
+.hv-table__message {
+  padding: var(--hv-5) var(--hv-3);
+  text-align: center;
+  color: var(--hv-text-faint);
+  font-size: var(--hv-size-small);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+
+/* Totals under a breakdown: slabs stacked, no list bullets, flush to the panel
+   edge because the slab draws its own inversion right to the border. */
+.hv-price__totals {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hv-hair);
+}
+
+.hv-price__totals dt,
+.hv-price__totals dd {
+  margin: 0;
+}
+
+.hv-delta__total {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hv-3);
+}
+
+/* A rise costs the customer money; a fall saves it. The slab is inverted, so the
+   tone goes on the figure rather than the bar, which would be a wall of colour. */
+.hv-delta__total[data-direction='up'] .hv-slab__v { color: var(--hv-bad); }
+.hv-delta__total[data-direction='down'] .hv-slab__v { color: var(--hv-good); }
+
+.hv-delta--empty { display: block; padding: var(--hv-3) 0; }
+
+/* -- the shell ------------------------------------------------------------ */
+
+/* The screen's own content, below the chrome and the appbar. Gets the page's
+   breathing room so no screen has to remember to add it.
+
+   This is the app's `.hv-main`: every kit screen wraps its content in that
+   element with `padding: var(--hv-3)`, and the shell owns it here so no page has
+   to. The padding matches the kit's exactly — it used to be `--hv-5 --hv-4`,
+   which pushed every screen 4px down and 4px in from where the kit draws it.
+
+   The `gap` is the app's own addition and has no kit equivalent, because kit
+   screens are single documents that space their own sections with `.hv-stack`.
+   It only applies between top-level children, so a page that stacks its own
+   content is unaffected. */
+.hv-shell__body {
+  flex: 1 1 auto;
+  padding: var(--hv-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hv-4);
+}
+
+/* Who is signed in. `.hv-who` exists in `screens.css` as the account screen's
+   identity plate — this is the appbar's much smaller version, and naming it the
+   same would make the two fight the moment the account screen ships. */
+.hv-appbar__right .hv-who {
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  color: var(--hv-text-dim);
+  white-space: nowrap;
+}
+
+/* The overlay's trigger. Carries the shortcut so it is discoverable without
+   reading documentation nobody opens. */
+.hv-menu-open::after {
+  content: 'CTRL+K';
+  margin-left: var(--hv-2);
+  color: var(--hv-text-faint);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+}
+
+/* Nothing matched the filter. Quiet, because it is a search result and not a
+   fault — the same reasoning as the table's empty row. */
+.hv-menu__empty {
+  padding: var(--hv-5);
+  color: var(--hv-text-faint);
+  font-size: var(--hv-size-small);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+
+/* The bar along the bottom of the shell. `hv-panel__foot` gives it the kit's
+   tracked-caps treatment; this pins it below the content and draws the rule the
+   promo page draws inline. */
+.hv-statusbar {
+  border-top: var(--hv-hair) solid var(--hv-line);
+  flex: none;
+}
+
+/* Footer prose: the same face as body copy at the smaller size the kit uses
+   there, rather than an inline style repeated in four columns. */
+.hv-prose--small { font-size: var(--hv-size-small); }
+
+/* ------------------------------------------------------- the 3D viewport
+   The catalogue's model view. Deliberately plain: the renderer draws an unlit
+   surface with its edges on top, so everything here is about giving it a box
+   with the right proportions and letting the panel's own ground show through. */
+
+.hv-viewer {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+  /* Grab, because the thing is draggable. The renderer's canvas inherits it. */
+  cursor: grab;
+}
+.hv-viewer:active { cursor: grabbing; }
+.hv-viewer > canvas { display: block; }
+
+/* Status while there is nothing to orbit. Same tracked micro type as every
+   other machine-readable label in the system. */
+.hv-viewer__note {
+  position: absolute;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+  pointer-events: none;
+}
+.hv-viewer[data-status='failed'] .hv-viewer__note { color: var(--hv-bad); }
+
+/* A taller frame than a card's preview: the detail view is the one place the
+   geometry is the subject rather than a thumbnail. */
+.hv-model__view--tall { aspect-ratio: 4 / 3; min-height: 300px; }
+
+/* The model popup carries two columns of panels, so it needs more room than
+   the default modal, which is sized for a form. */
+.hv-modal--wide { max-width: min(1180px, 94vw); }
+
+/* The modal's own chrome does not stick to the viewport — it is already inside
+   a positioned dialog, and `position: sticky` there makes it drift on scroll. */
+.hv-chrome--static { position: static; padding: var(--hv-3) var(--hv-3) 0; }
+
+@media (max-width: 900px) {
+  .hv-model__view--tall { min-height: 220px; }
+}

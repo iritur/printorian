@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Сервис</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Сервис :: Заявки</span>
+      <div class="hv-meta">
+        <span>БРИГАДА :: <strong>SV-01</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ОТКРЫТО :: <strong>9</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ПРОСРОЧЕНО :: <strong class="hv-bad">1</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/PRODUCTION/SERVICE/TICKETS</div>
+      <div class="hv-path__status">ПОТОК СОБЫТИЙ :: <b>ONLINE</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="dashboard.html">Сводка</a>
+      <a class="hv-appbar__link" href="orders.html">Заказы</a>
+      <a class="hv-appbar__link" href="fleet.html">Принтеры</a>
+      <a class="hv-appbar__link" href="postproduction.html">Постобработка</a>
+      <a class="hv-appbar__link" href="packaging.html">Упаковка</a>
+      <a class="hv-appbar__link" href="service.html" aria-current="page">Сервис</a>
+      <a class="hv-appbar__link" href="store.html">Склад</a>
+      <a class="hv-appbar__link" href="purchasing.html">Закупки</a>
+      <a class="hv-appbar__link" href="logistics.html">Логистика</a>
+      <a class="hv-appbar__link" href="settings.html">Настройки</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">ВГ</span>v.gorin@printorian</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main hv-stack hv-stack--4">
+
+    <!-- ========================================================= indicators -->
+    <div class="hv-grid hv-grid--4">
+      <div class="hv-frame hv-kpi" data-tone="bad">
+        <span class="hv-label">Машины стоят</span>
+        <span class="hv-kpi__v hv-bad">2</span>
+        <span class="hv-micro">P-04 ОШИБКА 41 М · P-08 НЕ В СЕТИ 4 Ч</span>
+        <span class="hv-kpi__foot"><span>ПОТЕРЯ</span><span class="hv-bad">3 820 ₽</span></span>
+      </div>
+      <div class="hv-frame hv-kpi" data-tone="warn">
+        <span class="hv-label">Открытых заявок</span>
+        <span class="hv-kpi__v">9</span>
+        <span class="hv-micro">1 ПРОСРОЧЕНА · 3 СРОЧНЫХ</span>
+        <span class="hv-kpi__foot"><span>СРЕДНЕЕ ЗАКРЫТИЕ</span><span>3.4 Ч</span></span>
+      </div>
+      <div class="hv-frame hv-kpi" data-tone="good">
+        <span class="hv-label">Готовность парка</span>
+        <span class="hv-kpi__v hv-good">83<small>%</small></span>
+        <span class="hv-micro">10 ИЗ 12 РАБОТОСПОСОБНЫ</span>
+        <span class="hv-kpi__foot"><span>ЦЕЛЬ</span><span>95%</span></span>
+      </div>
+      <div class="hv-frame hv-kpi">
+        <span class="hv-label">Наработка на отказ</span>
+        <span class="hv-kpi__v">412 <small>Ч</small> <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+38</span></span>
+        <span class="hv-micro">MTBF ПО ПАРКУ · БЫЛО 374 Ч</span>
+        <span class="hv-kpi__foot"><span>MTTR</span><span>1.8 ч</span></span>
+      </div>
+    </div>
+
+    <!-- ============================================================= board -->
+    <section class="hv-panel">
+      <div class="hv-panel__head">
+        <span>Заявки</span>
+        <span class="hv-panel__aside">УСТАНОВКА · РЕМОНТ · ТО · ЗАГРУЗКА · ПЕРЕМЕЩЕНИЕ</span>
+      </div>
+      <div class="hv-panel__body">
+        <div class="hv-board">
+
+          <div class="hv-col">
+            <div class="hv-col__h" style="color:var(--hv-bad)"><span>Аварийные</span><span class="hv-col__n">2</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="rush" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0412</span><span class="hv-due" data-state="late">ПРОСТОЙ 41 М</span></span>
+                <span class="hv-task__t">P-04 · слом филамента</span>
+                <span class="hv-task__m"><span>РЕМОНТ</span><span>HMS_0300</span><span>ORD-2148 СТОИТ</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="rush" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0411</span><span class="hv-due" data-state="late">4 Ч БЕЗ СВЯЗИ</span></span>
+                <span class="hv-task__t">P-08 · не отвечает</span>
+                <span class="hv-task__m"><span>ДИАГНОСТИКА</span><span>ЦЕХ C</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col">
+            <div class="hv-col__h"><span>Плановые</span><span class="hv-col__n">3</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="soon" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0408</span><span class="hv-due" data-state="late">−40 Ч НАРАБОТКИ</span></span>
+                <span class="hv-task__t">P-07 · замена сопла</span>
+                <span class="hv-task__m"><span>ТО</span><span>ПЕРИОД 1000 Ч</span><span>ПРОСТОЙ 40 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="soon" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0414</span><span class="hv-due" data-state="soon">ЧЕРЕЗ 132 Ч</span></span>
+                <span class="hv-task__t">P-01 · смазка осей</span>
+                <span class="hv-task__m"><span>ТО</span><span>ПЕРИОД 250 Ч</span><span>ПРОСТОЙ 15 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0415</span><span class="hv-due" data-state="ok">ЧЕРЕЗ 282 Ч</span></span>
+                <span class="hv-task__t">P-01 · натяжение ремней</span>
+                <span class="hv-task__m"><span>ТО</span><span>ПЕРИОД 500 Ч</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col hv-col--wip">
+            <div class="hv-col__h"><span>В работе</span><span class="hv-col__n">1</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="live" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0416</span><span class="hv-due" data-state="ok">28 М ИЗ 2 Ч</span></span>
+                <span class="hv-task__t">P-13 · установка новой машины</span>
+                <span class="hv-task__m"><span>УСТАНОВКА</span><span>BAMBU X1C</span><span>ШАГ 4 ИЗ 9</span></span>
+                <span class="hv-meter hv-meter--thin" style="margin-top:var(--hv-1)"><span class="hv-meter__fill" style="width:44%"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col">
+            <div class="hv-col__h"><span>Логистика цеха</span><span class="hv-col__n">3</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="rush" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0417</span><span class="hv-due" data-state="soon">БЛОКИРУЕТ ЗАКАЗ</span></span>
+                <span class="hv-task__t">Загрузить TPU 95A в P-05</span>
+                <span class="hv-task__m"><span>ЗАГРУЗКА</span><span class="hv-warn">МАТЕРИАЛ НЕ ПРИШЁЛ</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0418</span><span class="hv-due" data-state="ok">ДО 19:00</span></span>
+                <span class="hv-task__t">Заменить катушку PETG-CF красный</span>
+                <span class="hv-task__m"><span>ЗАГРУЗКА</span><span>P-01 · СЛОТ A3</span><span>340 Г</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0419</span><span class="hv-due" data-state="ok">ПОСЛЕ 21:48</span></span>
+                <span class="hv-task__t">Снять партию с P-01 → пост PP-01</span>
+                <span class="hv-task__m"><span>ПЕРЕМЕЩЕНИЕ</span><span>ORD-2147 · 10 ШТ</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col hv-col--done">
+            <div class="hv-col__h"><span>Закрыто сегодня</span><span class="hv-col__n">4</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="normal" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0410</span><span>16:20</span></span>
+                <span class="hv-task__t">P-03 · калибровка стола</span>
+                <span class="hv-task__m"><span>ТО</span><span>12 М · НОРМА 10 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0409</span><span>14:05</span></span>
+                <span class="hv-task__t">P-11 · замена катушки</span>
+                <span class="hv-task__m"><span>ЗАГРУЗКА</span><span>6 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0407</span><span>11:40</span></span>
+                <span class="hv-task__t">P-02 · чистка сопла</span>
+                <span class="hv-task__m"><span>РЕМОНТ</span><span>34 М</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="sv-detail">
+                <span class="hv-task__top"><span>SV-0406</span><span>09:15</span></span>
+                <span class="hv-task__t">Перемещение партии ORD-2144</span>
+                <span class="hv-task__m"><span>ПЕРЕМЕЩЕНИЕ</span><span>8 М</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hv-panel__foot">
+        <span>ЗАЯВКИ ТО СОЗДАЮТСЯ ПО НАРАБОТКЕ · АВАРИЙНЫЕ — ПО СОБЫТИЮ ДРАЙВЕРА</span>
+        <button class="hv-btn hv-btn--sm" type="button">Создать заявку</button>
+      </div>
+    </section>
+
+    <!-- ============================================== fleet health + parts -->
+    <section class="hv-cols hv-cols--2">
+
+      <div class="hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Ресурс парка</span><span class="hv-panel__aside">ДО БЛИЖАЙШЕГО ТО</span></div>
+          <div class="hv-panel__body--none">
+            <table class="hv-table" data-sortable>
+              <thead><tr>
+                <th><button class="hv-table__sort" data-sort>Машина <span class="hv-table__ind"></span></button></th>
+                <th>Состояние</th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Наработка <span class="hv-table__ind"></span></button></th>
+                <th><button class="hv-table__sort" data-sort>Ближайшее ТО <span class="hv-table__ind"></span></button></th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Отказов/год <span class="hv-table__ind"></span></button></th>
+                <th>Надёжность</th>
+              </tr></thead>
+              <tbody>
+                <tr data-activatable><td><b>P-04</b></td><td><span class="hv-state" data-state="error">Ошибка</span></td>
+                  <td data-align="end" data-sort-value="1140">1 140 ч</td><td>Сопло · 860 ч</td><td data-align="end" class="hv-bad">7</td>
+                  <td><span class="hv-blocks" data-tone="bad"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><i></i><i></i><i></i><i></i><i></i><b>4</b></span></td></tr>
+                <tr data-activatable><td><b>P-07</b></td><td><span class="hv-state" data-state="maintenance">Обслуживание</span></td>
+                  <td data-align="end" data-sort-value="3040">3 040 ч</td><td class="hv-warn">Сопло · просрочено</td><td data-align="end">3</td>
+                  <td><span class="hv-blocks"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><i></i><i></i><b>7</b></span></td></tr>
+                <tr data-activatable><td><b>P-08</b></td><td><span class="hv-state" data-state="offline">Не в сети</span></td>
+                  <td data-align="end" data-sort-value="220">220 ч</td><td>—</td><td data-align="end" class="hv-warn">5</td>
+                  <td><span class="hv-blocks" data-tone="warn"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><i></i><i></i><i></i><i></i><b>5</b></span></td></tr>
+                <tr data-activatable><td><b>P-01</b></td><td><span class="hv-state" data-state="printing">Печатает</span></td>
+                  <td data-align="end" data-sort-value="2418">2 418 ч</td><td>Смазка · 132 ч</td><td data-align="end">1</td>
+                  <td><span class="hv-blocks" data-tone="good"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><b>9</b></span></td></tr>
+                <tr data-activatable><td><b>P-02</b></td><td><span class="hv-state" data-state="printing">Печатает</span></td>
+                  <td data-align="end" data-sort-value="1902">1 902 ч</td><td>Калибровка · 88 ч</td><td data-align="end">2</td>
+                  <td><span class="hv-blocks" data-tone="good"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><i></i><b>8</b></span></td></tr>
+                <tr data-activatable><td><b>P-03</b></td><td><span class="hv-state" data-state="printing">Печатает</span></td>
+                  <td data-align="end" data-sort-value="884">884 ч</td><td>Ремни · 240 ч</td><td data-align="end">0</td>
+                  <td><span class="hv-blocks" data-tone="good"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><b>10</b></span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hv-panel__foot">
+            <span>P-04 :: 7 ОТКАЗОВ ЗА ГОД — КАНДИДАТ НА КАПРЕМОНТ ИЛИ СПИСАНИЕ</span>
+            <a class="hv-mono" href="fleet.html" style="color:inherit;text-decoration:none">ПАРК ›</a>
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Причины отказов</span><span class="hv-panel__aside">90 СУТОК · 18 СЛУЧАЕВ</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <div class="hv-funnel">
+              <div class="hv-funnel__row" data-tone="bad"><span class="hv-funnel__k">Слом филамента</span><span class="hv-funnel__bar"><i style="width:39%"></i></span><span class="hv-funnel__n">7</span></div>
+              <div class="hv-funnel__row" data-tone="warn"><span class="hv-funnel__k">Засор сопла</span><span class="hv-funnel__bar"><i style="width:22%"></i></span><span class="hv-funnel__n">4</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Отклеивание</span><span class="hv-funnel__bar"><i style="width:17%"></i></span><span class="hv-funnel__n">3</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Связь / сеть</span><span class="hv-funnel__bar"><i style="width:11%"></i></span><span class="hv-funnel__n">2</span></div>
+              <div class="hv-funnel__row"><span class="hv-funnel__k">Датчик AMS</span><span class="hv-funnel__bar"><i style="width:11%"></i></span><span class="hv-funnel__n">2</span></div>
+            </div>
+          </div>
+          <div class="hv-panel__foot"><span>СЛОМ ФИЛАМЕНТА :: 6 ИЗ 7 НА ВЛАЖНОМ PETG-CF — УЖЕСТОЧИТЬ СУШКУ</span></div>
+        </section>
+      </div>
+
+      <div class="hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Запчасти на посту</span><span class="hv-panel__aside">SPARE PARTS</span></div>
+          <div class="hv-panel__body--none">
+            <table class="hv-table">
+              <thead><tr><th>Позиция</th><th data-align="end">Остаток</th><th data-align="end">Расход/мес</th><th>Статус</th></tr></thead>
+              <tbody>
+                <tr><td>Сопло 0.4 закалённое</td><td data-align="end">6</td><td data-align="end">2.4</td><td><span class="hv-state" data-state="idle">Норма</span></td></tr>
+                <tr><td>Сопло 0.6 закалённое</td><td data-align="end" class="hv-warn">1</td><td data-align="end">0.8</td><td><span class="hv-state" data-state="maintenance">Заказать</span></td></tr>
+                <tr><td>PTFE-трубка</td><td data-align="end">4</td><td data-align="end">1.1</td><td><span class="hv-state" data-state="idle">Норма</span></td></tr>
+                <tr><td>Ремень GT2 · 890 мм</td><td data-align="end" class="hv-bad">0</td><td data-align="end">0.3</td><td><span class="hv-state" data-state="error">Нет</span></td></tr>
+                <tr><td>Стол PEI гладкий</td><td data-align="end">2</td><td data-align="end">0.6</td><td><span class="hv-state" data-state="idle">Норма</span></td></tr>
+                <tr><td>Фильтр угольный</td><td data-align="end">3</td><td data-align="end">1.0</td><td><span class="hv-state" data-state="idle">Норма</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hv-panel__foot">
+            <span>2 ПОЗИЦИИ ТРЕБУЮТ ЗАКУПКИ</span>
+            <a class="hv-btn hv-btn--sm" href="purchasing.html">В закупку</a>
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Отметки бригады</span><span class="hv-panel__aside">В. ГОРИН · 4 ИЗ 7</span></div>
+          <div class="hv-panel__body">
+            <div class="hv-badges">
+              <div class="hv-badge" data-tier="3">
+                <span class="hv-badge__g">MTTR</span>
+                <span class="hv-badge__k">Быстрый ремонт</span>
+                <span class="hv-badge__n">1.8 Ч СРЕДНЕЕ</span>
+              </div>
+              <div class="hv-badge" data-tier="3">
+                <span class="hv-badge__g">+3</span>
+                <span class="hv-badge__k">Установка машин</span>
+                <span class="hv-badge__n">3 ЗАПУЩЕНЫ</span>
+              </div>
+              <div class="hv-badge" data-tier="2">
+                <span class="hv-badge__g">ТО</span>
+                <span class="hv-badge__k">План ТО</span>
+                <span class="hv-badge__n">94% В СРОК</span>
+              </div>
+              <div class="hv-badge" data-tier="2">
+                <span class="hv-badge__g">200</span>
+                <span class="hv-badge__k">Двести заявок</span>
+                <span class="hv-badge__n">214 ЗАКРЫТО</span>
+              </div>
+              <div class="hv-badge" data-tier="1">
+                <span class="hv-badge__g">0</span>
+                <span class="hv-badge__k">Без повторов</span>
+                <span class="hv-badge__n">12 ДНЕЙ ИЗ 30</span>
+              </div>
+              <div class="hv-badge" data-tier="0">
+                <span class="hv-badge__g">95</span>
+                <span class="hv-badge__k">Готовность 95%</span>
+                <span class="hv-badge__n">СЕЙЧАС 83%</span>
+              </div>
+            </div>
+          </div>
+          <div class="hv-panel__foot"><span>ПОВТОРНАЯ ЗАЯВКА В ТЕЧЕНИЕ 48 Ч ОБНУЛЯЕТ СЕРИЮ</span></div>
+        </section>
+
+        <section class="hv-frame hv-frame--live">
+          <span class="hv-h hv-live">Установка P-13</span>
+          <p class="hv-micro" style="margin-top:var(--hv-2)">
+            BAMBU LAB X1 CARBON · ПОЛУЧЕН 08.08 · ЗАКУПКА PO-0088
+          </p>
+          <div class="hv-meter-row" style="margin-top:var(--hv-3)">
+            <div class="hv-meter" data-tone="live"><div class="hv-meter__fill" style="width:44%"></div></div>
+            <span class="hv-meter-row__pct">4/9</span>
+          </div>
+          <ul class="hv-leaders" style="margin-top:var(--hv-3)">
+            <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Распаковка и осмотр</span><span class="hv-leader__fill"></span><span class="hv-leader__v">готово</span></li>
+            <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Монтаж в стойку 4</span><span class="hv-leader__fill"></span><span class="hv-leader__v">готово</span></li>
+            <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Подключение к сети цеха</span><span class="hv-leader__fill"></span><span class="hv-leader__v">10.0.4.33</span></li>
+            <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Регистрация в системе</span><span class="hv-leader__fill"></span><span class="hv-leader__v">готово</span></li>
+            <li class="hv-leader" data-tone="live"><span class="hv-leader__k">Калибровка</span><span class="hv-leader__fill"></span><span class="hv-leader__v">идёт</span></li>
+            <li class="hv-leader"><span class="hv-leader__k">Тестовая печать</span><span class="hv-leader__fill"></span><span class="hv-leader__v">—</span></li>
+          </ul>
+          <button class="hv-btn hv-btn--block" type="button" data-open="sv-detail" style="margin-top:var(--hv-3)">Открыть заявку</button>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hv-panel__foot" style="border-top:1px solid var(--hv-line)">
+    <span>SERVICE.TICKETS · PRINTORIAN OS ./v2.0</span>
+    <span data-clock></span>
+  </footer>
+</div>
+
+<!-- ======================================================= service detail -->
+<div class="hv-overlay" id="sv-detail" hidden>
+  <div class="hv-modal" role="dialog" aria-modal="true" aria-labelledby="svd-t">
+    <div class="hv-chrome" style="position:static;padding:var(--hv-3) var(--hv-3) 0">
+      <div class="hv-chrome__row">
+        <span class="hv-tab" id="svd-t">Заявка :: SV-0412</span>
+        <div class="hv-meta">
+          <span>ТИП :: <strong>РЕМОНТ · АВАРИЙНЫЙ</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>МАШИНА :: <strong>P-04</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>КОД :: <strong>HMS_0300</strong></span>
+        </div>
+        <div class="hv-os">
+          <span class="hv-os__label">ПРОСТОЙ 41 МИН</span>
+        <button class="hv-os__x" type="button" data-close aria-label="Закрыть">✕</button>
+        </div>
+      </div>
+      <div class="hv-path">
+        <div class="hv-path__crumbs">C:/PRINTORIAN/PRODUCTION/SERVICE/SV-0412</div>
+        <div class="hv-path__status">STATUS :: <b class="hv-bad">OPEN</b></div>
+      </div>
+    </div>
+
+    <div class="hv-modal__body hv-stack">
+
+      <div class="hv-vs">
+        <div><span class="hv-vs__k">Простой</span><span class="hv-vs__v hv-bad">41:12</span></div>
+        <div><span class="hv-vs__k">Норма ремонта</span><span class="hv-vs__v">35:00</span></div>
+        <div><span class="hv-vs__k">Потеря</span><span class="hv-vs__v hv-bad">2 140 ₽</span></div>
+      </div>
+
+      <div class="hv-cols hv-cols--2">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Что случилось</span><span class="hv-panel__aside">СООБЩИЛ ДРАЙВЕР</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Код ошибки</span><span class="hv-leader__fill"></span><span class="hv-leader__v">HMS_0300</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Расшифровка</span><span class="hv-leader__fill"></span><span class="hv-leader__v">Обрыв филамента</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Время события</span><span class="hv-leader__fill"></span><span class="hv-leader__v">19:12:04</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Печать остановлена на</span><span class="hv-leader__fill"></span><span class="hv-leader__v">38% · слой 214</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Материал</span><span class="hv-leader__fill"></span><span class="hv-leader__v">PETG-CF чёрный · LOT.4471</span></li>
+              <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Похожих случаев на партии</span><span class="hv-leader__fill"></span><span class="hv-leader__v">3 за 14 дней</span></li>
+            </ul>
+            <div class="hv-callout" style="margin-top:var(--hv-3)">
+              <strong>Закономерность.</strong> Шесть из семи обрывов за квартал — на
+              PETG-CF из партий, пролежавших без сушки более 72 часов. Проверьте
+              отметку о сушке прежде чем ставить катушку обратно.
+            </div>
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Последствия</span><span class="hv-panel__aside">ЧТО СТОИТ ЗА ЭТОЙ ЗАЯВКОЙ</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader" data-tone="bad"><span class="hv-leader__k">ORD-2148 остановлен</span><span class="hv-leader__fill"></span><span class="hv-leader__v">срок 12.08 12:00</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Потеряно материала</span><span class="hv-leader__fill"></span><span class="hv-leader__v">148 г · 435 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Потеряно машинного времени</span><span class="hv-leader__fill"></span><span class="hv-leader__v">4.2 ч · 172 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Простой сверх нормы</span><span class="hv-leader__fill"></span><span class="hv-leader__v">6 мин</span></li>
+              <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Риск просрочки SLA</span><span class="hv-leader__fill"></span><span class="hv-leader__v">через 6 ч</span></li>
+            </ul>
+            <hr class="hv-hr">
+            <div class="hv-slab"><span>Итого потеря</span><span class="hv-slab__v">2 140 ₽</span></div>
+          </div>
+          <div class="hv-panel__foot"><span>ПЕРЕПЕЧАТЬ ЗА СЧЁТ РЕЗЕРВА НА БРАК</span></div>
+        </section>
+      </div>
+
+      <section class="hv-panel">
+        <div class="hv-panel__head"><span>Порядок работ</span><span class="hv-panel__aside">РЕМОНТ · ОБРЫВ ФИЛАМЕНТА</span></div>
+        <div class="hv-steps">
+          <div class="hv-step" data-done="true">
+            <span>
+              <span class="hv-step__t">Остановить печать, снять задание</span>
+              <span class="hv-step__d">Заказ автоматически ушёл в очередь на перепечать.</span>
+            </span>
+            <span class="hv-step__n">2 МИН<br>ФАКТ 2</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Извлечь остаток филамента из тракта</span>
+              <span class="hv-step__d">Нагреть сопло до 255 °C, вытянуть вручную. Не тянуть на холодную.</span>
+              <span class="hv-step__warn">
+                <b>Не тяните силой.</b> Обломок углеволоконного PETG в PTFE-трубке —
+                причина двух капитальных разборок в этом квартале.
+              </span>
+            </span>
+            <span class="hv-step__n">10 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Проверить сопло на засор, при необходимости заменить</span>
+              <span class="hv-step__d">Остаток сопел 0.4 закалённых на посту: 6 шт.</span>
+            </span>
+            <span class="hv-step__n">12 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Проверить отметку о сушке катушки</span>
+              <span class="hv-step__d">LOT.4471 · сушка от 07.08 09:00 — просрочена на 34 часа. Отправить на сушку.</span>
+            </span>
+            <span class="hv-step__n">3 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Заправить новую катушку, прогнать тест</span>
+              <span class="hv-step__d">20 мм линии, проверить равномерность экструзии.</span>
+            </span>
+            <span class="hv-step__n">8 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Закрыть заявку, вернуть машину в пул</span>
+              <span class="hv-step__d">Планировщик назначит новое задание автоматически.</span>
+            </span>
+            <span class="hv-step__n">1 МИН</span>
+          </div>
+        </div>
+        <div class="hv-panel__foot"><span>НОРМА 35 МИН · ПРОШЛО 41 МИН</span><span class="hv-warn">СВЕРХ НОРМЫ 6 МИН</span></div>
+      </section>
+
+      <div class="hv-row">
+        <button class="hv-btn hv-btn--primary hv-btn--lg" type="button">Отметить шаг</button>
+        <button class="hv-btn" type="button">Списать запчасть</button>
+        <button class="hv-btn" type="button">Передать инженеру</button>
+        <span class="hv-spacer"></span>
+        <button class="hv-btn hv-btn--danger" type="button">Вывести машину из работы</button>
+      </div>
+    </div>
+
+    <div class="hv-panel__foot">
+      <span>SV-0412 · БРИГАДА SV-01 · В. ГОРИН</span>
+      <button class="hv-btn hv-btn--sm" type="button" data-close>Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

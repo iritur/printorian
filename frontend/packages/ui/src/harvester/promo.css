@@ -1,0 +1,112 @@
+/* ============================================================================
+   PRINTORIAN OS — the promo page
+   ----------------------------------------------------------------------------
+   Section 21 of the Harvester system, lifted out of `screens.css` because this
+   is the first of those screens to actually be built. The rest stay there until
+   their slice lands.
+
+   The responsive block at the end of `screens.css` is deliberately *not* copied:
+   it covers every screen section at once and belongs with them. What the promo
+   page needs from it is in `system.css`, which both apps already load.
+
+   Depends on `tokens.css` and `system.css`.
+   ========================================================================= */
+
+/* --------------------------------------------------------------- 21 promo
+   The one outward-facing page. It uses the same parts at a larger size rather
+   than a second visual language — the argument of the whole product is that
+   the instrument panel *is* the brand, so the landing page must look like the
+   thing it is selling.
+   ------------------------------------------------------------------------ */
+
+.hv-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--hv-5);
+  min-height: min(78vh, 660px);
+  padding: var(--hv-7) var(--hv-5);
+  overflow: hidden;
+}
+
+.hv-hero__title {
+  margin: 0;
+  font-family: var(--hv-font-display);
+  font-size: clamp(3rem, 13vw, 11rem);
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  width: calc(100% / var(--hv-stretch));
+  transform: scaleX(var(--hv-stretch));
+  transform-origin: left center;
+}
+
+.hv-hero__sub { max-width: 62ch; font-size: clamp(0.95rem, 1.6vw, 1.2rem); line-height: 1.5; color: var(--hv-text-dim); }
+.hv-hero__sub b { color: var(--hv-text); font-weight: 600; }
+
+/* Live ticker along the bottom of the hero: the farm's real numbers, which is
+   a better proof than any adjective. */
+.hv-ticker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hv-2) var(--hv-5);
+  padding-top: var(--hv-4);
+  border-top: 1px solid var(--hv-line);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+.hv-ticker b { color: var(--hv-text); font-weight: 400; }
+.hv-ticker .hv-live { color: var(--hv-live); }
+
+/* Numbered feature block. */
+.hv-feature { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); gap: var(--hv-4); align-items: start; }
+.hv-feature__n {
+  font-family: var(--hv-font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--hv-text-faint);
+}
+.hv-feature__t { margin: 0 0 var(--hv-2); font-size: var(--hv-size-lead); font-weight: 700; letter-spacing: 0.02em; color: var(--hv-text); }
+.hv-feature__b { font-size: var(--hv-size-body); line-height: 1.55; color: var(--hv-text-dim); margin: 0; }
+
+/* Poster-scale number for the proof band. */
+.hv-bignum { display: flex; flex-direction: column; gap: var(--hv-1); }
+.hv-bignum__v {
+  font-family: var(--hv-font-display);
+  font-size: clamp(2rem, 5.5vw, 3.6rem);
+  font-weight: 900;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  width: calc(100% / var(--hv-stretch-brand));
+  transform: scaleX(var(--hv-stretch-brand));
+  transform-origin: left center;
+}
+.hv-bignum__k { font-size: var(--hv-size-tiny); font-weight: 700; letter-spacing: var(--hv-track-label); text-transform: uppercase; color: var(--hv-text-dim); }
+.hv-bignum__d { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); text-transform: uppercase; color: var(--hv-text-faint); }
+
+/* Full-width call to action. */
+.hv-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-4);
+  padding: var(--hv-6) var(--hv-5);
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+}
+.hv-cta .hv-btn { --ink: var(--hv-text-invert); color: var(--hv-text-invert); background-color: transparent; }
+.hv-cta .hv-btn:hover { background-color: rgba(255,255,255,0.12); }
+.hv-cta .hv-btn--primary { background-color: var(--hv-void); color: var(--hv-text); --ink: var(--hv-void); }
+:root[data-theme='paper'] .hv-cta .hv-btn--primary { background-color: var(--hv-bg-raised); color: var(--hv-text); --ink: var(--hv-bg-raised); }
+
+/* Us / them comparison. Two columns, one of which is deliberately dim. */
+.hv-vs-table th:nth-child(2), .hv-vs-table td:nth-child(2) { color: var(--hv-text); }
+.hv-vs-table th:nth-child(3), .hv-vs-table td:nth-child(3) { color: var(--hv-text-faint); }
+

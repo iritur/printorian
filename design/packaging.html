@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Упаковка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Цех :: Упаковка</span>
+      <div class="hv-meta">
+        <span>ПОСТ :: <strong>PK-01</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ЗАБОР КУРЬЕРА :: <strong>СЕГОДНЯ 19:30</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ДО ОТСЕЧКИ :: <strong class="hv-warn">2 Ч 14 М</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/PRODUCTION/PACKING/QUEUE</div>
+      <div class="hv-path__status">ОТСЕЧКА :: <b class="hv-warn">19:30</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="dashboard.html">Сводка</a>
+      <a class="hv-appbar__link" href="orders.html">Заказы</a>
+      <a class="hv-appbar__link" href="fleet.html">Принтеры</a>
+      <a class="hv-appbar__link" href="postproduction.html">Постобработка</a>
+      <a class="hv-appbar__link" href="packaging.html" aria-current="page">Упаковка</a>
+      <a class="hv-appbar__link" href="service.html">Сервис</a>
+      <a class="hv-appbar__link" href="store.html">Склад</a>
+      <a class="hv-appbar__link" href="purchasing.html">Закупки</a>
+      <a class="hv-appbar__link" href="logistics.html">Логистика</a>
+      <a class="hv-appbar__link" href="settings.html">Настройки</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">ИП</span>i.popova@printorian</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main hv-stack hv-stack--4">
+
+    <!-- ========================================================= the clock -->
+    <div class="hv-frame" style="--ink:var(--hv-warn)">
+      <div class="hv-row hv-row--between">
+        <div>
+          <span class="hv-h hv-warn">До забора курьера — 2 ч 14 м</span>
+          <p class="hv-micro" style="margin-top:var(--hv-1)">
+            5 ЗАКАЗОВ ДОЛЖНЫ БЫТЬ УПАКОВАНЫ И ПРОМАРКИРОВАНЫ · ПРИ ТЕМПЕ 8 МИН/ЗАКАЗ УСПЕВАЕМ С ЗАПАСОМ 1 Ч 34 М
+        </p>
+        </div>
+        <!-- `flex: 0 1 340px` rather than a min-width: it holds the desktop size
+             but is still allowed to shrink, so a phone does not get a 340px
+             block inside a 343px column. -->
+        <div class="hv-vs" style="flex:0 1 340px">
+          <div><span class="hv-vs__k">К отправке</span><span class="hv-vs__v">5</span></div>
+          <div><span class="hv-vs__k">Упаковано</span><span class="hv-vs__v hv-good">3</span></div>
+          <div><span class="hv-vs__k">Запас</span><span class="hv-vs__v">1:34</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================== shift indicators -->
+    <div class="hv-grid hv-grid--4">
+      <div class="hv-frame hv-kpi" data-tone="live">
+        <span class="hv-label">В очереди</span>
+        <span class="hv-kpi__v hv-live">5</span>
+        <span class="hv-micro">3 КУРЬЕР · 1 СДЭК · 1 САМОВЫВОЗ</span>
+        <span class="hv-kpi__foot"><span>СЕГОДНЯШНЯЯ ОТСЕЧКА</span><span class="hv-warn">5</span></span>
+      </div>
+      <div class="hv-frame hv-kpi">
+        <span class="hv-label">Упаковано за смену</span>
+        <span class="hv-kpi__v">17 <span class="hv-kpi__d" data-dir="up" data-sentiment="good">+2</span></span>
+        <span class="hv-micro">СРЕДНЕЕ 7.8 МИН · НОРМА 9 МИН</span>
+        <span class="hv-kpi__foot"><span>ТЕМП</span><span class="hv-hot">115%</span></span>
+      </div>
+      <div class="hv-frame hv-kpi" data-tone="good">
+        <span class="hv-label">Комплектность</span>
+        <span class="hv-kpi__v hv-good">100<small>%</small></span>
+        <span class="hv-micro">0 НЕДОВЛОЖЕНИЙ ЗА 62 ДНЯ</span>
+        <span class="hv-kpi__foot"><span>РЕКОРД ЦЕХА</span><span>62 ДНЯ</span></span>
+      </div>
+      <div class="hv-frame hv-kpi">
+        <span class="hv-label">Расход упаковки</span>
+        <span class="hv-kpi__v">218 <small>₽/ЗАКАЗ</small></span>
+        <span class="hv-kpi__d" data-dir="down" data-sentiment="good">−9% К ИЮЛЮ</span>
+        <span class="hv-kpi__foot"><span>НОРМАТИВ</span><span>240 ₽</span></span>
+      </div>
+    </div>
+
+    <!-- ============================================================ board -->
+    <section class="hv-panel">
+      <div class="hv-panel__head">
+        <span>Очередь упаковки</span>
+        <span class="hv-panel__aside">ПОРЯДОК ПО ВРЕМЕНИ ЗАБОРА</span>
+      </div>
+      <div class="hv-panel__body">
+        <div class="hv-board">
+
+          <div class="hv-col">
+            <div class="hv-col__h"><span>Прошли контроль</span><span class="hv-col__n">3</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="rush" data-open="pk-detail">
+                <span class="hv-task__top"><span>PK-2144</span><span class="hv-due" data-state="soon">ЗАБОР 19:30</span></span>
+                <span class="hv-task__t">ORD-2144 · PANEL_C</span>
+                <span class="hv-task__m"><span>6 ШТ</span><span>КУРЬЕР МСК</span><span>~1 040 Г</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="rush" data-open="pk-detail">
+                <span class="hv-task__top"><span>PK-2128</span><span class="hv-due" data-state="soon">ЗАБОР 19:30</span></span>
+                <span class="hv-task__t">ORD-2128 · GEAR_SET</span>
+                <span class="hv-task__m"><span>1 ШТ</span><span>СДЭК ЦФО</span><span>~180 Г</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="pk-detail">
+                <span class="hv-task__top"><span>PK-2124</span><span class="hv-due" data-state="ok">САМОВЫВОЗ</span></span>
+                <span class="hv-task__t">ORD-2124 · HOOK_H</span>
+                <span class="hv-task__m"><span>2 ШТ</span><span>ВЫДАЧА В ЦЕХЕ</span><span>~90 Г</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col hv-col--wip">
+            <div class="hv-col__h"><span>Упаковывается</span><span class="hv-col__n">1</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="live" data-open="pk-detail">
+                <span class="hv-task__top"><span>PK-2147</span><span class="hv-due" data-state="ok">4 М ИЗ 9 М</span></span>
+                <span class="hv-task__t">ORD-2147 · BRACKET_V4</span>
+                <span class="hv-task__m"><span>10 ШТ</span><span>ШАГ 2 ИЗ 5</span></span>
+                <span class="hv-meter hv-meter--thin" style="margin-top:var(--hv-1)"><span class="hv-meter__fill" style="width:44%"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col">
+            <div class="hv-col__h"><span>Ждут документов</span><span class="hv-col__n">1</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="soon" data-open="pk-detail">
+                <span class="hv-task__top"><span>PK-2126</span><span class="hv-due" data-state="soon">НЕТ НАКЛАДНОЙ</span></span>
+                <span class="hv-task__t">ORD-2126 · TRAY_6</span>
+                <span class="hv-task__m"><span>1 ШТ</span><span class="hv-warn">СЧЁТ ЮРЛИЦУ НЕ ОПЛАЧЕН</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hv-col hv-col--done">
+            <div class="hv-col__h"><span>Готово к отгрузке</span><span class="hv-col__n">3</span></div>
+            <div class="hv-col__b">
+              <button class="hv-task" type="button" data-pri="normal" data-open="pk-detail">
+                <span class="hv-task__top"><span>PK-2140</span><span>18:02</span></span>
+                <span class="hv-task__t">ORD-2140 · VASE_T</span>
+                <span class="hv-task__m"><span>КОРОБКА B</span><span>1 240 Г</span><span>МАРКИРОВАНО</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="pk-detail">
+                <span class="hv-task__top"><span>PK-2138</span><span>17:41</span></span>
+                <span class="hv-task__t">ORD-2138 · MOUNT_S</span>
+                <span class="hv-task__m"><span>ПАКЕТ S</span><span>210 Г</span><span>МАРКИРОВАНО</span></span>
+              </button>
+              <button class="hv-task" type="button" data-pri="normal" data-open="pk-detail">
+                <span class="hv-task__top"><span>PK-2135</span><span>16:58</span></span>
+                <span class="hv-task__t">ORD-2135 · CLIP_A</span>
+                <span class="hv-task__m"><span>КОРОБКА A</span><span>640 Г</span><span>МАРКИРОВАНО</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hv-panel__foot">
+        <span>ЗАДАНИЕ ПОЯВЛЯЕТСЯ ПОСЛЕ ОТМЕТКИ КОНТРОЛЯ КАЧЕСТВА</span>
+        <span>ОБНОВЛЕНО :: <span data-clock></span></span>
+      </div>
+    </section>
+
+    <!-- ================================================ analytics + people -->
+    <section class="hv-cols hv-cols--2">
+
+      <div class="hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Тара</span><span class="hv-panel__aside">РАСХОД И ОСТАТКИ</span></div>
+          <div class="hv-panel__body--none">
+            <table class="hv-table" data-sortable>
+              <thead><tr>
+                <th><button class="hv-table__sort" data-sort>Тип <span class="hv-table__ind"></span></button></th>
+                <th>Габарит</th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Цена <span class="hv-table__ind"></span></button></th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Расход/мес <span class="hv-table__ind"></span></button></th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Остаток <span class="hv-table__ind"></span></button></th>
+                <th>Хватит на</th>
+              </tr></thead>
+              <tbody>
+                <tr><td>Пакет S</td><td>200×150</td><td data-align="end">18 ₽</td><td data-align="end">104</td><td data-align="end">380</td><td>3.7 мес</td></tr>
+                <tr><td>Коробка A</td><td>200×150×80</td><td data-align="end">62 ₽</td><td data-align="end">88</td><td data-align="end">210</td><td>2.4 мес</td></tr>
+                <tr><td>Коробка B</td><td>300×220×120</td><td data-align="end">94 ₽</td><td data-align="end">41</td><td data-align="end" class="hv-warn">52</td><td class="hv-warn">1.3 мес</td></tr>
+                <tr><td>Коробка C</td><td>400×300×200</td><td data-align="end">148 ₽</td><td data-align="end">12</td><td data-align="end">64</td><td>5.3 мес</td></tr>
+                <tr><td>Пузырчатая плёнка</td><td>рулон 50 м</td><td data-align="end">340 ₽</td><td data-align="end">6</td><td data-align="end" class="hv-bad">1</td><td class="hv-bad">5 дней</td></tr>
+                <tr><td>Наполнитель крафт</td><td>кг</td><td data-align="end">120 ₽</td><td data-align="end">14</td><td data-align="end">31</td><td>2.2 мес</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hv-panel__foot">
+            <span>2 ПОЗИЦИИ НИЖЕ ПОРОГА</span>
+            <a class="hv-btn hv-btn--sm" href="purchasing.html">Создать закупку</a>
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Показатели за 30 дней</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Упаковано заказов</span><span class="hv-leader__fill"></span><span class="hv-leader__v">248</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Среднее время</span><span class="hv-leader__fill"></span><span class="hv-leader__v">7.8 мин</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Точность габарита к расчёту</span><span class="hv-leader__fill"></span><span class="hv-leader__v">96%</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Недовложений</span><span class="hv-leader__fill"></span><span class="hv-leader__v">0</span></li>
+              <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Повреждений в пути</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2 · 0.8%</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Пропущенных отсечек</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Средняя стоимость упаковки</span><span class="hv-leader__fill"></span><span class="hv-leader__v">218 ₽</span></li>
+            </ul>
+            <hr class="hv-hr">
+            <div class="hv-slab"><span>Оценка поста</span><span class="hv-slab__v">9.4 / 10</span></div>
+          </div>
+          <div class="hv-panel__foot"><span>ОБА ПОВРЕЖДЕНИЯ :: КОРОБКА A БЕЗ ПЛЁНКИ · ИЗМЕНЁН НОРМАТИВ</span></div>
+        </section>
+      </div>
+
+      <div class="hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Отметки поста</span><span class="hv-panel__aside">И. ПОПОВА · 6 ИЗ 8</span></div>
+          <div class="hv-panel__body">
+            <div class="hv-badges">
+              <div class="hv-badge" data-tier="3">
+                <span class="hv-badge__g">62</span>
+                <span class="hv-badge__k">Без ошибок</span>
+                <span class="hv-badge__n">62 ДНЯ ПОДРЯД</span>
+              </div>
+              <div class="hv-badge" data-tier="3">
+                <span class="hv-badge__g">↑↑</span>
+                <span class="hv-badge__k">Темп 115%</span>
+                <span class="hv-badge__n">7.8 ПРОТИВ 9 МИН</span>
+              </div>
+              <div class="hv-badge" data-tier="3">
+                <span class="hv-badge__g">₽</span>
+                <span class="hv-badge__k">Экономия тары</span>
+                <span class="hv-badge__n">−9% К НОРМЕ</span>
+              </div>
+              <div class="hv-badge" data-tier="2">
+                <span class="hv-badge__g">500</span>
+                <span class="hv-badge__k">Пятьсот заказов</span>
+                <span class="hv-badge__n">612 ВСЕГО</span>
+              </div>
+              <div class="hv-badge" data-tier="2">
+                <span class="hv-badge__g">ОТС</span>
+                <span class="hv-badge__k">Все отсечки</span>
+                <span class="hv-badge__n">29 ИЗ 30</span>
+              </div>
+              <div class="hv-badge" data-tier="1">
+                <span class="hv-badge__g">ХР</span>
+                <span class="hv-badge__k">Хрупкий груз</span>
+                <span class="hv-badge__n">18 ИЗ 25</span>
+              </div>
+              <div class="hv-badge" data-tier="0">
+                <span class="hv-badge__g">★</span>
+                <span class="hv-badge__k">Наставник</span>
+                <span class="hv-badge__n">НУЖНО ОБУЧИТЬ 1</span>
+              </div>
+              <div class="hv-badge" data-tier="0">
+                <span class="hv-badge__g">100</span>
+                <span class="hv-badge__k">Сто дней</span>
+                <span class="hv-badge__n">62 ИЗ 100</span>
+              </div>
+            </div>
+          </div>
+          <div class="hv-panel__foot"><span>НАЧИСЛЯЮТСЯ ПО ФАКТУ · РУЧНОГО НАЗНАЧЕНИЯ НЕТ</span></div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Пост сегодня</span><span class="hv-panel__aside">2 ОПЕРАТОРА</span></div>
+          <div class="hv-panel__body--none">
+            <div class="hv-score">
+              <span class="hv-avatar hv-avatar--sm">ИП</span>
+              <span>
+                <span class="hv-score__n">И. Попова <span class="hv-micro">· ВЫ</span></span>
+                <span class="hv-score__m">11 ЗАКАЗОВ · 7.4 МИН · ОШИБОК 0</span>
+              </span>
+              <span class="hv-blocks" data-tone="good"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><b>9.6</b></span>
+            </div>
+            <div class="hv-score">
+              <span class="hv-avatar hv-avatar--sm">ДБ</span>
+              <span>
+                <span class="hv-score__n">Д. Белов</span>
+                <span class="hv-score__m">6 ЗАКАЗОВ · 8.9 МИН · ОШИБОК 0</span>
+              </span>
+              <span class="hv-blocks"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i><i></i><b>8.3</b></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="hv-frame">
+          <span class="hv-label">Отгрузка сегодня</span>
+          <ul class="hv-leaders" style="margin-top:var(--hv-2)">
+            <li class="hv-leader"><span class="hv-leader__k">Курьер Москва · 19:30</span><span class="hv-leader__fill"></span><span class="hv-leader__v">3 места</span></li>
+            <li class="hv-leader"><span class="hv-leader__k">СДЭК · 19:30</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 место</span></li>
+            <li class="hv-leader"><span class="hv-leader__k">Самовывоз · до 21:00</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 место</span></li>
+          </ul>
+          <a class="hv-btn hv-btn--block" href="logistics.html" style="margin-top:var(--hv-3)">Открыть логистику</a>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hv-panel__foot" style="border-top:1px solid var(--hv-line)">
+    <span>PACKING.QUEUE · PRINTORIAN OS ./v2.0</span>
+    <span data-clock></span>
+  </footer>
+</div>
+
+<!-- ======================================================= packing detail -->
+<div class="hv-overlay" id="pk-detail" hidden>
+  <div class="hv-modal" role="dialog" aria-modal="true" aria-labelledby="pkd-t">
+    <div class="hv-chrome" style="position:static;padding:var(--hv-3) var(--hv-3) 0">
+      <div class="hv-chrome__row">
+        <span class="hv-tab" id="pkd-t">Упаковка :: PK-2147</span>
+        <div class="hv-meta">
+          <span>ЗАКАЗ :: <strong>ORD-2147</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>ДОСТАВКА :: <strong>КУРЬЕР МСК</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>ЗАБОР :: <strong>19:30</strong></span>
+        </div>
+        <div class="hv-os">
+          <span class="hv-os__label">В РАБОТЕ · 4 МИН</span>
+        <button class="hv-os__x" type="button" data-close aria-label="Закрыть">✕</button>
+        </div>
+      </div>
+      <div class="hv-path">
+        <div class="hv-path__crumbs">C:/PRINTORIAN/PRODUCTION/PACKING/PK-2147</div>
+        <div class="hv-path__status">STATUS :: <b>IN PROGRESS</b></div>
+      </div>
+    </div>
+
+    <div class="hv-modal__body hv-stack">
+
+      <div class="hv-vs">
+        <div><span class="hv-vs__k">Норма</span><span class="hv-vs__v">9:00</span></div>
+        <div><span class="hv-vs__k">Прошло</span><span class="hv-vs__v hv-live">4:02</span></div>
+        <div><span class="hv-vs__k">До отсечки</span><span class="hv-vs__v hv-warn">2:14</span></div>
+      </div>
+
+      <div class="hv-cols hv-cols--2">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Комплектность</span><span class="hv-panel__aside">СВЕРИТЬ ДО ЗАКРЫТИЯ КОРОБКИ</span></div>
+          <div class="hv-panel__body--none">
+            <table class="hv-table">
+              <thead><tr><th>Позиция</th><th data-align="end">Заказано</th><th data-align="end">В наличии</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>BRACKET_V4 · чёрный</td><td data-align="end">6</td><td data-align="end">6</td><td><span class="hv-state" data-state="idle">Сверено</span></td></tr>
+                <tr><td>BRACKET_V4 · красный</td><td data-align="end">4</td><td data-align="end">4</td><td><span class="hv-state" data-state="idle">Сверено</span></td></tr>
+                <tr><td>Паспорт заказа</td><td data-align="end">1</td><td data-align="end">1</td><td><span class="hv-state" data-state="idle">Напечатан</span></td></tr>
+                <tr><td>Чек</td><td data-align="end">1</td><td data-align="end">0</td><td><span class="hv-state" data-state="paused">Печать</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hv-panel__foot"><span>ИТОГО 10 ДЕТАЛЕЙ</span><span class="hv-good">РАСХОЖДЕНИЙ НЕТ</span></div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Тара и вес</span><span class="hv-panel__aside">ПОДОБРАНО СИСТЕМОЙ</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Рекомендуемая тара<span class="hv-leader__basis">ПО СУММАРНОМУ ГАБАРИТУ</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">Коробка A</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Габарит партии</span><span class="hv-leader__fill"></span><span class="hv-leader__v">190 × 140 × 70 мм</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Расчётный вес</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 040 г</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Объёмный вес<span class="hv-leader__basis">ДЕЛИТЕЛЬ 5000</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">373 г</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Наполнитель</span><span class="hv-leader__fill"></span><span class="hv-leader__v">Крафт · 60 г</span></li>
+              <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Плёнка обязательна<span class="hv-leader__basis">ТОНКИЕ СТЕНКИ 0.6 ММ</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">да</span></li>
+            </ul>
+            <hr class="hv-hr">
+            <div class="hv-slab"><span>Стоимость упаковки</span><span class="hv-slab__v">204 ₽</span></div>
+          </div>
+          <div class="hv-panel__foot"><span>В СМЕТЕ ЗАКАЗА :: 220 ₽</span><span class="hv-good">В НОРМАТИВЕ</span></div>
+        </section>
+      </div>
+
+      <section class="hv-panel">
+        <div class="hv-panel__head"><span>Инструкция</span><span class="hv-panel__aside">ШАГ 2 ИЗ 5</span></div>
+        <div class="hv-steps">
+          <div class="hv-step" data-done="true">
+            <span>
+              <span class="hv-step__t">Сверить комплектность по списку</span>
+              <span class="hv-step__d">Пересчитать по цветам отдельно. Расхождение — остановить и вызвать менеджера.</span>
+            </span>
+            <span class="hv-step__n">2 МИН<br>ФАКТ 2</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Обернуть каждую деталь пузырчатой плёнкой</span>
+              <span class="hv-step__d">Один слой, стык вниз. Детали не должны соприкасаться внутри коробки.</span>
+              <span class="hv-step__warn">
+                <b>Обязательно для этого заказа:</b> у модели две стенки 0.6 мм.
+                Оба повреждения в пути за последний месяц были именно на непроложенных деталях.
+              </span>
+            </span>
+            <span class="hv-step__n">3 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Уложить в коробку A, добавить наполнитель</span>
+              <span class="hv-step__d">Проверить встряхиванием: содержимое не должно двигаться.</span>
+            </span>
+            <span class="hv-step__n">2 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Вложить паспорт заказа и чек, заклеить</span>
+              <span class="hv-step__d">Документы сверху, лицевой стороной вверх.</span>
+            </span>
+            <span class="hv-step__n">1 МИН</span>
+          </div>
+          <div class="hv-step">
+            <span>
+              <span class="hv-step__t">Взвесить, наклеить этикетку, отсканировать</span>
+              <span class="hv-step__d">Скан переводит заказ в статус «Отправлен» и уведомляет заказчика.</span>
+            </span>
+            <span class="hv-step__n">1 МИН</span>
+          </div>
+        </div>
+        <div class="hv-panel__foot">
+          <span>ИНСТРУКЦИЯ ВЕРСИИ 2.1 · ИЗМЕНЕНА ПОСЛЕ ДВУХ ПОВРЕЖДЕНИЙ В ИЮЛЕ</span>
+          <span>ПРОШЛО 4:02 ИЗ 9:00</span>
+        </div>
+      </section>
+
+      <div class="hv-row">
+        <button class="hv-btn hv-btn--primary hv-btn--lg" type="button">Отметить шаг</button>
+        <button class="hv-btn" type="button">Печать этикетки</button>
+        <button class="hv-btn" type="button">Печать паспорта</button>
+        <span class="hv-spacer"></span>
+        <button class="hv-btn hv-btn--danger" type="button">Расхождение</button>
+      </div>
+    </div>
+
+    <div class="hv-panel__foot">
+      <span>PK-2147 · ОПЕРАТОР И. ПОПОВА · ПОСТ PK-01</span>
+      <button class="hv-btn hv-btn--sm" type="button" data-close>Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

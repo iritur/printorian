@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="public">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Отчёт #57</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-progress" id="reading"></div>
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Отчёт :: #57</span>
+      <div class="hv-meta">
+        <span>CODE :: <strong>2AFPQJJTVNGDOBFF</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>REPORT_DATE :: <strong>07.08.2026</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>SECTION :: <strong>COST_STRUCTURE</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/<a href="blog.html">JOURNAL</a>/REPORTS/REPORT.57</div>
+      <div class="hv-path__status">STATUS :: <b>OPEN</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="promo.html">О ферме</a>
+      <a class="hv-appbar__link" href="catalog.html">Каталог</a>
+      <a class="hv-appbar__link" href="configurator.html">Рассчитать</a>
+      <a class="hv-appbar__link" href="cabinet.html">Мои заказы</a>
+      <a class="hv-appbar__link" href="account.html">Кабинет</a>
+      <a class="hv-appbar__link" href="blog.html" aria-current="page">Журнал</a>
+    </div>
+    <div class="hv-appbar__right">
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main">
+    <div class="hv-cols hv-cols--3r">
+
+      <!-- ============================================= contents sidebar -->
+      <aside class="hv-sticky hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Содержание</span><span class="hv-panel__aside">7</span></div>
+          <nav class="hv-tree" style="padding:var(--hv-2) 0">
+            <a class="hv-tree__item" href="#s1" aria-current="true">Что входит в час печати <span class="hv-nav__chev">›</span></a>
+            <a class="hv-tree__item" href="#s2">Материал и продувка</a>
+            <a class="hv-tree__item" href="#s3">Электроэнергия</a>
+            <a class="hv-tree__item" href="#s4">Амортизация</a>
+            <a class="hv-tree__item" href="#s5">Труд</a>
+            <a class="hv-tree__item" href="#s6">Резерв на брак</a>
+            <a class="hv-tree__item" href="#s7">Почему это видит заказчик</a>
+          </nav>
+          <div class="hv-panel__foot"><span>11 МИН ЧТЕНИЯ</span></div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Другие отчёты</span></div>
+          <nav class="hv-nav">
+            <a class="hv-nav__item" href="blog-post.html"><span class="hv-nav__lead">#56 · Пороги скидок</span><span class="hv-nav__chev">›</span></a>
+            <a class="hv-nav__item" href="blog-post.html"><span class="hv-nav__lead">#55 · PETG-CF</span><span class="hv-nav__chev">›</span></a>
+            <a class="hv-nav__item" href="blog-post.html"><span class="hv-nav__lead">#54 · Драйверы</span><span class="hv-nav__chev">›</span></a>
+          </nav>
+          <div class="hv-panel__foot"><a class="hv-mono" href="blog.html" style="color:inherit;text-decoration:none">← ВЕСЬ ЖУРНАЛ</a></div>
+        </section>
+      </aside>
+
+      <!-- ======================================================= article -->
+      <article class="hv-stack hv-stack--4">
+
+        <header class="hv-frame hv-frame--wide">
+          <div class="hv-post__meta" style="margin-bottom:var(--hv-3)">
+            <span>ОТЧЁТ :: <b>#57</b></span>
+            <span>07.08.2026</span>
+            <span>СЕБЕСТОИМОСТЬ</span>
+            <span>11 МИН ЧТЕНИЯ</span>
+          </div>
+          <h1 class="hv-display" style="font-size:clamp(1.7rem,4.4vw,3rem)">Час печати</h1>
+          <p class="hv-lede" style="margin-top:var(--hv-4);max-width:70ch">
+            Сколько на самом деле стоит час работы принтера — и почему мы показываем
+            эту цифру заказчику до оплаты, а не прячем её в итоговой сумме.
+          </p>
+          <div class="hv-row" style="margin-top:var(--hv-4)">
+            <span class="hv-micro">АВТОР :: ИНЖЕНЕРНАЯ ГРУППА · ФЕРМА KN-SOL.21</span>
+            <span class="hv-spacer"></span>
+            <span class="hv-micro">ДАННЫЕ :: 12 ПРИНТЕРОВ · 90 СУТОК</span>
+          </div>
+        </header>
+
+        <!-- key figures: the dossier's leader-row treatment ------------- -->
+        <section class="hv-panel">
+          <div class="hv-panel__head hv-panel__head--invert">
+            <span>Итог отчёта в цифрах</span>
+            <span class="hv-panel__aside" style="color:inherit">BAMBU X1C · PETG-CF</span>
+          </div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Амортизация</span><span class="hv-leader__fill"></span><span class="hv-leader__v">41.00 ₽/ч</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Электроэнергия</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1.98 ₽/ч</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Труд · надзор</span><span class="hv-leader__fill"></span><span class="hv-leader__v">45.96 ₽/ч</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Резерв на брак</span><span class="hv-leader__fill"></span><span class="hv-leader__v">10.80 ₽/ч</span></li>
+              <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Простой · амортизация вхолостую</span><span class="hv-leader__fill"></span><span class="hv-leader__v">6.20 ₽/ч</span></li>
+            </ul>
+            <hr class="hv-hr hv-hr--heavy">
+            <div class="hv-slab hv-slab--lg"><span>Час печати</span><span class="hv-slab__v">99.74 ₽</span></div>
+            <p class="hv-micro" style="margin:var(--hv-2) 0 0">БЕЗ МАТЕРИАЛА · БЕЗ НАКЛАДНЫХ · БЕЗ ПРИБЫЛИ</p>
+          </div>
+        </section>
+
+        <div class="hv-article">
+
+          <h2 id="s1">Что входит в час печати</h2>
+          <p>
+            Когда заказчик видит цену, он видит одно число. Внутри этого числа —
+            восемь независимых статей, и только две из них растут пропорционально
+            размеру модели. Остальные шесть привязаны ко времени, а время
+            определяется не объёмом, а геометрией: <strong>деталь вдвое меньше
+            печатается не вдвое быстрее</strong>.
+          </p>
+          <p>
+            Мы посчитали каждую статью на выборке из 12 машин за 90 суток
+            непрерывной работы. Ниже — что получилось и как считается.
+          </p>
+
+          <div class="hv-callout hv-callout--live">
+            <strong>Правило, из которого всё следует.</strong> Один расчёт цены — чистая
+            детерминированная функция. Никаких коэффициентов «на глаз»: если цифру
+            нельзя вывести из тарифов, её не существует.
+          </div>
+
+          <h2 id="s2">Материал и продувка</h2>
+          <p>
+            Материал — единственная статья, которую заказчик обычно ожидает увидеть.
+            Считается по фактическому объёму сетки, а не по габаритной коробке:
+            <code>412.8 г × 2.94 ₽/г = 1 213 ₽</code>. Объём берётся из разбора STL,
+            герметичность проверяется до расчёта — на негерметичной сетке цену
+            назвать нельзя, и мы честно об этом говорим.
+          </p>
+          <p>
+            Вторая статья почти всегда становится сюрпризом. При многоцветной печати
+            каждая смена цвета требует прочистить сопло, и этот материал уходит в
+            отход. На двухцветной модели это <strong>62 грамма из 475</strong> —
+            13% материала, которые никогда не попадут в деталь.
+          </p>
+
+          <figure class="hv-figure">
+            <div class="hv-frame" style="padding:var(--hv-4)">
+              <svg viewBox="0 0 600 150" width="100%" height="150" aria-label="Распределение материала: деталь и продувка" role="img">
+                <g font-family="var(--hv-font-mono)" font-size="10" fill="currentColor" opacity="0.6">
+                  <text x="0" y="12">ДЕТАЛЬ · 412.8 Г · 87%</text>
+                  <text x="0" y="82">ПРОДУВКА · 62.0 Г · 13%</text>
+                </g>
+                <rect x="0" y="22" width="522" height="28" fill="currentColor" opacity="0.85"/>
+                <rect x="0" y="92" width="78" height="28" fill="none" stroke="var(--hv-warn)" stroke-width="1.5"/>
+                <rect x="0" y="92" width="78" height="28" fill="var(--hv-warn)" opacity="0.3"/>
+                <g font-family="var(--hv-font-mono)" font-size="10" fill="currentColor" opacity="0.45">
+                  <text x="534" y="41">1 213 ₽</text>
+                  <text x="92" y="111">182 ₽</text>
+                </g>
+              </svg>
+            </div>
+            <figcaption>РИС. 1 — РАСХОД МАТЕРИАЛА НА ЗАКАЗЕ ORD-2147, 10 ШТ, ДВА ЦВЕТА</figcaption>
+          </figure>
+
+          <h2 id="s3">Электроэнергия</h2>
+          <p>
+            Самая переоценённая статья. X1C с подогревом стола и камеры потребляет
+            в среднем 0.32 кВт·ч — за 23.5 часа печати это 9.4 кВт·ч, или
+            <strong>58 рублей на весь заказ</strong>. Меньше одного процента итоговой
+            цены. Мы всё равно показываем её отдельной строкой: строка, которая
+            обнуляет чей-то аргумент, стоит того, чтобы её печатать.
+          </p>
+
+          <div class="hv-code">
+            <div class="hv-code__head"><span>PRICING/ENGINE.PY</span><span>ФРАГМЕНТ</span></div>
+<pre><code>def electricity(hours: Decimal, draw_kw: Decimal, tariff: Money) -> Money:
+    """Потребление за время печати. Простой считается отдельно —
+    выключенный принтер не должен попадать в цену чужого заказа."""
+    return tariff * (hours * draw_kw)</code></pre>
+          </div>
+
+          <h2 id="s4">Амортизация</h2>
+          <p>
+            Принтер за 142 000 ₽ с ресурсом 10 000 часов даёт 14.20 ₽/ч «голой»
+            амортизации. Но ресурс — не то же самое, что срок службы: сопло, ремни и
+            подшипники меняются по наработке, и это тоже амортизация. С учётом
+            расходников получается <strong>41.00 ₽/ч</strong>.
+          </p>
+          <p>
+            Отдельно считается амортизация простоя — 6.20 ₽/ч. Машина дешевеет, даже
+            когда стоит. Эта цифра не попадает в цену конкретного заказа, но попадает
+            в накладные расходы, и именно она делает загрузку парка экономическим
+            вопросом, а не операционным.
+          </p>
+
+          <blockquote class="hv-quote">
+            Простаивающий принтер стоит 149 рублей в сутки. Двенадцать простаивающих —
+            почти 54 тысячи в год.
+            <cite>ОТЧЁТ #52 · КАРТА ОБСЛУЖИВАНИЯ</cite>
+          </blockquote>
+
+          <h2 id="s5">Труд</h2>
+          <p>
+            Две разные статьи, которые часто смешивают:
+          </p>
+          <ul>
+            <li><strong>Подготовка задания</strong> — фиксированные 0.5 часа на заказ,
+              независимо от количества. Раскладка на столе, проверка ориентации,
+              настройка поддержек.</li>
+            <li><strong>Надзор за печатью</strong> — пропорционально времени, но с
+              коэффициентом 0.05: оператор не стоит у машины, он обходит двенадцать.</li>
+          </ul>
+          <p>
+            Поэтому единичный заказ почти всегда дороже в пересчёте на штуку — и
+            поэтому скидка за объём не является щедростью. Она отражает реальное
+            падение себестоимости.
+          </p>
+
+          <h2 id="s6">Резерв на брак</h2>
+          <p>
+            За 90 суток мы потеряли 6.1% печатей: отклеивание, слом филамента,
+            засор сопла. Резерв закладывается по классу риска модели — тонкие
+            стенки и высокие тонкие детали идут по повышенному классу.
+          </p>
+
+          <div class="hv-table-wrap">
+            <table class="hv-table">
+              <thead><tr><th>Класс риска</th><th>Признак</th><th data-align="end">Доля брака</th><th data-align="end">Резерв</th></tr></thead>
+              <tbody>
+                <tr><td>A</td><td>Компактная, широкое основание</td><td data-align="end">2.4%</td><td data-align="end">3%</td></tr>
+                <tr><td>B</td><td>Стенки от 0.8 до 1.2 мм</td><td data-align="end">6.1%</td><td data-align="end">6%</td></tr>
+                <tr><td>C</td><td>Высота / основание больше 4</td><td data-align="end">11.8%</td><td data-align="end">12%</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="hv-callout">
+            <strong>Чего мы не делаем.</strong> Резерв не перекладывается на конкретного
+            заказчика, чья печать сорвалась. Перепечать за наш счёт — на то он и резерв.
+          </div>
+
+          <h2 id="s7">Почему это видит заказчик</h2>
+          <p>
+            Стандартный контраргумент: показывая себестоимость, вы приглашаете
+            торговаться. За четыре месяца прозрачной сметы мы получили обратное.
+            Споров о цене стало <strong>меньше</strong>, потому что спорить теперь
+            можно только с конкретной строкой — а конкретная строка либо
+            обоснована тарифом, либо нет.
+          </p>
+          <p>
+            Побочный эффект оказался важнее. Видя структуру, заказчик сам находит,
+            где сэкономить: убирает второй цвет, снижает класс риска, поднимает
+            тираж до порога скидки. Средний чек за это время вырос на 12%, а
+            количество отказов на этапе расчёта упало вдвое.
+          </p>
+
+          <div class="hv-slab hv-slab--outline" style="margin-top:var(--hv-5)">
+            <span>Следующий отчёт · #58</span>
+            <span class="hv-slab__v">ЛОГИСТИКА И УПАКОВКА</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- ==================================================== right rail -->
+      <aside class="hv-sticky hv-stack">
+        <section class="hv-frame hv-frame--wide">
+          <span class="hv-micro">ДАННЫЕ ОТЧЁТА</span>
+          <div class="hv-stack hv-stack--2" style="margin-top:var(--hv-3)">
+            <div class="hv-annot"><span>
+              <span class="hv-annot__k">Выборка</span>
+              <span class="hv-annot__v">12 ПРИНТЕРОВ · 90 СУТОК</span>
+            </span></div>
+            <div class="hv-annot"><span>
+              <span class="hv-annot__k">Наработка</span>
+              <span class="hv-annot__v">13 320 ЧАСОВ ПЕЧАТИ</span>
+            </span></div>
+            <div class="hv-annot"><span>
+              <span class="hv-annot__k">Заказов</span>
+              <span class="hv-annot__v">1 184</span>
+            </span></div>
+            <div class="hv-annot"><span>
+              <span class="hv-annot__k">Доля брака</span>
+              <span class="hv-annot__v">6.1%</span>
+            </span></div>
+            <div class="hv-annot"><span>
+              <span class="hv-annot__k">Тарифы</span>
+              <span class="hv-annot__v">SNAP.8F41C2</span>
+            </span></div>
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Проверить на себе</span></div>
+          <div class="hv-panel__body hv-stack">
+            <p class="hv-prose" style="font-size:var(--hv-size-small);margin:0">
+              Загрузите модель — увидите ту же смету построчно, с основанием
+              расчёта под каждой цифрой.
+            </p>
+            <a class="hv-btn hv-btn--primary hv-btn--block" href="configurator.html">Открыть конфигуратор</a>
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Упомянуто в отчёте</span></div>
+          <div class="hv-panel__body--none">
+            <table class="hv-table">
+              <tbody>
+                <tr data-activatable><td>PETG-CF<div class="hv-micro">МАТЕРИАЛ</div></td><td data-align="end">2.94 ₽/г</td></tr>
+                <tr data-activatable><td>Bambu X1C<div class="hv-micro">ПРИНТЕР</div></td><td data-align="end">41.00 ₽/ч</td></tr>
+                <tr data-activatable><td>ORD-2147<div class="hv-micro">ЗАКАЗ</div></td><td data-align="end">5 776 ₽</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="hv-row">
+          <button class="hv-btn" type="button">Поделиться</button>
+          <button class="hv-btn" type="button">PDF</button>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="hv-panel__foot" style="border-top:1px solid var(--hv-line)">
+    <span>REPORT.57 · JOURNAL · PRINTORIAN OS ./v2.0</span>
+    <span data-clock></span>
+  </footer>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+<script>
+  /* Reading progress. Demo-only, like the rest of kit.js — on integration this
+     is a scroll listener in the article component. */
+  (function () {
+    var bar = document.getElementById('reading');
+    var tick = function () {
+      var h = document.documentElement.scrollHeight - window.innerHeight;
+      bar.style.transform = 'scaleX(' + (h > 0 ? window.scrollY / h : 0) + ')';
+    };
+    addEventListener('scroll', tick, { passive: true });
+    addEventListener('resize', tick);
+    tick();
+  })();
+</script>
+</body>
+</html>

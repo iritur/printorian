@@ -1,0 +1,1449 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Настройки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Система :: Настройки</span>
+      <div class="hv-meta">
+        <span>SCOPE :: <strong>FARM.KN-SOL.21</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>RATES :: <strong>SNAP.8F41C2</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ENGINE :: <strong>v1.0.0</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/SYSTEM/SETTINGS/FARM.CONFIG</div>
+      <div class="hv-path__status">ПРАВА :: <b>MANAGE_SETTINGS</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="dashboard.html">Сводка</a>
+      <a class="hv-appbar__link" href="orders.html">Заказы</a>
+      <a class="hv-appbar__link" href="fleet.html">Принтеры</a>
+      <a class="hv-appbar__link" href="postproduction.html">Постобработка</a>
+      <a class="hv-appbar__link" href="packaging.html">Упаковка</a>
+      <a class="hv-appbar__link" href="service.html">Сервис</a>
+      <a class="hv-appbar__link" href="store.html">Склад</a>
+      <a class="hv-appbar__link" href="purchasing.html">Закупки</a>
+      <a class="hv-appbar__link" href="logistics.html">Логистика</a>
+      <a class="hv-appbar__link" href="settings.html" aria-current="page">Настройки</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">ДЧ</span>boss@printorian.example</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main" data-dirty-scope>
+    <div class="hv-cols hv-cols--2l">
+
+      <!-- ======================================================= sections -->
+      <aside class="hv-sticky hv-stack">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Разделы</span><span class="hv-panel__aside">15</span></div>
+          <nav class="hv-tree hv-rail" style="padding:var(--hv-2) 0" data-tabs="#settings-body">
+            <button class="hv-tree__item" type="button" data-tab-target="general" aria-selected="true" aria-current="true">Общие <span class="hv-nav__chev">›</span></button>
+            <button class="hv-tree__item" type="button" data-tab-target="pricing">Ценообразование</button>
+            <button class="hv-tree__item" type="button" data-tab-target="discounts">Скидки и тарифы</button>
+            <button class="hv-tree__item" type="button" data-tab-target="scheduling">Планировщик</button>
+            <button class="hv-tree__item" type="button" data-tab-target="sla">Сроки и SLA</button>
+            <button class="hv-tree__item" type="button" data-tab-target="inventory">Склад и материалы</button>
+            <button class="hv-tree__item" type="button" data-tab-target="service">Оборудование и сервис</button>
+            <button class="hv-tree__item" type="button" data-tab-target="postprocess">Постобработка</button>
+            <button class="hv-tree__item" type="button" data-tab-target="logistics">Логистика</button>
+            <button class="hv-tree__item" type="button" data-tab-target="finance">Финансы</button>
+            <button class="hv-tree__item" type="button" data-tab-target="notify">Уведомления</button>
+            <button class="hv-tree__item" type="button" data-tab-target="security">Доступ и безопасность</button>
+            <button class="hv-tree__item" type="button" data-tab-target="integrations">Интеграции</button>
+            <button class="hv-tree__item" type="button" data-tab-target="diagnostics">Диагностика</button>
+            <button class="hv-tree__item" type="button" data-tab-target="maintenance">Обслуживание системы</button>
+          </nav>
+          <div class="hv-panel__foot"><span>ИЗМЕНЕНИЯ ПИШУТСЯ В АУДИТ</span></div>
+        </section>
+
+        <section class="hv-frame">
+          <span class="hv-label">Снимок тарифов</span>
+          <div class="hv-stat" style="padding:var(--hv-2) 0">
+            <span class="hv-stat__v" style="font-size:1.1rem">8F41C2</span>
+            <span class="hv-micro">ДЕЙСТВУЕТ С 01.08.2026</span>
+          </div>
+          <p class="hv-micro" style="margin:0">
+            ЦЕНЫ ФИКСИРУЮТСЯ СНИМКОМ. ИЗМЕНЕНИЕ ТАРИФА НЕ ПЕРЕСЧИТЫВАЕТ УЖЕ ОФОРМЛЕННЫЕ ЗАКАЗЫ.
+          </p>
+        </section>
+      </aside>
+
+      <!-- =========================================================== body -->
+      <div id="settings-body" class="hv-stack hv-tabview">
+
+        <!-- ================================================= 01 GENERAL -->
+        <div data-tab-panel="general" class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 01 · CORE.CONFIG</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Общие</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Идентичность фермы, часовой пояс и режим работы. От времени открытия
+              зависят обещанные сроки: планировщик не назначает ручные операции
+              на закрытую смену.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Ферма</span><span class="hv-panel__aside">CORE.CONFIG</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Название фермы</span>
+                  <span class="hv-set__hint">Выводится в письмах, счетах и на экране цеха.</span>
+                  <span class="hv-set__code">farm_name</span></span>
+                <span class="hv-set__v"><input class="hv-input" value="KN-SOL.21"></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Часовой пояс</span>
+                  <span class="hv-set__hint">Все сроки, отчёты и расписание обслуживания считаются в нём.</span>
+                  <span class="hv-set__code">farm_timezone</span></span>
+                <span class="hv-set__v">
+                  <select class="hv-select"><option>Europe/Moscow</option><option>Asia/Yekaterinburg</option><option>Asia/Novosibirsk</option><option>UTC</option></select>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Смена открывается</span>
+                  <span class="hv-set__hint">Раньше этого часа ручные операции не планируются.</span>
+                  <span class="hv-set__code">farm_open_hour</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-set__was">БЫЛО 9</span>
+                  <button class="hv-btn hv-btn--sm" type="button" data-revert>Вернуть</button>
+                  <span class="hv-unit"><input type="number" value="9" min="0" max="23"><span class="hv-unit__u">час</span></span>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Смена закрывается</span>
+                  <span class="hv-set__hint">Печать продолжается ночью, ручные операции — нет.</span>
+                  <span class="hv-set__code">farm_close_hour</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-set__was">БЫЛО 21</span>
+                  <button class="hv-btn hv-btn--sm" type="button" data-revert>Вернуть</button>
+                  <span class="hv-unit"><input type="number" value="21" min="1" max="24"><span class="hv-unit__u">час</span></span>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Круглосуточная печать</span>
+                  <span class="hv-set__hint">Задания стартуют вне смены, если не требуют присутствия оператора.</span>
+                  <span class="hv-set__code">unattended_printing</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Круглосуточная печать"></button></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Представление</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Валюта</span>
+                  <span class="hv-set__hint">Меняется только при пустой очереди — снимки тарифов хранят валюту внутри себя.</span>
+                  <span class="hv-set__code">currency</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>RUB · ₽</option><option>KZT · ₸</option><option>USD · $</option></select></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Язык по умолчанию</span>
+                  <span class="hv-set__hint">Заказчик может переключить сам; это только начальное значение.</span>
+                  <span class="hv-set__code">default_locale</span></span>
+                <span class="hv-set__v">
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Единицы измерения</span>
+                  <span class="hv-set__hint">Метрические — единственный поддерживаемый вариант в этой версии.</span>
+                  <span class="hv-set__code">units</span></span>
+                <span class="hv-set__v"><select class="hv-select" disabled><option>Метрические · мм / г / ч</option></select></span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ================================================= 02 PRICING -->
+        <div data-tab-panel="pricing" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 02 · PRICING.RATESNAPSHOT</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Ценообразование</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Все ставки, которыми пользуется расчёт. Движок ничего не ищет сам —
+              снимок передаётся ему целиком, поэтому цена воспроизводима спустя годы.
+            </p>
+          </div>
+
+          <div class="hv-callout hv-callout--live">
+            <strong>Сохранение создаёт новый снимок.</strong> Текущий
+            <code>SNAP.8F41C2</code> останется привязан к уже оформленным заказам —
+            ни один из них не будет пересчитан.
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Труд</span><span class="hv-panel__aside">LABOR.*</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Ставка оператора</span>
+                  <span class="hv-set__hint">Основа для подготовки задания и надзора за печатью.</span>
+                  <span class="hv-set__code">labor_rate_per_hour</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-set__was">БЫЛО 600</span>
+                  <button class="hv-btn hv-btn--sm" type="button" data-revert>Вернуть</button>
+                  <span class="hv-unit"><input type="number" value="600" step="10"><span class="hv-unit__u">₽ / ч</span></span>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Надзор на час печати</span>
+                  <span class="hv-set__hint">Доля часа оператора на каждый час печати. 0.05 = один оператор на двадцать машин.</span>
+                  <span class="hv-set__code">labor_hours_per_print_hour</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-set__was">БЫЛО 0.05</span>
+                  <button class="hv-btn hv-btn--sm" type="button" data-revert>Вернуть</button>
+                  <span class="hv-unit"><input type="number" value="0.05" step="0.01"><span class="hv-unit__u">ч / ч</span></span>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Подготовка задания</span>
+                  <span class="hv-set__hint">Разово на заказ: раскладка на столе, старт, снятие, очистка.</span>
+                  <span class="hv-set__code">labor_hours_per_job</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="0.25" step="0.05"><span class="hv-unit__u">ч</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Инженерные работы при масштабировании</span>
+                  <span class="hv-set__hint">Начисляются один раз, если заказчик изменил размер модели.</span>
+                  <span class="hv-set__code">engineering_hours_per_resize</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="0.5" step="0.1"><span class="hv-unit__u">ч</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Ставка постобработки</span>
+                  <span class="hv-set__hint">Отдельная от операторской: шлифовка и окраска — другая квалификация.</span>
+                  <span class="hv-set__code">postprocess_rate_per_hour</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="500" step="10"><span class="hv-unit__u">₽ / ч</span></span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Оборудование</span><span class="hv-panel__aside">MACHINE.*</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Тариф на электроэнергию</span>
+                  <span class="hv-set__code">electricity_rate_per_kwh</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="6.50" step="0.1"><span class="hv-unit__u">₽ / кВт·ч</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Потребление принтера</span>
+                  <span class="hv-set__hint">Среднее по парку. Индивидуальное значение задаётся в карточке машины.</span>
+                  <span class="hv-set__code">printer_power_kw</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="0.35" step="0.01"><span class="hv-unit__u">кВт</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Амортизация за час печати</span>
+                  <span class="hv-set__hint">Значение по умолчанию. Карточка принтера переопределяет его.</span>
+                  <span class="hv-set__code">depreciation_per_printer_hour</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="35" step="1"><span class="hv-unit__u">₽ / ч</span></span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Материал</span><span class="hv-panel__aside">MATERIAL.*</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Закупка отсутствующего материала</span>
+                  <span class="hv-set__hint">Разово на заказ, не на штуку: одна закупка покрывает весь тираж.</span>
+                  <span class="hv-set__code">material_procurement_flat</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="500" step="50"><span class="hv-unit__u">₽</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Продувка на каждый доп. цвет</span>
+                  <span class="hv-set__hint">AMS прочищает сопло при каждой смене. Это материал, который не попадёт в деталь.</span>
+                  <span class="hv-set__code">multicolor_purge_grams_per_extra_color</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-set__was">БЫЛО 12</span>
+                  <button class="hv-btn hv-btn--sm" type="button" data-revert>Вернуть</button>
+                  <span class="hv-unit"><input type="number" value="12" step="1"><span class="hv-unit__u">г</span></span>
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Накладные, риск и прибыль</span><span class="hv-panel__aside">OVERHEAD · RISK · MARGIN</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Накладные на час печати</span>
+                  <span class="hv-set__hint">Аренда, свет в цехе, связь, простаивающие машины.</span>
+                  <span class="hv-set__code">overhead_per_print_hour</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="25" step="1"><span class="hv-unit__u">₽ / ч</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Резерв на брак</span>
+                  <span class="hv-set__hint">Применяется только к производственной себестоимости, никогда к доставке.</span>
+                  <span class="hv-set__code">failure_buffer_percent</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="7" step="0.5"><span class="hv-unit__u">%</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Надбавка за срочность</span>
+                  <span class="hv-set__code">rush_surcharge_percent</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="25" step="1"><span class="hv-unit__u">%</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Прибыль</span>
+                  <span class="hv-set__hint">Тариф клиента может переопределить это значение.</span>
+                  <span class="hv-set__code">margin_percent</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-set__was">БЫЛО 30</span>
+                  <button class="hv-btn hv-btn--sm" type="button" data-revert>Вернуть</button>
+                  <span class="hv-unit"><input type="number" value="30" step="1"><span class="hv-unit__u">%</span></span>
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- =============================================== 03 DISCOUNTS -->
+        <div data-tab-panel="discounts" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 03 · PRICING.DISCOUNTLADDER</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Скидки</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Лестница скидок за объём и персональные тарифы. Лестница проверяется
+              на неинвертируемость при сохранении: больший заказ не может стоить
+              дороже меньшего.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Лестница за объём</span><span class="hv-panel__aside">4 СТУПЕНИ</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Ступень</th><th>От количества</th><th>Скидка</th><th data-align="end">Цена за шт · пример</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td class="hv-table__id">1</td>
+                    <td><span class="hv-unit"><input type="number" value="10"><span class="hv-unit__u">шт</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="5"><span class="hv-unit__u">%</span></span></td>
+                    <td data-align="end">571.52 ₽</td>
+                    <td><button class="hv-btn hv-btn--sm hv-btn--danger" type="button">Удалить</button></td></tr>
+                  <tr><td class="hv-table__id">2</td>
+                    <td><span class="hv-unit"><input type="number" value="25"><span class="hv-unit__u">шт</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="12"><span class="hv-unit__u">%</span></span></td>
+                    <td data-align="end">529.41 ₽</td>
+                    <td><button class="hv-btn hv-btn--sm hv-btn--danger" type="button">Удалить</button></td></tr>
+                  <tr><td class="hv-table__id">3</td>
+                    <td><span class="hv-unit"><input type="number" value="50"><span class="hv-unit__u">шт</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="18"><span class="hv-unit__u">%</span></span></td>
+                    <td data-align="end">493.31 ₽</td>
+                    <td><button class="hv-btn hv-btn--sm hv-btn--danger" type="button">Удалить</button></td></tr>
+                  <tr><td class="hv-table__id">4</td>
+                    <td><span class="hv-unit"><input type="number" value="100"><span class="hv-unit__u">шт</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="24"><span class="hv-unit__u">%</span></span></td>
+                    <td data-align="end">457.22 ₽</td>
+                    <td><button class="hv-btn hv-btn--sm hv-btn--danger" type="button">Удалить</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="hv-panel__foot">
+              <span>ПРОВЕРКА :: ЛЕСТНИЦА НЕ ИНВЕРТИРУЕТСЯ</span>
+              <button class="hv-btn hv-btn--sm" type="button">Добавить ступень</button>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Защита от обрыва на пороге</span>
+                  <span class="hv-set__hint">Без неё 50 штук могут стоить дешевле, чем 49: ферма печатает лишнюю деталь и получает меньше денег. Выключайте, только если нужны «сырые» ступени.</span>
+                  <span class="hv-set__code">guard_tier_cliffs</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Защита от обрыва"></button></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Тарифы клиентов</span><span class="hv-panel__aside">PRICING.CUSTOMERTIER</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Код</th><th>Название</th><th>Скидка</th><th>Прибыль · переопределение</th><th data-align="end">Клиентов</th></tr></thead>
+                <tbody>
+                  <tr><td class="hv-table__id">standard</td><td>Базовый</td>
+                    <td><span class="hv-unit"><input type="number" value="0"><span class="hv-unit__u">%</span></span></td>
+                    <td><span class="hv-faint">не задано</span></td><td data-align="end">27</td></tr>
+                  <tr><td class="hv-table__id">silver</td><td>Silver</td>
+                    <td><span class="hv-unit"><input type="number" value="4"><span class="hv-unit__u">%</span></span></td>
+                    <td><span class="hv-faint">не задано</span></td><td data-align="end">5</td></tr>
+                  <tr><td class="hv-table__id">gold</td><td>Gold</td>
+                    <td><span class="hv-unit"><input type="number" value="8"><span class="hv-unit__u">%</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="22"><span class="hv-unit__u">%</span></span></td>
+                    <td data-align="end">2</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="hv-panel__foot"><span>СКИДКА КЛИЕНТА СКЛАДЫВАЕТСЯ СО СКИДКОЙ ЗА ОБЪЁМ</span><button class="hv-btn hv-btn--sm" type="button">Добавить тариф</button></div>
+          </section>
+        </div>
+
+        <!-- ============================================== 04 SCHEDULING -->
+        <div data-tab-panel="scheduling" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 04 · SCHEDULING.SCHEDULINGPOLICY</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Планировщик</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Как выбирается принтер, когда подходит несколько. Каждая составляющая —
+              штраф от 0 до 1, умноженный на вес; побеждает машина с наименьшей
+              суммой. Одно направление у всех весов: больше вес — сильнее избегаем.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Веса выбора</span><span class="hv-panel__aside">ШТРАФЫ, НЕ ДОСТОИНСТВА</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Расход возможностей машины</span>
+                  <span class="hv-set__hint">Четырёхцветный AMS, потраченный на одноцветную деталь, — это мощность, которую ферма не сможет использовать.</span>
+                  <span class="hv-set__code">weight_capability_waste</span></span>
+                <span class="hv-set__v hv-weight">
+                  <input class="hv-range" type="range" min="0" max="10" step="1" value="3" data-bind="#w1">
+                  <span class="hv-weight__v" id="w1">3</span>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Запас материала в катушке</span>
+                  <span class="hv-set__hint">Закончиться посреди печати — потерять всю плиту и потраченные часы. Самый тяжёлый вес по умолчанию.</span>
+                  <span class="hv-set__code">weight_material_headroom</span></span>
+                <span class="hv-set__v hv-weight">
+                  <input class="hv-range" type="range" min="0" max="10" step="1" value="4" data-bind="#w2">
+                  <span class="hv-weight__v" id="w2">4</span>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Стоимость машины</span>
+                  <span class="hv-set__hint">Обычную работу — на дешёвые машины, дорогие держим свободными.</span>
+                  <span class="hv-set__code">weight_amortization</span></span>
+                <span class="hv-set__v hv-weight">
+                  <input class="hv-range" type="range" min="0" max="10" step="1" value="1" data-bind="#w3">
+                  <span class="hv-weight__v" id="w3">1</span>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Балансировка загрузки</span>
+                  <span class="hv-set__hint">Распределять работу, а не ставить всё в очередь на один принтер.</span>
+                  <span class="hv-set__code">weight_load_balance</span></span>
+                <span class="hv-set__v hv-weight">
+                  <input class="hv-range" type="range" min="0" max="10" step="1" value="2" data-bind="#w4">
+                  <span class="hv-weight__v" id="w4">2</span>
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Нормировка и приоритет</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Срочным считается заказ со сроком в пределах</span>
+                  <span class="hv-set__hint">Такие задания ставятся в начало очереди.</span>
+                  <span class="hv-set__code">due_soon_hours</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="24" step="1"><span class="hv-unit__u">ч</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">«Полностью загружен» — это очередь в</span>
+                  <span class="hv-set__hint">Глубина очереди, принимаемая за 100% при нормировке балансировки.</span>
+                  <span class="hv-set__code">load_horizon_minutes</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="480" step="30"><span class="hv-unit__u">мин</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">«Дорогая машина» — это</span>
+                  <span class="hv-set__code">expensive_per_hour</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="50" step="5"><span class="hv-unit__u">₽ / ч</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Комфортный запас материала</span>
+                  <span class="hv-set__hint">Во сколько раз остаток должен превышать потребность задания, чтобы перестать быть риском.</span>
+                  <span class="hv-set__code">comfortable_headroom</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="3" step="0.5"><span class="hv-unit__u">×</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Такт планировщика</span>
+                  <span class="hv-set__hint">Как часто пересматривается очередь.</span>
+                  <span class="hv-set__code">scheduler_tick_seconds</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="30" step="5"><span class="hv-unit__u">с</span></span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Лист ожидания</span><span class="hv-panel__aside">ПРИЧИНЫ И ПОВЕДЕНИЕ</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Нет подходящего принтера</span>
+                  <span class="hv-set__hint">Требуется решение инженера. Заказчику срок не называется.</span>
+                  <span class="hv-set__code">waitlist.no_capable_printer</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>Уведомить инженера</option><option>Только в лист ожидания</option></select></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Ждёт освобождения принтера</span>
+                  <span class="hv-set__hint">Обычная очередь. Заказчику показывается место и прогноз.</span>
+                  <span class="hv-set__code">waitlist.awaiting_capacity</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>Показывать место и прогноз</option><option>Показывать только место</option></select></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Материал не загружен</span>
+                  <span class="hv-set__hint">Никто не знает, когда человек поставит катушку, поэтому дата не обещается.</span>
+                  <span class="hv-set__code">waitlist.material_not_loaded</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>Уведомить оператора цеха</option><option>Только в лист ожидания</option></select></span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ===================================================== 05 SLA -->
+        <div data-tab-panel="sla" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 05 · ORDERING.SLAPOLICY</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Сроки и SLA</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Обещанный срок и что происходит, когда ферма из него выходит. Скидка
+              за просрочку начисляется автоматически: заказчику не нужно её требовать,
+              а ферме — обсуждать.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Обещанный срок</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Запас поверх расчётного времени</span>
+                  <span class="hv-set__hint">Расчёт даёт чистое время печати; обещание должно пережить очередь и постобработку.</span>
+                  <span class="hv-set__code">promise_buffer_percent</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="40" step="5"><span class="hv-unit__u">%</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Минимальный срок</span>
+                  <span class="hv-set__hint">Ниже этого срок не обещается, даже если печать занимает 20 минут.</span>
+                  <span class="hv-set__code">min_lead_hours</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="24" step="1"><span class="hv-unit__u">ч</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Срок при срочном производстве</span>
+                  <span class="hv-set__code">rush_lead_hours</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="18" step="1"><span class="hv-unit__u">ч</span></span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Скидка за просрочку</span><span class="hv-panel__aside">НАЧИСЛЯЕТСЯ АВТОМАТИЧЕСКИ</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">За каждые сутки просрочки</span>
+                  <span class="hv-set__code">percent_per_day</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-set__was">БЫЛО 5</span>
+                  <button class="hv-btn hv-btn--sm" type="button" data-revert>Вернуть</button>
+                  <span class="hv-unit"><input type="number" value="5" step="1"><span class="hv-unit__u">%</span></span>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Потолок скидки</span>
+                  <span class="hv-set__hint">Дальше начисление останавливается — заказ не может стать бесплатным.</span>
+                  <span class="hv-set__code">max_percent</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="30" step="5"><span class="hv-unit__u">%</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Проверка просрочек</span>
+                  <span class="hv-set__hint">Как часто система обходит заказы и начисляет компенсацию.</span>
+                  <span class="hv-set__code">sla_sweep_seconds</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="300" step="60"><span class="hv-unit__u">с</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Возвращать деньги сразу</span>
+                  <span class="hv-set__hint">Иначе компенсация вычитается из суммы к доплате.</span>
+                  <span class="hv-set__code">sla_auto_refund</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Автовозврат"></button></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Пересмотр цены</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Допустимое отклонение факта от расчёта</span>
+                  <span class="hv-set__hint">Если фактическое время печати ушло дальше, заказ уходит в «Пересмотр цены», а не тихо дорожает.</span>
+                  <span class="hv-set__code">price_variance_tolerance</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-set__was">БЫЛО 15</span>
+                  <button class="hv-btn hv-btn--sm" type="button" data-revert>Вернуть</button>
+                  <span class="hv-unit"><input type="number" value="15" step="1"><span class="hv-unit__u">%</span></span>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Кто утверждает пересмотр</span>
+                  <span class="hv-set__code">price_review_role</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>Менеджер</option><option>Владелец</option><option>Инженер</option></select></span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- =============================================== 06 INVENTORY -->
+        <div data-tab-panel="inventory" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 06 · INVENTORY</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Склад</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Пороги остатков, политика сушки и правила автозаказа. Отсюда берутся
+              предупреждения в таблице материалов и причина ожидания
+              <code>waitlist.material_not_loaded</code>.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Пороги остатков</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Низкий остаток</span>
+                  <span class="hv-set__hint">Материал подсвечивается в таблице и не выбирается планировщиком для длинных заданий.</span>
+                  <span class="hv-set__code">low_stock_grams</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="400" step="50"><span class="hv-unit__u">г</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Критический остаток</span>
+                  <span class="hv-set__hint">Поднимается тревога, материал исключается из подбора.</span>
+                  <span class="hv-set__code">critical_stock_grams</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="150" step="25"><span class="hv-unit__u">г</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Автоматически предлагать закупку</span>
+                  <span class="hv-set__hint">Создаёт черновик заказа поставщику при пересечении низкого порога.</span>
+                  <span class="hv-set__code">auto_reorder</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Автозакупка"></button></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Срок поставки по умолчанию</span>
+                  <span class="hv-set__hint">Используется для прогноза, пока поставщик не подтвердил дату.</span>
+                  <span class="hv-set__code">default_lead_days</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="5" step="1"><span class="hv-unit__u">дн</span></span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Хранение и подготовка</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Требовать сушку гигроскопичных материалов</span>
+                  <span class="hv-set__hint">PA, PETG-CF и TPU не уходят в печать без отметки о сушке.</span>
+                  <span class="hv-set__code">require_drying</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Сушка"></button></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Срок годности отметки о сушке</span>
+                  <span class="hv-set__hint">После этого катушку нужно сушить заново.</span>
+                  <span class="hv-set__code">drying_valid_hours</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="72" step="12"><span class="hv-unit__u">ч</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Списывать остаток меньше</span>
+                  <span class="hv-set__hint">Хвост катушки, который не имеет смысла учитывать.</span>
+                  <span class="hv-set__code">writeoff_below_grams</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="30" step="5"><span class="hv-unit__u">г</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Учитывать партии отдельно</span>
+                  <span class="hv-set__hint">Разные партии одного материала могут отличаться по цвету. Выключение упрощает учёт, но теряет прослеживаемость.</span>
+                  <span class="hv-set__code">track_lots</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Учёт партий"></button></span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ================================================= 07 SERVICE -->
+        <div data-tab-panel="service" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 07 · FLEET · DRIVERS</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Сервис</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Периодичность обслуживания по умолчанию и поведение драйверов.
+              Периодичность считается по наработке, а не по календарю: машина,
+              простоявшая месяц, не нуждается в замене сопла.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Периодичность по умолчанию</span><span class="hv-panel__aside">ПРИМЕНЯЕТСЯ К НОВЫМ МАШИНАМ</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Операция</th><th>Код</th><th>Периодичность</th><th>Простой</th><th data-align="end">Расход</th></tr></thead>
+                <tbody>
+                  <tr><td>Замена сопла</td><td class="hv-table__id">nozzle_change</td>
+                    <td><span class="hv-unit"><input type="number" value="1000"><span class="hv-unit__u">ч</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="40"><span class="hv-unit__u">мин</span></span></td>
+                    <td data-align="end">1 200 ₽</td></tr>
+                  <tr><td>Натяжение ремней</td><td class="hv-table__id">belt_tension</td>
+                    <td><span class="hv-unit"><input type="number" value="500"><span class="hv-unit__u">ч</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="25"><span class="hv-unit__u">мин</span></span></td>
+                    <td data-align="end">—</td></tr>
+                  <tr><td>Смазка</td><td class="hv-table__id">lubrication</td>
+                    <td><span class="hv-unit"><input type="number" value="250"><span class="hv-unit__u">ч</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="15"><span class="hv-unit__u">мин</span></span></td>
+                    <td data-align="end">80 ₽</td></tr>
+                  <tr><td>Калибровка стола</td><td class="hv-table__id">bed_level</td>
+                    <td><span class="hv-unit"><input type="number" value="200"><span class="hv-unit__u">ч</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="10"><span class="hv-unit__u">мин</span></span></td>
+                    <td data-align="end">—</td></tr>
+                  <tr><td>Замена фильтра</td><td class="hv-table__id">filter_change</td>
+                    <td><span class="hv-unit"><input type="number" value="1500"><span class="hv-unit__u">ч</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="10"><span class="hv-unit__u">мин</span></span></td>
+                    <td data-align="end">450 ₽</td></tr>
+                  <tr><td>Глубокая чистка</td><td class="hv-table__id">deep_clean</td>
+                    <td><span class="hv-unit"><input type="number" value="2000"><span class="hv-unit__u">ч</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="120"><span class="hv-unit__u">мин</span></span></td>
+                    <td data-align="end">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="hv-panel__foot"><span>ПРОСТОЙ УЧИТЫВАЕТСЯ ПЛАНИРОВЩИКОМ КАК НЕДОСТУПНОСТЬ</span><button class="hv-btn hv-btn--sm" type="button">Добавить операцию</button></div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Драйверы принтеров</span><span class="hv-panel__aside">DRIVERS.*</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-callout" style="margin:var(--hv-3)">
+                <strong>Драйвер никогда не выдумывает данные.</strong> Отключённая машина
+                сообщает «не в сети» и поднимает тревогу. Это правило не настраивается —
+                ниже только таймауты, после которых машина считается потерянной.
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Опрос телеметрии</span>
+                  <span class="hv-set__code">telemetry_poll_seconds</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="5" step="1"><span class="hv-unit__u">с</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Таймаут связи</span>
+                  <span class="hv-set__hint">Без ответа дольше этого — машина переходит в «не в сети».</span>
+                  <span class="hv-set__code">driver_timeout_seconds</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="30" step="5"><span class="hv-unit__u">с</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Повторных попыток отправки задания</span>
+                  <span class="hv-set__code">driver_send_retries</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="3" step="1"><span class="hv-unit__u">раз</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Автоматическая пауза при ошибке HMS</span>
+                  <span class="hv-set__hint">Останавливает печать и вызывает оператора вместо продолжения с браком.</span>
+                  <span class="hv-set__code">pause_on_hms_error</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Пауза при ошибке"></button></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Разрешить драйвер mock в продакшене</span>
+                  <span class="hv-set__hint">Mock-драйвер отказывается работать в продакшене by design. Переключатель существует только для стенда.</span>
+                  <span class="hv-set__code">allow_mock_driver</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="false" disabled aria-label="Mock-драйвер"></button></span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ============================================= 08 POSTPROCESS -->
+        <div data-tab-panel="postprocess" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 08 · PRICING.POSTPROCESS.*</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Постобработка</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Единственный этап, который остаётся ручным. Нормо-часы умножаются на
+              ставку постобработки из раздела «Ценообразование».
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Каталог операций</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Операция</th><th>Код</th><th>Нормо-часы · база</th><th>На см² поверхности</th><th>Доступна</th></tr></thead>
+                <tbody>
+                  <tr><td>Без обработки</td><td class="hv-table__id">postprocess.raw</td>
+                    <td><span class="hv-faint">—</span></td><td><span class="hv-faint">—</span></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" disabled aria-label="Без обработки"></button></td></tr>
+                  <tr><td>Шлифовка</td><td class="hv-table__id">postprocess.sanded</td>
+                    <td><span class="hv-unit"><input type="number" value="0.4" step="0.1"><span class="hv-unit__u">ч</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="0.002" step="0.001"><span class="hv-unit__u">ч</span></span></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Шлифовка"></button></td></tr>
+                  <tr><td>Грунтовка</td><td class="hv-table__id">postprocess.primed</td>
+                    <td><span class="hv-unit"><input type="number" value="0.7" step="0.1"><span class="hv-unit__u">ч</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="0.003" step="0.001"><span class="hv-unit__u">ч</span></span></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Грунтовка"></button></td></tr>
+                  <tr><td>Окраска</td><td class="hv-table__id">postprocess.painted</td>
+                    <td><span class="hv-unit"><input type="number" value="1.6" step="0.1"><span class="hv-unit__u">ч</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="0.006" step="0.001"><span class="hv-unit__u">ч</span></span></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Окраска"></button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="hv-panel__foot">
+              <span>НОВЫЙ КОД ТРЕБУЕТ RU И EN ПОДПИСИ — ИНАЧЕ CI НЕ ПРОПУСТИТ</span>
+              <button class="hv-btn hv-btn--sm" type="button">Добавить операцию</button>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Контроль качества обязателен</span>
+                  <span class="hv-set__hint">Заказ не может уйти в упаковку, минуя отметку контролёра.</span>
+                  <span class="hv-set__code">require_quality_check</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Контроль качества"></button></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Фотофиксация перед упаковкой</span>
+                  <span class="hv-set__hint">Снимок прикладывается к заказу и виден заказчику.</span>
+                  <span class="hv-set__code">photo_before_packing</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="Фотофиксация"></button></span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- =============================================== 09 LOGISTICS -->
+        <div data-tab-panel="logistics" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 09 · LOGISTICS.*</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Логистика</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Упаковка и доставка. До указания адреса строка доставки в смете
+              остаётся неопределённой — система не подставляет туда правдоподобное число.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Упаковка</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Упаковка за единицу</span>
+                  <span class="hv-set__code">packaging_per_unit</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="40" step="5"><span class="hv-unit__u">₽</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Базовая доставка</span>
+                  <span class="hv-set__hint">Ставка по умолчанию, пока не сработала зона ниже.</span>
+                  <span class="hv-set__code">shipping_flat</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="400" step="50"><span class="hv-unit__u">₽</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Объёмный вес</span>
+                  <span class="hv-set__hint">Делитель для пересчёта габаритов в вес. 5000 — стандарт большинства перевозчиков.</span>
+                  <span class="hv-set__code">volumetric_divisor</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="5000" step="100"><span class="hv-unit__u">см³/кг</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Бесплатная доставка от</span>
+                  <span class="hv-set__hint">Ноль — отключено.</span>
+                  <span class="hv-set__code">free_shipping_threshold</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="15000" step="1000"><span class="hv-unit__u">₽</span></span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Зоны и перевозчики</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Зона</th><th>Перевозчик</th><th>Базовая</th><th>За кг</th><th>Срок</th><th>Активна</th></tr></thead>
+                <tbody>
+                  <tr><td>Самовывоз · цех</td><td class="hv-table__id">pickup</td>
+                    <td><span class="hv-unit"><input type="number" value="0"><span class="hv-unit__u">₽</span></span></td>
+                    <td><span class="hv-faint">—</span></td><td>0 дн</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Самовывоз"></button></td></tr>
+                  <tr><td>Москва · в пределах МКАД</td><td class="hv-table__id">courier.msk</td>
+                    <td><span class="hv-unit"><input type="number" value="400"><span class="hv-unit__u">₽</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="0"><span class="hv-unit__u">₽</span></span></td>
+                    <td>1 дн</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Москва"></button></td></tr>
+                  <tr><td>ЦФО</td><td class="hv-table__id">cdek.cfo</td>
+                    <td><span class="hv-unit"><input type="number" value="550"><span class="hv-unit__u">₽</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="60"><span class="hv-unit__u">₽</span></span></td>
+                    <td>2–3 дн</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="ЦФО"></button></td></tr>
+                  <tr><td>Россия · остальное</td><td class="hv-table__id">cdek.ru</td>
+                    <td><span class="hv-unit"><input type="number" value="750"><span class="hv-unit__u">₽</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="95"><span class="hv-unit__u">₽</span></span></td>
+                    <td>4–7 дн</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Россия"></button></td></tr>
+                  <tr><td>Международная</td><td class="hv-table__id">intl</td>
+                    <td><span class="hv-unit"><input type="number" value="0"><span class="hv-unit__u">₽</span></span></td>
+                    <td><span class="hv-unit"><input type="number" value="0"><span class="hv-unit__u">₽</span></span></td>
+                    <td><span class="hv-faint">—</span></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="Международная"></button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="hv-panel__foot"><span>ЗОНА ОПРЕДЕЛЯЕТСЯ ПО ИНДЕКСУ</span><button class="hv-btn hv-btn--sm" type="button">Добавить зону</button></div>
+          </section>
+        </div>
+
+        <!-- ================================================= 10 FINANCE -->
+        <div data-tab-panel="finance" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 10 · PAYMENTS</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Финансы</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Налоги, приём платежей и возвраты. Реквизиты провайдера хранятся
+              зашифрованными и никогда не показываются обратно.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Налоги и учёт</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Система налогообложения</span>
+                  <span class="hv-set__code">tax_regime</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>УСН · доходы минус расходы</option><option>УСН · доходы</option><option>ОСНО · с НДС</option><option>НПД</option></select></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Ставка НДС</span>
+                  <span class="hv-set__hint">Учитывается только при ОСНО.</span>
+                  <span class="hv-set__code">vat_percent</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="20" step="1"><span class="hv-unit__u">%</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Цены включают налог</span>
+                  <span class="hv-set__hint">Влияет на то, как разложена смета, но не на итог.</span>
+                  <span class="hv-set__code">prices_include_tax</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Цены с налогом"></button></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Округление итога</span>
+                  <span class="hv-set__code">rounding_step</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>До копейки</option><option>До рубля</option><option>До 10 ₽</option></select></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Приём платежей</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Провайдер</span>
+                  <span class="hv-set__code">payment_provider</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>ЮKassa</option><option>Тинькофф Касса</option><option>mock · только стенд</option></select></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Идентификатор магазина</span>
+                  <span class="hv-set__code">yookassa_shop_id</span></span>
+                <span class="hv-set__v"><input class="hv-input" value="904417"></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Секретный ключ</span>
+                  <span class="hv-set__hint">Хранится зашифрованным. Показать значение обратно невозможно — только заменить.</span>
+                  <span class="hv-set__code">yookassa_secret_key</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-micro hv-good">КЛЮЧ СОХРАНЁН</span>
+                  <button class="hv-btn hv-btn--sm" type="button">Заменить</button>
+                </span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Предоплата</span>
+                  <span class="hv-set__hint">100% — заказ не уходит в производство до полной оплаты.</span>
+                  <span class="hv-set__code">prepayment_percent</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="100" step="10"><span class="hv-unit__u">%</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Оплата по счёту для юрлиц</span>
+                  <span class="hv-set__code">invoice_payment</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Оплата по счёту"></button></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Срок оплаты счёта</span>
+                  <span class="hv-set__code">invoice_due_days</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="5" step="1"><span class="hv-unit__u">раб. дн</span></span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Возвраты</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Возврат до начала печати</span>
+                  <span class="hv-set__hint">Пока задание не ушло на принтер, ферма ничего не потратила.</span>
+                  <span class="hv-set__code">refund_before_print_percent</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="100" step="5"><span class="hv-unit__u">%</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Возврат после начала печати</span>
+                  <span class="hv-set__code">refund_after_print_percent</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="0" step="5"><span class="hv-unit__u">%</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Порог возврата без утверждения</span>
+                  <span class="hv-set__hint">Выше этой суммы возврат требует роли «Владелец».</span>
+                  <span class="hv-set__code">refund_approval_threshold</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="10000" step="1000"><span class="hv-unit__u">₽</span></span></span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ================================================== 11 NOTIFY -->
+        <div data-tab-panel="notify" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 11 · NOTIFICATIONS</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Уведомления</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Матрица «событие × канал». Строки — то, что происходит в системе;
+              столбцы — куда об этом сообщать.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Матрица</span><span class="hv-panel__aside">ЗАКАЗЧИК · ОПЕРАТОР · МЕНЕДЖЕР</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Событие</th><th>Код</th><th>Почта</th><th>Экран цеха</th><th>Telegram</th></tr></thead>
+                <tbody>
+                  <tr><td>Заказ оплачен</td><td class="hv-table__id">order.paid</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="1"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="2"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="3"></button></td></tr>
+                  <tr><td>Печать началась</td><td class="hv-table__id">order.printing</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="4"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="5"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="6"></button></td></tr>
+                  <tr><td>Печать завершена · нужен человек</td><td class="hv-table__id">print.finished</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="7"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="8"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="9"></button></td></tr>
+                  <tr><td>Ошибка принтера</td><td class="hv-table__id">printer.error</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="10"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="11"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="12"></button></td></tr>
+                  <tr><td>Низкий остаток материала</td><td class="hv-table__id">material.low</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="13"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="14"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="15"></button></td></tr>
+                  <tr><td>Пора обслужить машину</td><td class="hv-table__id">service.due</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="16"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="17"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="18"></button></td></tr>
+                  <tr><td>Риск просрочки SLA</td><td class="hv-table__id">order.sla_risk</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="19"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="20"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="21"></button></td></tr>
+                  <tr><td>Заказ отправлен</td><td class="hv-table__id">order.shipped</td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="22"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="23"></button></td>
+                    <td><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="24"></button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Каналы</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Отправитель писем</span>
+                  <span class="hv-set__code">mail_from</span></span>
+                <span class="hv-set__v"><input class="hv-input" value="farm@printorian.example"></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">SMTP-сервер</span>
+                  <span class="hv-set__code">smtp_host</span></span>
+                <span class="hv-set__v"><input class="hv-input" value="smtp.yandex.ru:465"></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Telegram · чат цеха</span>
+                  <span class="hv-set__code">telegram_chat_id</span></span>
+                <span class="hv-set__v"><input class="hv-input" value="-1001884420031"></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Тихие часы</span>
+                  <span class="hv-set__hint">Всё, кроме ошибок принтера, откладывается до утра.</span>
+                  <span class="hv-set__code">quiet_hours</span></span>
+                <span class="hv-set__v">
+                  <span class="hv-unit"><input type="number" value="22"><span class="hv-unit__u">с</span></span>
+                  <span class="hv-unit"><input type="number" value="8"><span class="hv-unit__u">до</span></span>
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ================================================ 12 SECURITY -->
+        <div data-tab-panel="security" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 12 · IDENTITY</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Доступ</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Сессии, пароли и ключи API. Права проверяются на сервере — эти
+              настройки не влияют на то, что разрешено роли, только на то, как
+              подтверждается личность.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Сессии и пароли</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Время жизни сессии</span>
+                  <span class="hv-set__code">session_ttl_hours</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="12" step="1"><span class="hv-unit__u">ч</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Минимальная длина пароля</span>
+                  <span class="hv-set__code">password_min_length</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="12" step="1"><span class="hv-unit__u">симв</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Алгоритм хэширования</span>
+                  <span class="hv-set__hint">Смена алгоритма перехэширует пароли при следующем входе.</span>
+                  <span class="hv-set__code">password_hasher</span></span>
+                <span class="hv-set__v"><select class="hv-select" disabled><option>Argon2id</option></select></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Двухфакторная аутентификация для управления</span>
+                  <span class="hv-set__hint">Обязательна для ролей «Менеджер» и «Владелец».</span>
+                  <span class="hv-set__code">require_2fa_for_management</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="2FA"></button></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Блокировка после неудачных попыток</span>
+                  <span class="hv-set__code">lockout_attempts</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="5" step="1"><span class="hv-unit__u">попыт</span></span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Ключи API</span><span class="hv-panel__aside">2 АКТИВНЫХ</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Название</th><th>Префикс</th><th>Права</th><th>Создан</th><th>Использован</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td>Экран цеха</td><td class="hv-table__id">pk_live_8f41…</td><td>view_production</td><td>12.03.2026</td><td class="hv-live">сейчас</td>
+                    <td><button class="hv-btn hv-btn--sm hv-btn--danger" type="button">Отозвать</button></td></tr>
+                  <tr><td>Выгрузка в 1С</td><td class="hv-table__id">pk_live_2a0c…</td><td>view_all_orders</td><td>04.05.2026</td><td>сегодня 03:00</td>
+                    <td><button class="hv-btn hv-btn--sm hv-btn--danger" type="button">Отозвать</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="hv-panel__foot"><span>КЛЮЧ ПОКАЗЫВАЕТСЯ ОДИН РАЗ ПРИ СОЗДАНИИ</span><button class="hv-btn hv-btn--sm" type="button">Создать ключ</button></div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Аудит</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Хранить журнал изменений</span>
+                  <span class="hv-set__hint">Кто, что и когда менял в настройках, ценах и заказах.</span>
+                  <span class="hv-set__code">audit_retention_days</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="365" step="30"><span class="hv-unit__u">дн</span></span></span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ============================================ 13 INTEGRATIONS -->
+        <div data-tab-panel="integrations" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 13 · INTEGRATIONS</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Интеграции</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Внешние системы, от которых зависит ферма. Каждая показывает своё
+              фактическое состояние, а не то, что записано в настройках.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Слайсер</span><span class="hv-panel__aside">РАСЧЁТ ВРЕМЕНИ И МАТЕРИАЛА</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Движок</span>
+                  <span class="hv-set__code">slicer_engine</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>Bambu Studio CLI</option><option>OrcaSlicer CLI</option><option>PrusaSlicer CLI</option></select></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Путь к исполняемому файлу</span>
+                  <span class="hv-set__code">slicer_path</span></span>
+                <span class="hv-set__v"><input class="hv-input" value="C:/Program Files/Bambu Studio/bambu-studio.exe"></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Профиль по умолчанию</span>
+                  <span class="hv-set__code">slicer_profile</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>0.20 мм · Standard</option><option>0.16 мм · Optimal</option><option>0.28 мм · Draft</option></select></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Таймаут нарезки</span>
+                  <span class="hv-set__hint">Модель, которая нарезается дольше, уходит инженеру вместо отказа заказчику.</span>
+                  <span class="hv-set__code">slicer_timeout_seconds</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="180" step="30"><span class="hv-unit__u">с</span></span></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Принтеры</span><span class="hv-panel__aside">DRIVERS.BAMBU</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Режим подключения</span>
+                  <span class="hv-set__hint">Ферма работает в своей локальной сети. Облако — запасной путь для машин вне неё.</span>
+                  <span class="hv-set__code">bambu_connection</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>Только локальная сеть</option><option>Локальная сеть, затем облако</option><option>Только облако</option></select></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Аккаунт Bambu Cloud</span>
+                  <span class="hv-set__code">bambu_cloud_account</span></span>
+                <span class="hv-set__v"><span class="hv-micro hv-faint">НЕ ПОДКЛЮЧЕН</span><button class="hv-btn hv-btn--sm" type="button">Подключить</button></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Загрузка по MQTT / FTPS</span>
+                  <span class="hv-set__code">bambu_transport</span></span>
+                <span class="hv-set__v"><select class="hv-select"><option>MQTT + FTPS</option><option>Только FTPS</option></select></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Webhooks</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Событие</th><th>URL</th><th>Состояние</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td class="hv-table__id">order.*</td><td>https://crm.local/hooks/printorian</td>
+                    <td><span class="hv-state" data-state="idle">Работает</span></td>
+                    <td><button class="hv-btn hv-btn--sm" type="button">Проверить</button></td></tr>
+                  <tr><td class="hv-table__id">printer.error</td><td>https://alerts.local/pd</td>
+                    <td><span class="hv-state" data-state="error">4 ошибки подряд</span></td>
+                    <td><button class="hv-btn hv-btn--sm" type="button">Проверить</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="hv-panel__foot"><span>ПОДПИСЬ HMAC-SHA256 В ЗАГОЛОВКЕ X-PRINTORIAN-SIGNATURE</span><button class="hv-btn hv-btn--sm" type="button">Добавить</button></div>
+          </section>
+        </div>
+
+        <!-- ============================================= 14 DIAGNOSTICS -->
+        <div data-tab-panel="diagnostics" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 14 · DIAGNOSTICS</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Диагностика</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Фактическое состояние подсистем. Ничего из этого не настраивается —
+              страница показывает, что система думает о себе прямо сейчас.
+            </p>
+          </div>
+
+          <div class="hv-grid hv-grid--4">
+            <div class="hv-frame hv-stat" data-tone="good"><span class="hv-label">Готовность</span><span class="hv-stat__v">OK</span><span class="hv-micro">14 ИЗ 15 ПРОВЕРОК</span></div>
+            <div class="hv-frame hv-stat"><span class="hv-label">Аптайм</span><span class="hv-stat__v">41<small> Д</small></span><span class="hv-micro">С 29.06.2026</span></div>
+            <div class="hv-frame hv-stat"><span class="hv-label">События в очереди</span><span class="hv-stat__v">0</span><span class="hv-micro">ШИНА СВОБОДНА</span></div>
+            <div class="hv-frame hv-stat" data-tone="warn"><span class="hv-label">Предупреждений</span><span class="hv-stat__v">01</span><span class="hv-micro">СПАЙК BAMBU НЕ ВЫПОЛНЕН</span></div>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Проверки</span><span class="hv-panel__aside">ОБНОВЛЕНО <span data-clock></span></span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-health"><span>База данных · PostgreSQL 16</span><span class="hv-state" data-state="idle">Доступна</span><span class="hv-health__ms">2 мс</span></div>
+              <div class="hv-health"><span>Миграции · одна голова</span><span class="hv-state" data-state="idle">0004_fleet</span><span class="hv-health__ms">—</span></div>
+              <div class="hv-health"><span>Шина событий</span><span class="hv-state" data-state="idle">Работает</span><span class="hv-health__ms">0 мс</span></div>
+              <div class="hv-health"><span>Redis</span><span class="hv-state" data-state="idle">Доступен</span><span class="hv-health__ms">1 мс</span></div>
+              <div class="hv-health"><span>Планировщик · такт</span><span class="hv-state" data-state="printing">Тикает</span><span class="hv-health__ms">30 с</span></div>
+              <div class="hv-health"><span>Обход SLA</span><span class="hv-state" data-state="printing">Работает</span><span class="hv-health__ms">300 с</span></div>
+              <div class="hv-health"><span>Слайсер · Bambu Studio CLI</span><span class="hv-state" data-state="idle">Отвечает</span><span class="hv-health__ms">840 мс</span></div>
+              <div class="hv-health"><span>Платёжный провайдер · ЮKassa</span><span class="hv-state" data-state="idle">Доступен</span><span class="hv-health__ms">120 мс</span></div>
+              <div class="hv-health"><span>SMTP</span><span class="hv-state" data-state="idle">Доступен</span><span class="hv-health__ms">210 мс</span></div>
+              <div class="hv-health"><span>Драйверы · 11 из 12 на связи</span><span class="hv-state" data-state="paused">P-08 не в сети</span><span class="hv-health__ms">4 ч</span></div>
+              <div class="hv-health"><span>Спайк Bambu на реальной машине</span><span class="hv-state" data-state="maintenance">Не выполнен</span><span class="hv-health__ms">—</span></div>
+              <div class="hv-health"><span>Свободное место на диске</span><span class="hv-state" data-state="idle">312 ГБ</span><span class="hv-health__ms">78%</span></div>
+            </div>
+            <div class="hv-panel__foot">
+              <span>ПРОВЕРКИ ВЫПОЛНЯЮТСЯ ПО ЗАПРОСУ, НЕ КЭШИРУЮТСЯ</span>
+              <button class="hv-btn hv-btn--sm" type="button">Прогнать заново</button>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Версии</span></div>
+            <div class="hv-panel__body hv-panel__body--tight">
+              <ul class="hv-leaders">
+                <li class="hv-leader"><span class="hv-leader__k">Backend</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2.0.0 · 8f41c2b</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Движок расчёта</span><span class="hv-leader__fill"></span><span class="hv-leader__v">ENGINE_VERSION 1.0.0</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Схема БД</span><span class="hv-leader__fill"></span><span class="hv-leader__v">0004_fleet</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Веб-клиент</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2.0.0</span></li>
+                <li class="hv-leader"><span class="hv-leader__k">Десктоп цеха</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2.0.0</span></li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Журнал</span><span class="hv-panel__aside">ПОСЛЕДНИЕ ЗАПИСИ</span></div>
+            <div class="hv-code" style="border:0">
+              <div class="hv-code__head"><span>LOGS/APP.JSONL</span><span>УРОВЕНЬ :: WARNING+</span></div>
+<pre><code>19:12:04  WARNING  driver.bambu   P-08 offline for 4h12m, alert raised
+18:40:31  WARNING  inventory      PETG-CF-RED below low_stock_grams (340 &lt; 400)
+14:22:07  INFO     scheduling     ORD-2147 assigned P-01 (score 0.31)
+14:18:55  INFO     ordering       ORD-2147 -> printing
+09:00:02  INFO     maintenance    backup completed, 1.2 GB</code></pre>
+            </div>
+            <div class="hv-panel__foot"><span>РОТАЦИЯ :: 14 ДНЕЙ</span><button class="hv-btn hv-btn--sm" type="button">Скачать журнал</button></div>
+          </section>
+        </div>
+
+        <!-- ============================================= 15 MAINTENANCE -->
+        <div data-tab-panel="maintenance" hidden class="hv-stack">
+          <div class="hv-frame hv-frame--wide">
+            <span class="hv-micro">РАЗДЕЛ 15 · SYSTEM.MAINTENANCE</span>
+            <h1 class="hv-display" style="font-size:clamp(1.5rem,3.6vw,2.4rem);margin-top:var(--hv-2)">Обслуживание</h1>
+            <p class="hv-prose" style="margin-top:var(--hv-3)">
+              Резервные копии, хранение данных и необратимые операции.
+            </p>
+          </div>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Резервное копирование</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Автоматические копии</span>
+                  <span class="hv-set__code">backup_enabled</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="true" aria-label="Копии"></button></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Время запуска</span>
+                  <span class="hv-set__code">backup_hour</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="3" min="0" max="23"><span class="hv-unit__u">час</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Хранить копий</span>
+                  <span class="hv-set__code">backup_retention</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="30" step="1"><span class="hv-unit__u">шт</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Каталог копий</span>
+                  <span class="hv-set__code">backup_path</span></span>
+                <span class="hv-set__v"><input class="hv-input" value="D:/printorian/backups"></span>
+              </div>
+            </div>
+            <div class="hv-panel__foot">
+              <span>ПОСЛЕДНЯЯ :: СЕГОДНЯ 03:00 · 1.2 ГБ · УСПЕШНО</span>
+              <button class="hv-btn hv-btn--sm" type="button">Сделать копию сейчас</button>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Хранение данных</span></div>
+            <div class="hv-panel__body--none">
+              <div class="hv-set">
+                <span><span class="hv-set__name">Загруженные модели</span>
+                  <span class="hv-set__hint">Файлы завершённых заказов. Метаданные и смета сохраняются навсегда.</span>
+                  <span class="hv-set__code">model_retention_days</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="180" step="30"><span class="hv-unit__u">дн</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Телеметрия принтеров</span>
+                  <span class="hv-set__code">telemetry_retention_days</span></span>
+                <span class="hv-set__v"><span class="hv-unit"><input type="number" value="90" step="30"><span class="hv-unit__u">дн</span></span></span>
+              </div>
+              <div class="hv-set">
+                <span><span class="hv-set__name">Режим обслуживания</span>
+                  <span class="hv-set__hint">Витрина закрывается, текущая печать продолжается до конца.</span>
+                  <span class="hv-set__code">maintenance_mode</span></span>
+                <span class="hv-set__v"><button class="hv-switch" type="button" role="switch" aria-checked="false" aria-label="Режим обслуживания"></button></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-frame hv-danger">
+            <span class="hv-h hv-bad">Необратимые операции</span>
+            <p class="hv-prose" style="font-size:var(--hv-size-small);margin-top:var(--hv-2)">
+              Каждая требует подтверждения вводом названия фермы и пишется в аудит
+              с указанием, кто её выполнил.
+            </p>
+            <div class="hv-stack hv-stack--2" style="margin-top:var(--hv-3)">
+              <div class="hv-row hv-row--between">
+                <span><span class="hv-set__name">Сбросить тарифы к значениям по умолчанию</span>
+                  <span class="hv-set__hint">Создаст новый снимок. Оформленные заказы не затрагиваются.</span></span>
+                <button class="hv-btn hv-btn--danger" type="button">Сбросить</button>
+              </div>
+              <hr class="hv-hr">
+              <div class="hv-row hv-row--between">
+                <span><span class="hv-set__name">Очистить лист ожидания</span>
+                  <span class="hv-set__hint">Все ожидающие заказы вернутся в состояние «Подготовка».</span></span>
+                <button class="hv-btn hv-btn--danger" type="button">Очистить</button>
+              </div>
+              <hr class="hv-hr">
+              <div class="hv-row hv-row--between">
+                <span><span class="hv-set__name">Удалить телеметрию старше срока хранения</span>
+                  <span class="hv-set__hint">Освободит около 8 ГБ.</span></span>
+                <button class="hv-btn hv-btn--danger" type="button">Удалить</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="hv-panel">
+            <div class="hv-panel__head"><span>Журнал изменений настроек</span><span class="hv-panel__aside">АУДИТ</span></div>
+            <div class="hv-panel__body--none">
+              <table class="hv-table">
+                <thead><tr><th>Время</th><th>Кто</th><th>Параметр</th><th>Было</th><th>Стало</th></tr></thead>
+                <tbody>
+                  <tr><td class="hv-table__id">08.08 11:42</td><td>boss@…</td><td class="hv-table__id">margin_percent</td><td>28</td><td>30</td></tr>
+                  <tr><td class="hv-table__id">05.08 16:20</td><td>manager@…</td><td class="hv-table__id">rush_surcharge_percent</td><td>20</td><td>25</td></tr>
+                  <tr><td class="hv-table__id">01.08 09:05</td><td>boss@…</td><td class="hv-table__id">discounts.tiers[3]</td><td>—</td><td>100 шт · 24%</td></tr>
+                  <tr><td class="hv-table__id">28.07 14:11</td><td>boss@…</td><td class="hv-table__id">guard_tier_cliffs</td><td>false</td><td>true</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="hv-panel__foot"><span>ХРАНИТСЯ 365 ДНЕЙ</span><button class="hv-btn hv-btn--sm" type="button">Выгрузить CSV</button></div>
+          </section>
+        </div>
+
+        <!-- ======================================================= save -->
+        <div class="hv-savebar" data-dirty="false">
+          <span class="hv-savebar__n" data-dirty-count>ИЗМЕНЕНИЙ НЕТ — ВСЁ СОХРАНЕНО</span>
+          <span class="hv-spacer"></span>
+          <span class="hv-micro">СОХРАНЕНИЕ СОЗДАСТ НОВЫЙ СНИМОК ТАРИФОВ</span>
+          <button class="hv-btn" type="button" data-needs-dirty disabled>Отменить</button>
+          <button class="hv-btn hv-btn--primary" type="button" data-needs-dirty disabled>Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

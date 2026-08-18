@@ -1,0 +1,125 @@
+/* ============================================================================
+   PRINTORIAN OS — design tokens
+   ----------------------------------------------------------------------------
+   Every colour, metric and type decision lives here. Components below reference
+   variables only, so retheming (VOID <-> PAPER) is a variable swap, never a
+   second stylesheet. Names are prefixed `--hv-` (harvester) to sit alongside
+   the existing `--pr-` tokens without collision during integration.
+   ========================================================================= */
+
+:root {
+  /* ---------------------------------------------------------------- surface
+     Six steps from absolute black. The interface is built from hairlines on
+     near-black, not from boxes on grey: contrast comes from the line, not the
+     fill, which is what makes the sketches read as instrumentation. */
+  --hv-void:        #000000;   /* page — true black, never lifted */
+  --hv-bg:          #060607;
+  --hv-bg-raised:   #0c0d0f;   /* panels */
+  --hv-bg-inset:    #121316;   /* wells, inputs, table stripes */
+  --hv-bg-hover:    #1a1c20;
+  --hv-bg-invert:   #ffffff;   /* slab rows, active tabs */
+
+  /* ------------------------------------------------------------------ line
+     Three hairline weights. `--hv-line` is the workhorse; `--hv-line-dim` is
+     for internal subdivision; `--hv-line-hot` marks the active object. */
+  --hv-line:        #2a2d33;
+  --hv-line-dim:    #17191d;
+  --hv-line-hot:    #ffffff;
+
+  /* ------------------------------------------------------------------ text */
+  --hv-text:        #f2f4f7;
+  --hv-text-dim:    #8b929d;   /* metadata, units, basis lines */
+  /* `faint` carries the 9px annotations, so it is pinned at the 4.5:1 floor
+     rather than as dim as the sketches suggest — below that, the smallest type
+     in the system stops being readable and becomes texture. */
+  --hv-text-faint:  #767d89;   /* leaders, tick labels, disabled */
+  --hv-text-invert: #000000;
+
+  /* ---------------------------------------------------------------- signal
+     Monochrome by default; colour is reserved for machine state so that a
+     coloured pixel always means something is happening. */
+  --hv-live:        #4cd7e8;   /* online / streaming / active */
+  --hv-good:        #58e08b;   /* idle, complete, credit */
+  --hv-warn:        #f0b429;   /* attention, due, rush */
+  --hv-bad:         #ff5c5c;   /* error, offline, debit */
+  --hv-live-glow:   rgba(76, 215, 232, 0.18);
+
+  /* ------------------------------------------------------------------ type */
+  --hv-font-display: 'Orbitron', 'Bank Gothic', 'Eurostile Extended', 'Impact', sans-serif;
+  --hv-font-ui:      'Chakra Petch', 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  --hv-font-mono:    'Share Tech Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  /* Tracking is the signature of this design. Uppercase technical labels are
+     always tracked out; body prose never is. */
+  --hv-track-chrome: 0.16em;   /* chrome bars, tabs, buttons */
+  --hv-track-label:  0.12em;   /* field labels, table headers */
+  --hv-track-micro:  0.20em;   /* 9–10px annotations */
+
+  --hv-size-micro:   0.5625rem; /*  9px */
+  --hv-size-tiny:    0.625rem;  /* 10px */
+  --hv-size-small:   0.6875rem; /* 11px */
+  --hv-size-base:    0.8125rem; /* 13px */
+  --hv-size-body:    0.875rem;  /* 14px — prose only */
+  --hv-size-lead:    1.125rem;
+  --hv-size-figure:  1.75rem;
+  --hv-size-display: clamp(2.5rem, 7vw, 5.5rem);
+
+  /* --------------------------------------------------------------- metrics
+     A 4px base. The chrome bars are a fixed 30px so that stacked bars line up
+     across every screen the way they do in the sketches. */
+  --hv-1: 4px;
+  --hv-2: 8px;
+  --hv-3: 12px;
+  --hv-4: 16px;
+  --hv-5: 24px;
+  --hv-6: 32px;
+  --hv-7: 48px;
+
+  --hv-bar-h:    30px;   /* chrome tab row */
+  --hv-strip-h:  22px;   /* path / status strip */
+  --hv-hair:     1px;
+  --hv-corner:   14px;   /* bracket arm length */
+  --hv-radius:   0px;    /* the system is square. Nothing is rounded. */
+
+  /* Horizontal stretch applied to the display face. No free webfont ships the
+     Eurostile-Extended proportion the sketches use, so it is synthesised. It is
+     a token because narrow viewports must be able to switch it off — a scaled
+     element overflows its own box and would otherwise scroll the page. */
+  --hv-stretch:       1.12;   /* display headings */
+  --hv-stretch-mark:  1.15;   /* glyph cards */
+  --hv-stretch-brand: 1.08;   /* wordmark */
+
+  --hv-grid:     rgba(255, 255, 255, 0.028);  /* graph-paper backdrop */
+  --hv-scan:     rgba(255, 255, 255, 0.015);
+}
+
+/* ---------------------------------------------------------------------------
+   PAPER — the light variant, taken from the printed-dossier sketch.
+   Same structure, inverted values. Toggle with data-theme on <html>.
+   ------------------------------------------------------------------------ */
+:root[data-theme='paper'] {
+  --hv-void:        #f4f3ef;
+  --hv-bg:          #f4f3ef;
+  --hv-bg-raised:   #ffffff;
+  --hv-bg-inset:    #eceae4;
+  --hv-bg-hover:    #e3e0d8;
+  --hv-bg-invert:   #000000;
+
+  --hv-line:        #b9b6ad;
+  --hv-line-dim:    #d8d5cc;
+  --hv-line-hot:    #000000;
+
+  --hv-text:        #0d0d0d;
+  --hv-text-dim:    #4a4a48;
+  --hv-text-faint:  #6d6b63;
+  --hv-text-invert: #ffffff;
+
+  --hv-live:        #0b6f7d;
+  --hv-good:        #17703f;
+  --hv-warn:        #8a5a00;
+  --hv-bad:         #9e2020;
+  --hv-live-glow:   rgba(11, 111, 125, 0.12);
+
+  --hv-grid:        rgba(0, 0, 0, 0.04);
+  --hv-scan:        rgba(0, 0, 0, 0.015);
+}

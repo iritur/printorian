@@ -1,0 +1,101 @@
+; Architectural contracts — see docs/ARCHITECTURE.md §11 Governance.
+; Run: lint-imports
+;
+; NOTE: the "a context may import another context's public __init__ only" rule is NOT
+; expressible here without wildcard self-import false positives. It is enforced by
+; tools/check_context_isolation.py, which is also a CI gate.
+
+[importlinter]
+root_package = printorian
+include_external_packages = True
+
+; ---------------------------------------------------------------------------
+[importlinter:contract:layers]
+name = Delivery layers sit above contexts, contexts sit above core
+type = layers
+layers =
+    printorian.api | printorian.workers
+    printorian.contexts
+    printorian.core
+containers =
+exhaustive = False
+
+; ---------------------------------------------------------------------------
+[importlinter:contract:pricing-purity]
+name = ADR-0002 — the pricing engine is pure: no I/O, no database, no clock, no network
+type = forbidden
+source_modules =
+    printorian.contexts.pricing
+forbidden_modules =
+    sqlalchemy
+    asyncpg
+    redis
+    httpx
+    fastapi
+    time
+    random
+    printorian.core.db
+    printorian.core.events
+allow_indirect_imports = False
+
+; ---------------------------------------------------------------------------
+[importlinter:contract:scheduling-purity]
+name = ARCHITECTURE 6 — the planner is pure: no I/O, no database, no clock, no network
+type = forbidden
+source_modules =
+    printorian.contexts.scheduling
+forbidden_modules =
+    sqlalchemy
+    asyncpg
+    redis
+    httpx
+    fastapi
+    time
+    random
+    printorian.core.db
+    printorian.core.events
+; Direct imports only, unlike the pricing contract above. The planner imports
+; `can_take` from fleet's public __init__ so that eligibility has exactly one
+; definition on the farm — and that __init__ legitimately re-exports fleet's
+; service and schemas, which reach the database and `core.ids` (whose UUIDv7
+; generator reads the clock). Chasing those transitively is whack-a-mole against
+; ordinary package plumbing, not against the planner doing I/O.
+;
+; What this still catches is the thing that would actually break purity: the
+; planner itself importing a session, a client, or a clock. `now` is a parameter,
+; and `tests/unit/test_scheduling_planner.py` pins that the same inputs always
+; produce the same plan.
+allow_indirect_imports = True
+
+; ---------------------------------------------------------------------------
+[importlinter:contract:core-knows-nothing]
+name = core is the foundation and depends on no feature module
+type = forbidden
+source_modules =
+    printorian.core
+forbidden_modules =
+    printorian.contexts
+    printorian.drivers
+    printorian.api
+    printorian.workers
+
+; ---------------------------------------------------------------------------
+[importlinter:contract:drivers-are-standalone]
+name = ADR-0011 — drivers depend on core only, never on business contexts
+type = forbidden
+source_modules =
+    printorian.drivers
+forbidden_modules =
+    printorian.contexts
+    printorian.api
+    printorian.workers
+
+; ---------------------------------------------------------------------------
+[importlinter:contract:no-ui-strings-in-backend]
+name = ADR-0012 — the backend emits codes, never localized user-facing strings
+type = forbidden
+source_modules =
+    printorian.contexts
+    printorian.core
+forbidden_modules =
+    gettext

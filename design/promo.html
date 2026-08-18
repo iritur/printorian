@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="public">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian :: Автоматическая ферма 3D-печати</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Printorian :: Ферма</span>
+      <div class="hv-meta">
+        <span>KN-SOL.21</span>
+        <i class="hv-meta__sep"></i>
+        <span>ПРИНТЕРОВ :: <strong>12</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ЗАКАЗОВ ВЫПОЛНЕНО :: <strong>1 184</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><span class="hv-path__here">C:/PRINTORIAN</span></div>
+      <div class="hv-path__status">ПРИЁМ ЗАКАЗОВ :: <b>ОТКРЫТ</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="promo.html" aria-current="page">О ферме</a>
+      <a class="hv-appbar__link" href="catalog.html">Каталог</a>
+      <a class="hv-appbar__link" href="configurator.html">Рассчитать</a>
+      <a class="hv-appbar__link" href="cabinet.html">Мои заказы</a>
+      <a class="hv-appbar__link" href="account.html">Кабинет</a>
+      <a class="hv-appbar__link" href="blog.html">Журнал</a>
+    </div>
+    <div class="hv-appbar__right">
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+      <button class="hv-btn hv-btn--sm" type="button" data-auth-open="signin">Войти</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ============================================================= HERO -->
+    <section class="hv-hero">
+      <div>
+        <span class="hv-micro">АВТОМАТИЧЕСКАЯ ФЕРМА 3D-ПЕЧАТИ · МОСКВА · С МАРТА 2026</span>
+        <h1 class="hv-hero__title" style="margin-top:var(--hv-3)">Printorian</h1>
+      </div>
+
+      <p class="hv-hero__sub">
+        Загрузите модель — увидите <b>полную смету построчно</b> с основанием
+        расчёта под каждой цифрой. Не «от 500 ₽» и не «уточним по телефону»:
+        сумма и срок известны до оплаты, а срок обещает та машина, которая
+        будет печатать.
+      </p>
+
+      <div class="hv-row">
+        <a class="hv-btn hv-btn--primary hv-btn--lg" href="configurator.html">Рассчитать за 1.2 секунды</a>
+        <a class="hv-btn hv-btn--lg" href="catalog.html">146 готовых моделей</a>
+      </div>
+
+      <div class="hv-ticker">
+        <span>СЕЙЧАС ПЕЧАТАЕТСЯ <b class="hv-live">7 из 12</b></span>
+        <span>СРЕДНИЙ РАСЧЁТ <b>1.2 с</b></span>
+        <span>СРОК СОБЛЮДЁН <b>96%</b></span>
+        <span>ЗАКАЗОВ ВЫПОЛНЕНО <b>1 184</b></span>
+        <span>СВОБОДНАЯ МАШИНА ЧЕРЕЗ <b>21 мин</b></span>
+      </div>
+    </section>
+
+    <!-- ================================================== the real claim -->
+    <section class="hv-main">
+      <div class="hv-cols hv-cols--2">
+        <div>
+          <span class="hv-micro">ГЛАВНОЕ ОТЛИЧИЕ</span>
+          <h2 class="hv-display hv-display--rule" style="font-size:clamp(1.8rem,5vw,3.4rem);margin-top:var(--hv-2)">Цена без тумана</h2>
+          <p class="hv-prose" style="margin-top:var(--hv-4)">
+            Почти все считают «по объёму, умножить на коэффициент». Мы считаем
+            восемь независимых статей и показываем каждую. Под ценой стоит
+            основание: сколько граммов, по какой ставке, сколько часов машины.
+          </p>
+          <p class="hv-prose">
+            Это не щедрость, а следствие устройства: расчёт — чистая функция от
+            тарифов, и если цифру нельзя вывести из тарифа, её не существует.
+            Побочный эффект оказался важнее — видя структуру, заказчик сам
+            находит, где сэкономить.
+          </p>
+          <div class="hv-row" style="margin-top:var(--hv-4)">
+            <a class="hv-btn" href="blog-post.html">Отчёт: сколько стоит час печати</a>
+          </div>
+        </div>
+
+        <!-- a real breakdown, not a mockup of one -->
+        <section class="hv-panel">
+          <div class="hv-panel__head hv-panel__head--invert">
+            <span>Так выглядит смета</span>
+            <span class="hv-panel__aside" style="color:inherit">BRACKET_V4 · 10 ШТ</span>
+          </div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Материал<span class="hv-leader__basis">412.8 Г × 2.94 ₽/Г</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 213 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Продувка при смене цвета<span class="hv-leader__basis">62 Г — УХОДИТ В ОТХОД</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">182 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Амортизация принтера<span class="hv-leader__basis">23.5 Ч × 41.00 ₽/Ч</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">963 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Электроэнергия<span class="hv-leader__basis">9.4 КВТ·Ч × 6.20 ₽</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">58 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Труд · подготовка и надзор</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 530 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Резерв на брак<span class="hv-leader__basis">6% · КЛАСС РИСКА B</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">254 ₽</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Скидка за объём</span><span class="hv-leader__fill"></span><span class="hv-leader__v">− 396 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Прибыль<span class="hv-leader__basis">28% МАРЖА — ДА, МЫ ЕЁ ПОКАЗЫВАЕМ</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 386 ₽</span></li>
+            </ul>
+            <hr class="hv-hr hv-hr--heavy">
+            <div class="hv-slab hv-slab--lg"><span>Итого</span><span class="hv-slab__v">6 016 ₽</span></div>
+            <div class="hv-slab hv-slab--outline" style="margin-top:var(--hv-1)"><span>За штуку</span><span class="hv-slab__v">601.60 ₽</span></div>
+          </div>
+          <div class="hv-panel__foot"><span>СРОК :: 74 Ч</span><a class="hv-mono" href="configurator.html" style="color:inherit;text-decoration:none">СВОЯ МОДЕЛЬ ›</a></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ========================================================= features -->
+    <section class="hv-main">
+      <div class="hv-row" style="margin-bottom:var(--hv-5)">
+        <h2 class="hv-h">Что ещё делает ферма</h2>
+        <span class="hv-micro">ПЯТЬ ВЕЩЕЙ, КОТОРЫХ ОБЫЧНО НЕТ</span>
+      </div>
+
+      <div class="hv-grid hv-grid--2" style="gap:var(--hv-6) var(--hv-6)">
+        <div class="hv-feature">
+          <span class="hv-feature__n">01</span>
+          <div>
+            <h3 class="hv-feature__t">Заказ сам находит принтер</h3>
+            <p class="hv-feature__b">
+              Планировщик сравнивает машины по четырём штрафам: не тратить
+              четырёхцветный AMS на одноцветную деталь, не брать катушку без
+              запаса, беречь дорогие машины, разносить нагрузку. Побеждает
+              самая дешёвая по сумме — за секунды, без диспетчера.
+            </p>
+          </div>
+        </div>
+
+        <div class="hv-feature">
+          <span class="hv-feature__n">02</span>
+          <div>
+            <h3 class="hv-feature__t">Опоздали — стало дешевле</h3>
+            <p class="hv-feature__b">
+              5% за каждые сутки просрочки, до 30%. Начисляется автоматически:
+              вам не нужно писать, звонить и доказывать. Деньги возвращаются
+              тем же способом, которым вы платили.
+            </p>
+          </div>
+        </div>
+
+        <div class="hv-feature">
+          <span class="hv-feature__n">03</span>
+          <div>
+            <h3 class="hv-feature__t">Проблемы видны до оплаты</h3>
+            <p class="hv-feature__b">
+              Модель разбирается до расчёта: объём, герметичность, тонкие
+              стенки. Негерметичная сетка не получает цену — мы честно говорим,
+              что посчитать нельзя, вместо того чтобы взять деньги и потом
+              «выяснить нюансы».
+            </p>
+          </div>
+        </div>
+
+        <div class="hv-feature">
+          <span class="hv-feature__n">04</span>
+          <div>
+            <h3 class="hv-feature__t">Принтер не врёт</h3>
+            <p class="hv-feature__b">
+              Отключённая машина сообщает «не в сети» и поднимает тревогу.
+              Она никогда не рисует правдоподобный прогресс. Поэтому 63% в
+              вашем кабинете — это действительно 412-й слой из 654.
+            </p>
+          </div>
+        </div>
+
+        <div class="hv-feature">
+          <span class="hv-feature__n">05</span>
+          <div>
+            <h3 class="hv-feature__t">Материал подбирается по задаче</h3>
+            <p class="hv-feature__b">
+              Опишите сценарий — «на улице, под нагрузкой» — и система выберет
+              материал сама, показав альтернативы с разницей в цене. В трёх
+              случаях из четырёх углеволокно вам не нужно, и мы это скажем.
+            </p>
+          </div>
+        </div>
+
+        <div class="hv-feature">
+          <span class="hv-feature__n">06</span>
+          <div>
+            <h3 class="hv-feature__t">Скидка не создаёт обрыв</h3>
+            <p class="hv-feature__b">
+              У ступенчатых скидок есть дефект: 50 штук выходят дешевле, чем 49.
+              Мы это чиним — лестница проверяется на неинвертируемость, и
+              больший заказ никогда не стоит меньше меньшего.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ steps -->
+    <section class="hv-main">
+      <div class="hv-frame hv-frame--wide">
+        <div class="hv-row" style="margin-bottom:var(--hv-4)">
+          <h2 class="hv-h">Как это работает</h2>
+          <span class="hv-micro">ОТ ФАЙЛА ДО КУРЬЕРА</span>
+        </div>
+        <div class="hv-pipe">
+          <div class="hv-pipe__step" data-state="done"><div class="hv-pipe__n">01</div><div class="hv-pipe__k">Модель</div><div class="hv-pipe__t">ЗАГРУЗКА ИЛИ КАТАЛОГ</div></div>
+          <div class="hv-pipe__step" data-state="done"><div class="hv-pipe__n">02</div><div class="hv-pipe__k">Расчёт</div><div class="hv-pipe__t">1.2 С · 14 СТРОК</div></div>
+          <div class="hv-pipe__step" data-state="done"><div class="hv-pipe__n">03</div><div class="hv-pipe__k">Настройка</div><div class="hv-pipe__t">ЦВЕТ · ТИРАЖ · ОБРАБОТКА</div></div>
+          <div class="hv-pipe__step" data-state="done"><div class="hv-pipe__n">04</div><div class="hv-pipe__k">Оплата</div><div class="hv-pipe__t">КАРТА · СБП · СЧЁТ</div></div>
+          <div class="hv-pipe__step" data-state="now"><div class="hv-pipe__n">05</div><div class="hv-pipe__k">Печать</div><div class="hv-pipe__t">ПРИНТЕР НАЗНАЧЕН САМ</div></div>
+          <div class="hv-pipe__step"><div class="hv-pipe__n">06</div><div class="hv-pipe__k">Обработка</div><div class="hv-pipe__t">ПО ВАШЕМУ ВЫБОРУ</div></div>
+          <div class="hv-pipe__step"><div class="hv-pipe__n">07</div><div class="hv-pipe__k">Контроль</div><div class="hv-pipe__t">ОБЯЗАТЕЛЬНЫЙ ЭТАП</div></div>
+          <div class="hv-pipe__step"><div class="hv-pipe__n">08</div><div class="hv-pipe__k">Упаковка</div><div class="hv-pipe__t">ПО ГАБАРИТУ</div></div>
+          <div class="hv-pipe__step"><div class="hv-pipe__n">09</div><div class="hv-pipe__k">Отправка</div><div class="hv-pipe__t">КУРЬЕР ИЛИ САМОВЫВОЗ</div></div>
+        </div>
+        <p class="hv-micro" style="margin-top:var(--hv-3)">
+          ВСЕ ДЕВЯТЬ ЭТАПОВ ВИДНЫ В КАБИНЕТЕ · С ВРЕМЕНЕМ И НОМЕРОМ МАШИНЫ
+        </p>
+      </div>
+    </section>
+
+    <!-- ======================================================= big numbers -->
+    <section class="hv-main">
+      <div class="hv-frame hv-frame--wide">
+        <span class="hv-micro">ЗА 90 СУТОК НЕПРЕРЫВНОЙ РАБОТЫ · 12 МАШИН</span>
+        <div class="hv-grid hv-grid--4" style="margin-top:var(--hv-4)">
+          <div class="hv-bignum">
+            <span class="hv-bignum__v">1 184</span>
+            <span class="hv-bignum__k">Заказов выполнено</span>
+            <span class="hv-bignum__d">СРЕДНИЙ ЦИКЛ 3.1 СУТОК</span>
+          </div>
+          <div class="hv-bignum">
+            <span class="hv-bignum__v">96%</span>
+            <span class="hv-bignum__k">В обещанный срок</span>
+            <span class="hv-bignum__d">ОСТАЛЬНЫМ НАЧИСЛЕНА СКИДКА</span>
+          </div>
+          <div class="hv-bignum">
+            <span class="hv-bignum__v">13 320</span>
+            <span class="hv-bignum__k">Часов печати</span>
+            <span class="hv-bignum__d">В ТОМ ЧИСЛЕ НОЧЬЮ</span>
+          </div>
+          <div class="hv-bignum">
+            <span class="hv-bignum__v">6.1%</span>
+            <span class="hv-bignum__k">Доля брака</span>
+            <span class="hv-bignum__d">ПЕРЕПЕЧАТЬ ЗА НАШ СЧЁТ</span>
+          </div>
+        </div>
+        <p class="hv-micro" style="margin-top:var(--hv-4)">
+          ЭТИ ЦИФРЫ МЫ ПУБЛИКУЕМ В ЖУРНАЛЕ ВМЕСТЕ С МЕТОДИКОЙ РАСЧЁТА
+        </p>
+      </div>
+    </section>
+
+    <!-- ======================================================== catalogue -->
+    <section class="hv-main">
+      <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-3)">
+        <div class="hv-row">
+          <h2 class="hv-h">Готовые модели</h2>
+          <span class="hv-micro">ВСЕ ХОТЯ БЫ РАЗ НАПЕЧАТАНЫ У НАС</span>
+        </div>
+        <a class="hv-btn hv-btn--sm" href="catalog.html">Весь каталог · 146 ›</a>
+      </div>
+
+      <div class="hv-cat">
+        <a class="hv-frame hv-model" href="catalog.html">
+          <div class="hv-model__view">
+            <span class="hv-model__tag hv-model__tag--tl">2 Ч 21 М</span>
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <path data-face d="M30 100 L100 60 L170 100 L100 140 Z"/>
+              <path data-edge d="M30 100 L100 60 L170 100 L100 140 Z"/>
+              <path data-edge d="M30 100 L30 62 L100 22 L170 62 L170 100"/>
+              <path data-edge d="M100 60 L100 22"/>
+              <path data-accent d="M62 81 L100 59 L138 81"/>
+            </svg>
+            <span class="hv-model__tag hv-model__tag--br">601 ₽</span>
+          </div>
+          <div class="hv-model__body">
+            <h3 class="hv-model__title">Кронштейн угловой V4</h3>
+            <div class="hv-model__meta"><span>PETG-CF</span><span>НАПЕЧАТАН 312 РАЗ</span></div>
+          </div>
+        </a>
+
+        <a class="hv-frame hv-model" href="catalog.html">
+          <div class="hv-model__view">
+            <span class="hv-model__tag hv-model__tag--tl">3 Ч 16 М</span>
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <path data-face d="M40 95 L100 62 L160 95 L100 128 Z"/>
+              <path data-edge d="M40 95 L100 62 L160 95 L100 128 Z"/>
+              <path data-edge d="M40 95 L40 60 L100 27 L160 60 L160 95"/>
+              <path data-edge d="M100 62 L100 27"/>
+              <path data-accent d="M55 66 L75 55"/>
+            </svg>
+            <span class="hv-model__tag hv-model__tag--br">410 ₽</span>
+          </div>
+          <div class="hv-model__body">
+            <h3 class="hv-model__title">Корпус для Raspberry Pi 5</h3>
+            <div class="hv-model__meta"><span>PLA</span><span>НАПЕЧАТАН 487 РАЗ</span></div>
+          </div>
+        </a>
+
+        <a class="hv-frame hv-model" href="catalog.html">
+          <div class="hv-model__view">
+            <span class="hv-model__tag hv-model__tag--tl">1 Ч 44 М</span>
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <circle data-face cx="78" cy="75" r="38"/>
+              <circle data-edge cx="78" cy="75" r="38"/>
+              <circle data-edge cx="78" cy="75" r="12"/>
+              <circle data-accent cx="146" cy="92" r="22"/>
+              <circle data-edge cx="146" cy="92" r="7"/>
+            </svg>
+            <span class="hv-model__tag hv-model__tag--br">348 ₽</span>
+          </div>
+          <div class="hv-model__body">
+            <h3 class="hv-model__title">Набор шестерён 20:60</h3>
+            <div class="hv-model__meta"><span>PETG</span><span>НАПЕЧАТАН 164 РАЗА</span></div>
+          </div>
+        </a>
+
+        <a class="hv-frame hv-model" href="catalog.html">
+          <div class="hv-model__view">
+            <span class="hv-model__tag hv-model__tag--tl">8 Ч 32 М</span>
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <path data-face d="M78 132 C62 100 70 60 100 20 C130 60 138 100 122 132 Z"/>
+              <path data-edge d="M78 132 C62 100 70 60 100 20 C130 60 138 100 122 132 Z"/>
+              <path data-accent d="M82 112 C96 106 108 106 118 112"/>
+              <path data-accent d="M78 88 C94 81 108 81 121 88"/>
+            </svg>
+            <span class="hv-model__tag hv-model__tag--br">1 420 ₽</span>
+          </div>
+          <div class="hv-model__body">
+            <h3 class="hv-model__title">Ваза «Спираль»</h3>
+            <div class="hv-model__meta"><span>PLA SILK</span><span>НАПЕЧАТАНА 238 РАЗ</span></div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- ========================================================= contrast -->
+    <section class="hv-main">
+      <div class="hv-cols hv-cols--2">
+        <div>
+          <span class="hv-micro">ЧЕСТНО О РАЗНИЦЕ</span>
+          <h2 class="hv-display" style="font-size:clamp(1.6rem,4vw,2.6rem);margin-top:var(--hv-2)">Не для всех</h2>
+          <p class="hv-prose" style="margin-top:var(--hv-4)">
+            Мы не самые дешёвые. Резерв на брак, обязательный контроль качества
+            и оплата простоя машин — всё это в цене. Если нужна одна деталь
+            «как получится» и подешевле, дешевле будет у частника с одним
+            принтером на кухне.
+          </p>
+          <p class="hv-prose">
+            Мы нужны, когда важен предсказуемый срок, повторяемость от партии к
+            партии и возможность спросить, откуда взялась каждая строка в счёте.
+          </p>
+        </div>
+
+        <div class="hv-table-wrap">
+          <table class="hv-table hv-vs-table">
+            <thead><tr><th></th><th>Printorian</th><th>Обычно</th></tr></thead>
+            <tbody>
+              <tr><td>Цена</td><td>Смета из 14 строк</td><td>«От 500 ₽»</td></tr>
+              <tr><td>Срок</td><td>Обещан машиной</td><td>«Дня три-четыре»</td></tr>
+              <tr><td>Просрочка</td><td>Скидка автоматически</td><td>Извинения</td></tr>
+              <tr><td>Проблемы модели</td><td>Видны до оплаты</td><td>Выясняются после</td></tr>
+              <tr><td>Ход печати</td><td>9 этапов онлайн</td><td>«Ещё печатается»</td></tr>
+              <tr><td>Брак</td><td>Перепечать за наш счёт</td><td>Спор</td></tr>
+              <tr><td>Ночью</td><td>Печатает</td><td>Спит</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== CTA -->
+    <section class="hv-cta">
+      <div>
+        <div class="hv-h hv-h--lead">Проверьте на своей модели</div>
+        <p class="hv-micro" style="margin:var(--hv-2) 0 0;color:inherit;opacity:.7">
+          РАСЧЁТ БЕЗ РЕГИСТРАЦИИ · STL, 3MF, STEP · ДО 200 МБ
+        </p>
+      </div>
+      <div class="hv-row">
+        <a class="hv-btn hv-btn--primary hv-btn--lg" href="configurator.html">Загрузить модель</a>
+        <a class="hv-btn hv-btn--lg" href="catalog.html">Выбрать готовую</a>
+      </div>
+    </section>
+
+    <!-- =========================================================== footer -->
+    <section class="hv-main">
+      <div class="hv-grid hv-grid--4">
+        <div>
+          <span class="hv-label">Заказчику</span>
+          <nav class="hv-nav" style="margin-top:var(--hv-2)">
+            <a class="hv-nav__item" href="configurator.html"><span class="hv-nav__lead">Рассчитать</span></a>
+            <a class="hv-nav__item" href="catalog.html"><span class="hv-nav__lead">Каталог</span></a>
+            <a class="hv-nav__item" href="account.html"><span class="hv-nav__lead">Кабинет</span></a>
+          </nav>
+        </div>
+        <div>
+          <span class="hv-label">О ферме</span>
+          <nav class="hv-nav" style="margin-top:var(--hv-2)">
+            <a class="hv-nav__item" href="blog.html"><span class="hv-nav__lead">Журнал</span></a>
+            <a class="hv-nav__item" href="blog-post.html"><span class="hv-nav__lead">Как считается цена</span></a>
+            <a class="hv-nav__item" href="dashboard.html"><span class="hv-nav__lead">Состояние парка</span></a>
+          </nav>
+        </div>
+        <div>
+          <span class="hv-label">Контакты</span>
+          <p class="hv-prose" style="font-size:var(--hv-size-small);margin-top:var(--hv-2)">
+            Москва, цех KN-SOL.21<br>
+            Выдача с 09:00 до 21:00<br>
+            farm@printorian.example
+          </p>
+        </div>
+        <div>
+          <span class="hv-label">Оплата</span>
+          <p class="hv-prose" style="font-size:var(--hv-size-small);margin-top:var(--hv-2)">
+            Карта · СБП · счёт для юрлиц<br>
+            Возврат до начала печати — 100%
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hv-panel__foot" style="border-top:1px solid var(--hv-line)">
+    <span>PRINTORIAN · АВТОМАТИЧЕСКАЯ ФЕРМА 3D-ПЕЧАТИ · KN-SOL.21</span>
+    <span data-clock></span>
+  </footer>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="public">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Конфигуратор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <!-- ==================================================== window chrome -->
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Конфигуратор :: Расчёт</span>
+      <div class="hv-meta">
+        <span>QUOTE :: <strong>3ESXATK0A41PJ2EY</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>RATES :: <strong>SNAP.8F41C2</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>MESH :: <strong>BRACKET_V4.STL</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/STORE/CONFIGURATOR/QUOTE.LIVE</div>
+      <div class="hv-path__status">STATUS :: <b>ONLINE</b></div>
+    </div>
+  </header>
+
+  <!-- ==================================================== application bar -->
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="promo.html">О ферме</a>
+      <a class="hv-appbar__link" href="catalog.html">Каталог</a>
+      <a class="hv-appbar__link" href="configurator.html" aria-current="page">Рассчитать</a>
+      <a class="hv-appbar__link" href="cabinet.html">Мои заказы</a>
+      <a class="hv-appbar__link" href="account.html">Кабинет</a>
+      <a class="hv-appbar__link" href="blog.html">Журнал</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">ДЧ</span>boss@printorian.example</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main">
+    <div class="hv-cols hv-cols--2">
+
+      <!-- ================================================ LEFT :: choices -->
+      <div class="hv-stack">
+
+        <!-- model viewport ............................................... -->
+        <section class="hv-frame hv-frame--wide" style="padding:var(--hv-2)">
+          <div class="hv-view" style="min-height:300px">
+            <div class="hv-view__pin hv-view__pin--tl hv-stack hv-stack--2">
+              <div class="hv-annot">
+                <span>
+                  <span class="hv-annot__k">Объём</span>
+                  <span class="hv-annot__v">41.28 см³ · герметично</span>
+                </span>
+              </div>
+              <div class="hv-annot">
+                <span>
+                  <span class="hv-annot__k">Габарит</span>
+                  <span class="hv-annot__v">128.0 × 64.5 × 22.4 мм</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="hv-view__pin hv-view__pin--tr hv-stack hv-stack--2">
+              <div class="hv-annot">
+                <span>
+                  <span class="hv-annot__k">Треугольников</span>
+                  <span class="hv-annot__v">184 220</span>
+                </span>
+              </div>
+              <div class="hv-annot hv-warn">
+                <span>
+                  <span class="hv-annot__k">Тонкие стенки</span>
+                  <span class="hv-annot__v">0.6 мм · 2 участка</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Placeholder for the WebGL canvas. Isometric wireframe keeps the
+                 template honest about what will occupy the well. -->
+            <svg viewBox="0 0 320 200" width="320" height="200" aria-label="Предпросмотр модели" role="img">
+              <g fill="none" stroke="currentColor" stroke-width="1" opacity="0.85">
+                <path d="M60 120 L160 70 L260 120 L160 170 Z"/>
+                <path d="M60 120 L60 82 L160 32 L260 82 L260 120"/>
+                <path d="M160 70 L160 32"/>
+                <path d="M60 82 L160 132 L260 82" opacity="0.35"/>
+                <path d="M160 132 L160 170" opacity="0.35"/>
+              </g>
+              <g stroke="var(--hv-live)" stroke-width="1" opacity="0.9">
+                <path d="M110 95 L160 70 L210 95 L160 120 Z" fill="none"/>
+              </g>
+            </svg>
+
+            <div class="hv-view__pin hv-view__pin--bl">
+              <span class="hv-micro">BRACKET_V4.STL :: 8.4 МБ :: ЗАГРУЖЕНО</span>
+            </div>
+            <div class="hv-view__pin hv-view__pin--br">
+              <span class="hv-micro">ISO · 1:1 · СЕТКА 10 ММ</span>
+            </div>
+          </div>
+          <div class="hv-ruler" style="margin-top:var(--hv-2)"></div>
+        </section>
+
+        <div class="hv-row">
+          <button class="hv-btn" type="button">Загрузить другую модель</button>
+          <button class="hv-btn" type="button">Выбрать из каталога</button>
+          <span class="hv-spacer"></span>
+          <span class="hv-micro">ШАГ 1 / 4</span>
+        </div>
+
+        <!-- material .................................................... -->
+        <section class="hv-panel">
+          <div class="hv-panel__head">
+            <span>01 :: Материал</span>
+            <span class="hv-panel__aside">СПОСОБ ВЫБОРА</span>
+          </div>
+          <div class="hv-panel__body hv-stack">
+
+            <div class="hv-seg" data-toggle-group="single">
+              <button class="hv-seg__btn" type="button" data-toggle aria-pressed="true">По сценарию</button>
+              <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">Выбрать вручную</button>
+            </div>
+
+            <div class="hv-field">
+              <label class="hv-label" for="scenario">Сценарий использования</label>
+              <select class="hv-select" id="scenario">
+                <option>Функциональная деталь · нагрузка · улица</option>
+                <option>Прототип · проверка формы</option>
+                <option>Декор · выставочная модель</option>
+                <option>Инженерная деталь · термостойкость</option>
+              </select>
+              <span class="hv-hint">Система подберёт материал сама</span>
+            </div>
+
+            <div class="hv-panel" style="background:var(--hv-bg-inset)">
+              <div class="hv-panel__body hv-panel__body--tight hv-row hv-row--between">
+                <div>
+                  <div class="hv-h">Подобрано :: PETG-CF · Bambu Lab</div>
+                  <div class="hv-micro">ПРОЧНОСТЬ 8/10 · УФ 7/10 · ТЕРМО 78 °C · НА СКЛАДЕ 4.2 КГ</div>
+                </div>
+                <button class="hv-btn hv-btn--sm" type="button" data-open="m-alt">Альтернативы · 3</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- colours ..................................................... -->
+        <section class="hv-panel">
+          <div class="hv-panel__head">
+            <span>02 :: Цвет</span>
+            <span class="hv-panel__aside">ДО 4 СЛОТОВ AMS</span>
+          </div>
+          <div class="hv-panel__body hv-stack">
+            <div class="hv-row">
+              <span class="hv-label" style="margin:0">Сколько цветов</span>
+              <span class="hv-seg" data-toggle-group="single">
+                <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">1</button>
+                <button class="hv-seg__btn" type="button" data-toggle aria-pressed="true">2</button>
+                <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">3</button>
+                <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">4</button>
+              </span>
+              <span class="hv-hint">Смена цвета добавляет продувку</span>
+            </div>
+
+            <div class="hv-grid hv-grid--2">
+              <div class="hv-slot" style="--hv-swatch:#1b1b1e">
+                <span class="hv-slot__chip"></span>
+                <span class="hv-slot__body">
+                  <span class="hv-h">Цвет 1 :: Чёрный</span>
+                  <span class="hv-slot__n">AMS.A1 · 820 Г В СЛОТЕ</span>
+                </span>
+              </div>
+              <div class="hv-slot" style="--hv-swatch:#d64545">
+                <span class="hv-slot__chip"></span>
+                <span class="hv-slot__body">
+                  <span class="hv-h">Цвет 2 :: Красный</span>
+                  <span class="hv-slot__n">AMS.A3 · 340 Г В СЛОТЕ</span>
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <span class="hv-label">Палитра в наличии</span>
+              <div class="hv-swatches" style="margin-top:var(--hv-2)" data-toggle-group="single">
+                <button class="hv-swatch" type="button" data-toggle aria-pressed="true"  style="--hv-swatch:#1b1b1e" aria-label="Чёрный"></button>
+                <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#f2f2f0" aria-label="Белый"></button>
+                <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#d64545" aria-label="Красный"></button>
+                <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#2f6fed" aria-label="Синий"></button>
+                <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#3fbf76" aria-label="Зелёный"></button>
+                <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#e0a53c" aria-label="Оранжевый"></button>
+                <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#6b6f76" aria-label="Серый"></button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- geometry / quantity ......................................... -->
+        <section class="hv-panel">
+          <div class="hv-panel__head">
+            <span>03 :: Размер и количество</span>
+          </div>
+          <div class="hv-panel__body hv-stack">
+
+            <div class="hv-field">
+              <div class="hv-row hv-row--between">
+                <label class="hv-label" for="scale" style="margin:0">Масштаб</label>
+                <span class="hv-mono" id="scale-out">100%</span>
+              </div>
+              <input class="hv-range" type="range" id="scale" min="50" max="200" step="5" value="100"
+                     data-bind="#scale-out" data-suffix="%">
+              <span class="hv-hint">Изменение размера добавляет инженерные работы</span>
+            </div>
+
+            <div class="hv-field">
+              <div class="hv-row hv-row--between">
+                <label class="hv-label" for="qty" style="margin:0">Количество</label>
+                <span class="hv-mono" id="qty-out">10 шт</span>
+              </div>
+              <input class="hv-range" type="range" id="qty" min="1" max="50" step="1" value="10"
+                     data-bind="#qty-out" data-suffix=" шт">
+              <ul class="hv-leaders" style="margin-top:var(--hv-2)">
+                <li class="hv-leader" data-tone="good">
+                  <span class="hv-leader__k">Скидка за объём · порог 10 шт</span>
+                  <span class="hv-leader__fill"></span>
+                  <span class="hv-leader__v">−8%</span>
+                </li>
+                <li class="hv-leader">
+                  <span class="hv-leader__k">Следующий порог :: 25 шт</span>
+                  <span class="hv-leader__fill"></span>
+                  <span class="hv-leader__v">−14%</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- options ..................................................... -->
+        <section class="hv-panel">
+          <div class="hv-panel__head">
+            <span>04 :: Обработка и срок</span>
+            <span class="hv-panel__aside">ВЛИЯЕТ НА ЦЕНУ</span>
+          </div>
+          <div class="hv-panel__body hv-stack hv-stack--2">
+            <button class="hv-option" type="button" aria-pressed="true">
+              <span class="hv-h">Без обработки</span>
+              <span class="hv-option__delta hv-faint">± 0 ₽</span>
+            </button>
+            <button class="hv-option" type="button" aria-pressed="false">
+              <span class="hv-h">Шлифовка</span>
+              <span class="hv-option__delta" data-dir="up">+ 340 ₽ / шт</span>
+            </button>
+            <button class="hv-option" type="button" aria-pressed="false">
+              <span class="hv-h">Грунтовка</span>
+              <span class="hv-option__delta" data-dir="up">+ 610 ₽ / шт</span>
+            </button>
+            <button class="hv-option" type="button" aria-pressed="false">
+              <span class="hv-h">Окраска</span>
+              <span class="hv-option__delta" data-dir="up">+ 1 250 ₽ / шт</span>
+            </button>
+            <hr class="hv-hr">
+            <button class="hv-option" type="button" aria-pressed="false">
+              <span>
+                <span class="hv-h">Срочное производство</span>
+                <span class="hv-micro" style="display:block">СРОК 18 Ч ВМЕСТО 74 Ч</span>
+              </span>
+              <span class="hv-option__delta" data-dir="up">+ 22%</span>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- ================================================ RIGHT :: price -->
+      <div class="hv-sticky hv-stack">
+
+        <!-- what changes if you pick differently ........................ -->
+        <section class="hv-frame hv-frame--live">
+          <div class="hv-row hv-row--between" style="margin-bottom:var(--hv-2)">
+            <span class="hv-h hv-live">Что изменится</span>
+            <span class="hv-micro">ПРИ ВЫБОРЕ :: ШЛИФОВКА</span>
+          </div>
+          <ul class="hv-leaders">
+            <li class="hv-leader" data-tone="bad">
+              <span class="hv-leader__k">Труд · постобработка <b>новая позиция</b></span>
+              <span class="hv-leader__fill"></span>
+              <span class="hv-leader__v">+ 3 400 ₽</span>
+            </li>
+            <li class="hv-leader" data-tone="good">
+              <span class="hv-leader__k">Резерв на брак</span>
+              <span class="hv-leader__fill"></span>
+              <span class="hv-leader__v">− 180 ₽</span>
+            </li>
+            <li class="hv-leader" data-tone="bad">
+              <span class="hv-leader__k">Прибыль</span>
+              <span class="hv-leader__fill"></span>
+              <span class="hv-leader__v">+ 520 ₽</span>
+            </li>
+          </ul>
+          <hr class="hv-hr">
+          <div class="hv-slab hv-slab--outline">
+            <span>Итого изменение</span>
+            <span class="hv-slab__v hv-bad">+ 3 740 ₽</span>
+          </div>
+        </section>
+
+        <!-- the breakdown ............................................... -->
+        <section class="hv-panel">
+          <div class="hv-panel__head hv-panel__head--invert">
+            <span>Из чего складывается цена</span>
+            <span class="hv-panel__aside" style="color:inherit">10 ШТ</span>
+          </div>
+          <div class="hv-panel__body hv-panel__body--tight">
+
+            <div class="hv-label" style="margin:var(--hv-2) 0 var(--hv-1)">Материал</div>
+            <ul class="hv-leaders">
+              <li class="hv-leader">
+                <span class="hv-leader__k">Материал
+                  <span class="hv-leader__basis">412.8 Г × 2.94 ₽/Г</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">1 213 ₽</span>
+              </li>
+              <li class="hv-leader">
+                <span class="hv-leader__k">Продувка при смене цвета
+                  <span class="hv-leader__basis">62 Г × 2.94 ₽/Г</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">182 ₽</span>
+              </li>
+              <li class="hv-leader">
+                <span class="hv-leader__k">Закупка материала
+                  <span class="hv-leader__basis">7% ОТ СТОИМОСТИ</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">98 ₽</span>
+              </li>
+            </ul>
+
+            <div class="hv-label" style="margin:var(--hv-3) 0 var(--hv-1)">Оборудование</div>
+            <ul class="hv-leaders">
+              <li class="hv-leader">
+                <span class="hv-leader__k">Электроэнергия
+                  <span class="hv-leader__basis">9.4 КВТ·Ч × 6.20 ₽</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">58 ₽</span>
+              </li>
+              <li class="hv-leader">
+                <span class="hv-leader__k">Амортизация принтера
+                  <span class="hv-leader__basis">23.5 Ч × 41.00 ₽/Ч</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">963 ₽</span>
+              </li>
+            </ul>
+
+            <div class="hv-label" style="margin:var(--hv-3) 0 var(--hv-1)">Труд</div>
+            <ul class="hv-leaders">
+              <li class="hv-leader">
+                <span class="hv-leader__k">Труд · подготовка задания
+                  <span class="hv-leader__basis">0.5 Ч × 900 ₽/Ч</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">450 ₽</span>
+              </li>
+              <li class="hv-leader">
+                <span class="hv-leader__k">Труд · надзор за печатью
+                  <span class="hv-leader__basis">1.2 Ч × 900 ₽/Ч</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">1 080 ₽</span>
+              </li>
+            </ul>
+
+            <div class="hv-label" style="margin:var(--hv-3) 0 var(--hv-1)">Логистика · Накладные · Риски</div>
+            <ul class="hv-leaders">
+              <li class="hv-leader">
+                <span class="hv-leader__k">Упаковка</span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">220 ₽</span>
+              </li>
+              <li class="hv-leader">
+                <span class="hv-leader__k">Доставка
+                  <span class="hv-leader__basis">АДРЕС НЕ УКАЗАН — УТОЧНИТСЯ ПОСЛЕ ВХОДА</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v hv-faint">—</span>
+              </li>
+              <li class="hv-leader">
+                <span class="hv-leader__k">Накладные расходы
+                  <span class="hv-leader__basis">12% ОТ СЕБЕСТОИМОСТИ</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">508 ₽</span>
+              </li>
+              <li class="hv-leader">
+                <span class="hv-leader__k">Резерв на брак
+                  <span class="hv-leader__basis">6% · КЛАСС РИСКА B</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">254 ₽</span>
+              </li>
+            </ul>
+
+            <div class="hv-label" style="margin:var(--hv-3) 0 var(--hv-1)">Корректировки · Прибыль</div>
+            <ul class="hv-leaders">
+              <li class="hv-leader" data-tone="good">
+                <span class="hv-leader__k">Скидка за объём
+                  <span class="hv-leader__basis">10 ШТ · СТУПЕНЬ 2</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">− 396 ₽</span>
+              </li>
+              <li class="hv-leader">
+                <span class="hv-leader__k">Прибыль
+                  <span class="hv-leader__basis">28% МАРЖА</span>
+                </span>
+                <span class="hv-leader__fill"></span>
+                <span class="hv-leader__v">1 386 ₽</span>
+              </li>
+            </ul>
+          </div>
+
+          <div style="padding:0 var(--hv-3) var(--hv-3)">
+            <hr class="hv-hr hv-hr--heavy">
+            <div class="hv-slab hv-slab--lg">
+              <span>Итого</span>
+              <span class="hv-slab__v">6 016 ₽</span>
+            </div>
+            <div class="hv-slab hv-slab--outline" style="margin-top:var(--hv-1)">
+              <span>Цена за штуку</span>
+              <span class="hv-slab__v">601.60 ₽</span>
+            </div>
+          </div>
+
+          <div class="hv-panel__foot">
+            <span>СРОК :: 74 Ч</span>
+            <span>ТАРИФЫ :: SNAP.8F41C2</span>
+          </div>
+        </section>
+
+        <a class="hv-btn hv-btn--primary hv-btn--lg hv-btn--block" href="checkout.html">Оформить заказ</a>
+
+        <p class="hv-micro" style="text-align:center;margin:0">
+          ЦЕНА ФИКСИРУЕТСЯ НА 24 Ч ПОСЛЕ ОФОРМЛЕНИЯ
+        </p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ================================================ material alternatives -->
+<div class="hv-overlay" id="m-alt" hidden>
+  <div class="hv-modal" role="dialog" aria-modal="true" aria-labelledby="m-alt-t">
+    <div class="hv-chrome" style="position:static;padding:var(--hv-3) var(--hv-3) 0">
+      <div class="hv-chrome__row">
+        <span class="hv-tab" id="m-alt-t">Материалы :: Альтернативы</span>
+        <div class="hv-meta"><span>SCENARIO :: <strong>FUNCTIONAL.OUTDOOR</strong></span></div>
+        <div class="hv-os">
+          <span class="hv-os__label">3 ВАРИАНТА</span>
+        <button class="hv-os__x" type="button" data-close aria-label="Закрыть">✕</button>
+        </div>
+      </div>
+      <div class="hv-path">
+        <div class="hv-path__crumbs">C:/PRINTORIAN/INVENTORY/RECOMMEND</div>
+        <div class="hv-path__status">STATUS :: <b>OPEN</b></div>
+      </div>
+    </div>
+    <div class="hv-modal__body">
+      <div class="hv-table-wrap">
+        <table class="hv-table">
+          <thead>
+            <tr>
+              <th>Материал</th><th>Прочность</th><th>УФ</th><th>Термо</th>
+              <th data-align="end">Склад</th><th data-align="end">Δ Цена</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>PETG-CF</b> <span class="hv-micro">· ПОДОБРАНО</span></td>
+              <td>8 / 10</td><td>7 / 10</td><td>78 °C</td>
+              <td data-align="end">4.2 кг</td>
+              <td data-align="end" class="hv-faint">± 0 ₽</td>
+              <td><span class="hv-state" data-state="idle">Выбран</span></td>
+            </tr>
+            <tr data-activatable>
+              <td>PLA-BASIC</td><td>5 / 10</td><td>2 / 10</td><td>55 °C</td>
+              <td data-align="end">12.8 кг</td>
+              <td data-align="end" class="hv-good">− 1 240 ₽</td>
+              <td><button class="hv-btn hv-btn--sm" type="button">Выбрать</button></td>
+            </tr>
+            <tr data-activatable>
+              <td>ASA</td><td>7 / 10</td><td>9 / 10</td><td>95 °C</td>
+              <td data-align="end">1.1 кг</td>
+              <td data-align="end" class="hv-bad">+ 860 ₽</td>
+              <td><button class="hv-btn hv-btn--sm" type="button">Выбрать</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hv-prose" style="margin-top:var(--hv-3)">
+        Подбор опирается на сценарий использования: деталь эксплуатируется на улице
+        под нагрузкой, поэтому УФ-стойкость и температура размягчения весят больше,
+        чем цена. Любой вариант можно выбрать вручную — расчёт пересчитается сразу.
+      </p>
+    </div>
+    <div class="hv-panel__foot">
+      <span>ИСТОЧНИК :: INVENTORY.RECOMMEND</span>
+      <button class="hv-btn hv-btn--sm" type="button" data-close>Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

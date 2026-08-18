@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Пользователи</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Доступ :: Пользователи</span>
+      <div class="hv-meta">
+        <span>REALM :: <strong>IDENTITY.LOCAL</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ACCOUNTS :: <strong>34</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>SESSIONS :: <strong>6 АКТИВНЫХ</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/IDENTITY/USERS.DB</div>
+      <div class="hv-path__status">STATUS :: <b>ONLINE</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="dashboard.html">Сводка</a>
+      <a class="hv-appbar__link" href="orders.html">Заказы</a>
+      <a class="hv-appbar__link" href="fleet.html">Принтеры</a>
+      <a class="hv-appbar__link" href="postproduction.html">Постобработка</a>
+      <a class="hv-appbar__link" href="packaging.html">Упаковка</a>
+      <a class="hv-appbar__link" href="service.html">Сервис</a>
+      <a class="hv-appbar__link" href="store.html">Склад</a>
+      <a class="hv-appbar__link" href="purchasing.html">Закупки</a>
+      <a class="hv-appbar__link" href="logistics.html">Логистика</a>
+      <a class="hv-appbar__link" href="settings.html">Настройки</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">ДЧ</span>boss@printorian.example</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main">
+    <div class="hv-cols hv-cols--2">
+
+      <div class="hv-stack">
+        <div class="hv-row hv-row--between">
+          <div class="hv-tags" data-filter-group="#usr-table">
+            <button class="hv-tag" type="button" data-filter="all" aria-pressed="true"><span class="hv-tag__k">Все</span><span class="hv-tag__n">34</span></button>
+            <button class="hv-tag" type="button" data-filter="customer" aria-pressed="false"><span class="hv-tag__k">Заказчик</span><span class="hv-tag__n">27</span></button>
+            <button class="hv-tag" type="button" data-filter="operator" data-tone="live" aria-pressed="false"><span class="hv-tag__k">Оператор</span><span class="hv-tag__n">3</span></button>
+            <button class="hv-tag" type="button" data-filter="engineer" data-tone="live" aria-pressed="false"><span class="hv-tag__k">Инженер</span><span class="hv-tag__n">2</span></button>
+            <button class="hv-tag" type="button" data-filter="manager" data-tone="warn" aria-pressed="false"><span class="hv-tag__k">Менеджер</span><span class="hv-tag__n">1</span></button>
+            <button class="hv-tag" type="button" data-filter="owner" data-tone="bad" aria-pressed="false"><span class="hv-tag__k">Владелец</span><span class="hv-tag__n">1</span></button>
+          </div>
+          <button class="hv-btn" type="button">Пригласить</button>
+        </div>
+
+        <div class="hv-table-wrap">
+          <table class="hv-table" id="usr-table" data-sortable>
+            <thead>
+              <tr>
+                <th><button class="hv-table__sort" data-sort>Почта <span class="hv-table__ind"></span></button></th>
+                <th><button class="hv-table__sort" data-sort>Роль <span class="hv-table__ind"></span></button></th>
+                <th><button class="hv-table__sort" data-sort>Статус <span class="hv-table__ind"></span></button></th>
+                <th><button class="hv-table__sort" data-sort>Последний вход <span class="hv-table__ind"></span></button></th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Заказов <span class="hv-table__ind"></span></button></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-status="owner" data-activatable aria-selected="true">
+                <td><b>boss@printorian.example</b></td>
+                <td>Владелец</td>
+                <td><span class="hv-state" data-state="idle">Активен</span></td>
+                <td class="hv-live">сейчас</td>
+                <td data-align="end">14</td>
+              </tr>
+              <tr data-status="manager" data-activatable>
+                <td>manager@printorian.example</td>
+                <td>Менеджер</td>
+                <td><span class="hv-state" data-state="idle">Активен</span></td>
+                <td>сегодня 09:12</td>
+                <td data-align="end">0</td>
+              </tr>
+              <tr data-status="engineer" data-activatable>
+                <td>eng1@printorian.example</td>
+                <td>Инженер</td>
+                <td><span class="hv-state" data-state="idle">Активен</span></td>
+                <td>сегодня 08:40</td>
+                <td data-align="end">0</td>
+              </tr>
+              <tr data-status="operator" data-activatable>
+                <td>floor@printorian.example</td>
+                <td>Оператор</td>
+                <td><span class="hv-state" data-state="printing">В смене</span></td>
+                <td class="hv-live">сейчас</td>
+                <td data-align="end">0</td>
+              </tr>
+              <tr data-status="operator" data-activatable>
+                <td>floor2@printorian.example</td>
+                <td>Оператор</td>
+                <td><span class="hv-state" data-state="offline">Не в смене</span></td>
+                <td>вчера 22:04</td>
+                <td data-align="end">0</td>
+              </tr>
+              <tr data-status="customer" data-activatable>
+                <td>a.orlov@mail.ru</td>
+                <td>Заказчик · Gold</td>
+                <td><span class="hv-state" data-state="idle">Активен</span></td>
+                <td>08.08 16:20</td>
+                <td data-align="end">41</td>
+              </tr>
+              <tr data-status="customer" data-activatable>
+                <td>zakaz@techpro.ru</td>
+                <td>Заказчик · Silver</td>
+                <td><span class="hv-state" data-state="idle">Активен</span></td>
+                <td>07.08 11:05</td>
+                <td data-align="end">18</td>
+              </tr>
+              <tr data-status="customer" data-activatable>
+                <td>m.belova@yandex.ru</td>
+                <td>Заказчик</td>
+                <td><span class="hv-state" data-state="offline">Отключена</span></td>
+                <td class="hv-faint">14.05 09:31</td>
+                <td data-align="end">2</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hv-panel__foot" style="border:var(--hv-hair) solid var(--hv-line);border-top:0">
+          <span>ПОКАЗАНО 8 ИЗ 34</span>
+          <span>ХЭШ ПАРОЛЕЙ :: ARGON2ID</span>
+        </div>
+      </div>
+
+      <!-- ============================================ permission matrix -- -->
+      <aside class="hv-sticky hv-stack">
+        <section class="hv-frame hv-frame--wide">
+          <span class="hv-label">Выбран</span>
+          <h2 class="hv-display" style="font-size:clamp(1.4rem,3.4vw,2rem);margin-top:var(--hv-1)">OWNER</h2>
+          <p class="hv-micro" style="margin-top:var(--hv-2)">BOSS@PRINTORIAN.EXAMPLE · СОЗДАН 12.03.2026</p>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Права роли</span><span class="hv-panel__aside">14 ИЗ 14</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">view_own_orders</span><span class="hv-leader__fill"></span><span class="hv-leader__v">✓</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">view_all_orders</span><span class="hv-leader__fill"></span><span class="hv-leader__v">✓</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">manage_order</span><span class="hv-leader__fill"></span><span class="hv-leader__v">✓</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">issue_refund</span><span class="hv-leader__fill"></span><span class="hv-leader__v">✓</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">view_production</span><span class="hv-leader__fill"></span><span class="hv-leader__v">✓</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">manage_fleet</span><span class="hv-leader__fill"></span><span class="hv-leader__v">✓</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">manage_inventory</span><span class="hv-leader__fill"></span><span class="hv-leader__v">✓</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">manage_pricing</span><span class="hv-leader__fill"></span><span class="hv-leader__v">✓</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">manage_users</span><span class="hv-leader__fill"></span><span class="hv-leader__v">✓</span></li>
+            </ul>
+            <p class="hv-micro" style="margin-top:var(--hv-3)">
+              РОЛЬ — ЭТО ИМЯ НАБОРА ПРАВ. ЭКРАНЫ ПОКАЗЫВАЮТСЯ ПО ПРАВАМ, А НЕ ПО РОЛИ.
+            </p>
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Активные сессии</span><span class="hv-panel__aside">2</span></div>
+          <div class="hv-panel__body--none">
+            <table class="hv-table">
+              <tbody>
+                <tr>
+                  <td>Chrome · Windows<div class="hv-micro">10.0.4.88 · ЦЕХ A</div></td>
+                  <td data-align="end"><span class="hv-state" data-state="printing">Текущая</span></td>
+                </tr>
+                <tr>
+                  <td>Electron · Desktop<div class="hv-micro">10.0.4.12 · ПУЛЬТ</div></td>
+                  <td data-align="end"><button class="hv-btn hv-btn--sm hv-btn--danger" type="button">Завершить</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="hv-row">
+          <button class="hv-btn" type="button">Сменить роль</button>
+          <button class="hv-btn hv-btn--danger" type="button">Отключить</button>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

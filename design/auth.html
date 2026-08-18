@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="public">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Вход</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Доступ :: Аутентификация</span>
+      <div class="hv-meta">
+        <span>REALM :: <strong>IDENTITY.LOCAL</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>HASH :: <strong>ARGON2ID</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>SESSION_TTL :: <strong>12 Ч</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/IDENTITY/AUTHENTICATE</div>
+      <div class="hv-path__status">СЕАНС :: <b>НЕ УСТАНОВЛЕН</b></div>
+    </div>
+  </header>
+
+  <div class="hv-auth">
+
+    <!-- ============================================================ poster -->
+    <section class="hv-auth__poster">
+      <div>
+        <span class="hv-micro">ФЕРМА 3D-ПЕЧАТИ · KN-SOL.21 · С МАРТА 2026</span>
+        <h1 class="hv-display hv-display--rule" style="margin-top:var(--hv-3)">Printorian</h1>
+        <p class="hv-prose" style="margin-top:var(--hv-4);max-width:52ch">
+          Загрузите модель — увидите цену построчно, с основанием расчёта под каждой
+          цифрой. Никаких «уточним по телефону»: сумма известна до оплаты, а срок
+          обещан машиной, которая будет печатать.
+        </p>
+      </div>
+
+      <div class="hv-grid hv-grid--3">
+        <div class="hv-frame hv-stat"><span class="hv-label">Принтеров</span><span class="hv-stat__v">12</span><span class="hv-micro">FDM И ФОТОПОЛИМЕР</span></div>
+        <div class="hv-frame hv-stat" data-tone="good"><span class="hv-label">Точность срока</span><span class="hv-stat__v">96<small>%</small></span><span class="hv-micro">ЗА 90 СУТОК</span></div>
+        <div class="hv-frame hv-stat"><span class="hv-label">Расчёт цены</span><span class="hv-stat__v">1.2<small> С</small></span><span class="hv-micro">ОТ ЗАГРУЗКИ ДО СМЕТЫ</span></div>
+      </div>
+
+      <div class="hv-frame">
+        <span class="hv-label">Что даёт учётная запись</span>
+        <ul class="hv-leaders" style="margin-top:var(--hv-2)">
+          <li class="hv-leader"><span class="hv-leader__k">Ход печати в реальном времени</span><span class="hv-leader__fill"></span><span class="hv-leader__v">9 этапов</span></li>
+          <li class="hv-leader"><span class="hv-leader__k">Скидка за просрочку</span><span class="hv-leader__fill"></span><span class="hv-leader__v">автоматически</span></li>
+          <li class="hv-leader"><span class="hv-leader__k">Повтор заказа в один клик</span><span class="hv-leader__fill"></span><span class="hv-leader__v">из истории</span></li>
+          <li class="hv-leader"><span class="hv-leader__k">Персональный тариф</span><span class="hv-leader__fill"></span><span class="hv-leader__v">от 4%</span></li>
+        </ul>
+        <p class="hv-micro" style="margin:var(--hv-3) 0 0">
+          РАСЧЁТ ЦЕНЫ ДОСТУПЕН БЕЗ РЕГИСТРАЦИИ — АККАУНТ НУЖЕН ТОЛЬКО ДЛЯ ОФОРМЛЕНИЯ
+        </p>
+      </div>
+
+      <div class="hv-row">
+        <a class="hv-btn" href="catalog.html">Смотреть каталог</a>
+        <a class="hv-btn" href="configurator.html">Рассчитать без входа</a>
+      </div>
+    </section>
+
+    <!-- ============================================================== form -->
+    <section class="hv-auth__form">
+      <div class="hv-auth__box hv-stack">
+
+        <div class="hv-seg" data-tabs="#auth-panels" style="width:100%">
+          <button class="hv-seg__btn" type="button" data-tab-target="signin" aria-selected="true" style="flex:1">Вход</button>
+          <button class="hv-seg__btn" type="button" data-tab-target="signup" aria-selected="false" style="flex:1">Регистрация</button>
+          <button class="hv-seg__btn" type="button" data-tab-target="recover" aria-selected="false" style="flex:1">Забыли пароль</button>
+        </div>
+
+        <div id="auth-panels">
+
+          <!-- sign in ------------------------------------------------- -->
+          <div data-tab-panel="signin" class="hv-stack">
+            <div>
+              <h2 class="hv-h hv-h--lead">Вход в систему</h2>
+              <p class="hv-micro" style="margin-top:var(--hv-1)">УКАЖИТЕ ПОЧТУ И ПАРОЛЬ</p>
+            </div>
+
+            <div class="hv-field">
+              <label class="hv-label" for="s-email">Электронная почта</label>
+              <input class="hv-input" id="s-email" type="email" autocomplete="email" value="boss@printorian.example">
+            </div>
+
+            <div class="hv-field">
+              <div class="hv-row hv-row--between">
+                <label class="hv-label" for="s-pw" style="margin:0">Пароль</label>
+                <button class="hv-btn hv-btn--sm" type="button">Показать</button>
+              </div>
+              <input class="hv-input" id="s-pw" type="password" autocomplete="current-password" value="············">
+            </div>
+
+            <!-- error state, shown as a specimen so the wrong-password case
+                 is part of the review rather than discovered later -->
+            <div class="hv-field" data-invalid="true">
+              <label class="hv-label" for="s-demo">Пример ошибки</label>
+              <input class="hv-input" id="s-demo" value="wrong@example">
+              <span class="hv-field__err">Неверная почта или пароль</span>
+            </div>
+
+            <label class="hv-check">
+              <input type="checkbox" checked>
+              <span class="hv-check__body">
+                <span class="hv-h">Запомнить на этом устройстве</span>
+                <span class="hv-hint">Сеанс живёт 12 часов · session_ttl_hours</span>
+              </span>
+            </label>
+
+            <a class="hv-btn hv-btn--primary hv-btn--lg hv-btn--block" href="account.html">Войти</a>
+            <div class="hv-or">или</div>
+            <button class="hv-btn hv-btn--block" type="button">Войти по коду из письма</button>
+          </div>
+
+          <!-- sign up ------------------------------------------------- -->
+          <div data-tab-panel="signup" hidden class="hv-stack">
+            <div>
+              <h2 class="hv-h hv-h--lead">Регистрация</h2>
+              <p class="hv-micro" style="margin-top:var(--hv-1)">ДВА ПОЛЯ · ОСТАЛЬНОЕ ПОЗЖЕ</p>
+            </div>
+
+            <div class="hv-field">
+              <label class="hv-label" for="r-email">Электронная почта</label>
+              <input class="hv-input" id="r-email" type="email" autocomplete="email" placeholder="ВЫ@ПОЧТА.RU">
+            </div>
+
+            <div class="hv-field">
+              <label class="hv-label" for="r-pw">Пароль</label>
+              <input class="hv-input" id="r-pw" type="password" autocomplete="new-password" placeholder="НЕ КОРОЧЕ 12 СИМВОЛОВ">
+              <span class="hv-pw" data-level="3" style="margin-top:var(--hv-1)"><i></i><i></i><i></i><i></i></span>
+              <span class="hv-hint">ХОРОШИЙ · МИНИМУМ 12 СИМВОЛОВ · password_min_length</span>
+            </div>
+
+            <div class="hv-field">
+              <label class="hv-label" for="r-type">Тип заказчика</label>
+              <select class="hv-select" id="r-type">
+                <option>Частное лицо</option>
+                <option>Юридическое лицо · нужен счёт</option>
+              </select>
+              <span class="hv-hint">Влияет только на способ оплаты</span>
+            </div>
+
+            <label class="hv-check">
+              <input type="checkbox">
+              <span class="hv-check__body">
+                <span class="hv-h">Я принимаю условия производства и возврата</span>
+                <span class="hv-hint">Обязательно для оформления заказов</span>
+              </span>
+            </label>
+
+            <label class="hv-check">
+              <input type="checkbox" checked>
+              <span class="hv-check__body">
+                <span class="hv-h">Сообщать о ходе печати</span>
+                <span class="hv-hint">Письмо при каждой смене этапа · можно отключить</span>
+              </span>
+            </label>
+
+            <button class="hv-btn hv-btn--primary hv-btn--lg hv-btn--block" type="button">Зарегистрироваться</button>
+            <p class="hv-micro" style="margin:0;text-align:center">
+              АДРЕС И РЕКВИЗИТЫ ПОНАДОБЯТСЯ ТОЛЬКО ПРИ ПЕРВОМ ЗАКАЗЕ
+            </p>
+          </div>
+
+          <!-- recover ------------------------------------------------- -->
+          <div data-tab-panel="recover" hidden class="hv-stack">
+            <div>
+              <h2 class="hv-h hv-h--lead">Восстановление доступа</h2>
+              <p class="hv-micro" style="margin-top:var(--hv-1)">КОД ИЗ ШЕСТИ ЦИФР</p>
+            </div>
+
+            <p class="hv-prose" style="font-size:var(--hv-size-small);margin:0">
+              Укажите почту — пришлём код. Ссылку не отправляем: код нельзя
+              переслать по ошибке, а срок его жизни — 10 минут.
+            </p>
+
+            <div class="hv-field">
+              <label class="hv-label" for="rc-email">Электронная почта</label>
+              <input class="hv-input" id="rc-email" type="email" placeholder="ВЫ@ПОЧТА.RU">
+            </div>
+
+            <div>
+              <span class="hv-label" style="margin-bottom:var(--hv-2)">Код из письма</span>
+              <div class="hv-otp">
+                <input inputmode="numeric" maxlength="1" value="4" aria-label="Цифра 1">
+                <input inputmode="numeric" maxlength="1" value="7" aria-label="Цифра 2">
+                <input inputmode="numeric" maxlength="1" value="1" aria-label="Цифра 3">
+                <input inputmode="numeric" maxlength="1" aria-label="Цифра 4">
+                <input inputmode="numeric" maxlength="1" aria-label="Цифра 5">
+                <input inputmode="numeric" maxlength="1" aria-label="Цифра 6">
+              </div>
+              <p class="hv-micro" style="margin:var(--hv-2) 0 0">ОТПРАВИТЬ ПОВТОРНО ЧЕРЕЗ 0:42</p>
+            </div>
+
+            <button class="hv-btn hv-btn--primary hv-btn--lg hv-btn--block" type="button">Подтвердить</button>
+          </div>
+        </div>
+
+        <hr class="hv-hr">
+
+        <div class="hv-row hv-row--between">
+          <span class="hv-micro">ЗАЩИЩЕНО :: ARGON2ID · БЛОКИРОВКА ПОСЛЕ 5 ПОПЫТОК</span>
+          <button class="hv-btn hv-btn--sm" type="button" data-auth-open="signin">Показать всплывающим окном</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="hv-panel__foot" style="border-top:1px solid var(--hv-line)">
+    <span>IDENTITY.AUTHENTICATE · PRINTORIAN OS ./v2.0</span>
+    <span data-clock></span>
+  </footer>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

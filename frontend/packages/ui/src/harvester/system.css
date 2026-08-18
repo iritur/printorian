@@ -1,0 +1,1314 @@
+/* ============================================================================
+   PRINTORIAN OS — component system  ("HARVESTER")
+   ----------------------------------------------------------------------------
+   A technical-console interface: hairlines on black, bracket corners, tracked
+   uppercase chrome, tabular figures everywhere a number can be compared.
+   Depends on tokens.css. No JS required except for demo interactivity.
+
+   Contents
+     01  reset + page
+     02  chrome        — tab row, meta bar, path/status strip
+     03  frame         — the bracket-corner container
+     04  panel + head
+     05  type          — display, labels, annotations, prose
+     06  nav           — sidebar list, tree list, tabs
+     07  data          — table, leader rows, slab rows, key/value
+     08  status        — tags, dots, state pills
+     09  meter         — progress, gauge, ruler
+     10  controls      — buttons, inputs, select, swatch, segmented, range
+     11  cards         — glyph card, stat card, viewport
+     12  pipeline      — order workflow tracker
+     13  overlay       — modal / detail popup
+     14  layout        — shells, grids, utilities
+   ========================================================================= */
+
+/* ----------------------------------------------------------------------------
+   Promoted from `design/css/harvester.css` (Slice B). Sections 01–14 — the
+   system every screen is built from. Sections 15–19 style screens that do not
+   exist yet and live in `screens.css`, imported by the slice that builds them.
+
+   This file is now the source. The copy under `design/` stays as the reference
+   the kit renders from; when the two disagree, this one is what ships.
+   -------------------------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------------- 01 reset */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--hv-void);
+  color: var(--hv-text);
+  font-family: var(--hv-font-ui);
+  font-size: var(--hv-size-base);
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Graph paper. Deliberately at the threshold of visibility — it should register
+   as texture, not as a grid you could count. */
+.hv-graph {
+  background-image:
+    linear-gradient(var(--hv-grid) var(--hv-hair), transparent var(--hv-hair)),
+    linear-gradient(90deg, var(--hv-grid) var(--hv-hair), transparent var(--hv-hair));
+  background-size: 32px 32px;
+}
+
+img, svg { max-width: 100%; display: block; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+::selection { background: var(--hv-text); color: var(--hv-text-invert); }
+
+:focus-visible {
+  outline: var(--hv-hair) solid var(--hv-live);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--hv-bg); }
+::-webkit-scrollbar-thumb { background: var(--hv-line); border: 3px solid var(--hv-bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--hv-text-faint); }
+
+.hv-sr {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- 02 chrome
+   The window furniture. Every screen opens with the same three-part header:
+   a section tab, a metadata bar, and the OS bar — then a path/status strip.
+   Consistency here is what makes six unrelated screens feel like one machine.
+   ------------------------------------------------------------------------ */
+
+.hv-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--hv-void);
+  padding: var(--hv-3) var(--hv-3) 0;
+}
+
+.hv-chrome__row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--hv-2);
+  min-height: var(--hv-bar-h);
+}
+
+/* The section tab: inverted, the only white block in the header. It names
+   where you are, and the trailing dot marks the pane as focused. */
+.hv-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-3);
+  padding: 0 var(--hv-4);
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hv-tab::after {
+  content: '';
+  width: 5px; height: 5px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.hv-tab--ghost {
+  background: transparent;
+  color: var(--hv-text);
+  border: var(--hv-hair) solid var(--hv-line);
+}
+
+/* Metadata bar — the run identifiers. Purely informational, always mono. */
+.hv-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-3);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 var(--hv-4);
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+  white-space: nowrap;
+}
+
+.hv-meta strong { color: var(--hv-text); font-weight: 400; }
+
+.hv-meta__sep {
+  width: 4px; height: 4px;
+  flex: none;
+  background: var(--hv-text-faint);
+}
+
+/* OS bar — product identity plus the close affordance. */
+.hv-os {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-4);
+  flex: 0 1 340px;
+  padding: 0 var(--hv-2) 0 var(--hv-4);
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The version string takes the slack, so language and close stay pinned right
+   even when the label is hidden on a narrow viewport. */
+.hv-os__label { margin-right: auto; }
+
+/* Language. It lives in the OS bar rather than the app bar because the choice
+   is a property of the whole console, not of the section you happen to be in —
+   the same reason the version string is here. */
+.hv-lang {
+  display: inline-flex;
+  align-items: stretch;
+  flex: none;
+  height: 18px;
+  border: var(--hv-hair) solid var(--hv-line);
+}
+
+.hv-lang__btn {
+  padding: 0 var(--hv-2);
+  border: 0;
+  border-right: var(--hv-hair) solid var(--hv-line);
+  background: none;
+  color: var(--hv-text-faint);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  font-weight: 400;
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.hv-lang__btn:last-child { border-right: 0; }
+.hv-lang__btn:hover { color: var(--hv-text); background: var(--hv-bg-hover); }
+.hv-lang__btn[aria-pressed='true'] { background: var(--hv-bg-invert); color: var(--hv-text-invert); }
+
+.hv-os__x {
+  display: grid;
+  place-items: center;
+  width: 26px; height: 22px;
+  border: 0;
+  background: none;
+  color: var(--hv-text);
+  cursor: pointer;
+}
+
+.hv-os__x:hover { background: var(--hv-bg-hover); }
+
+/* Path strip — breadcrumb as a filesystem path, status flush right. */
+.hv-path {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-4);
+  min-height: var(--hv-strip-h);
+  margin-top: var(--hv-2);
+  padding: 0 var(--hv-3);
+  border-top: var(--hv-hair) solid var(--hv-line);
+  border-bottom: var(--hv-hair) solid var(--hv-line);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+.hv-path__crumbs { display: flex; align-items: center; gap: 0; min-width: 0; overflow: hidden; white-space: nowrap; }
+.hv-path__crumbs::before { content: '>'; margin-right: var(--hv-2); color: var(--hv-text-faint); }
+.hv-path a { color: inherit; text-decoration: none; }
+.hv-path a:hover { color: var(--hv-text); }
+.hv-path__here { color: var(--hv-text); }
+.hv-path__status { flex: none; }
+.hv-path__status b { font-weight: 400; color: var(--hv-live); }
+
+/* Application bar — the product's own navigation, sitting directly under the
+   OS chrome. Permission decides which items exist; this only styles them. */
+.hv-appbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-4);
+  flex-wrap: wrap;
+  padding: var(--hv-2) var(--hv-3);
+  border-bottom: var(--hv-hair) solid var(--hv-line);
+}
+
+.hv-appbar__brand {
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-small);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transform: scaleX(var(--hv-stretch-brand));
+  transform-origin: left center;
+  white-space: nowrap;
+}
+
+.hv-appbar__nav { display: flex; flex-wrap: wrap; gap: var(--hv-1); }
+
+.hv-appbar__link {
+  padding: var(--hv-1) var(--hv-3);
+  border: var(--hv-hair) solid transparent;
+  background: none;
+  color: var(--hv-text-faint);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hv-appbar__link:hover { color: var(--hv-text); border-color: var(--hv-line); }
+.hv-appbar__link[aria-current='page'] {
+  color: var(--hv-text-invert);
+  background: var(--hv-bg-invert);
+  border-color: var(--hv-bg-invert);
+}
+
+.hv-appbar__right {
+  display: flex;
+  align-items: center;
+  /* Wraps because this group grows with what a screen offers — a page carrying
+     both the theme and the locale toggle is a pixel wider than a phone. */
+  flex-wrap: wrap;
+  gap: var(--hv-2) var(--hv-3);
+  margin-left: auto;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+/* ---------------------------------------------------------------- 03 frame
+   Bracket corners, drawn as eight background gradients so both pseudo-elements
+   stay free for component use. `--hv-corner` sets the arm length.
+   ------------------------------------------------------------------------ */
+
+.hv-frame {
+  --arm: var(--hv-corner);
+  --ink: var(--hv-line);
+  position: relative;
+  padding: var(--hv-4);
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink));
+  background-size:
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm);
+  background-position:
+    left top, left top,
+    right top, right top,
+    left bottom, left bottom,
+    right bottom, right bottom;
+}
+
+.hv-frame--hot  { --ink: var(--hv-line-hot); }
+.hv-frame--live { --ink: var(--hv-live); }
+.hv-frame--wide { --arm: 28px; }
+.hv-frame--fill { background-color: var(--hv-bg-raised); }
+
+/* ---------------------------------------------------------------- 04 panel */
+
+.hv-panel {
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-raised);
+}
+
+.hv-panel--flush { border: 0; background: transparent; }
+
+.hv-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-3);
+  padding: var(--hv-2) var(--hv-3);
+  border-bottom: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+}
+
+.hv-panel__head--invert {
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  border-bottom-color: var(--hv-bg-invert);
+}
+
+.hv-panel__aside {
+  font-family: var(--hv-font-mono);
+  font-weight: 400;
+  letter-spacing: var(--hv-track-label);
+  color: var(--hv-text-dim);
+}
+
+.hv-panel__body { padding: var(--hv-4); }
+.hv-panel__body--tight { padding: var(--hv-3); }
+
+/* The "table sits flush in the panel" modifier. It scrolls on its own axis
+   because table cells are `nowrap` by design — without this the table widens
+   the whole document on narrow viewports instead of scrolling inside its box. */
+.hv-panel__body--none  { padding: 0; overflow-x: auto; }
+
+.hv-panel__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-3);
+  padding: var(--hv-2) var(--hv-3);
+  border-top: var(--hv-hair) solid var(--hv-line);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+/* ----------------------------------------------------------------- 05 type */
+
+/* The wide display face. Used once per screen, at most — it is the poster
+   headline, and a second one would cancel the first. */
+.hv-display {
+  margin: 0;
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-display);
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  /* Wide-stretches the glyphs toward the Eurostile-Extended proportion the
+     sketches use, which no free webfont supplies directly.
+
+     A transform paints outside the element's own box, so the box is narrowed by
+     exactly the factor it is about to be scaled by: the painted result lands on
+     the container edge instead of 12% past it. Without this the heading widens
+     the document on any layout where its column reaches the viewport edge. */
+  width: calc(100% / var(--hv-stretch));
+  transform: scaleX(var(--hv-stretch));
+  transform-origin: left center;
+}
+
+.hv-display--rule {
+  padding-bottom: var(--hv-2);
+  border-bottom: 2px solid currentColor;
+}
+
+.hv-h {
+  margin: 0;
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+}
+
+.hv-h--lead { font-size: var(--hv-size-lead); letter-spacing: 0.06em; }
+
+/* Section heading inside prose — the "GEOGRAPHY AND CLIMATE:" pattern. */
+.hv-h-sec {
+  margin: var(--hv-4) 0 var(--hv-1);
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+.hv-h-sec:first-child { margin-top: 0; }
+
+.hv-label {
+  display: block;
+  font-size: var(--hv-size-tiny);
+  font-weight: 600;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+.hv-micro {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+.hv-mono { font-family: var(--hv-font-mono); }
+.hv-num  { font-variant-numeric: tabular-nums; }
+
+/* Prose is the one place tracking is dropped and mixed case allowed. */
+.hv-prose { max-width: 68ch; font-size: var(--hv-size-body); color: var(--hv-text-dim); }
+.hv-prose p { margin: 0 0 var(--hv-3); }
+.hv-prose strong { color: var(--hv-text); font-weight: 600; }
+
+/* Bulleted annotation, as pinned around the planet diagrams: a square bullet,
+   a tracked caption, and a dim value beneath it. */
+.hv-annot { display: flex; gap: var(--hv-2); }
+.hv-annot::before {
+  content: '';
+  flex: none;
+  width: 4px; height: 4px;
+  margin-top: 6px;
+  background: currentColor;
+}
+.hv-annot__k {
+  display: block;
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+.hv-annot__v {
+  display: block;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  color: var(--hv-text-faint);
+}
+
+/* ------------------------------------------------------------------ 06 nav */
+
+.hv-nav { display: flex; flex-direction: column; }
+
+.hv-nav__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-2);
+  padding: var(--hv-2) var(--hv-3);
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--hv-text-dim);
+  font-size: var(--hv-size-base);
+  font-weight: 600;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.hv-nav__item:hover { color: var(--hv-text); background: var(--hv-bg-hover); }
+
+.hv-nav__item[aria-current='page'],
+.hv-nav__item[aria-pressed='true'] {
+  color: var(--hv-text);
+  border-left-color: var(--hv-text);
+}
+
+/* The focus dot from the sketches: present only on the active row. */
+.hv-nav__item[aria-current='page'] .hv-nav__dot,
+.hv-nav__item[aria-pressed='true'] .hv-nav__dot {
+  width: 5px; height: 5px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.hv-nav__lead { display: flex; align-items: center; gap: var(--hv-2); }
+.hv-nav__chev { color: var(--hv-text-faint); }
+.hv-nav__item[aria-current='page'] .hv-nav__chev { color: var(--hv-text); }
+
+/* Document tree — the folder list. Glyph is CSS, not an icon font. */
+.hv-tree { display: flex; flex-direction: column; }
+
+.hv-tree__item {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-2);
+  padding: var(--hv-1) var(--hv-3);
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--hv-text-dim);
+  font-size: var(--hv-size-small);
+  font-weight: 600;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hv-tree__item::before {
+  content: '';
+  flex: none;
+  width: 11px; height: 9px;
+  border: var(--hv-hair) solid currentColor;
+  border-top-width: 3px;
+  opacity: 0.7;
+}
+
+.hv-tree__item:hover { color: var(--hv-text); }
+
+/* Active by either contract: `aria-current` when the row is a link to the page
+   you are on, `aria-selected` when it switches a panel in place. Both mean the
+   same thing to the eye, so both must light the same way. */
+.hv-tree__item[aria-current='true'],
+.hv-tree__item[aria-selected='true'] {
+  color: var(--hv-text);
+  border-left-color: var(--hv-text);
+}
+.hv-tree__item[aria-current='true']::before,
+.hv-tree__item[aria-selected='true']::before { opacity: 1; }
+.hv-tree__item .hv-nav__chev { margin-left: auto; }
+
+/* Horizontal tab strip, for switching a panel's contents. */
+.hv-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: var(--hv-hair) solid var(--hv-line);
+}
+
+.hv-tabs__btn {
+  padding: var(--hv-2) var(--hv-4);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--hv-text-faint);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.hv-tabs__btn:hover { color: var(--hv-text-dim); }
+.hv-tabs__btn[aria-selected='true'] { color: var(--hv-text); border-bottom-color: var(--hv-text); }
+
+/* ----------------------------------------------------------------- 07 data */
+
+.hv-table-wrap { overflow-x: auto; border: var(--hv-hair) solid var(--hv-line); }
+
+.hv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--hv-size-base);
+  background: var(--hv-bg-raised);
+}
+
+.hv-table th,
+.hv-table td {
+  padding: var(--hv-2) var(--hv-3);
+  border-bottom: var(--hv-hair) solid var(--hv-line-dim);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.hv-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--hv-bg-inset);
+  border-bottom-color: var(--hv-line);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+.hv-table tbody tr:last-child td { border-bottom: 0; }
+
+.hv-table [data-align='end'] { text-align: right; font-variant-numeric: tabular-nums; }
+
+.hv-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.hv-table__sort:hover { color: var(--hv-text); }
+.hv-table__ind { width: 1ch; font-size: 0.75em; color: var(--hv-live); }
+
+.hv-table tbody tr[data-activatable] { cursor: pointer; }
+.hv-table tbody tr[data-activatable]:hover { background: var(--hv-bg-hover); }
+.hv-table tbody tr[aria-selected='true'] {
+  background: var(--hv-bg-hover);
+  box-shadow: inset 2px 0 0 var(--hv-text);
+}
+
+.hv-table__id { font-family: var(--hv-font-mono); color: var(--hv-text-dim); }
+
+/* Dotted-leader row: LABEL ........ VALUE. Taken from the dossier sketch; the
+   right column stays readable at any width because the leader does the work. */
+.hv-leaders { margin: 0; padding: 0; list-style: none; }
+
+.hv-leader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hv-2);
+  padding: var(--hv-1) 0;
+  font-size: var(--hv-size-small);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hv-leader__k { color: var(--hv-text-dim); white-space: nowrap; }
+.hv-leader__k b { font-weight: 400; color: var(--hv-text); }
+
+.hv-leader__fill {
+  flex: 1 1 auto;
+  min-width: var(--hv-5);
+  height: 0.75em;
+  border-bottom: var(--hv-hair) dotted var(--hv-text-faint);
+}
+
+.hv-leader__v {
+  font-family: var(--hv-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--hv-text);
+}
+
+.hv-leader[data-tone='good'] .hv-leader__v { color: var(--hv-good); }
+.hv-leader[data-tone='bad']  .hv-leader__v { color: var(--hv-bad); }
+.hv-leader[data-tone='warn'] .hv-leader__v { color: var(--hv-warn); }
+
+/* Basis line — the quiet "why" under a priced row. */
+.hv-leader__basis {
+  display: block;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  color: var(--hv-text-faint);
+  text-transform: uppercase;
+}
+
+/* Slab: an inverted heavy bar. Reserved for totals and headline facts. */
+.hv-slab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-4);
+  padding: var(--hv-2) var(--hv-3);
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+
+.hv-slab__v { font-family: var(--hv-font-mono); font-variant-numeric: tabular-nums; }
+.hv-slab--lg { padding: var(--hv-3) var(--hv-4); font-size: var(--hv-size-lead); }
+.hv-slab--outline {
+  background: transparent;
+  color: var(--hv-text);
+  border: var(--hv-hair) solid var(--hv-line);
+}
+
+/* Key/value grid for detail popups. */
+.hv-kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--hv-1) var(--hv-4); margin: 0; }
+.hv-kv dt { font-size: var(--hv-size-tiny); letter-spacing: var(--hv-track-label); text-transform: uppercase; color: var(--hv-text-dim); }
+.hv-kv dd { margin: 0; font-family: var(--hv-font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+/* --------------------------------------------------------------- 08 status */
+
+.hv-tags { display: flex; flex-wrap: wrap; gap: var(--hv-2); }
+
+/* Status counter tag. The count is the point, so it sits in its own inverted
+   cell — scannable as a number even when the label is not read. */
+.hv-tag {
+  display: inline-flex;
+  align-items: stretch;
+  /* Zero, because the two children carry their own. A chip is a button, and the
+     UA gives buttons `1px 6px` — which sits *inside* the border and inset the
+     count cell from the top, bottom and right edges by a few pixels each. The
+     rest of this rule already says the cell should reach them: `align-items:
+     stretch` for the height, and the cell's own `border-left` only reads as a
+     divider if the two halves actually meet. `font: inherit` for the same reason
+     — a button does not inherit the page's face, so the label rendered in the
+     UA's Arial while everything beside it was Chakra Petch. */
+  padding: 0;
+  appearance: none;
+  font: inherit;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  color: var(--hv-text-dim);
+  cursor: pointer;
+}
+
+.hv-tag__k {
+  padding: var(--hv-1) var(--hv-3);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+
+.hv-tag__n {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  /* `line-height: 1` is what actually centres the digit. `place-items: center`
+     only ever centred the *line box*, and the inherited 18.85px box is taller
+     than the 13px em box it holds — so Share Tech Mono's ascent-heavy metrics
+     rode the ink 1.84px above centre in a bordered white cell where that is
+     plainly visible. Collapsing the line box to the em box makes the two the
+     same thing, and the grid then centres the glyph itself: measured 3.75px
+     above and below, exactly.
+
+     The vertical padding is not decoration. Inside a full chip it changes
+     nothing — the label's own padding is taller and `align-items: stretch`
+     wins — but this class is also used *alone*, as a text badge in the console's
+     library table. There `line-height: 1` would size the badge to 15px and
+     Cyrillic descenders would cross the border. */
+  padding: var(--hv-1) var(--hv-2);
+  line-height: 1;
+  border-left: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  font-family: var(--hv-font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--hv-text);
+}
+
+.hv-tag:hover { color: var(--hv-text); border-color: var(--hv-text-faint); }
+
+.hv-tag[aria-pressed='true'] {
+  border-color: var(--hv-text);
+  color: var(--hv-text);
+}
+.hv-tag[aria-pressed='true'] .hv-tag__n {
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  border-left-color: var(--hv-text);
+}
+
+.hv-tag[data-tone='live'] .hv-tag__n { color: var(--hv-live); }
+.hv-tag[data-tone='good'] .hv-tag__n { color: var(--hv-good); }
+.hv-tag[data-tone='warn'] .hv-tag__n { color: var(--hv-warn); }
+.hv-tag[data-tone='bad']  .hv-tag__n { color: var(--hv-bad); }
+
+/* State pill — one machine's current state, inline in a table cell. */
+.hv-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-2);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+
+.hv-state::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: currentColor;
+}
+
+.hv-state[data-state='printing']    { color: var(--hv-live); }
+.hv-state[data-state='idle']        { color: var(--hv-good); }
+.hv-state[data-state='preparing']   { color: var(--hv-live); }
+.hv-state[data-state='paused']      { color: var(--hv-warn); }
+.hv-state[data-state='maintenance'] { color: var(--hv-warn); }
+.hv-state[data-state='error']       { color: var(--hv-bad); }
+.hv-state[data-state='offline']     { color: var(--hv-text-faint); }
+.hv-state[data-state='finished']    { color: var(--hv-good); }
+
+/* A live machine pulses; an idle one does not. Motion is a status channel. */
+.hv-state[data-state='printing']::before,
+.hv-state[data-state='preparing']::before { animation: hv-pulse 1.6s ease-in-out infinite; }
+
+@keyframes hv-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .hv-state::before,
+  .hv-meter__fill::after { animation: none !important; }
+}
+
+/* ---------------------------------------------------------------- 09 meter */
+
+.hv-meter {
+  position: relative;
+  height: 14px;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  overflow: hidden;
+}
+
+.hv-meter__fill {
+  position: relative;
+  height: 100%;
+  background: var(--hv-text);
+}
+
+.hv-meter[data-tone='live'] .hv-meter__fill { background: var(--hv-live); }
+.hv-meter[data-tone='warn'] .hv-meter__fill { background: var(--hv-warn); }
+.hv-meter[data-tone='bad']  .hv-meter__fill { background: var(--hv-bad); }
+
+/* Leading edge marker — reads as a playhead rather than a filled box. */
+.hv-meter__fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--hv-bg-invert);
+  animation: hv-pulse 1.6s ease-in-out infinite;
+}
+
+.hv-meter--thin { height: 6px; }
+
+.hv-meter-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-3);
+}
+.hv-meter-row .hv-meter { flex: 1 1 auto; }
+.hv-meter-row__pct {
+  flex: none;
+  min-width: 5ch;
+  text-align: right;
+  font-family: var(--hv-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tick ruler — the instrument scale along the edge of a viewport.
+   Major tick every 50px, minor every 10px, both drawn from repeating gradients
+   so the ruler is resolution-independent and costs no markup. */
+.hv-ruler {
+  height: 12px;
+  background-image:
+    repeating-linear-gradient(90deg, var(--hv-text-faint) 0 var(--hv-hair), transparent var(--hv-hair) 50px),
+    repeating-linear-gradient(90deg, var(--hv-line) 0 var(--hv-hair), transparent var(--hv-hair) 10px);
+  background-size: 100% 10px, 100% 5px;
+  background-position: 0 bottom, 0 bottom;
+  background-repeat: no-repeat;
+}
+
+/* ------------------------------------------------------------- 10 controls */
+
+/* Buttons wear bracket corners rather than borders — the CANCEL / MORE
+   treatment from the sketches. The full border is reserved for inputs. */
+.hv-btn {
+  --arm: 8px;
+  --ink: var(--hv-text-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hv-2);
+  padding: var(--hv-2) var(--hv-4);
+  border: 0;
+  background-color: var(--hv-bg-inset);
+  color: var(--hv-text);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink));
+  background-size:
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm);
+  background-position:
+    left top, left top, right top, right top,
+    left bottom, left bottom, right bottom, right bottom;
+  transition: background-color 0.12s linear, color 0.12s linear;
+}
+
+.hv-btn:hover { --ink: var(--hv-text); background-color: var(--hv-bg-hover); }
+.hv-btn:disabled { color: var(--hv-text-faint); cursor: not-allowed; background-color: transparent; }
+
+/* Primary: the one committing action per screen. Solid, so it cannot be
+   confused with the bracketed secondaries around it. */
+.hv-btn--primary {
+  background-color: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  --ink: var(--hv-bg-invert);
+}
+.hv-btn--primary:hover { background-color: var(--hv-text-dim); --ink: var(--hv-text-dim); }
+
+.hv-btn--danger { color: var(--hv-bad); --ink: var(--hv-bad); }
+.hv-btn--danger:hover { background-color: var(--hv-bad); color: var(--hv-text-invert); }
+
+.hv-btn--block { display: flex; width: 100%; }
+.hv-btn--lg { padding: var(--hv-3) var(--hv-5); font-size: var(--hv-size-small); --arm: 12px; }
+.hv-btn--sm { padding: var(--hv-1) var(--hv-2); --arm: 6px; }
+
+/* Field */
+.hv-field { display: flex; flex-direction: column; gap: var(--hv-1); }
+
+.hv-input,
+.hv-select,
+.hv-textarea {
+  width: 100%;
+  padding: var(--hv-2) var(--hv-3);
+  border: var(--hv-hair) solid var(--hv-line);
+  border-radius: var(--hv-radius);
+  background: var(--hv-bg-inset);
+  color: var(--hv-text);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-base);
+  letter-spacing: 0.04em;
+}
+
+.hv-input::placeholder { color: var(--hv-text-faint); }
+.hv-input:hover, .hv-select:hover { border-color: var(--hv-text-faint); }
+.hv-input:focus, .hv-select:focus, .hv-textarea:focus {
+  border-color: var(--hv-live);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--hv-live-glow);
+}
+
+.hv-select {
+  appearance: none;
+  padding-right: var(--hv-6);
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-size: 5px 5px, 5px 5px;
+  background-position: right 16px center, right 11px center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.hv-hint { font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); text-transform: uppercase; color: var(--hv-text-faint); }
+.hv-error { color: var(--hv-bad); }
+
+/* Segmented control — mutually exclusive options as one instrument. */
+.hv-seg { display: inline-flex; border: var(--hv-hair) solid var(--hv-line); background: var(--hv-bg-inset); }
+
+.hv-seg__btn {
+  padding: var(--hv-2) var(--hv-3);
+  border: 0;
+  border-right: var(--hv-hair) solid var(--hv-line);
+  background: none;
+  color: var(--hv-text-dim);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.hv-seg__btn:last-child { border-right: 0; }
+.hv-seg__btn:hover { color: var(--hv-text); background: var(--hv-bg-hover); }
+.hv-seg__btn[aria-pressed='true'] { background: var(--hv-bg-invert); color: var(--hv-text-invert); }
+
+/* Colour swatch — up to four slots on the plate. */
+.hv-swatches { display: flex; flex-wrap: wrap; gap: var(--hv-2); }
+
+.hv-swatch {
+  position: relative;
+  width: 34px; height: 34px;
+  padding: 0;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-swatch, #808080);
+  cursor: pointer;
+}
+.hv-swatch:hover { border-color: var(--hv-text-faint); }
+.hv-swatch[aria-pressed='true'] { border-color: var(--hv-text); box-shadow: 0 0 0 2px var(--hv-void), 0 0 0 3px var(--hv-text); }
+
+/* Named slot: swatch + the material loaded in it. */
+.hv-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-3);
+  padding: var(--hv-2);
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+}
+.hv-slot__chip { flex: none; width: 22px; height: 22px; border: var(--hv-hair) solid var(--hv-line); background: var(--hv-swatch, #808080); }
+.hv-slot__body { min-width: 0; }
+.hv-slot__n { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); color: var(--hv-text-faint); }
+
+/* Range — flat, square, no thumb chrome. */
+.hv-range {
+  width: 100%;
+  appearance: none;
+  height: 20px;
+  background: none;
+  cursor: pointer;
+}
+.hv-range::-webkit-slider-runnable-track { height: 2px; background: var(--hv-line); }
+.hv-range::-moz-range-track { height: 2px; background: var(--hv-line); }
+.hv-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 4px; height: 16px;
+  margin-top: -7px;
+  background: var(--hv-text);
+  border: 0;
+}
+.hv-range::-moz-range-thumb { width: 4px; height: 16px; background: var(--hv-text); border: 0; border-radius: 0; }
+
+/* Checkbox / radio as square instrument marks. */
+.hv-check { display: flex; align-items: flex-start; gap: var(--hv-2); cursor: pointer; }
+.hv-check input {
+  appearance: none;
+  flex: none;
+  width: 14px; height: 14px;
+  margin: 2px 0 0;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  cursor: pointer;
+}
+.hv-check input:checked { background: var(--hv-text); border-color: var(--hv-text); box-shadow: inset 0 0 0 3px var(--hv-void); }
+.hv-check input[type='radio'] { border-radius: 50%; }
+.hv-check:hover input { border-color: var(--hv-text-faint); }
+.hv-check__body { min-width: 0; }
+
+/* Option row — a choice that carries a price delta. The delta is the reason
+   the row exists, so it is typographically equal to the label, not smaller. */
+.hv-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-3);
+  padding: var(--hv-2) var(--hv-3);
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  cursor: pointer;
+}
+.hv-option:hover { border-color: var(--hv-text-faint); }
+.hv-option[aria-pressed='true'] { border-color: var(--hv-text); background: var(--hv-bg-hover); }
+.hv-option__delta { font-family: var(--hv-font-mono); white-space: nowrap; }
+.hv-option__delta[data-dir='up']   { color: var(--hv-bad); }
+.hv-option__delta[data-dir='down'] { color: var(--hv-good); }
+
+/* Upload well */
+.hv-drop {
+  display: grid;
+  place-items: center;
+  gap: var(--hv-2);
+  min-height: 120px;
+  padding: var(--hv-5);
+  border: var(--hv-hair) dashed var(--hv-line);
+  background: var(--hv-bg-inset);
+  text-align: center;
+  cursor: pointer;
+}
+.hv-drop:hover { border-color: var(--hv-text-faint); background: var(--hv-bg-hover); }
+
+/* ---------------------------------------------------------------- 11 cards */
+
+/* Glyph card — the periodic-element treatment, reused for materials. The
+   two-letter code is the identity; the numbers under it are the specifics. */
+.hv-glyph {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--hv-4);
+  min-height: 150px;
+  padding: var(--hv-4);
+  background: var(--hv-bg-raised);
+  text-align: center;
+  cursor: pointer;
+}
+.hv-glyph:hover { --ink: var(--hv-text); background-color: var(--hv-bg-hover); }
+
+.hv-glyph__mark {
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-figure);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  /* Same width compensation as .hv-display — this one is centred, so an
+     unconstrained scale would spill out of both sides of the card. */
+  width: calc(100% / var(--hv-stretch-mark));
+  transform: scaleX(var(--hv-stretch-mark));
+  margin: auto auto;
+}
+
+.hv-glyph__stats {
+  display: flex;
+  justify-content: center;
+  gap: var(--hv-3);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+.hv-glyph__name {
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hv-glyph[data-status='none'] { opacity: 0.45; }
+
+/* Stat card — one figure, named. */
+.hv-stat { display: flex; flex-direction: column; gap: var(--hv-1); padding: var(--hv-3); }
+.hv-stat__v {
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-figure);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.hv-stat__v small { font-family: var(--hv-font-mono); font-size: var(--hv-size-tiny); color: var(--hv-text-dim); letter-spacing: var(--hv-track-label); }
+.hv-stat[data-tone='live'] .hv-stat__v { color: var(--hv-live); }
+.hv-stat[data-tone='warn'] .hv-stat__v { color: var(--hv-warn); }
+.hv-stat[data-tone='bad']  .hv-stat__v { color: var(--hv-bad); }
+.hv-stat[data-tone='good'] .hv-stat__v { color: var(--hv-good); }
+
+/* Viewport — the model / imagery well, framed and annotated. */
+.hv-view {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  background: radial-gradient(120% 120% at 50% 40%, #101216 0%, #000 72%);
+  overflow: hidden;
+}
+:root[data-theme='paper'] .hv-view { background: radial-gradient(120% 120% at 50% 40%, #fff 0%, #e6e3dc 72%); }
+
+.hv-view__pin { position: absolute; color: var(--hv-text-dim); }
+.hv-view__pin--tl { top: var(--hv-3); left: var(--hv-3); }
+.hv-view__pin--tr { top: var(--hv-3); right: var(--hv-3); text-align: right; }
+.hv-view__pin--bl { bottom: var(--hv-3); left: var(--hv-3); }
+.hv-view__pin--br { bottom: var(--hv-3); right: var(--hv-3); text-align: right; }
+.hv-view__pin--tr .hv-annot, .hv-view__pin--br .hv-annot { flex-direction: row-reverse; text-align: right; }
+
+/* ------------------------------------------------------------- 12 pipeline
+   The order's journey, scenario steps 6–10. A stepper rather than a bar,
+   because the customer needs to know which stage, not what percentage.
+   ------------------------------------------------------------------------ */
+
+.hv-pipe { display: flex; overflow-x: auto; }
+
+.hv-pipe__step {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 108px;
+  padding: var(--hv-3) var(--hv-3) var(--hv-3) var(--hv-4);
+  border-top: 2px solid var(--hv-line);
+  color: var(--hv-text-faint);
+}
+
+.hv-pipe__step::before {
+  content: '';
+  position: absolute;
+  top: -5px; left: var(--hv-4);
+  width: 8px; height: 8px;
+  background: var(--hv-line);
+}
+
+.hv-pipe__step[data-state='done'] { border-top-color: var(--hv-text); color: var(--hv-text-dim); }
+.hv-pipe__step[data-state='done']::before { background: var(--hv-text); }
+
+.hv-pipe__step[data-state='now'] {
+  border-top-color: var(--hv-live);
+  color: var(--hv-text);
+}
+.hv-pipe__step[data-state='now']::before { background: var(--hv-live); animation: hv-pulse 1.6s ease-in-out infinite; }
+
+.hv-pipe__n { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); }
+.hv-pipe__k { font-size: var(--hv-size-tiny); font-weight: 700; letter-spacing: var(--hv-track-label); text-transform: uppercase; }
+.hv-pipe__t { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); color: var(--hv-text-faint); }
+
+/* -------------------------------------------------------------- 13 overlay */
+
+.hv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--hv-5);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(2px);
+}
+:root[data-theme='paper'] .hv-overlay { background: rgba(244, 243, 239, 0.86); }
+
+.hv-overlay[hidden] { display: none; }
+
+.hv-modal {
+  width: min(880px, 100%);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg);
+  box-shadow: 0 0 0 1px var(--hv-void), 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.hv-modal__body { overflow: auto; padding: var(--hv-4); }
+
+/* --------------------------------------------------------------- 14 layout */
+
+.hv-shell { display: flex; flex-direction: column; min-height: 100vh; }
+.hv-main  { flex: 1 1 auto; padding: var(--hv-3); }
+
+/* Sidebar + content, the ARBOGAST three-column arrangement. */
+.hv-cols {
+  display: grid;
+  gap: var(--hv-3);
+  align-items: start;
+}
+.hv-cols--2   { grid-template-columns: minmax(0, 1fr) minmax(320px, 26rem); }
+.hv-cols--2l  { grid-template-columns: minmax(220px, 15rem) minmax(0, 1fr); }
+.hv-cols--3   { grid-template-columns: minmax(180px, 13rem) minmax(200px, 15rem) minmax(0, 1fr); }
+.hv-cols--3r  { grid-template-columns: minmax(180px, 13rem) minmax(0, 1fr) minmax(280px, 22rem); }
+
+.hv-grid { display: grid; gap: var(--hv-3); }
+.hv-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hv-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hv-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hv-grid--auto { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+.hv-stack   { display: flex; flex-direction: column; gap: var(--hv-3); }
+.hv-stack--2 { gap: var(--hv-2); }
+.hv-stack--4 { gap: var(--hv-4); }
+.hv-row     { display: flex; align-items: center; gap: var(--hv-3); flex-wrap: wrap; }
+.hv-row--end { justify-content: flex-end; }
+.hv-row--between { justify-content: space-between; }
+.hv-spacer  { flex: 1 1 auto; }
+
+.hv-hr { height: var(--hv-hair); border: 0; margin: var(--hv-3) 0; background: var(--hv-line); }
+.hv-hr--heavy { height: 2px; background: var(--hv-text); }
+
+.hv-sticky { position: sticky; top: calc(var(--hv-bar-h) + var(--hv-strip-h) + var(--hv-6)); }
+
+.hv-dim   { color: var(--hv-text-dim); }
+.hv-faint { color: var(--hv-text-faint); }
+.hv-hot   { color: var(--hv-text); }
+.hv-live  { color: var(--hv-live); }
+.hv-good  { color: var(--hv-good); }
+.hv-warn  { color: var(--hv-warn); }
+.hv-bad   { color: var(--hv-bad); }
+.hv-right { text-align: right; }
+.hv-nowrap { white-space: nowrap; }
+

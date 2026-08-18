@@ -1,0 +1,482 @@
+body {
+  margin: 0;
+  background: var(--pr-bg);
+  color: var(--pr-text);
+  font-family: var(--pr-font);
+}
+
+.app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--pr-space-3) var(--pr-space-4);
+  border-bottom: 1px solid var(--pr-border);
+}
+
+.app__header h1 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.app__locale button {
+  border: 1px solid var(--pr-border);
+  background: var(--pr-bg-raised);
+  color: inherit;
+  padding: var(--pr-space-1) var(--pr-space-2);
+  cursor: pointer;
+}
+
+.app__locale button[aria-pressed='true'] {
+  border-color: var(--pr-accent);
+}
+
+/* Two columns: what you choose on the left, what it costs on the right, so the
+   price is always in view while options are being changed. */
+.cfg {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1fr);
+  gap: var(--pr-space-4);
+  padding: var(--pr-space-4);
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .cfg { grid-template-columns: 1fr; }
+}
+
+.cfg__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-space-3);
+}
+
+.cfg__panel--price {
+  position: sticky;
+  top: var(--pr-space-4);
+}
+
+.cfg__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-space-1);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.cfg__field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--pr-space-2);
+}
+
+.cfg__field button {
+  border: 1px solid var(--pr-border);
+  background: var(--pr-bg-raised);
+  color: inherit;
+  padding: var(--pr-space-1) var(--pr-space-3);
+  margin-right: var(--pr-space-1);
+  border-radius: var(--pr-radius);
+  cursor: pointer;
+}
+
+.cfg__field button[aria-pressed='true'] {
+  border-color: var(--pr-accent);
+  box-shadow: inset 0 0 0 1px var(--pr-accent);
+}
+
+.cfg__mesh {
+  display: flex;
+  gap: var(--pr-space-4);
+  margin: 0 0 var(--pr-space-3);
+  color: var(--pr-text-muted);
+  font-size: 0.875rem;
+}
+
+.cfg__mesh dt { font-weight: 600; }
+.cfg__mesh dd { margin: 0; }
+
+.cfg__error { color: var(--pr-tone-bad); }
+.cfg__warning { color: var(--pr-tone-warn); font-size: 0.875rem; margin: 0; }
+.cfg__hint { color: var(--pr-text-muted); }
+
+/* ------------------------------------------------------------- shell */
+
+.app__header {
+  gap: var(--pr-space-4);
+}
+
+.app__nav,
+.app__right {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-space-2);
+}
+
+.app__nav button,
+.app__right button {
+  border: 1px solid var(--pr-border);
+  background: var(--pr-bg-raised);
+  color: inherit;
+  padding: var(--pr-space-1) var(--pr-space-3);
+  border-radius: var(--pr-radius);
+  cursor: pointer;
+}
+
+.app__nav button[aria-pressed='true'] {
+  border-color: var(--pr-accent);
+  box-shadow: inset 0 0 0 1px var(--pr-accent);
+}
+
+.app__who {
+  color: var(--pr-text-muted);
+  font-size: 0.875rem;
+}
+
+/* ------------------------------------------------------------ auth */
+
+.auth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-space-2);
+  margin-top: var(--pr-space-3);
+  padding: var(--pr-space-3);
+  border: 1px solid var(--pr-border);
+  border-radius: var(--pr-radius);
+  background: var(--pr-bg-raised);
+}
+
+.auth__hint { margin: 0; color: var(--pr-text-muted); }
+
+.auth__actions {
+  display: flex;
+  gap: var(--pr-space-2);
+}
+
+.auth__actions button {
+  border: 1px solid var(--pr-border);
+  background: var(--pr-bg);
+  color: inherit;
+  padding: var(--pr-space-2) var(--pr-space-3);
+  border-radius: var(--pr-radius);
+  cursor: pointer;
+}
+
+/* -------------------------------------------------------- checkout */
+
+.checkout,
+.cabinet {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--pr-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-space-3);
+}
+
+.checkout__back {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  color: var(--pr-accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+/* The primary action is deliberately the loudest thing on the screen. */
+.checkout__cta {
+  display: inline-block;
+  padding: var(--pr-space-3) var(--pr-space-4);
+  border: 0;
+  border-radius: var(--pr-radius);
+  background: var(--pr-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.checkout__cta:disabled { opacity: 0.6; cursor: default; }
+
+.checkout__order,
+.checkout__payment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-space-2);
+}
+
+/* --------------------------------------------------------- cabinet */
+
+.cabinet { max-width: 900px; }
+
+.cabinet__detail {
+  border: 1px solid var(--pr-border);
+  border-radius: var(--pr-radius);
+  padding: var(--pr-space-3);
+  background: var(--pr-bg-raised);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pr-space-3);
+}
+
+.cabinet__detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cabinet__detail-head h3 { margin: 0; }
+
+.cabinet__detail-head button {
+  border: 1px solid var(--pr-border);
+  background: var(--pr-bg);
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--pr-radius);
+  padding: 0 var(--pr-space-2);
+}
+
+.cabinet__credit {
+  margin: 0;
+  color: var(--pr-tone-good);
+  font-weight: 600;
+}
+
+.cabinet__history {
+  margin: 0;
+  padding-left: var(--pr-space-4);
+  color: var(--pr-text-muted);
+  font-size: 0.875rem;
+}
+
+.cabinet__history li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--pr-space-3);
+  padding: 2px 0;
+}
+
+/* -------------------------------------------------------------- fleet */
+
+.fleet { max-width: 1100px; }
+
+.fleet__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pr-space-4);
+}
+
+.fleet__header h2 { margin: 0; }
+
+/* The connection badge is deliberately prominent when it is *not* live: a table
+   that has quietly stopped updating is worse than one that admits it. */
+.fleet__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-space-2);
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--pr-tone-warn);
+}
+
+.fleet__status[data-live='true'] { color: var(--pr-text-muted); }
+
+.fleet__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--pr-tone-warn);
+}
+
+.fleet__status[data-live='true'] .fleet__dot { background: var(--pr-tone-good); }
+
+.fleet__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-space-2);
+}
+
+.fleet__flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: var(--pr-radius);
+  background: var(--pr-tone-bad);
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.notice { color: var(--pr-text-muted); }
+
+/* ------------------------------------------------- admin forms & detail */
+
+.fleet__head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-space-4);
+}
+
+.admin-form,
+.admin-detail {
+  margin: var(--pr-space-4) 0;
+  padding: var(--pr-space-4);
+  border: 1px solid var(--pr-border);
+  border-radius: var(--pr-radius);
+  background: var(--pr-bg-raised);
+}
+
+.admin-form h3,
+.admin-detail h3 { margin: 0 0 var(--pr-space-3); }
+.admin-detail h4 { margin: var(--pr-space-4) 0 var(--pr-space-2); }
+
+.admin-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--pr-space-3);
+}
+
+.admin-form__actions,
+.admin-detail__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--pr-space-3);
+  margin-top: var(--pr-space-3);
+}
+
+.admin-detail__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pr-space-4);
+}
+
+.admin-detail__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--pr-space-2) var(--pr-space-4);
+  margin: 0;
+}
+
+.admin-detail__facts dt { color: var(--pr-text-muted); }
+.admin-detail__facts dd { margin: 0; }
+
+.admin-detail__muted { color: var(--pr-text-muted); }
+
+.admin-detail__list {
+  list-style: none;
+  margin: var(--pr-space-3) 0 0;
+  padding: 0;
+}
+
+.admin-detail__list li {
+  display: flex;
+  align-items: center;
+  gap: var(--pr-space-3);
+  padding: var(--pr-space-2) 0;
+  border-top: 1px solid var(--pr-border);
+}
+
+.admin-detail__list li > span:first-child { flex: 1; }
+.admin-detail__list li[data-due='true'] > span:first-child { color: var(--pr-tone-warn); }
+
+.desk { margin: var(--pr-space-3) 0; }
+.desk__refund-actions { display: inline-flex; gap: var(--pr-space-2); }
+
+.materials__name,
+.users__email {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-space-2);
+}
+
+.materials__swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1px solid var(--pr-border);
+  border-radius: 50%;
+}
+
+/* --------------------------------------------------- customer queue (C7) */
+
+.queue {
+  margin: var(--pr-space-3) 0;
+  padding: var(--pr-space-3);
+  border-left: 3px solid var(--pr-accent);
+  background: var(--pr-bg-raised);
+  border-radius: var(--pr-radius);
+}
+
+.queue p { margin: var(--pr-space-1) 0 0; }
+
+
+/* ------------------------------ colours and material (configurator 2–4) */
+
+/* A row, not a column: these are short, related choices that should be read in
+   one glance rather than scanned down a list. */
+.cfg__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pr-space-2);
+  align-items: center;
+}
+
+.cfg__count {
+  min-width: 2.25rem;
+  padding: var(--pr-space-1) var(--pr-space-2);
+}
+
+/* The swatch is the label. A name beside every colour would push four choices
+   onto two lines and say less than the colour itself does. */
+.cfg__colour {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 2px solid var(--pr-border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.cfg__colour[aria-pressed='true'] {
+  border-color: var(--pr-accent);
+  /* A ring rather than a thicker border, so the swatch does not change size and
+     the row never reflows as choices are made. */
+  box-shadow: 0 0 0 2px var(--pr-bg), 0 0 0 4px var(--pr-accent);
+}
+
+/* Held by another slot too. Dimmer than the accent ring, because it is
+   information rather than the current answer: picking it is allowed, and the
+   plate then uses one filament in two slots. */
+.cfg__colour[data-used='true'] {
+  border-color: var(--pr-text-muted);
+  border-style: dashed;
+}
+
+/* The slot row: which of the plate's colours the swatches below are filling. */
+.cfg__slots {
+  margin-bottom: var(--pr-space-1);
+}
+
+.cfg__slot {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pr-space-1);
+  /* Overrides the shared `.cfg__field button` spacing — the row's own gap gives
+     the separation, and a trailing margin would make it uneven. */
+  margin-right: 0;
+  padding: var(--pr-space-1) var(--pr-space-2);
+}
+
+.cfg__slot-chip {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  border: 1px solid var(--pr-border);
+}

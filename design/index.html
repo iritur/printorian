@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Design Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+<style>
+  /* Kit-only helpers. Not part of the system — they exist to label specimens. */
+  .kit-spec { border-top: 1px solid var(--hv-line); padding-top: var(--hv-3); margin-top: var(--hv-5); }
+  .kit-spec__n { display: flex; align-items: baseline; gap: var(--hv-3); margin-bottom: var(--hv-3); }
+  .kit-spec__n span:first-child { font-family: var(--hv-font-mono); color: var(--hv-text-faint); }
+  .kit-swatch { height: 56px; border: 1px solid var(--hv-line); }
+</style>
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Система :: Design Kit</span>
+      <div class="hv-meta">
+        <span>CODE :: <strong>HQECZ88WV0040GR3</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>PRESET :: <strong>HARVESTER.V1</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>SCREENS :: <strong>21</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><span class="hv-path__here">C:/VISUAL_STYLE/BASE.MODULE/HARVESTER.KIT</span></div>
+      <div class="hv-path__status">STATUS :: <b>ONLINE</b></div>
+    </div>
+  </header>
+
+  <main class="hv-main hv-stack hv-stack--4">
+
+    <!-- ============================================================ poster -->
+    <section class="hv-cols hv-cols--2">
+      <div class="hv-frame hv-frame--wide">
+        <h1 class="hv-display hv-display--rule">Printorian</h1>
+        <p class="hv-micro" style="margin:var(--hv-3) 0 0">
+          ФЕРМА 3D-ПЕЧАТИ · ПРОЗРАЧНАЯ ЦЕНА · АВТОМАТИЧЕСКОЕ РАСПРЕДЕЛЕНИЕ ЗАДАНИЙ
+        </p>
+        <div class="hv-row" style="margin-top:var(--hv-4)">
+          <span class="hv-seg">
+            <button class="hv-seg__btn" type="button" data-theme-set="void">Тема Void</button>
+            <button class="hv-seg__btn" type="button" data-theme-set="paper">Тема Paper</button>
+          </span>
+          <span class="hv-micro">ПЕРЕКЛЮЧАЕТСЯ НА ВСЕХ ЭКРАНАХ</span>
+        </div>
+      </div>
+
+      <div class="hv-panel">
+        <div class="hv-panel__head hv-panel__head--invert"><span>Экраны</span><span class="hv-panel__aside" style="color:inherit">КЛИКАБЕЛЬНЫ</span></div>
+        <nav class="hv-nav">
+          <div class="hv-panel__head" style="border-top:1px solid var(--hv-line)"><span>Витрина</span></div>
+          <a class="hv-nav__item" href="promo.html">
+            <span class="hv-nav__lead">01 · Главная · о ферме</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="catalog.html">
+            <span class="hv-nav__lead">02 · Каталог моделей</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="configurator.html">
+            <span class="hv-nav__lead">03 · Конфигуратор</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="checkout.html">
+            <span class="hv-nav__lead">04 · Оформление и оплата</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="auth.html">
+            <span class="hv-nav__lead">05 · Вход и регистрация</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="account.html">
+            <span class="hv-nav__lead">06 · Личный кабинет</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="cabinet.html">
+            <span class="hv-nav__lead">07 · Мои заказы · ход печати</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="blog.html">
+            <span class="hv-nav__lead">08 · Журнал · список</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="blog-post.html">
+            <span class="hv-nav__lead">09 · Журнал · отчёт</span><span class="hv-nav__chev">›</span>
+          </a>
+          <div class="hv-panel__head" style="border-top:1px solid var(--hv-line)"><span>Цех</span></div>
+          <a class="hv-nav__item" href="dashboard.html">
+            <span class="hv-nav__lead">10 · Сводка фермы</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="orders.html">
+            <span class="hv-nav__lead">11 · Диспетчерская</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="fleet.html">
+            <span class="hv-nav__lead">12 · Парк принтеров</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="postproduction.html">
+            <span class="hv-nav__lead">13 · Постобработка</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="packaging.html">
+            <span class="hv-nav__lead">14 · Упаковка</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="service.html">
+            <span class="hv-nav__lead">15 · Сервис</span><span class="hv-nav__chev">›</span>
+          </a>
+          <div class="hv-panel__head" style="border-top:1px solid var(--hv-line)"><span>Снабжение и управление</span></div>
+          <a class="hv-nav__item" href="purchasing.html">
+            <span class="hv-nav__lead">16 · Закупки</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="store.html">
+            <span class="hv-nav__lead">17 · Склад · хранение</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="logistics.html">
+            <span class="hv-nav__lead">18 · Логистика</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="materials.html">
+            <span class="hv-nav__lead">19 · Материалы</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="users.html">
+            <span class="hv-nav__lead">20 · Пользователи и доступ</span><span class="hv-nav__chev">›</span>
+          </a>
+          <a class="hv-nav__item" href="settings.html">
+            <span class="hv-nav__lead">21 · Настройки системы</span><span class="hv-nav__chev">›</span>
+          </a>
+        </nav>
+        <div class="hv-panel__foot">
+          <span>ВСЕ ЭКРАНЫ — СТАТИЧЕСКИЕ HTML + CSS</span>
+          <span>3 ФАЙЛА СТИЛЕЙ</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= principles -->
+    <section class="hv-panel">
+      <div class="hv-panel__head"><span>Принципы</span><span class="hv-panel__aside">ЧТО ДЕЛАЕТ ЭТОТ ЯЗЫК УЗНАВАЕМЫМ</span></div>
+      <div class="hv-panel__body hv-grid hv-grid--3">
+        <div>
+          <h3 class="hv-h-sec">Линия, а не заливка</h3>
+          <p class="hv-prose" style="font-size:var(--hv-size-small)">
+            Контраст создаёт волосяная линия на чёрном, а не серая плашка. Поэтому
+            интерфейс читается как прибор, а не как набор карточек. Углы —
+            скобки, а не рамки: они очерчивают область, не запирая её.
+          </p>
+        </div>
+        <div>
+          <h3 class="hv-h-sec">Цвет = состояние</h3>
+          <p class="hv-prose" style="font-size:var(--hv-size-small)">
+            Всё монохромно, пока что-то не происходит. Цветной пиксель всегда
+            означает состояние машины: <span class="hv-live">печатает</span>,
+            <span class="hv-good">свободен</span>, <span class="hv-warn">внимание</span>,
+            <span class="hv-bad">ошибка</span>. Ни один акцент не декоративен.
+          </p>
+        </div>
+        <div>
+          <h3 class="hv-h-sec">Число важнее подписи</h3>
+          <p class="hv-prose" style="font-size:var(--hv-size-small)">
+            Везде табличные цифры и выключка вправо, чтобы значения сравнивались
+            взглядом по вертикали. Под ценой всегда стоит основание расчёта —
+            это то, ради чего вся система и строится.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ tokens -->
+    <div class="kit-spec">
+      <div class="kit-spec__n"><span>01</span><h2 class="hv-h">Палитра</h2><span class="hv-micro">TOKENS.CSS</span></div>
+      <div class="hv-grid hv-grid--4">
+        <div><div class="kit-swatch" style="background:var(--hv-void)"></div><div class="hv-micro" style="margin-top:var(--hv-1)">VOID · #000000</div></div>
+        <div><div class="kit-swatch" style="background:var(--hv-bg-raised)"></div><div class="hv-micro" style="margin-top:var(--hv-1)">RAISED · ПАНЕЛИ</div></div>
+        <div><div class="kit-swatch" style="background:var(--hv-bg-inset)"></div><div class="hv-micro" style="margin-top:var(--hv-1)">INSET · ПОЛЯ ВВОДА</div></div>
+        <div><div class="kit-swatch" style="background:var(--hv-line)"></div><div class="hv-micro" style="margin-top:var(--hv-1)">LINE · ВОЛОСЯНАЯ</div></div>
+        <div><div class="kit-swatch" style="background:var(--hv-live)"></div><div class="hv-micro" style="margin-top:var(--hv-1)">LIVE · В РАБОТЕ</div></div>
+        <div><div class="kit-swatch" style="background:var(--hv-good)"></div><div class="hv-micro" style="margin-top:var(--hv-1)">GOOD · ГОТОВО</div></div>
+        <div><div class="kit-swatch" style="background:var(--hv-warn)"></div><div class="hv-micro" style="margin-top:var(--hv-1)">WARN · ВНИМАНИЕ</div></div>
+        <div><div class="kit-swatch" style="background:var(--hv-bad)"></div><div class="hv-micro" style="margin-top:var(--hv-1)">BAD · ОШИБКА</div></div>
+      </div>
+    </div>
+
+    <!-- ============================================================== type -->
+    <div class="kit-spec">
+      <div class="kit-spec__n"><span>02</span><h2 class="hv-h">Типографика</h2><span class="hv-micro">ORBITRON · CHAKRA PETCH · SHARE TECH MONO</span></div>
+      <div class="hv-cols hv-cols--2">
+        <div class="hv-frame">
+          <div class="hv-display" style="font-size:2.6rem">АБВГД</div>
+          <div class="hv-display" style="font-size:2.6rem">01234</div>
+          <p class="hv-micro" style="margin-top:var(--hv-3)">
+            DISPLAY · ОДИН РАЗ НА ЭКРАН · ЗАГОЛОВОК-ПЛАКАТ
+          </p>
+        </div>
+        <div class="hv-stack">
+          <div><span class="hv-h">HV-H · ЗАГОЛОВОК ПАНЕЛИ</span></div>
+          <div><span class="hv-label">HV-LABEL · ПОДПИСЬ ПОЛЯ</span></div>
+          <div><span class="hv-mono">HV-MONO · 1 234.56 ₽ · 23.5 Ч</span></div>
+          <div><span class="hv-micro">HV-MICRO · ОСНОВАНИЕ РАСЧЁТА, ТЕХНИЧЕСКАЯ СНОСКА</span></div>
+          <p class="hv-prose" style="margin:0">
+            Проза — единственное место, где отменяется разрядка и разрешён
+            строчный регистр. Всё остальное — прописные с трекингом.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================== chrome -->
+    <div class="kit-spec">
+      <div class="kit-spec__n"><span>03</span><h2 class="hv-h">Оконная обвязка</h2><span class="hv-micro">ОДИНАКОВА НА ВСЕХ ЭКРАНАХ</span></div>
+      <div style="border:1px solid var(--hv-line);background:var(--hv-void)">
+        <div class="hv-chrome" style="position:static">
+          <div class="hv-chrome__row">
+            <span class="hv-tab">Раздел :: Название</span>
+            <div class="hv-meta">
+              <span>CODE :: <strong>2AFPQJJTVNGDOBFF</strong></span>
+              <i class="hv-meta__sep"></i>
+              <span>PRESET :: <strong>LISTING.5X7</strong></span>
+            </div>
+            <div class="hv-os">
+              <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <button class="hv-os__x" type="button">✕</button>
+            </div>
+          </div>
+          <div class="hv-path">
+            <div class="hv-path__crumbs">C:/PRINTORIAN/РАЗДЕЛ/ОБЪЕКТ</div>
+            <div class="hv-path__status">STATUS :: <b>ONLINE</b></div>
+          </div>
+        </div>
+      </div>
+      <p class="hv-micro" style="margin-top:var(--hv-2)">
+        ТАБ — ГДЕ ВЫ · МЕТА — ИДЕНТИФИКАТОРЫ ЗАПУСКА · ПУТЬ — ПОЛОЖЕНИЕ В ДАННЫХ
+      </p>
+    </div>
+
+    <!-- ======================================================== containers -->
+    <div class="kit-spec">
+      <div class="kit-spec__n"><span>04</span><h2 class="hv-h">Контейнеры</h2></div>
+      <div class="hv-grid hv-grid--3">
+        <div class="hv-frame"><span class="hv-h">hv-frame</span><p class="hv-micro" style="margin-top:var(--hv-2)">СКОБОЧНЫЕ УГЛЫ · ОСНОВНАЯ ОБЛАСТЬ</p></div>
+        <div class="hv-frame hv-frame--live"><span class="hv-h hv-live">hv-frame--live</span><p class="hv-micro" style="margin-top:var(--hv-2)">ЖИВЫЕ ДАННЫЕ · ПОТОК СОБЫТИЙ</p></div>
+        <div class="hv-panel">
+          <div class="hv-panel__head"><span>hv-panel</span><span class="hv-panel__aside">ЗАГОЛОВОК</span></div>
+          <div class="hv-panel__body hv-panel__body--tight"><span class="hv-micro">ТЕЛО ПАНЕЛИ</span></div>
+          <div class="hv-panel__foot"><span>ПОДВАЛ</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================== data -->
+    <div class="kit-spec">
+      <div class="kit-spec__n"><span>05</span><h2 class="hv-h">Данные</h2></div>
+      <div class="hv-cols hv-cols--2">
+        <div class="hv-frame">
+          <span class="hv-label" style="margin-bottom:var(--hv-2)">Строки с отточием</span>
+          <ul class="hv-leaders">
+            <li class="hv-leader"><span class="hv-leader__k">Материал<span class="hv-leader__basis">412.8 Г × 2.94 ₽/Г</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 213 ₽</span></li>
+            <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Скидка за объём</span><span class="hv-leader__fill"></span><span class="hv-leader__v">− 396 ₽</span></li>
+            <li class="hv-leader" data-tone="bad"><span class="hv-leader__k">Срочное производство</span><span class="hv-leader__fill"></span><span class="hv-leader__v">+ 1 320 ₽</span></li>
+          </ul>
+          <hr class="hv-hr hv-hr--heavy">
+          <div class="hv-slab hv-slab--lg"><span>Итого</span><span class="hv-slab__v">6 016 ₽</span></div>
+          <div class="hv-slab hv-slab--outline" style="margin-top:var(--hv-1)"><span>За штуку</span><span class="hv-slab__v">601.60 ₽</span></div>
+        </div>
+
+        <div class="hv-stack">
+          <div class="hv-tags">
+            <button class="hv-tag" type="button" aria-pressed="true"><span class="hv-tag__k">Все</span><span class="hv-tag__n">24</span></button>
+            <button class="hv-tag" type="button" data-tone="good"><span class="hv-tag__k">На складе</span><span class="hv-tag__n">14</span></button>
+            <button class="hv-tag" type="button" data-tone="live"><span class="hv-tag__k">В принтере</span><span class="hv-tag__n">6</span></button>
+            <button class="hv-tag" type="button" data-tone="warn"><span class="hv-tag__k">Заказан</span><span class="hv-tag__n">2</span></button>
+          </div>
+          <div class="hv-table-wrap">
+            <table class="hv-table" data-sortable>
+              <thead><tr>
+                <th><button class="hv-table__sort" data-sort>Принтер <span class="hv-table__ind"></span></button></th>
+                <th><button class="hv-table__sort" data-sort>Состояние <span class="hv-table__ind"></span></button></th>
+                <th data-align="end"><button class="hv-table__sort" data-sort>Наработка <span class="hv-table__ind"></span></button></th>
+              </tr></thead>
+              <tbody>
+                <tr data-activatable><td>P-01</td><td><span class="hv-state" data-state="printing">Печатает</span></td><td data-align="end">2 418 ч</td></tr>
+                <tr data-activatable><td>P-05</td><td><span class="hv-state" data-state="idle">Свободен</span></td><td data-align="end">640 ч</td></tr>
+                <tr data-activatable><td>P-04</td><td><span class="hv-state" data-state="error">Ошибка</span></td><td data-align="end">1 140 ч</td></tr>
+                <tr data-activatable><td>P-08</td><td><span class="hv-state" data-state="offline">Не в сети</span></td><td data-align="end">220 ч</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hv-micro">ЗАГОЛОВКИ СОРТИРУЮТ · ТЕГИ ФИЛЬТРУЮТ · СЧЁТЧИК ОПИСЫВАЕТ ВЕСЬ НАБОР</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================== instruments -->
+    <div class="kit-spec">
+      <div class="kit-spec__n"><span>06</span><h2 class="hv-h">Индикаторы</h2></div>
+      <div class="hv-grid hv-grid--3">
+        <div class="hv-frame hv-stack">
+          <span class="hv-label">Прогресс</span>
+          <div class="hv-meter-row"><div class="hv-meter" data-tone="live"><div class="hv-meter__fill" style="width:63%"></div></div><span class="hv-meter-row__pct">63%</span></div>
+          <div class="hv-meter-row"><div class="hv-meter" data-tone="warn"><div class="hv-meter__fill" style="width:34%"></div></div><span class="hv-meter-row__pct">34%</span></div>
+          <div class="hv-meter hv-meter--thin"><div class="hv-meter__fill" style="width:82%"></div></div>
+        </div>
+        <div class="hv-frame hv-stat" data-tone="live">
+          <span class="hv-label">Печатают сейчас</span>
+          <span class="hv-stat__v">07<small> / 12</small></span>
+          <span class="hv-micro">ЗАГРУЗКА ПАРКА 58%</span>
+        </div>
+        <button class="hv-frame hv-glyph" type="button">
+          <span class="hv-glyph__mark">PETG</span>
+          <span class="hv-stack hv-stack--2">
+            <span class="hv-glyph__stats"><span>ПЛОТН 1.27</span><span>СКЛАД 31.4 КГ</span></span>
+            <span class="hv-glyph__name">Полиэфир</span>
+          </span>
+        </button>
+      </div>
+
+      <div class="hv-panel" style="margin-top:var(--hv-3)">
+        <div class="hv-panel__head"><span>Ход заказа</span><span class="hv-panel__aside">ЭТАП 5 ИЗ 9</span></div>
+        <div class="hv-pipe">
+          <div class="hv-pipe__step" data-state="done"><div class="hv-pipe__n">01</div><div class="hv-pipe__k">Оплачен</div><div class="hv-pipe__t">08.08 14:07</div></div>
+          <div class="hv-pipe__step" data-state="done"><div class="hv-pipe__n">02</div><div class="hv-pipe__k">Подготовка</div><div class="hv-pipe__t">08.08 14:22</div></div>
+          <div class="hv-pipe__step" data-state="done"><div class="hv-pipe__n">03</div><div class="hv-pipe__k">В очереди</div><div class="hv-pipe__t">08.08 15:40</div></div>
+          <div class="hv-pipe__step" data-state="done"><div class="hv-pipe__n">04</div><div class="hv-pipe__k">Назначен</div><div class="hv-pipe__t">09.08 14:22</div></div>
+          <div class="hv-pipe__step" data-state="now"><div class="hv-pipe__n">05</div><div class="hv-pipe__k">Печатается</div><div class="hv-pipe__t">63%</div></div>
+          <div class="hv-pipe__step"><div class="hv-pipe__n">06</div><div class="hv-pipe__k">Постобработка</div><div class="hv-pipe__t">—</div></div>
+          <div class="hv-pipe__step"><div class="hv-pipe__n">07</div><div class="hv-pipe__k">Контроль</div><div class="hv-pipe__t">—</div></div>
+          <div class="hv-pipe__step"><div class="hv-pipe__n">08</div><div class="hv-pipe__k">Упаковка</div><div class="hv-pipe__t">—</div></div>
+          <div class="hv-pipe__step"><div class="hv-pipe__n">09</div><div class="hv-pipe__k">Отправлен</div><div class="hv-pipe__t">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================= controls -->
+    <div class="kit-spec">
+      <div class="kit-spec__n"><span>07</span><h2 class="hv-h">Управление</h2></div>
+      <div class="hv-cols hv-cols--2">
+        <div class="hv-frame hv-stack">
+          <div class="hv-row">
+            <button class="hv-btn hv-btn--primary" type="button">Основное</button>
+            <button class="hv-btn" type="button">Обычное</button>
+            <button class="hv-btn hv-btn--danger" type="button">Опасное</button>
+            <button class="hv-btn" type="button" disabled>Недоступно</button>
+            <button class="hv-btn hv-btn--sm" type="button">Мелкое</button>
+          </div>
+          <div class="hv-seg" data-toggle-group="single">
+            <button class="hv-seg__btn" type="button" data-toggle aria-pressed="true">1</button>
+            <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">2</button>
+            <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">3</button>
+            <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">4</button>
+          </div>
+          <div class="hv-swatches" data-toggle-group="single">
+            <button class="hv-swatch" type="button" data-toggle aria-pressed="true"  style="--hv-swatch:#1b1b1e"></button>
+            <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#f2f2f0"></button>
+            <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#d64545"></button>
+            <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#2f6fed"></button>
+            <button class="hv-swatch" type="button" data-toggle aria-pressed="false" style="--hv-swatch:#3fbf76"></button>
+          </div>
+          <button class="hv-option" type="button" aria-pressed="true">
+            <span class="hv-h">Шлифовка</span><span class="hv-option__delta" data-dir="up">+ 340 ₽ / шт</span>
+          </button>
+          <button class="hv-option" type="button" aria-pressed="false">
+            <span class="hv-h">Скидка за объём</span><span class="hv-option__delta" data-dir="down">− 396 ₽</span>
+          </button>
+        </div>
+
+        <div class="hv-frame hv-stack">
+          <div class="hv-field">
+            <label class="hv-label" for="k-in">Текстовое поле</label>
+            <input class="hv-input" id="k-in" placeholder="ЗНАЧЕНИЕ">
+          </div>
+          <div class="hv-field">
+            <label class="hv-label" for="k-sel">Выпадающий список</label>
+            <select class="hv-select" id="k-sel"><option>Функциональная деталь</option><option>Прототип</option></select>
+          </div>
+          <div class="hv-field">
+            <div class="hv-row hv-row--between">
+              <label class="hv-label" for="k-rng" style="margin:0">Ползунок</label>
+              <span class="hv-mono" id="k-out">100%</span>
+            </div>
+            <input class="hv-range" type="range" id="k-rng" min="50" max="200" value="100" data-bind="#k-out" data-suffix="%">
+          </div>
+          <label class="hv-check">
+            <input type="checkbox" checked>
+            <span class="hv-check__body"><span class="hv-h">Флажок</span><span class="hv-hint">С пояснением под подписью</span></span>
+          </label>
+          <div class="hv-drop"><span class="hv-h">Перетащите STL / 3MF</span><span class="hv-micro">ИЛИ НАЖМИТЕ ДЛЯ ВЫБОРА · ДО 200 МБ</span></div>
+          <button class="hv-btn hv-btn--block" type="button" data-open="kit-modal">Открыть модальное окно</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================= notes -->
+    <div class="kit-spec">
+      <div class="kit-spec__n"><span>08</span><h2 class="hv-h">Как это встраивается</h2></div>
+      <div class="hv-grid hv-grid--2">
+        <div class="hv-prose">
+          <p><strong>tokens.css</strong> — единственное место, где принимаются решения о цвете
+          и метрике. Переменные названы <span class="hv-mono">--hv-*</span>, чтобы жить рядом
+          с текущими <span class="hv-mono">--pr-*</span> и не конфликтовать во время перехода.</p>
+          <p><strong>harvester.css</strong> — компоненты. Каждый класс уже соответствует тому,
+          что рисует существующий React: <span class="hv-mono">.hv-table</span> ↔ DataTable,
+          <span class="hv-mono">.hv-tag</span> ↔ StatusTags, <span class="hv-mono">.hv-leader</span> ↔
+          PriceBreakdown, <span class="hv-mono">.hv-option__delta</span> ↔ DeltaPreview.</p>
+          <p><strong>js/kit.js</strong> при интеграции удаляется — он существует только чтобы
+          шаблоны можно было щёлкать при просмотре.</p>
+        </div>
+        <div class="hv-panel">
+          <div class="hv-panel__head"><span>Соответствие компонентов</span></div>
+          <div class="hv-panel__body--none">
+            <table class="hv-table">
+              <thead><tr><th>Класс</th><th>Существующий компонент</th></tr></thead>
+              <tbody>
+                <tr><td class="hv-table__id">.hv-table</td><td>packages/ui · DataTable</td></tr>
+                <tr><td class="hv-table__id">.hv-tag</td><td>packages/ui · StatusTags</td></tr>
+                <tr><td class="hv-table__id">.hv-leader</td><td>packages/ui · PriceBreakdown</td></tr>
+                <tr><td class="hv-table__id">.hv-option__delta</td><td>packages/ui · DeltaPreview</td></tr>
+                <tr><td class="hv-table__id">.hv-state</td><td>fleet · printer.state.*</td></tr>
+                <tr><td class="hv-table__id">.hv-pipe</td><td>ordering · OrderStatus</td></tr>
+                <tr><td class="hv-table__id">.hv-appbar</td><td>apps/web · App.tsx nav</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="hv-panel__foot" style="border-top:1px solid var(--hv-line)">
+    <span>HARVESTER.V1 · PRINTORIAN OS ./v2.0</span>
+    <span data-clock></span>
+  </footer>
+</div>
+
+<!-- ============================================================ kit modal -->
+<div class="hv-overlay" id="kit-modal" hidden>
+  <div class="hv-modal" role="dialog" aria-modal="true" aria-labelledby="kit-modal-t">
+    <div class="hv-chrome" style="position:static;padding:var(--hv-3) var(--hv-3) 0">
+      <div class="hv-chrome__row">
+        <span class="hv-tab" id="kit-modal-t">Объект :: Подробно</span>
+        <div class="hv-meta"><span>ID :: <strong>3ESXATK0A41PJ2EY</strong></span></div>
+        <div class="hv-os">
+          <span class="hv-os__label">ОКНО ДЕТАЛЕЙ</span>
+        <button class="hv-os__x" type="button" data-close aria-label="Закрыть">✕</button>
+        </div>
+      </div>
+      <div class="hv-path">
+        <div class="hv-path__crumbs">C:/PRINTORIAN/OBJECT/DETAIL</div>
+        <div class="hv-path__status">STATUS :: <b>OPEN</b></div>
+      </div>
+    </div>
+    <div class="hv-modal__body">
+      <div class="hv-tabs" data-tabs="#kit-modal">
+        <button class="hv-tabs__btn" type="button" data-tab-target="a" aria-selected="true">Вкладка A</button>
+        <button class="hv-tabs__btn" type="button" data-tab-target="b" aria-selected="false">Вкладка B</button>
+      </div>
+      <div data-tab-panel="a" style="padding-top:var(--hv-3)">
+        <dl class="hv-kv">
+          <dt>Поле</dt><dd>Значение</dd>
+          <dt>Число</dt><dd>1 234.56</dd>
+          <dt>Состояние</dt><dd>Активно</dd>
+        </dl>
+      </div>
+      <div data-tab-panel="b" hidden style="padding-top:var(--hv-3)">
+        <p class="hv-prose" style="margin:0">Модальное окно повторяет ту же обвязку, что и экран — то же
+        расположение таба, метаданных и пути. Одно окно внутри другого, а не отдельный
+        визуальный язык.</p>
+      </div>
+    </div>
+    <div class="hv-panel__foot">
+      <span>ESC — ЗАКРЫТЬ</span>
+      <button class="hv-btn hv-btn--sm" type="button" data-close>Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

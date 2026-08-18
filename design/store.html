@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="control">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Склад</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Склад :: Хранение</span>
+      <div class="hv-meta">
+        <span>ЯЧЕЕК :: <strong>96</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ЗАНЯТО :: <strong>71%</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>ПОЗИЦИЙ :: <strong>184</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="index.html">C:/PRINTORIAN</a>/SUPPLY/STORE/LOCATIONS</div>
+      <div class="hv-path__status">ИНВЕНТАРИЗАЦИЯ :: <b>28.07.2026</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="dashboard.html">Сводка</a>
+      <a class="hv-appbar__link" href="orders.html">Заказы</a>
+      <a class="hv-appbar__link" href="fleet.html">Принтеры</a>
+      <a class="hv-appbar__link" href="postproduction.html">Постобработка</a>
+      <a class="hv-appbar__link" href="packaging.html">Упаковка</a>
+      <a class="hv-appbar__link" href="service.html">Сервис</a>
+      <a class="hv-appbar__link" href="store.html" aria-current="page">Склад</a>
+      <a class="hv-appbar__link" href="purchasing.html">Закупки</a>
+      <a class="hv-appbar__link" href="logistics.html">Логистика</a>
+      <a class="hv-appbar__link" href="settings.html">Настройки</a>
+    </div>
+    <div class="hv-appbar__right">
+      <a class="hv-who" href="account.html"><span class="hv-avatar hv-avatar--sm" style="--sz:22px;font-size:9px">ДЧ</span>boss@printorian.example</a>
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main hv-stack hv-stack--4">
+
+    <div class="hv-grid hv-grid--4">
+      <div class="hv-frame hv-kpi">
+        <span class="hv-label">Стоимость остатков</span>
+        <span class="hv-kpi__v">186 <small>ТЫС ₽</small></span>
+        <span class="hv-kpi__d" data-dir="up" data-sentiment="bad">+12% К ИЮЛЮ</span>
+        <span class="hv-kpi__foot"><span>ЗАМОРОЖЕНО</span><span>31 ДЕНЬ ОБОРОТА</span></span>
+      </div>
+      <div class="hv-frame hv-kpi">
+        <span class="hv-label">Заполнение</span>
+        <span class="hv-kpi__v">71<small>%</small></span>
+        <span class="hv-micro">68 ЯЧЕЕК ИЗ 96 · СВОБОДНО 28</span>
+        <span class="hv-kpi__foot"><span>ЗОНА B ПОЧТИ ПОЛНА</span><span class="hv-warn">92%</span></span>
+      </div>
+      <div class="hv-frame hv-kpi" data-tone="warn">
+        <span class="hv-label">Расхождения</span>
+        <span class="hv-kpi__v hv-warn">3</span>
+        <span class="hv-micro">С ПОСЛЕДНЕЙ ИНВЕНТАРИЗАЦИИ</span>
+        <span class="hv-kpi__foot"><span>НА СУММУ</span><span>4 180 ₽</span></span>
+      </div>
+      <div class="hv-frame hv-kpi" data-tone="bad">
+        <span class="hv-label">Залежалое</span>
+        <span class="hv-kpi__v hv-bad">7</span>
+        <span class="hv-micro">БЕЗ ДВИЖЕНИЯ БОЛЕЕ 90 ДНЕЙ</span>
+        <span class="hv-kpi__foot"><span>НА СУММУ</span><span class="hv-bad">21 400 ₽</span></span>
+      </div>
+    </div>
+
+    <!-- ================================================== location map -->
+    <section class="hv-panel">
+      <div class="hv-panel__head">
+        <span>Карта хранения</span>
+        <span class="hv-panel__aside">ЯРЧЕ = ПЛОТНЕЕ ЗАНЯТО · НАЖМИТЕ ЯЧЕЙКУ</span>
+      </div>
+      <div class="hv-panel__body hv-stack">
+        <div class="hv-legend">
+          <span><i style="background:var(--hv-live)"></i> Занято</span>
+          <span><i style="background:var(--hv-warn)"></i> Ниже порога</span>
+          <span><i style="background:var(--hv-bad)"></i> Залежалое</span>
+          <span><i style="border:1px dashed var(--hv-line)"></i> Свободно</span>
+        </div>
+
+        <div class="hv-zone">
+          <div class="hv-zone__head"><span>ЗОНА A · ФИЛАМЕНТ · СТЕЛЛАЖИ 1–4 · СУХО, 21 °C</span><span>ЗАНЯТО 78%</span></div>
+          <div class="hv-matrix">
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">A1-1</span><span class="hv-node__pct">PETG-CF</span><span class="hv-node__fill" style="--p:82%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">A1-2</span><span class="hv-node__pct">PLA БЕЛ</span><span class="hv-node__fill" style="--p:94%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">A1-3</span><span class="hv-node__pct">PLA ЗОЛ</span><span class="hv-node__fill" style="--p:61%"></span></button>
+            <button class="hv-node" type="button" data-state="paused" data-open="loc-detail"><span class="hv-node__id">A2-1</span><span class="hv-node__pct">ASA</span><span class="hv-node__fill" style="--p:18%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">A2-2</span><span class="hv-node__pct">PETG</span><span class="hv-node__fill" style="--p:70%"></span></button>
+            <button class="hv-node" type="button" data-state="error" data-open="loc-detail"><span class="hv-node__id">A2-3</span><span class="hv-node__pct">ABS СЕР</span><span class="hv-node__fill" style="--p:40%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">A3-1</span><span class="hv-node__pct">PLA ЧЁР</span><span class="hv-node__fill" style="--p:88%"></span></button>
+            <span class="hv-node hv-node--empty"><span class="hv-micro">A3-2</span></span>
+            <span class="hv-node hv-node--empty"><span class="hv-micro">A3-3</span></span>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">A4-1</span><span class="hv-node__pct">PA6-CF</span><span class="hv-node__fill" style="--p:55%"></span></button>
+            <span class="hv-node hv-node--empty"><span class="hv-micro">A4-2</span></span>
+            <span class="hv-node hv-node--empty"><span class="hv-micro">A4-3</span></span>
+          </div>
+        </div>
+
+        <div class="hv-zone">
+          <div class="hv-zone__head"><span>ЗОНА B · СМОЛЫ И ХИМИЯ · ШКАФЫ 1–2 · ВЫТЯЖКА</span><span>ЗАНЯТО 92%</span></div>
+          <div class="hv-matrix">
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">B1-1</span><span class="hv-node__pct">СМОЛА</span><span class="hv-node__fill" style="--p:76%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">B1-2</span><span class="hv-node__pct">ИЗОПРОП</span><span class="hv-node__fill" style="--p:68%"></span></button>
+            <button class="hv-node" type="button" data-state="paused" data-open="loc-detail"><span class="hv-node__id">B1-3</span><span class="hv-node__pct">ГРУНТ</span><span class="hv-node__fill" style="--p:22%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">B2-1</span><span class="hv-node__pct">КРАСКА</span><span class="hv-node__fill" style="--p:84%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">B2-2</span><span class="hv-node__pct">ЛАК</span><span class="hv-node__fill" style="--p:91%"></span></button>
+            <span class="hv-node hv-node--empty"><span class="hv-micro">B2-3</span></span>
+          </div>
+        </div>
+
+        <div class="hv-zone">
+          <div class="hv-zone__head"><span>ЗОНА C · ЗАПЧАСТИ И УПАКОВКА · СТЕЛЛАЖИ 5–7</span><span>ЗАНЯТО 58%</span></div>
+          <div class="hv-matrix">
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">C5-1</span><span class="hv-node__pct">СОПЛА</span><span class="hv-node__fill" style="--p:60%"></span></button>
+            <button class="hv-node" type="button" data-state="error" data-open="loc-detail"><span class="hv-node__id">C5-2</span><span class="hv-node__pct">РЕМНИ</span><span class="hv-node__fill" style="--p:0%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">C5-3</span><span class="hv-node__pct">PTFE</span><span class="hv-node__fill" style="--p:44%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">C6-1</span><span class="hv-node__pct">КОРОБ A</span><span class="hv-node__fill" style="--p:70%"></span></button>
+            <button class="hv-node" type="button" data-state="paused" data-open="loc-detail"><span class="hv-node__id">C6-2</span><span class="hv-node__pct">КОРОБ B</span><span class="hv-node__fill" style="--p:26%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">C6-3</span><span class="hv-node__pct">ПАКЕТЫ</span><span class="hv-node__fill" style="--p:76%"></span></button>
+            <button class="hv-node" type="button" data-state="printing" data-open="loc-detail"><span class="hv-node__id">C7-1</span><span class="hv-node__pct">СТОЛЫ</span><span class="hv-node__fill" style="--p:33%"></span></button>
+            <span class="hv-node hv-node--empty"><span class="hv-micro">C7-2</span></span>
+            <span class="hv-node hv-node--empty"><span class="hv-micro">C7-3</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="hv-panel__foot">
+        <span>АДРЕС ЯЧЕЙКИ :: ЗОНА-СТЕЛЛАЖ-ПОЛКА · ПЕЧАТАЕТСЯ НА ЭТИКЕТКЕ ПАРТИИ</span>
+        <button class="hv-btn hv-btn--sm" type="button">Начать инвентаризацию</button>
+      </div>
+    </section>
+
+    <!-- ==================================================== movements -->
+    <section class="hv-cols hv-cols--2">
+      <div class="hv-panel">
+        <div class="hv-panel__head"><span>Движения за сегодня</span><span class="hv-panel__aside">ПРИХОД · РАСХОД · ПЕРЕМЕЩЕНИЕ</span></div>
+        <div class="hv-panel__body--none">
+          <table class="hv-table" data-sortable>
+            <thead><tr>
+              <th><button class="hv-table__sort" data-sort>Время <span class="hv-table__ind"></span></button></th>
+              <th>Операция</th><th>Позиция</th><th>Откуда → куда</th>
+              <th data-align="end"><button class="hv-table__sort" data-sort>Кол-во <span class="hv-table__ind"></span></button></th>
+              <th>Основание</th>
+            </tr></thead>
+            <tbody>
+              <tr><td class="hv-table__id">18:42</td><td><span class="hv-state" data-state="error">Расход</span></td><td>PETG-CF красный</td><td>A1-1 → P-01.A3</td><td data-align="end">1 кг</td><td class="hv-table__id">SV-0418</td></tr>
+              <tr><td class="hv-table__id">17:10</td><td><span class="hv-state" data-state="error">Расход</span></td><td>Коробка A</td><td>C6-1 → PK-01</td><td data-align="end">6 шт</td><td class="hv-table__id">PK-2147</td></tr>
+              <tr><td class="hv-table__id">15:34</td><td><span class="hv-state" data-state="error">Расход</span></td><td>Сопло 0.4</td><td>C5-1 → P-02</td><td data-align="end">1 шт</td><td class="hv-table__id">SV-0407</td></tr>
+              <tr><td class="hv-table__id">14:02</td><td><span class="hv-state" data-state="preparing">Перемещение</span></td><td>PLA Silk золото</td><td>A3-2 → A1-3</td><td data-align="end">3.4 кг</td><td>Уплотнение</td></tr>
+              <tr><td class="hv-table__id">11:20</td><td><span class="hv-state" data-state="idle">Приход</span></td><td>Изопропанол</td><td>Приёмка → B1-2</td><td data-align="end">5 л</td><td class="hv-table__id">PO-0090</td></tr>
+              <tr><td class="hv-table__id">09:48</td><td><span class="hv-state" data-state="error">Расход</span></td><td>Шкурка P400</td><td>C7-1 → PP-01</td><td data-align="end">12 листов</td><td class="hv-table__id">PP-2136</td></tr>
+              <tr><td class="hv-table__id">09:05</td><td><span class="hv-state" data-state="maintenance">Списание</span></td><td>PLA Basic белый</td><td>A1-2 → брак</td><td data-align="end">28 г</td><td>Хвост катушки</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="hv-panel__foot">
+          <span>КАЖДОЕ ДВИЖЕНИЕ ПРИВЯЗАНО К ЗАЯВКЕ ИЛИ ЗАКАЗУ</span>
+          <span>СЕГОДНЯ 7 ОПЕРАЦИЙ</span>
+        </div>
+      </div>
+
+      <div class="hv-stack">
+        <section class="hv-frame" style="--ink:var(--hv-bad)">
+          <span class="hv-h hv-bad">Залежалое · 90+ дней без движения</span>
+          <div class="hv-panel__body--none" style="margin-top:var(--hv-3)">
+            <table class="hv-table">
+              <thead><tr><th>Позиция</th><th>Ячейка</th><th data-align="end">Лежит</th><th data-align="end">Стоимость</th></tr></thead>
+              <tbody>
+                <tr><td>ABS серый</td><td class="hv-table__id">A2-3</td><td data-align="end" class="hv-bad">147 дн</td><td data-align="end">6 400 ₽</td></tr>
+                <tr><td>Смола прозрачная</td><td class="hv-table__id">B1-1</td><td data-align="end" class="hv-bad">122 дн</td><td data-align="end">5 400 ₽</td></tr>
+                <tr><td>Стол PEI текстурный</td><td class="hv-table__id">C7-1</td><td data-align="end">104 дн</td><td data-align="end">4 200 ₽</td></tr>
+                <tr><td>PLA Matte синий</td><td class="hv-table__id">A3-1</td><td data-align="end">98 дн</td><td data-align="end">3 100 ₽</td></tr>
+                <tr><td>Коробка C</td><td class="hv-table__id">C6-3</td><td data-align="end">94 дн</td><td data-align="end">2 300 ₽</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hv-micro" style="margin-top:var(--hv-3)">
+            ABS ЛЕЖИТ С МАРТА — МАТЕРИАЛ ВЫВЕДЕН ИЗ ПОДБОРА, НО НЕ СПИСАН.
+            РЕШЕНИЕ :: РАСПРОДАЖА, ПЕРЕВОД В ТЕСТОВЫЙ ИЛИ СПИСАНИЕ.
+          </p>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Оборачиваемость</span><span class="hv-panel__aside">ДНЕЙ НА СКЛАДЕ</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <div class="hv-spec" data-tone="live"><span class="hv-spec__k">PETG-CF</span><span class="hv-spec__bar"><i style="width:18%"></i></span><span class="hv-spec__v">14</span></div>
+            <div class="hv-spec" data-tone="live"><span class="hv-spec__k">PLA Basic</span><span class="hv-spec__bar"><i style="width:24%"></i></span><span class="hv-spec__v">19</span></div>
+            <div class="hv-spec"><span class="hv-spec__k">Упаковка</span><span class="hv-spec__bar"><i style="width:42%"></i></span><span class="hv-spec__v">34</span></div>
+            <div class="hv-spec"><span class="hv-spec__k">Запчасти</span><span class="hv-spec__bar"><i style="width:58%"></i></span><span class="hv-spec__v">46</span></div>
+            <div class="hv-spec" data-tone="warn"><span class="hv-spec__k">Смолы</span><span class="hv-spec__bar"><i style="width:81%"></i></span><span class="hv-spec__v">65</span></div>
+            <div class="hv-spec" data-tone="warn"><span class="hv-spec__k">Прочее</span><span class="hv-spec__bar"><i style="width:96%"></i></span><span class="hv-spec__v">77</span></div>
+            <hr class="hv-hr">
+            <div class="hv-slab"><span>Средняя по складу</span><span class="hv-slab__v">31 день</span></div>
+          </div>
+          <div class="hv-panel__foot"><span>ЦЕЛЬ :: НЕ БОЛЕЕ 30 ДНЕЙ ПО МАТЕРИАЛАМ</span></div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Инвентаризация</span><span class="hv-panel__aside">ПОСЛЕДНЯЯ 28.07.2026</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Проверено позиций</span><span class="hv-leader__fill"></span><span class="hv-leader__v">184 из 184</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Совпало</span><span class="hv-leader__fill"></span><span class="hv-leader__v">181 · 98.4%</span></li>
+              <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Недостача</span><span class="hv-leader__fill"></span><span class="hv-leader__v">2 · 3 240 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Излишек</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 · 940 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Следующая</span><span class="hv-leader__fill"></span><span class="hv-leader__v">28.10.2026</span></li>
+            </ul>
+          </div>
+          <div class="hv-panel__foot"><span>ОБЕ НЕДОСТАЧИ :: ХВОСТЫ КАТУШЕК НИЖЕ ПОРОГА СПИСАНИЯ</span></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hv-panel__foot" style="border-top:1px solid var(--hv-line)">
+    <span>SUPPLY.STORE · PRINTORIAN OS ./v2.0</span>
+    <span data-clock></span>
+  </footer>
+</div>
+
+<!-- ======================================================== location -->
+<div class="hv-overlay" id="loc-detail" hidden>
+  <div class="hv-modal" role="dialog" aria-modal="true" aria-labelledby="loc-t">
+    <div class="hv-chrome" style="position:static;padding:var(--hv-3) var(--hv-3) 0">
+      <div class="hv-chrome__row">
+        <span class="hv-tab" id="loc-t">Ячейка :: A1-1</span>
+        <div class="hv-meta">
+          <span>ЗОНА :: <strong>A · ФИЛАМЕНТ</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>УСЛОВИЯ :: <strong>СУХО · 21 °C · 38% RH</strong></span>
+          <i class="hv-meta__sep"></i>
+          <span>ВМЕСТИМОСТЬ :: <strong>6 КАТУШЕК</strong></span>
+        </div>
+        <div class="hv-os">
+          <span class="hv-os__label">ЗАНЯТО 82%</span>
+        <button class="hv-os__x" type="button" data-close aria-label="Закрыть">✕</button>
+        </div>
+      </div>
+      <div class="hv-path">
+        <div class="hv-path__crumbs">C:/PRINTORIAN/SUPPLY/STORE/A1-1</div>
+        <div class="hv-path__status">STATUS :: <b>OPEN</b></div>
+      </div>
+    </div>
+
+    <div class="hv-modal__body hv-stack">
+      <div class="hv-vs">
+        <div><span class="hv-vs__k">Позиция</span><span class="hv-vs__v">PETG-CF</span></div>
+        <div><span class="hv-vs__k">Остаток</span><span class="hv-vs__v">4 200 г</span></div>
+        <div><span class="hv-vs__k">Стоимость</span><span class="hv-vs__v">12 348 ₽</span></div>
+      </div>
+
+      <section class="hv-panel">
+        <div class="hv-panel__head"><span>Партии в ячейке</span><span class="hv-panel__aside">FIFO · СНАЧАЛА СТАРШАЯ</span></div>
+        <div class="hv-panel__body--none">
+          <table class="hv-table">
+            <thead><tr><th>Партия</th><th>Принята</th><th>Сушка</th><th data-align="end">Остаток</th><th>Статус</th></tr></thead>
+            <tbody>
+              <tr><td class="hv-table__id">LOT.4469</td><td>18.07.2026</td><td class="hv-good">07.08 09:00</td><td data-align="end">2 380 г</td><td><span class="hv-state" data-state="idle">Выдавать первой</span></td></tr>
+              <tr><td class="hv-table__id">LOT.4470</td><td>26.07.2026</td><td class="hv-warn">просрочена</td><td data-align="end">1 000 г</td><td><span class="hv-state" data-state="maintenance">На сушку</span></td></tr>
+              <tr><td class="hv-table__id">LOT.4471</td><td>02.08.2026</td><td>—</td><td data-align="end">820 г</td><td><span class="hv-state" data-state="printing">В принтере P-01</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="hv-panel__foot">
+          <span>LOT.4470 БЕЗ СУШКИ 34 Ч — ГЛАВНАЯ ПРИЧИНА ОБРЫВОВ ФИЛАМЕНТА</span>
+          <button class="hv-btn hv-btn--sm" type="button">Отправить на сушку</button>
+        </div>
+      </section>
+
+      <div class="hv-cols hv-cols--2">
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Движение по ячейке</span><span class="hv-panel__aside">30 ДНЕЙ</span></div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Приход</span><span class="hv-leader__fill"></span><span class="hv-leader__v">12 000 г</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Расход</span><span class="hv-leader__fill"></span><span class="hv-leader__v">8 400 г</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Списано</span><span class="hv-leader__fill"></span><span class="hv-leader__v">62 г</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Оборачиваемость</span><span class="hv-leader__fill"></span><span class="hv-leader__v">14 дней</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Точность учёта</span><span class="hv-leader__fill"></span><span class="hv-leader__v">100%</span></li>
+            </ul>
+          </div>
+        </section>
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>Действия</span></div>
+          <div class="hv-panel__body hv-stack hv-stack--2">
+            <button class="hv-btn hv-btn--block" type="button">Выдать в производство</button>
+            <button class="hv-btn hv-btn--block" type="button">Принять партию</button>
+            <button class="hv-btn hv-btn--block" type="button">Переместить</button>
+            <button class="hv-btn hv-btn--block" type="button">Пересчитать</button>
+            <button class="hv-btn hv-btn--block hv-btn--danger" type="button">Списать</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="hv-panel__foot">
+      <span>A1-1 · SUPPLY.STORE · ПОСЛЕДНЯЯ ОПЕРАЦИЯ 18:42</span>
+      <button class="hv-btn hv-btn--sm" type="button" data-close>Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

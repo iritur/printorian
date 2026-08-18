@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ru" data-theme="void" data-realm="public">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Printorian OS :: Оформление заказа</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/harvester.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/realm.css">
+</head>
+<body class="hv-graph">
+<div class="hv-shell">
+
+  <header class="hv-chrome">
+    <div class="hv-chrome__row">
+      <span class="hv-tab">Оформление :: Заказ</span>
+      <div class="hv-meta">
+        <span>QUOTE :: <strong>3ESXATK0A41PJ2EY</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>LOCK :: <strong>23 Ч 41 М</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span>RATES :: <strong>SNAP.8F41C2</strong></span>
+        <i class="hv-meta__sep"></i>
+        <span data-clock></span>
+      </div>
+      <div class="hv-os">
+        <span class="hv-os__label">PRINTORIAN OS ./v2.0</span>
+        <span class="hv-lang" data-toggle-group="single" role="group" aria-label="Язык интерфейса">
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="true">RU</button>
+          <button class="hv-lang__btn" type="button" data-toggle aria-pressed="false">EN</button>
+        </span>
+        <button class="hv-os__x" type="button" aria-label="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="hv-path">
+      <div class="hv-path__crumbs"><a href="configurator.html">C:/PRINTORIAN/STORE/CONFIGURATOR</a>/CHECKOUT</div>
+      <div class="hv-path__status">STATUS :: <b>ЦЕНА ЗАФИКСИРОВАНА</b></div>
+    </div>
+  </header>
+
+  <nav class="hv-appbar">
+    <span class="hv-appbar__brand">Printorian</span>
+    <div class="hv-appbar__nav">
+      <a class="hv-appbar__link" href="promo.html">О ферме</a>
+      <a class="hv-appbar__link" href="catalog.html">Каталог</a>
+      <a class="hv-appbar__link" href="configurator.html" aria-current="page">Рассчитать</a>
+      <a class="hv-appbar__link" href="cabinet.html">Мои заказы</a>
+      <a class="hv-appbar__link" href="account.html">Кабинет</a>
+      <a class="hv-appbar__link" href="blog.html">Журнал</a>
+    </div>
+    <div class="hv-appbar__right">
+      <span class="hv-seg">
+        <button class="hv-seg__btn" type="button" data-theme-set="void">Void</button>
+        <button class="hv-seg__btn" type="button" data-theme-set="paper">Paper</button>
+      </span>
+    </div>
+  </nav>
+
+  <main class="hv-main">
+    <div class="hv-cols hv-cols--2">
+
+      <!-- ================================================== LEFT :: form -->
+      <div class="hv-stack">
+
+        <!-- 01 identity -------------------------------------------------- -->
+        <section class="hv-panel">
+          <div class="hv-panel__head">
+            <span>01 :: Учётная запись</span>
+            <span class="hv-panel__aside">ТРЕБУЕТСЯ ДЛЯ ОФОРМЛЕНИЯ</span>
+          </div>
+          <div class="hv-panel__body hv-stack">
+            <div class="hv-seg" data-tabs="#auth-panels">
+              <button class="hv-seg__btn" type="button" data-tab-target="signin" aria-selected="true">Войти</button>
+              <button class="hv-seg__btn" type="button" data-tab-target="signup" aria-selected="false">Зарегистрироваться</button>
+            </div>
+
+            <div id="auth-panels">
+              <div data-tab-panel="signin" class="hv-stack">
+                <div class="hv-field">
+                  <label class="hv-label" for="email">Электронная почта</label>
+                  <input class="hv-input" id="email" type="email" value="boss@printorian.example">
+                </div>
+                <div class="hv-field">
+                  <label class="hv-label" for="pw">Пароль</label>
+                  <input class="hv-input" id="pw" type="password" value="············">
+                </div>
+                <div class="hv-row">
+                  <button class="hv-btn" type="button">Войти</button>
+                  <span class="hv-hint">Войдите, чтобы оформить заказ</span>
+                </div>
+              </div>
+
+              <div data-tab-panel="signup" hidden class="hv-stack">
+                <div class="hv-field">
+                  <label class="hv-label" for="email2">Электронная почта</label>
+                  <input class="hv-input" id="email2" type="email" placeholder="ВЫ@ПОЧТА.RU">
+                </div>
+                <div class="hv-field">
+                  <label class="hv-label" for="pw2">Пароль</label>
+                  <input class="hv-input" id="pw2" type="password" placeholder="НЕ КОРОЧЕ 12 СИМВОЛОВ">
+                  <span class="hv-hint">Пароль должен быть не короче 12 символов</span>
+                </div>
+                <button class="hv-btn" type="button">Зарегистрироваться</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 02 delivery -------------------------------------------------- -->
+        <section class="hv-panel">
+          <div class="hv-panel__head">
+            <span>02 :: Доставка</span>
+            <span class="hv-panel__aside">УТОЧНЯЕТ СТОИМОСТЬ ЛОГИСТИКИ</span>
+          </div>
+          <div class="hv-panel__body hv-stack">
+            <div class="hv-seg" data-toggle-group="single">
+              <button class="hv-seg__btn" type="button" data-toggle aria-pressed="true">Самовывоз</button>
+              <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">Курьер</button>
+              <button class="hv-seg__btn" type="button" data-toggle aria-pressed="false">Транспортная</button>
+            </div>
+            <div class="hv-grid hv-grid--2">
+              <div class="hv-field">
+                <label class="hv-label" for="city">Город</label>
+                <input class="hv-input" id="city" value="МОСКВА">
+              </div>
+              <div class="hv-field">
+                <label class="hv-label" for="zip">Индекс</label>
+                <input class="hv-input" id="zip" value="101000">
+              </div>
+            </div>
+            <div class="hv-field">
+              <label class="hv-label" for="addr">Адрес</label>
+              <input class="hv-input" id="addr" placeholder="УЛИЦА, ДОМ, КВАРТИРА">
+            </div>
+            <label class="hv-check">
+              <input type="checkbox" checked>
+              <span class="hv-check__body">
+                <span class="hv-h">Сообщать о ходе печати</span>
+                <span class="hv-hint">Письмо при каждой смене этапа</span>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <!-- 03 payment --------------------------------------------------- -->
+        <section class="hv-panel">
+          <div class="hv-panel__head"><span>03 :: Оплата</span></div>
+          <div class="hv-panel__body hv-stack hv-stack--2">
+            <label class="hv-option">
+              <span class="hv-row">
+                <input type="radio" name="pay" checked style="appearance:none;width:14px;height:14px;border:1px solid var(--hv-line);border-radius:50%;background:var(--hv-text);box-shadow:inset 0 0 0 3px var(--hv-void)">
+                <span class="hv-h">Банковская карта</span>
+              </span>
+              <span class="hv-micro">ЮKASSA · 3-D SECURE</span>
+            </label>
+            <label class="hv-option">
+              <span class="hv-row">
+                <input type="radio" name="pay" style="appearance:none;width:14px;height:14px;border:1px solid var(--hv-line);border-radius:50%;background:var(--hv-bg-inset)">
+                <span class="hv-h">СБП</span>
+              </span>
+              <span class="hv-micro">ПО QR-КОДУ</span>
+            </label>
+            <label class="hv-option">
+              <span class="hv-row">
+                <input type="radio" name="pay" style="appearance:none;width:14px;height:14px;border:1px solid var(--hv-line);border-radius:50%;background:var(--hv-bg-inset)">
+                <span class="hv-h">Счёт для юрлица</span>
+              </span>
+              <span class="hv-micro">ОПЛАТА ДО 5 РАБ. ДНЕЙ</span>
+            </label>
+            <p class="hv-micro" style="margin:var(--hv-2) 0 0">
+              ВЫ ПЕРЕЙДЁТЕ НА СТРАНИЦУ ПЛАТЁЖНОЙ СИСТЕМЫ. PRINTORIAN НЕ ХРАНИТ ДАННЫЕ КАРТ.
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <!-- ================================================ RIGHT :: order -->
+      <div class="hv-sticky hv-stack">
+
+        <section class="hv-frame hv-frame--wide">
+          <span class="hv-label">Заказ</span>
+          <h1 class="hv-display" style="font-size:clamp(1.6rem,4vw,2.6rem);margin-top:var(--hv-1)">BRACKET_V4</h1>
+          <div class="hv-micro" style="margin-top:var(--hv-2)">
+            PETG-CF · ЧЁРНЫЙ + КРАСНЫЙ · 100% · БЕЗ ОБРАБОТКИ · 10 ШТ
+          </div>
+        </section>
+
+        <section class="hv-panel">
+          <div class="hv-panel__head hv-panel__head--invert">
+            <span>Из чего складывается цена</span>
+            <span class="hv-panel__aside" style="color:inherit">10 ШТ</span>
+          </div>
+          <div class="hv-panel__body hv-panel__body--tight">
+            <ul class="hv-leaders">
+              <li class="hv-leader"><span class="hv-leader__k">Материал<span class="hv-leader__basis">412.8 Г × 2.94 ₽/Г</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 213 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Продувка при смене цвета</span><span class="hv-leader__fill"></span><span class="hv-leader__v">182 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Закупка материала</span><span class="hv-leader__fill"></span><span class="hv-leader__v">98 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Электроэнергия</span><span class="hv-leader__fill"></span><span class="hv-leader__v">58 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Амортизация принтера</span><span class="hv-leader__fill"></span><span class="hv-leader__v">963 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Труд · подготовка задания</span><span class="hv-leader__fill"></span><span class="hv-leader__v">450 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Труд · надзор за печатью</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 080 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Упаковка</span><span class="hv-leader__fill"></span><span class="hv-leader__v">220 ₽</span></li>
+              <li class="hv-leader" data-tone="warn"><span class="hv-leader__k">Доставка<span class="hv-leader__basis">УКАЖИТЕ АДРЕС — ПЕРЕСЧИТАЕТСЯ</span></span><span class="hv-leader__fill"></span><span class="hv-leader__v">не определено</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Накладные расходы</span><span class="hv-leader__fill"></span><span class="hv-leader__v">508 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Резерв на брак</span><span class="hv-leader__fill"></span><span class="hv-leader__v">254 ₽</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Скидка за объём</span><span class="hv-leader__fill"></span><span class="hv-leader__v">− 396 ₽</span></li>
+              <li class="hv-leader" data-tone="good"><span class="hv-leader__k">Персональная скидка · Silver</span><span class="hv-leader__fill"></span><span class="hv-leader__v">− 240 ₽</span></li>
+              <li class="hv-leader"><span class="hv-leader__k">Прибыль</span><span class="hv-leader__fill"></span><span class="hv-leader__v">1 386 ₽</span></li>
+            </ul>
+          </div>
+          <div style="padding:0 var(--hv-3) var(--hv-3)">
+            <hr class="hv-hr hv-hr--heavy">
+            <div class="hv-slab hv-slab--lg"><span>К оплате</span><span class="hv-slab__v">5 776 ₽</span></div>
+            <div class="hv-slab hv-slab--outline" style="margin-top:var(--hv-1)"><span>Цена за штуку</span><span class="hv-slab__v">577.60 ₽</span></div>
+          </div>
+          <div class="hv-panel__foot">
+            <span>СРОК :: 74 Ч · ДО 11.08.2026 18:00</span>
+            <span>SNAP.8F41C2</span>
+          </div>
+        </section>
+
+        <button class="hv-btn hv-btn--primary hv-btn--lg hv-btn--block" type="button">Перейти к оплате</button>
+        <a class="hv-btn hv-btn--block" href="configurator.html">Назад к конфигуратору</a>
+
+        <p class="hv-micro" style="text-align:center;margin:0">
+          ОФОРМЛЯЯ ЗАКАЗ, ВЫ ПРИНИМАЕТЕ УСЛОВИЯ ПРОИЗВОДСТВА И ВОЗВРАТА
+        </p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

@@ -1,0 +1,3077 @@
+/* ============================================================================
+   PRINTORIAN OS — component system  ("HARVESTER")
+   ----------------------------------------------------------------------------
+   A technical-console interface: hairlines on black, bracket corners, tracked
+   uppercase chrome, tabular figures everywhere a number can be compared.
+   Depends on tokens.css. No JS required except for demo interactivity.
+
+   Contents
+     01  reset + page
+     02  chrome        — tab row, meta bar, path/status strip
+     03  frame         — the bracket-corner container
+     04  panel + head
+     05  type          — display, labels, annotations, prose
+     06  nav           — sidebar list, tree list, tabs
+     07  data          — table, leader rows, slab rows, key/value
+     08  status        — tags, dots, state pills
+     09  meter         — progress, gauge, ruler
+     10  controls      — buttons, inputs, select, swatch, segmented, range
+     11  cards         — glyph card, stat card, viewport
+     12  pipeline      — order workflow tracker
+     13  overlay       — modal / detail popup
+     14  layout        — shells, grids, utilities
+   ========================================================================= */
+
+/* ---------------------------------------------------------------- 01 reset */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--hv-void);
+  color: var(--hv-text);
+  font-family: var(--hv-font-ui);
+  font-size: var(--hv-size-base);
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Graph paper. Deliberately at the threshold of visibility — it should register
+   as texture, not as a grid you could count. */
+.hv-graph {
+  background-image:
+    linear-gradient(var(--hv-grid) var(--hv-hair), transparent var(--hv-hair)),
+    linear-gradient(90deg, var(--hv-grid) var(--hv-hair), transparent var(--hv-hair));
+  background-size: 32px 32px;
+}
+
+img, svg { max-width: 100%; display: block; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* `hidden` must beat every layout class in this file.
+   The UA rule is `[hidden] { display: none }` at specificity (0,1,0) — the same
+   as `.hv-stack`, `.hv-cat`, `.hv-grid` — and an author rule wins ties against
+   the UA sheet. So any hidden element that also carried a layout class stayed
+   on screen: every tab panel rendered at once and the tabs did nothing visible.
+   `hidden` means "not relevant", which outranks any opinion about display. */
+[hidden] { display: none !important; }
+
+::selection { background: var(--hv-text); color: var(--hv-text-invert); }
+
+:focus-visible {
+  outline: var(--hv-hair) solid var(--hv-live);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--hv-bg); }
+::-webkit-scrollbar-thumb { background: var(--hv-line); border: 3px solid var(--hv-bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--hv-text-faint); }
+
+.hv-sr {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- 02 chrome
+   The window furniture. Every screen opens with the same three-part header:
+   a section tab, a metadata bar, and the OS bar — then a path/status strip.
+   Consistency here is what makes six unrelated screens feel like one machine.
+   ------------------------------------------------------------------------ */
+
+.hv-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--hv-void);
+  padding: var(--hv-3) var(--hv-3) 0;
+}
+
+.hv-chrome__row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--hv-2);
+  min-height: var(--hv-bar-h);
+}
+
+/* The section tab: inverted, the only white block in the header. It names
+   where you are, and the trailing dot marks the pane as focused. */
+.hv-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-3);
+  padding: 0 var(--hv-4);
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hv-tab::after {
+  content: '';
+  width: 5px; height: 5px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.hv-tab--ghost {
+  background: transparent;
+  color: var(--hv-text);
+  border: var(--hv-hair) solid var(--hv-line);
+}
+
+/* Metadata bar — the run identifiers. Purely informational, always mono. */
+.hv-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-3);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 var(--hv-4);
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+  white-space: nowrap;
+}
+
+.hv-meta strong { color: var(--hv-text); font-weight: 400; }
+
+.hv-meta__sep {
+  width: 4px; height: 4px;
+  flex: none;
+  background: var(--hv-text-faint);
+}
+
+/* OS bar — product identity, language, and the close affordance. */
+.hv-os {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-3);
+  flex: 0 1 420px;
+  padding: 0 var(--hv-2) 0 var(--hv-4);
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The version string takes the slack, so language and close stay pinned right
+   even when the label is hidden on a narrow viewport. */
+.hv-os__label { margin-right: auto; }
+
+/* Language. It lives in the OS bar rather than the app bar because the choice
+   is a property of the whole console, not of the section you happen to be in —
+   the same reason the version string is here. */
+.hv-lang {
+  display: inline-flex;
+  align-items: stretch;
+  flex: none;
+  height: 18px;
+  border: var(--hv-hair) solid var(--hv-line);
+}
+
+.hv-lang__btn {
+  padding: 0 var(--hv-2);
+  border: 0;
+  border-right: var(--hv-hair) solid var(--hv-line);
+  background: none;
+  color: var(--hv-text-faint);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  font-weight: 400;
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.hv-lang__btn:last-child { border-right: 0; }
+.hv-lang__btn:hover { color: var(--hv-text); background: var(--hv-bg-hover); }
+.hv-lang__btn[aria-pressed='true'] { background: var(--hv-bg-invert); color: var(--hv-text-invert); }
+
+.hv-os__x {
+  display: grid;
+  place-items: center;
+  width: 26px; height: 22px;
+  border: 0;
+  background: none;
+  color: var(--hv-text);
+  cursor: pointer;
+}
+
+.hv-os__x:hover { background: var(--hv-bg-hover); }
+
+/* Path strip — breadcrumb as a filesystem path, status flush right. */
+.hv-path {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-4);
+  min-height: var(--hv-strip-h);
+  margin-top: var(--hv-2);
+  padding: 0 var(--hv-3);
+  border-top: var(--hv-hair) solid var(--hv-line);
+  border-bottom: var(--hv-hair) solid var(--hv-line);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+.hv-path__crumbs { display: flex; align-items: center; gap: 0; min-width: 0; overflow: hidden; white-space: nowrap; }
+.hv-path__crumbs::before { content: '>'; margin-right: var(--hv-2); color: var(--hv-text-faint); }
+.hv-path a { color: inherit; text-decoration: none; }
+.hv-path a:hover { color: var(--hv-text); }
+.hv-path__here { color: var(--hv-text); }
+.hv-path__status { flex: none; }
+.hv-path__status b { font-weight: 400; color: var(--hv-live); }
+
+/* Application bar — the product's own navigation, sitting directly under the
+   OS chrome. Permission decides which items exist; this only styles them. */
+.hv-appbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-4);
+  flex-wrap: wrap;
+  padding: var(--hv-2) var(--hv-3);
+  border-bottom: var(--hv-hair) solid var(--hv-line);
+}
+
+.hv-appbar__brand {
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-small);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transform: scaleX(var(--hv-stretch-brand));
+  transform-origin: left center;
+  white-space: nowrap;
+}
+
+.hv-appbar__nav { display: flex; flex-wrap: wrap; gap: var(--hv-1); }
+
+.hv-appbar__link {
+  padding: var(--hv-1) var(--hv-3);
+  border: var(--hv-hair) solid transparent;
+  background: none;
+  color: var(--hv-text-faint);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hv-appbar__link:hover { color: var(--hv-text); border-color: var(--hv-line); }
+.hv-appbar__link[aria-current='page'] {
+  color: var(--hv-text-invert);
+  background: var(--hv-bg-invert);
+  border-color: var(--hv-bg-invert);
+}
+
+.hv-appbar__right {
+  display: flex;
+  align-items: center;
+  /* Wraps because this group grows with what a screen offers — a page carrying
+     both the theme and the locale toggle is a pixel wider than a phone. */
+  flex-wrap: wrap;
+  gap: var(--hv-2) var(--hv-3);
+  margin-left: auto;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+/* ---------------------------------------------------------------- 03 frame
+   Bracket corners, drawn as eight background gradients so both pseudo-elements
+   stay free for component use. `--hv-corner` sets the arm length.
+   ------------------------------------------------------------------------ */
+
+.hv-frame {
+  --arm: var(--hv-corner);
+  --ink: var(--hv-line);
+  position: relative;
+  padding: var(--hv-4);
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink));
+  background-size:
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm);
+  background-position:
+    left top, left top,
+    right top, right top,
+    left bottom, left bottom,
+    right bottom, right bottom;
+}
+
+.hv-frame--hot  { --ink: var(--hv-line-hot); }
+.hv-frame--live { --ink: var(--hv-live); }
+.hv-frame--wide { --arm: 28px; }
+.hv-frame--fill { background-color: var(--hv-bg-raised); }
+
+/* ---------------------------------------------------------------- 04 panel */
+
+.hv-panel {
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-raised);
+}
+
+.hv-panel--flush { border: 0; background: transparent; }
+
+.hv-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-3);
+  padding: var(--hv-2) var(--hv-3);
+  border-bottom: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+}
+
+.hv-panel__head--invert {
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  border-bottom-color: var(--hv-bg-invert);
+}
+
+.hv-panel__aside {
+  font-family: var(--hv-font-mono);
+  font-weight: 400;
+  letter-spacing: var(--hv-track-label);
+  color: var(--hv-text-dim);
+}
+
+.hv-panel__body { padding: var(--hv-4); }
+.hv-panel__body--tight { padding: var(--hv-3); }
+
+/* The "table sits flush in the panel" modifier. It scrolls on its own axis
+   because table cells are `nowrap` by design — without this the table widens
+   the whole document on narrow viewports instead of scrolling inside its box. */
+.hv-panel__body--none  { padding: 0; overflow-x: auto; }
+
+.hv-panel__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-3);
+  padding: var(--hv-2) var(--hv-3);
+  border-top: var(--hv-hair) solid var(--hv-line);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+/* ----------------------------------------------------------------- 05 type */
+
+/* The wide display face. Used once per screen, at most — it is the poster
+   headline, and a second one would cancel the first. */
+.hv-display {
+  margin: 0;
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-display);
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  /* Wide-stretches the glyphs toward the Eurostile-Extended proportion the
+     sketches use, which no free webfont supplies directly.
+
+     A transform paints outside the element's own box, so the box is narrowed by
+     exactly the factor it is about to be scaled by: the painted result lands on
+     the container edge instead of 12% past it. Without this the heading widens
+     the document on any layout where its column reaches the viewport edge. */
+  width: calc(100% / var(--hv-stretch));
+  transform: scaleX(var(--hv-stretch));
+  transform-origin: left center;
+}
+
+.hv-display--rule {
+  padding-bottom: var(--hv-2);
+  border-bottom: 2px solid currentColor;
+}
+
+.hv-h {
+  margin: 0;
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+}
+
+.hv-h--lead { font-size: var(--hv-size-lead); letter-spacing: 0.06em; }
+
+/* Section heading inside prose — the "GEOGRAPHY AND CLIMATE:" pattern. */
+.hv-h-sec {
+  margin: var(--hv-4) 0 var(--hv-1);
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+.hv-h-sec:first-child { margin-top: 0; }
+
+.hv-label {
+  display: block;
+  font-size: var(--hv-size-tiny);
+  font-weight: 600;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+.hv-micro {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+.hv-mono { font-family: var(--hv-font-mono); }
+.hv-num  { font-variant-numeric: tabular-nums; }
+
+/* Prose is the one place tracking is dropped and mixed case allowed. */
+.hv-prose { max-width: 68ch; font-size: var(--hv-size-body); color: var(--hv-text-dim); }
+.hv-prose p { margin: 0 0 var(--hv-3); }
+.hv-prose strong { color: var(--hv-text); font-weight: 600; }
+
+/* Bulleted annotation, as pinned around the planet diagrams: a square bullet,
+   a tracked caption, and a dim value beneath it. */
+.hv-annot { display: flex; gap: var(--hv-2); }
+.hv-annot::before {
+  content: '';
+  flex: none;
+  width: 4px; height: 4px;
+  margin-top: 6px;
+  background: currentColor;
+}
+.hv-annot__k {
+  display: block;
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+.hv-annot__v {
+  display: block;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  color: var(--hv-text-faint);
+}
+
+/* ------------------------------------------------------------------ 06 nav */
+
+.hv-nav { display: flex; flex-direction: column; }
+
+.hv-nav__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-2);
+  padding: var(--hv-2) var(--hv-3);
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--hv-text-dim);
+  font-size: var(--hv-size-base);
+  font-weight: 600;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.hv-nav__item:hover { color: var(--hv-text); background: var(--hv-bg-hover); }
+
+.hv-nav__item[aria-current='page'],
+.hv-nav__item[aria-pressed='true'] {
+  color: var(--hv-text);
+  border-left-color: var(--hv-text);
+}
+
+/* The focus dot from the sketches: present only on the active row. */
+.hv-nav__item[aria-current='page'] .hv-nav__dot,
+.hv-nav__item[aria-pressed='true'] .hv-nav__dot {
+  width: 5px; height: 5px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.hv-nav__lead { display: flex; align-items: center; gap: var(--hv-2); }
+.hv-nav__chev { color: var(--hv-text-faint); }
+.hv-nav__item[aria-current='page'] .hv-nav__chev { color: var(--hv-text); }
+
+/* Document tree — the folder list. Glyph is CSS, not an icon font. */
+.hv-tree { display: flex; flex-direction: column; }
+
+.hv-tree__item {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-2);
+  padding: var(--hv-1) var(--hv-3);
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--hv-text-dim);
+  font-size: var(--hv-size-small);
+  font-weight: 600;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hv-tree__item::before {
+  content: '';
+  flex: none;
+  width: 11px; height: 9px;
+  border: var(--hv-hair) solid currentColor;
+  border-top-width: 3px;
+  opacity: 0.7;
+}
+
+.hv-tree__item:hover { color: var(--hv-text); }
+
+/* Active by either contract: `aria-current` when the row is a link to the page
+   you are on, `aria-selected` when it switches a panel in place. Both mean the
+   same thing to the eye, so both must light the same way. */
+.hv-tree__item[aria-current='true'],
+.hv-tree__item[aria-selected='true'] {
+  color: var(--hv-text);
+  border-left-color: var(--hv-text);
+}
+.hv-tree__item[aria-current='true']::before,
+.hv-tree__item[aria-selected='true']::before { opacity: 1; }
+.hv-tree__item .hv-nav__chev { margin-left: auto; }
+
+/* Horizontal tab strip, for switching a panel's contents. */
+.hv-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: var(--hv-hair) solid var(--hv-line);
+}
+
+.hv-tabs__btn {
+  padding: var(--hv-2) var(--hv-4);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--hv-text-faint);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.hv-tabs__btn:hover { color: var(--hv-text-dim); }
+.hv-tabs__btn[aria-selected='true'] { color: var(--hv-text); border-bottom-color: var(--hv-text); }
+
+/* ----------------------------------------------------------------- 07 data */
+
+.hv-table-wrap { overflow-x: auto; border: var(--hv-hair) solid var(--hv-line); }
+
+.hv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--hv-size-base);
+  background: var(--hv-bg-raised);
+}
+
+.hv-table th,
+.hv-table td {
+  padding: var(--hv-2) var(--hv-3);
+  border-bottom: var(--hv-hair) solid var(--hv-line-dim);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.hv-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--hv-bg-inset);
+  border-bottom-color: var(--hv-line);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+.hv-table tbody tr:last-child td { border-bottom: 0; }
+
+.hv-table [data-align='end'] { text-align: right; font-variant-numeric: tabular-nums; }
+
+.hv-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.hv-table__sort:hover { color: var(--hv-text); }
+.hv-table__ind { width: 1ch; font-size: 0.75em; color: var(--hv-live); }
+
+.hv-table tbody tr[data-activatable] { cursor: pointer; }
+.hv-table tbody tr[data-activatable]:hover { background: var(--hv-bg-hover); }
+.hv-table tbody tr[aria-selected='true'] {
+  background: var(--hv-bg-hover);
+  box-shadow: inset 2px 0 0 var(--hv-text);
+}
+
+.hv-table__id { font-family: var(--hv-font-mono); color: var(--hv-text-dim); }
+
+/* Dotted-leader row: LABEL ........ VALUE. Taken from the dossier sketch; the
+   right column stays readable at any width because the leader does the work. */
+.hv-leaders { margin: 0; padding: 0; list-style: none; }
+
+.hv-leader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hv-2);
+  padding: var(--hv-1) 0;
+  font-size: var(--hv-size-small);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hv-leader__k { color: var(--hv-text-dim); white-space: nowrap; }
+.hv-leader__k b { font-weight: 400; color: var(--hv-text); }
+
+.hv-leader__fill {
+  flex: 1 1 auto;
+  min-width: var(--hv-5);
+  height: 0.75em;
+  border-bottom: var(--hv-hair) dotted var(--hv-text-faint);
+}
+
+.hv-leader__v {
+  font-family: var(--hv-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--hv-text);
+}
+
+.hv-leader[data-tone='good'] .hv-leader__v { color: var(--hv-good); }
+.hv-leader[data-tone='bad']  .hv-leader__v { color: var(--hv-bad); }
+.hv-leader[data-tone='warn'] .hv-leader__v { color: var(--hv-warn); }
+
+/* Basis line — the quiet "why" under a priced row. */
+.hv-leader__basis {
+  display: block;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  color: var(--hv-text-faint);
+  text-transform: uppercase;
+}
+
+/* Slab: an inverted heavy bar. Reserved for totals and headline facts. */
+.hv-slab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-4);
+  padding: var(--hv-2) var(--hv-3);
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+
+.hv-slab__v { font-family: var(--hv-font-mono); font-variant-numeric: tabular-nums; }
+.hv-slab--lg { padding: var(--hv-3) var(--hv-4); font-size: var(--hv-size-lead); }
+.hv-slab--outline {
+  background: transparent;
+  color: var(--hv-text);
+  border: var(--hv-hair) solid var(--hv-line);
+}
+
+/* Key/value grid for detail popups. */
+.hv-kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--hv-1) var(--hv-4); margin: 0; }
+.hv-kv dt { font-size: var(--hv-size-tiny); letter-spacing: var(--hv-track-label); text-transform: uppercase; color: var(--hv-text-dim); }
+.hv-kv dd { margin: 0; font-family: var(--hv-font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+/* --------------------------------------------------------------- 08 status */
+
+.hv-tags { display: flex; flex-wrap: wrap; gap: var(--hv-2); }
+
+/* Status counter tag. The count is the point, so it sits in its own inverted
+   cell — scannable as a number even when the label is not read. */
+.hv-tag {
+  display: inline-flex;
+  align-items: stretch;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  color: var(--hv-text-dim);
+  cursor: pointer;
+}
+
+.hv-tag__k {
+  padding: var(--hv-1) var(--hv-3);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+
+.hv-tag__n {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  padding: 0 var(--hv-2);
+  border-left: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  font-family: var(--hv-font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--hv-text);
+}
+
+.hv-tag:hover { color: var(--hv-text); border-color: var(--hv-text-faint); }
+
+.hv-tag[aria-pressed='true'] {
+  border-color: var(--hv-text);
+  color: var(--hv-text);
+}
+.hv-tag[aria-pressed='true'] .hv-tag__n {
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  border-left-color: var(--hv-text);
+}
+
+.hv-tag[data-tone='live'] .hv-tag__n { color: var(--hv-live); }
+.hv-tag[data-tone='good'] .hv-tag__n { color: var(--hv-good); }
+.hv-tag[data-tone='warn'] .hv-tag__n { color: var(--hv-warn); }
+.hv-tag[data-tone='bad']  .hv-tag__n { color: var(--hv-bad); }
+
+/* State pill — one machine's current state, inline in a table cell. */
+.hv-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-2);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+
+.hv-state::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: currentColor;
+}
+
+.hv-state[data-state='printing']    { color: var(--hv-live); }
+.hv-state[data-state='idle']        { color: var(--hv-good); }
+.hv-state[data-state='preparing']   { color: var(--hv-live); }
+.hv-state[data-state='paused']      { color: var(--hv-warn); }
+.hv-state[data-state='maintenance'] { color: var(--hv-warn); }
+.hv-state[data-state='error']       { color: var(--hv-bad); }
+.hv-state[data-state='offline']     { color: var(--hv-text-faint); }
+.hv-state[data-state='finished']    { color: var(--hv-good); }
+
+/* A live machine pulses; an idle one does not. Motion is a status channel. */
+.hv-state[data-state='printing']::before,
+.hv-state[data-state='preparing']::before { animation: hv-pulse 1.6s ease-in-out infinite; }
+
+@keyframes hv-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .hv-state::before,
+  .hv-meter__fill::after { animation: none !important; }
+}
+
+/* ---------------------------------------------------------------- 09 meter */
+
+.hv-meter {
+  position: relative;
+  height: 14px;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  overflow: hidden;
+}
+
+.hv-meter__fill {
+  position: relative;
+  height: 100%;
+  background: var(--hv-text);
+}
+
+.hv-meter[data-tone='live'] .hv-meter__fill { background: var(--hv-live); }
+.hv-meter[data-tone='warn'] .hv-meter__fill { background: var(--hv-warn); }
+.hv-meter[data-tone='bad']  .hv-meter__fill { background: var(--hv-bad); }
+
+/* Leading edge marker — reads as a playhead rather than a filled box. */
+.hv-meter__fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--hv-bg-invert);
+  animation: hv-pulse 1.6s ease-in-out infinite;
+}
+
+.hv-meter--thin { height: 6px; }
+
+.hv-meter-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-3);
+}
+.hv-meter-row .hv-meter { flex: 1 1 auto; }
+.hv-meter-row__pct {
+  flex: none;
+  min-width: 5ch;
+  text-align: right;
+  font-family: var(--hv-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tick ruler — the instrument scale along the edge of a viewport.
+   Major tick every 50px, minor every 10px, both drawn from repeating gradients
+   so the ruler is resolution-independent and costs no markup. */
+.hv-ruler {
+  height: 12px;
+  background-image:
+    repeating-linear-gradient(90deg, var(--hv-text-faint) 0 var(--hv-hair), transparent var(--hv-hair) 50px),
+    repeating-linear-gradient(90deg, var(--hv-line) 0 var(--hv-hair), transparent var(--hv-hair) 10px);
+  background-size: 100% 10px, 100% 5px;
+  background-position: 0 bottom, 0 bottom;
+  background-repeat: no-repeat;
+}
+
+/* ------------------------------------------------------------- 10 controls */
+
+/* Buttons wear bracket corners rather than borders — the CANCEL / MORE
+   treatment from the sketches. The full border is reserved for inputs. */
+.hv-btn {
+  --arm: 8px;
+  --ink: var(--hv-text-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hv-2);
+  padding: var(--hv-2) var(--hv-4);
+  border: 0;
+  background-color: var(--hv-bg-inset);
+  color: var(--hv-text);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink));
+  background-size:
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm),
+    var(--arm) var(--hv-hair), var(--hv-hair) var(--arm);
+  background-position:
+    left top, left top, right top, right top,
+    left bottom, left bottom, right bottom, right bottom;
+  transition: background-color 0.12s linear, color 0.12s linear;
+}
+
+.hv-btn:hover { --ink: var(--hv-text); background-color: var(--hv-bg-hover); }
+.hv-btn:disabled { color: var(--hv-text-faint); cursor: not-allowed; background-color: transparent; }
+
+/* Primary: the one committing action per screen. Solid, so it cannot be
+   confused with the bracketed secondaries around it. */
+.hv-btn--primary {
+  background-color: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+  --ink: var(--hv-bg-invert);
+}
+.hv-btn--primary:hover { background-color: var(--hv-text-dim); --ink: var(--hv-text-dim); }
+
+.hv-btn--danger { color: var(--hv-bad); --ink: var(--hv-bad); }
+.hv-btn--danger:hover { background-color: var(--hv-bad); color: var(--hv-text-invert); }
+
+.hv-btn--block { display: flex; width: 100%; }
+.hv-btn--lg { padding: var(--hv-3) var(--hv-5); font-size: var(--hv-size-small); --arm: 12px; }
+.hv-btn--sm { padding: var(--hv-1) var(--hv-2); --arm: 6px; }
+
+/* Field */
+.hv-field { display: flex; flex-direction: column; gap: var(--hv-1); }
+
+.hv-input,
+.hv-select,
+.hv-textarea {
+  width: 100%;
+  padding: var(--hv-2) var(--hv-3);
+  border: var(--hv-hair) solid var(--hv-line);
+  border-radius: var(--hv-radius);
+  background: var(--hv-bg-inset);
+  color: var(--hv-text);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-base);
+  letter-spacing: 0.04em;
+}
+
+.hv-input::placeholder { color: var(--hv-text-faint); }
+.hv-input:hover, .hv-select:hover { border-color: var(--hv-text-faint); }
+.hv-input:focus, .hv-select:focus, .hv-textarea:focus {
+  border-color: var(--hv-live);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--hv-live-glow);
+}
+
+.hv-select {
+  appearance: none;
+  padding-right: var(--hv-6);
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-size: 5px 5px, 5px 5px;
+  background-position: right 16px center, right 11px center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.hv-hint { font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); text-transform: uppercase; color: var(--hv-text-faint); }
+.hv-error { color: var(--hv-bad); }
+
+/* Segmented control — mutually exclusive options as one instrument. */
+.hv-seg { display: inline-flex; border: var(--hv-hair) solid var(--hv-line); background: var(--hv-bg-inset); }
+
+.hv-seg__btn {
+  padding: var(--hv-2) var(--hv-3);
+  border: 0;
+  border-right: var(--hv-hair) solid var(--hv-line);
+  background: none;
+  color: var(--hv-text-dim);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.hv-seg__btn:last-child { border-right: 0; }
+.hv-seg__btn:hover { color: var(--hv-text); background: var(--hv-bg-hover); }
+.hv-seg__btn[aria-pressed='true'] { background: var(--hv-bg-invert); color: var(--hv-text-invert); }
+
+/* Colour swatch — up to four slots on the plate. */
+.hv-swatches { display: flex; flex-wrap: wrap; gap: var(--hv-2); }
+
+.hv-swatch {
+  position: relative;
+  width: 34px; height: 34px;
+  padding: 0;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-swatch, #808080);
+  cursor: pointer;
+}
+.hv-swatch:hover { border-color: var(--hv-text-faint); }
+.hv-swatch[aria-pressed='true'] { border-color: var(--hv-text); box-shadow: 0 0 0 2px var(--hv-void), 0 0 0 3px var(--hv-text); }
+
+/* Named slot: swatch + the material loaded in it. */
+.hv-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-3);
+  padding: var(--hv-2);
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+}
+.hv-slot__chip { flex: none; width: 22px; height: 22px; border: var(--hv-hair) solid var(--hv-line); background: var(--hv-swatch, #808080); }
+.hv-slot__body { min-width: 0; }
+.hv-slot__n { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); color: var(--hv-text-faint); }
+
+/* Range — flat, square, no thumb chrome. */
+.hv-range {
+  width: 100%;
+  appearance: none;
+  height: 20px;
+  background: none;
+  cursor: pointer;
+}
+.hv-range::-webkit-slider-runnable-track { height: 2px; background: var(--hv-line); }
+.hv-range::-moz-range-track { height: 2px; background: var(--hv-line); }
+.hv-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 4px; height: 16px;
+  margin-top: -7px;
+  background: var(--hv-text);
+  border: 0;
+}
+.hv-range::-moz-range-thumb { width: 4px; height: 16px; background: var(--hv-text); border: 0; border-radius: 0; }
+
+/* Checkbox / radio as square instrument marks. */
+.hv-check { display: flex; align-items: flex-start; gap: var(--hv-2); cursor: pointer; }
+.hv-check input {
+  appearance: none;
+  flex: none;
+  width: 14px; height: 14px;
+  margin: 2px 0 0;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  cursor: pointer;
+}
+.hv-check input:checked { background: var(--hv-text); border-color: var(--hv-text); box-shadow: inset 0 0 0 3px var(--hv-void); }
+.hv-check input[type='radio'] { border-radius: 50%; }
+.hv-check:hover input { border-color: var(--hv-text-faint); }
+.hv-check__body { min-width: 0; }
+
+/* Option row — a choice that carries a price delta. The delta is the reason
+   the row exists, so it is typographically equal to the label, not smaller. */
+.hv-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-3);
+  padding: var(--hv-2) var(--hv-3);
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  cursor: pointer;
+}
+.hv-option:hover { border-color: var(--hv-text-faint); }
+.hv-option[aria-pressed='true'] { border-color: var(--hv-text); background: var(--hv-bg-hover); }
+.hv-option__delta { font-family: var(--hv-font-mono); white-space: nowrap; }
+.hv-option__delta[data-dir='up']   { color: var(--hv-bad); }
+.hv-option__delta[data-dir='down'] { color: var(--hv-good); }
+
+/* Upload well */
+.hv-drop {
+  display: grid;
+  place-items: center;
+  gap: var(--hv-2);
+  min-height: 120px;
+  padding: var(--hv-5);
+  border: var(--hv-hair) dashed var(--hv-line);
+  background: var(--hv-bg-inset);
+  text-align: center;
+  cursor: pointer;
+}
+.hv-drop:hover { border-color: var(--hv-text-faint); background: var(--hv-bg-hover); }
+
+/* ---------------------------------------------------------------- 11 cards */
+
+/* Glyph card — the periodic-element treatment, reused for materials. The
+   two-letter code is the identity; the numbers under it are the specifics. */
+.hv-glyph {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--hv-4);
+  min-height: 150px;
+  padding: var(--hv-4);
+  background: var(--hv-bg-raised);
+  text-align: center;
+  cursor: pointer;
+}
+.hv-glyph:hover { --ink: var(--hv-text); background-color: var(--hv-bg-hover); }
+
+.hv-glyph__mark {
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-figure);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  /* Same width compensation as .hv-display — this one is centred, so an
+     unconstrained scale would spill out of both sides of the card. */
+  width: calc(100% / var(--hv-stretch-mark));
+  transform: scaleX(var(--hv-stretch-mark));
+  margin: auto auto;
+}
+
+.hv-glyph__stats {
+  display: flex;
+  justify-content: center;
+  gap: var(--hv-3);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+.hv-glyph__name {
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hv-glyph[data-status='none'] { opacity: 0.45; }
+
+/* Stat card — one figure, named. */
+.hv-stat { display: flex; flex-direction: column; gap: var(--hv-1); padding: var(--hv-3); }
+.hv-stat__v {
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-figure);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.hv-stat__v small { font-family: var(--hv-font-mono); font-size: var(--hv-size-tiny); color: var(--hv-text-dim); letter-spacing: var(--hv-track-label); }
+.hv-stat[data-tone='live'] .hv-stat__v { color: var(--hv-live); }
+.hv-stat[data-tone='warn'] .hv-stat__v { color: var(--hv-warn); }
+.hv-stat[data-tone='bad']  .hv-stat__v { color: var(--hv-bad); }
+.hv-stat[data-tone='good'] .hv-stat__v { color: var(--hv-good); }
+
+/* Viewport — the model / imagery well, framed and annotated. */
+.hv-view {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  background: radial-gradient(120% 120% at 50% 40%, #101216 0%, #000 72%);
+  overflow: hidden;
+}
+:root[data-theme='paper'] .hv-view { background: radial-gradient(120% 120% at 50% 40%, #fff 0%, #e6e3dc 72%); }
+
+.hv-view__pin { position: absolute; color: var(--hv-text-dim); }
+.hv-view__pin--tl { top: var(--hv-3); left: var(--hv-3); }
+.hv-view__pin--tr { top: var(--hv-3); right: var(--hv-3); text-align: right; }
+.hv-view__pin--bl { bottom: var(--hv-3); left: var(--hv-3); }
+.hv-view__pin--br { bottom: var(--hv-3); right: var(--hv-3); text-align: right; }
+.hv-view__pin--tr .hv-annot, .hv-view__pin--br .hv-annot { flex-direction: row-reverse; text-align: right; }
+
+/* ------------------------------------------------------------- 12 pipeline
+   The order's journey, scenario steps 6–10. A stepper rather than a bar,
+   because the customer needs to know which stage, not what percentage.
+   ------------------------------------------------------------------------ */
+
+.hv-pipe { display: flex; overflow-x: auto; }
+
+.hv-pipe__step {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 108px;
+  padding: var(--hv-3) var(--hv-3) var(--hv-3) var(--hv-4);
+  border-top: 2px solid var(--hv-line);
+  color: var(--hv-text-faint);
+}
+
+.hv-pipe__step::before {
+  content: '';
+  position: absolute;
+  top: -5px; left: var(--hv-4);
+  width: 8px; height: 8px;
+  background: var(--hv-line);
+}
+
+.hv-pipe__step[data-state='done'] { border-top-color: var(--hv-text); color: var(--hv-text-dim); }
+.hv-pipe__step[data-state='done']::before { background: var(--hv-text); }
+
+.hv-pipe__step[data-state='now'] {
+  border-top-color: var(--hv-live);
+  color: var(--hv-text);
+}
+.hv-pipe__step[data-state='now']::before { background: var(--hv-live); animation: hv-pulse 1.6s ease-in-out infinite; }
+
+.hv-pipe__n { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); }
+.hv-pipe__k { font-size: var(--hv-size-tiny); font-weight: 700; letter-spacing: var(--hv-track-label); text-transform: uppercase; }
+.hv-pipe__t { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); color: var(--hv-text-faint); }
+
+/* -------------------------------------------------------------- 13 overlay */
+
+.hv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--hv-5);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(2px);
+}
+:root[data-theme='paper'] .hv-overlay { background: rgba(244, 243, 239, 0.86); }
+
+.hv-overlay[hidden] { display: none; }
+
+.hv-modal {
+  width: min(880px, 100%);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  border: var(--hv-hair) solid var(--hv-line);
+  background: var(--hv-bg);
+  box-shadow: 0 0 0 1px var(--hv-void), 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.hv-modal__body { overflow: auto; padding: var(--hv-4); }
+
+/* --------------------------------------------------------------- 14 layout */
+
+.hv-shell { display: flex; flex-direction: column; min-height: 100vh; }
+.hv-main  { flex: 1 1 auto; padding: var(--hv-3); }
+
+/* Sidebar + content, the ARBOGAST three-column arrangement. */
+.hv-cols {
+  display: grid;
+  gap: var(--hv-3);
+  align-items: start;
+}
+.hv-cols--2   { grid-template-columns: minmax(0, 1fr) minmax(320px, 26rem); }
+.hv-cols--2l  { grid-template-columns: minmax(220px, 15rem) minmax(0, 1fr); }
+.hv-cols--3   { grid-template-columns: minmax(180px, 13rem) minmax(200px, 15rem) minmax(0, 1fr); }
+.hv-cols--3r  { grid-template-columns: minmax(180px, 13rem) minmax(0, 1fr) minmax(280px, 22rem); }
+
+.hv-grid { display: grid; gap: var(--hv-3); }
+.hv-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hv-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hv-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hv-grid--auto { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+.hv-stack   { display: flex; flex-direction: column; gap: var(--hv-3); }
+.hv-stack--2 { gap: var(--hv-2); }
+.hv-stack--4 { gap: var(--hv-4); }
+.hv-row     { display: flex; align-items: center; gap: var(--hv-3); flex-wrap: wrap; }
+.hv-row--end { justify-content: flex-end; }
+.hv-row--between { justify-content: space-between; }
+.hv-spacer  { flex: 1 1 auto; }
+
+.hv-hr { height: var(--hv-hair); border: 0; margin: var(--hv-3) 0; background: var(--hv-line); }
+.hv-hr--heavy { height: 2px; background: var(--hv-text); }
+
+.hv-sticky { position: sticky; top: calc(var(--hv-bar-h) + var(--hv-strip-h) + var(--hv-6)); }
+
+.hv-dim   { color: var(--hv-text-dim); }
+.hv-faint { color: var(--hv-text-faint); }
+.hv-hot   { color: var(--hv-text); }
+.hv-live  { color: var(--hv-live); }
+.hv-good  { color: var(--hv-good); }
+.hv-warn  { color: var(--hv-warn); }
+.hv-bad   { color: var(--hv-bad); }
+.hv-right { text-align: right; }
+.hv-nowrap { white-space: nowrap; }
+
+/* --------------------------------------------------------------- 15 article
+   Long-form reading, built on the dossier sketch: a tracked deck, sectioned
+   body copy, and figures pinned with annotations. The one place in the system
+   where measure and rhythm matter more than density.
+   ------------------------------------------------------------------------ */
+
+.hv-article {
+  max-width: 74ch;
+  font-size: 0.9375rem;
+  line-height: 1.62;
+  color: var(--hv-text-dim);
+}
+
+.hv-article > * + * { margin-top: var(--hv-4); }
+
+.hv-article p { margin: 0; }
+.hv-article strong { color: var(--hv-text); font-weight: 600; }
+.hv-article em { font-style: italic; color: var(--hv-text); }
+
+.hv-article a {
+  color: var(--hv-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--hv-live);
+}
+.hv-article a:hover { background: var(--hv-live-glow); }
+
+/* Section headings repeat the "GEOGRAPHY AND CLIMATE:" pattern — tracked,
+   uppercase, and tight to the paragraph they introduce. */
+.hv-article h2 {
+  margin: var(--hv-6) 0 0;
+  font-size: var(--hv-size-small);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text);
+}
+.hv-article h2 + p { margin-top: var(--hv-2); }
+
+.hv-article h3 {
+  margin: var(--hv-5) 0 0;
+  font-size: var(--hv-size-base);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--hv-text);
+}
+.hv-article h3 + p { margin-top: var(--hv-1); }
+
+.hv-article ul,
+.hv-article ol { margin: 0; padding-left: var(--hv-5); }
+.hv-article li + li { margin-top: var(--hv-1); }
+.hv-article ul { list-style: none; padding-left: var(--hv-4); }
+.hv-article ul > li { position: relative; }
+.hv-article ul > li::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--hv-4) * -1);
+  top: 0.62em;
+  width: 4px; height: 4px;
+  background: var(--hv-text-faint);
+}
+
+/* Lede — one paragraph at larger size that states the claim of the piece. */
+.hv-lede {
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--hv-text);
+}
+
+/* Pull quote. No quotation marks: the rule and the scale do that work. */
+.hv-quote {
+  margin: var(--hv-6) 0;
+  padding-left: var(--hv-4);
+  border-left: 2px solid var(--hv-text);
+  font-family: var(--hv-font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  color: var(--hv-text);
+}
+.hv-quote cite {
+  display: block;
+  margin-top: var(--hv-2);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+/* Code. Technical posts carry it, so it gets a real treatment rather than a
+   grey box: chrome strip on top, hairline body, horizontal scroll of its own. */
+.hv-code {
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-inset);
+}
+.hv-code__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--hv-3);
+  padding: var(--hv-1) var(--hv-3);
+  border-bottom: 1px solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+.hv-code pre {
+  margin: 0;
+  padding: var(--hv-3);
+  overflow-x: auto;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-base);
+  line-height: 1.6;
+  color: var(--hv-text);
+}
+.hv-article code {
+  padding: 1px 5px;
+  background: var(--hv-bg-inset);
+  border: 1px solid var(--hv-line-dim);
+  font-family: var(--hv-font-mono);
+  font-size: 0.92em;
+  color: var(--hv-text);
+}
+.hv-code pre code { padding: 0; border: 0; background: none; }
+
+/* Figure — image or diagram with the annotation caption used on the viewports. */
+.hv-figure { margin: var(--hv-6) 0; }
+.hv-figure figcaption {
+  display: flex;
+  gap: var(--hv-2);
+  margin-top: var(--hv-2);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+.hv-figure figcaption::before { content: '■'; color: var(--hv-text-faint); }
+
+/* Callout — an aside that must not be missed. */
+.hv-callout {
+  padding: var(--hv-3);
+  border-left: 2px solid var(--hv-warn);
+  background: var(--hv-bg-inset);
+  font-size: var(--hv-size-base);
+}
+.hv-callout--live { border-left-color: var(--hv-live); }
+
+/* ------------------------------------------------------------ post cards */
+
+.hv-post {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hv-3);
+  padding: var(--hv-4);
+  background: var(--hv-bg-raised);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.12s linear;
+}
+.hv-post:hover { --ink: var(--hv-text); background-color: var(--hv-bg-hover); }
+
+.hv-post__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hv-3);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+.hv-post__meta b { font-weight: 400; color: var(--hv-live); }
+
+.hv-post__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.24;
+  letter-spacing: 0.01em;
+  color: var(--hv-text);
+}
+.hv-post:hover .hv-post__title { text-decoration: underline; text-underline-offset: 3px; }
+
+.hv-post__excerpt { margin: 0; font-size: var(--hv-size-base); color: var(--hv-text-dim); }
+
+.hv-post__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--hv-3);
+  margin-top: auto;
+  padding-top: var(--hv-2);
+  border-top: 1px solid var(--hv-line-dim);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+/* Compact list row for the archive — number, title, dotted leader, date. */
+.hv-post-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hv-3);
+  padding: var(--hv-2) 0;
+  border-bottom: 1px solid var(--hv-line-dim);
+  color: inherit;
+  text-decoration: none;
+}
+.hv-post-row:hover { background: var(--hv-bg-hover); }
+.hv-post-row__n { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); color: var(--hv-text-faint); }
+.hv-post-row__t { color: var(--hv-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hv-post-row__d { font-family: var(--hv-font-mono); font-size: var(--hv-size-tiny); color: var(--hv-text-faint); white-space: nowrap; }
+
+/* Reading progress — a hairline that fills across the top of an article. */
+.hv-progress {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 60;
+  height: 2px;
+  background: var(--hv-live);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+/* -------------------------------------------------------------- 16 settings
+   A settings screen is a control panel, so it is built from rows rather than
+   cards: name, why it matters, the backend identifier it maps to, and the
+   control — repeated at a fixed rhythm so a hundred parameters stay scannable.
+
+   The identifier is not decoration. Showing `pricing.margin_percent` next to
+   "Прибыль" means a support conversation, a log line and this screen all use
+   the same word for the same thing.
+   ------------------------------------------------------------------------ */
+
+.hv-set {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+  gap: var(--hv-4);
+  align-items: center;
+  padding: var(--hv-3) var(--hv-3) var(--hv-3) var(--hv-4);
+  border-bottom: 1px solid var(--hv-line-dim);
+  position: relative;
+}
+
+.hv-set:last-child { border-bottom: 0; }
+.hv-set:hover { background: var(--hv-bg-inset); }
+
+/* Modified-from-default marker. A settings screen that cannot tell you what
+   you changed is a settings screen you stop trusting. */
+.hv-set::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--hv-warn);
+  opacity: 0;
+}
+.hv-set[data-changed='true']::before { opacity: 1; }
+
+.hv-set__name {
+  display: block;
+  font-size: var(--hv-size-base);
+  font-weight: 600;
+  color: var(--hv-text);
+}
+
+.hv-set__hint {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--hv-size-small);
+  line-height: 1.45;
+  color: var(--hv-text-dim);
+}
+
+.hv-set__code {
+  display: inline-block;
+  margin-top: var(--hv-1);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+.hv-set__v {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--hv-2);
+}
+
+/* The default, revealed only once the value differs from it. */
+.hv-set__was {
+  display: none;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-warn);
+  white-space: nowrap;
+}
+.hv-set[data-changed='true'] .hv-set__was { display: inline; }
+
+/* Input carrying a unit. The unit is part of the field, not a label beside it,
+   so the number and its dimension can never be read apart. */
+.hv-unit {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-inset);
+}
+.hv-unit:focus-within { border-color: var(--hv-live); box-shadow: 0 0 0 1px var(--hv-live-glow); }
+
+.hv-unit input {
+  width: 6.5rem;
+  padding: var(--hv-2) var(--hv-3);
+  border: 0;
+  background: none;
+  font-family: var(--hv-font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.hv-unit input:focus { outline: none; }
+.hv-unit input::-webkit-outer-spin-button,
+.hv-unit input::-webkit-inner-spin-button { appearance: none; margin: 0; }
+.hv-unit input[type='number'] { appearance: textfield; }
+
+.hv-unit__u {
+  display: grid;
+  place-items: center;
+  padding: 0 var(--hv-3);
+  border-left: 1px solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+  white-space: nowrap;
+}
+
+/* Switch. Square and mechanical — a rounded pill would be the only soft shape
+   in the entire system. */
+.hv-switch {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  cursor: pointer;
+}
+.hv-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  background: var(--hv-text-faint);
+  transition: transform 0.14s cubic-bezier(0.2, 0.7, 0.3, 1), background-color 0.14s linear;
+}
+.hv-switch:hover { border-color: var(--hv-text-faint); }
+.hv-switch[aria-checked='true'] { border-color: var(--hv-live); }
+.hv-switch[aria-checked='true']::after { transform: translateX(22px); background: var(--hv-live); }
+.hv-switch[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hv-switch::after { transition: none; }
+}
+
+/* Weight slider: a scheduler knob shows its number, because "3" and "4" are
+   the difference between two different farms. */
+.hv-weight { display: flex; align-items: center; gap: var(--hv-3); width: 100%; }
+.hv-weight .hv-range { flex: 1 1 auto; }
+.hv-weight__v {
+  flex: none;
+  min-width: 3.5ch;
+  text-align: right;
+  font-family: var(--hv-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Save bar. Pinned, and only interesting when something is dirty. */
+.hv-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--hv-3);
+  flex-wrap: wrap;
+  margin-top: var(--hv-3);
+  padding: var(--hv-2) var(--hv-3);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-raised);
+}
+.hv-savebar[data-dirty='true'] { border-color: var(--hv-warn); }
+
+.hv-savebar__n {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+.hv-savebar[data-dirty='true'] .hv-savebar__n { color: var(--hv-warn); }
+
+/* Health row for the diagnostics panel: probe, verdict, latency. */
+.hv-health {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--hv-3);
+  align-items: center;
+  padding: var(--hv-2) var(--hv-3);
+  border-bottom: 1px solid var(--hv-line-dim);
+}
+.hv-health:last-child { border-bottom: 0; }
+.hv-health__ms {
+  min-width: 6ch;
+  text-align: right;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  font-variant-numeric: tabular-nums;
+  color: var(--hv-text-faint);
+}
+
+/* Destructive group. Framed in the failure colour so it can never be mistaken
+   for the panel above it. */
+.hv-danger { --ink: var(--hv-bad); }
+.hv-danger .hv-set::before { background: var(--hv-bad); }
+
+/* ------------------------------------------------------------- 17 dashboard
+   Four questions the farm floor asks, each given the shape that answers it:
+
+     where is it        -> a plan, because position is the answer
+     what is it doing   -> colour on an edge, readable across the whole plan
+     what is loaded     -> chips in the cell; headroom as a stacked bar
+     when is it free    -> a timeline, because a table cannot show "when"
+
+   Nothing here invents a new visual language: the plan is bracket frames, the
+   timeline is hairline rows, the bars are the same tones as every status tag.
+   ------------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------- floor plan */
+
+.hv-floor { display: flex; flex-direction: column; gap: var(--hv-3); }
+
+.hv-zone { --ink: var(--hv-line); }
+
+.hv-zone__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hv-3);
+  margin-bottom: var(--hv-2);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+/* A rack is a labelled row of bays. The label sits in the gutter so the cells
+   themselves line up across every rack in the zone. */
+.hv-rack {
+  display: grid;
+  grid-template-columns: 4.5rem repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--hv-2);
+  align-items: stretch;
+  margin-bottom: var(--hv-2);
+}
+
+.hv-rack__label {
+  display: flex;
+  align-items: center;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ status wall
+   One machine, one square. The grid keeps its rack order so position still
+   answers "where", but the square itself carries only state — a wall of these
+   is read at a glance from across the room, and the detail lives in the popup
+   a click away.
+
+   Each state exposes its colour as `--st`, so the border, the glow and the
+   inner wash all come from one declaration per state instead of three. */
+
+.hv-matrix {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: var(--hv-2);
+}
+
+.hv-node {
+  --st: var(--hv-text-faint);
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: var(--hv-2);
+  border: 1px solid var(--st);
+  background:
+    radial-gradient(120% 120% at 50% 120%, color-mix(in srgb, var(--st) 22%, transparent), transparent 70%),
+    var(--hv-bg-raised);
+  color: inherit;
+  cursor: pointer;
+  /* The glow. Kept tight and low-alpha: it should read as an emitting panel,
+     not as a blurred halo. */
+  box-shadow: 0 0 14px -4px var(--st), inset 0 0 18px -12px var(--st);
+  transition: box-shadow 0.15s linear, transform 0.15s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* Fallback for engines without color-mix: solid panel, glow still applies. */
+@supports not (background: color-mix(in srgb, red 20%, transparent)) {
+  .hv-node { background: var(--hv-bg-raised); }
+}
+
+.hv-node:hover,
+.hv-node:focus-visible {
+  box-shadow: 0 0 22px -2px var(--st), inset 0 0 22px -10px var(--st);
+  transform: translateY(-2px);
+  z-index: 1;
+}
+
+.hv-node[data-state='printing'],
+.hv-node[data-state='preparing']   { --st: var(--hv-live); }
+.hv-node[data-state='idle']        { --st: var(--hv-good); }
+.hv-node[data-state='paused'],
+.hv-node[data-state='maintenance'] { --st: var(--hv-warn); }
+.hv-node[data-state='error']       { --st: var(--hv-bad); }
+.hv-node[data-state='offline']     { --st: var(--hv-line); box-shadow: none; opacity: 0.55; }
+
+.hv-node__id {
+  font-family: var(--hv-font-display);
+  font-size: var(--hv-size-base);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.hv-node__pct {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  color: var(--hv-text-dim);
+}
+
+/* Fill line across the bottom edge: progress without spending any height. */
+.hv-node__fill {
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 3px;
+  background: var(--st);
+  width: var(--p, 0%);
+}
+
+/* A machine actually running breathes. Everything else holds still, which is
+   what makes the movement mean something. */
+.hv-node[data-state='printing']::after,
+.hv-node[data-state='preparing']::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--st);
+  opacity: 0;
+  animation: hv-node-pulse 2.4s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes hv-node-pulse {
+  0%   { opacity: 0.7; transform: scale(1); }
+  70%  { opacity: 0;   transform: scale(1.08); }
+  100% { opacity: 0; }
+}
+
+.hv-node[data-state='error'] { animation: hv-node-alarm 1.4s steps(1) infinite; }
+@keyframes hv-node-alarm {
+  0%, 60%  { box-shadow: 0 0 18px -3px var(--st), inset 0 0 18px -12px var(--st); }
+  61%,100% { box-shadow: 0 0 6px -3px var(--st), inset 0 0 18px -12px var(--st); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hv-node::after { animation: none; }
+  .hv-node[data-state='error'] { animation: none; }
+}
+
+/* An empty bay is drawn, not omitted — a gap in the rack is information. */
+.hv-node--empty {
+  --st: var(--hv-line-dim);
+  border-style: dashed;
+  background: none;
+  box-shadow: none;
+  cursor: default;
+}
+.hv-node--empty:hover { transform: none; box-shadow: none; }
+
+/* --------------------------------------------------------------- KPI tile
+   A number worth putting on a dashboard always has three parts: the value,
+   what it is measured against, and which way it is moving. */
+
+.hv-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hv-1);
+  padding: var(--hv-3);
+}
+
+.hv-kpi__v {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hv-2);
+  font-family: var(--hv-font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.hv-kpi__v small {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  font-weight: 400;
+  letter-spacing: var(--hv-track-label);
+  color: var(--hv-text-dim);
+}
+
+.hv-kpi__d {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+}
+.hv-kpi__d[data-dir='up']   { color: var(--hv-good); }
+.hv-kpi__d[data-dir='down'] { color: var(--hv-bad); }
+.hv-kpi__d[data-dir='up']::before   { content: '▲'; font-size: 0.8em; }
+.hv-kpi__d[data-dir='down']::before { content: '▼'; font-size: 0.8em; }
+/* Direction is not sentiment: spend rising is bad, revenue rising is good. */
+.hv-kpi__d[data-sentiment='bad']  { color: var(--hv-bad); }
+.hv-kpi__d[data-sentiment='good'] { color: var(--hv-good); }
+.hv-kpi__d[data-sentiment='flat'] { color: var(--hv-text-faint); }
+
+.hv-kpi__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--hv-2);
+  margin-top: auto;
+  padding-top: var(--hv-2);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+/* Loaded filament, one chip per AMS slot. Four chips is the whole answer to
+   "what colour is in that machine" without a word of text. */
+.hv-ams { display: flex; gap: 2px; }
+.hv-ams i {
+  width: 9px; height: 9px;
+  background: var(--hv-slot, transparent);
+  border: 1px solid var(--hv-line);
+}
+.hv-ams i[data-empty] { background: none; border-style: dashed; }
+.hv-ams i[data-low] { box-shadow: inset 0 -3px 0 var(--hv-warn); }
+
+/* --------------------------------------------------------------- timeline */
+
+.hv-gantt { display: flex; flex-direction: column; }
+
+.hv-gantt__scale {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--hv-2);
+  align-items: end;
+  padding-bottom: var(--hv-1);
+  border-bottom: 1px solid var(--hv-line);
+}
+
+.hv-gantt__hours {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  color: var(--hv-text-faint);
+}
+
+.hv-gantt__row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--hv-2);
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--hv-line-dim);
+}
+.hv-gantt__row:hover { background: var(--hv-bg-inset); }
+
+.hv-gantt__who {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  color: var(--hv-text-dim);
+}
+
+/* The track carries hour gridlines so a block can be read against the clock
+   without chasing a tooltip. */
+.hv-gantt__track {
+  position: relative;
+  height: 18px;
+  background-image: repeating-linear-gradient(90deg, var(--hv-line-dim) 0 1px, transparent 1px calc(100% / 12));
+}
+
+.hv-gantt__bar {
+  position: absolute;
+  top: 2px; bottom: 2px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--hv-1);
+  background: var(--hv-bg-hover);
+  border-left: 2px solid var(--hv-text-faint);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.hv-gantt__bar[data-kind='printing'] { border-left-color: var(--hv-live); color: var(--hv-text); }
+.hv-gantt__bar[data-kind='queued']   { border-left-color: var(--hv-text-faint); background: transparent; border-top: 1px dashed var(--hv-line); border-bottom: 1px dashed var(--hv-line); }
+.hv-gantt__bar[data-kind='service']  { border-left-color: var(--hv-warn); background: repeating-linear-gradient(45deg, transparent 0 4px, var(--hv-bg-hover) 4px 8px); }
+.hv-gantt__bar[data-kind='blocked']  { border-left-color: var(--hv-bad); }
+
+/* Now. The one moving thing on the page. */
+.hv-gantt__now {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--hv-live);
+  z-index: 2;
+}
+.hv-gantt__now::before {
+  content: '';
+  position: absolute;
+  top: -3px; left: -2px;
+  width: 5px; height: 5px;
+  background: var(--hv-live);
+}
+
+/* ------------------------------------------------------------ stacked bar
+   Material headroom: what is loaded, what is on the shelf, what the queue has
+   already spoken for. Committed stock is the number that matters and it is the
+   one nobody tracks, so it gets the warning tone. */
+
+.hv-stack-bar {
+  display: flex;
+  height: 14px;
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  overflow: hidden;
+}
+.hv-stack-bar span { display: block; height: 100%; }
+.hv-stack-bar [data-part='loaded']    { background: var(--hv-live); }
+.hv-stack-bar [data-part='stock']     { background: var(--hv-text-faint); }
+.hv-stack-bar [data-part='committed'] { background: repeating-linear-gradient(45deg, var(--hv-warn) 0 3px, transparent 3px 6px); }
+
+.hv-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hv-3);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+.hv-legend span { display: inline-flex; align-items: center; gap: var(--hv-1); }
+.hv-legend i { width: 9px; height: 9px; flex: none; }
+
+/* ----------------------------------------------------------------- funnel
+   Orders by stage. A bar per stage rather than a true funnel: stages are not
+   nested, an order sits in exactly one, and comparing lengths is the task. */
+
+.hv-funnel { display: flex; flex-direction: column; }
+
+.hv-funnel__row {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr) 2.5rem;
+  gap: var(--hv-2);
+  align-items: center;
+  padding: var(--hv-1) 0;
+}
+
+.hv-funnel__k {
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+.hv-funnel__bar { height: 12px; background: var(--hv-bg-inset); }
+.hv-funnel__bar i { display: block; height: 100%; background: var(--hv-text-faint); }
+.hv-funnel__row[data-tone='live'] .hv-funnel__bar i { background: var(--hv-live); }
+.hv-funnel__row[data-tone='warn'] .hv-funnel__bar i { background: var(--hv-warn); }
+.hv-funnel__row[data-tone='bad']  .hv-funnel__bar i { background: var(--hv-bad); }
+.hv-funnel__row[data-tone='good'] .hv-funnel__bar i { background: var(--hv-good); }
+
+.hv-funnel__n {
+  text-align: right;
+  font-family: var(--hv-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------- heat
+   Utilisation, seven days by twenty-four hours. Density beats a line chart
+   here: the farm's rhythm is a daily pattern, and a grid shows the pattern. */
+
+.hv-heat { display: flex; flex-direction: column; gap: 2px; }
+
+.hv-heat__row {
+  display: grid;
+  grid-template-columns: 2.5rem repeat(24, minmax(0, 1fr));
+  gap: 2px;
+  align-items: center;
+}
+
+.hv-heat__d {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+.hv-heat__c {
+  aspect-ratio: 1;
+  min-height: 10px;
+  background: var(--hv-live);
+  opacity: var(--v, 0);
+}
+/* Zero is drawn as an outline, not as nothing: an idle hour is a fact. */
+.hv-heat__c[style*='--v: 0;'] { border: 1px solid var(--hv-line-dim); }
+
+/* -------------------------------------------------------------- sparkline */
+
+.hv-spark { display: block; width: 100%; height: 34px; overflow: visible; }
+.hv-spark polyline { fill: none; stroke: var(--hv-live); stroke-width: 1.5; }
+.hv-spark polygon { fill: var(--hv-live); opacity: 0.12; }
+
+/* ------------------------------------------------------------ alert feed */
+
+.hv-alert {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--hv-2) var(--hv-3);
+  align-items: baseline;
+  padding: var(--hv-2) var(--hv-3);
+  border-bottom: 1px solid var(--hv-line-dim);
+  border-left: 2px solid transparent;
+}
+.hv-alert:last-child { border-bottom: 0; }
+.hv-alert[data-tone='bad']  { border-left-color: var(--hv-bad); }
+.hv-alert[data-tone='warn'] { border-left-color: var(--hv-warn); }
+.hv-alert[data-tone='live'] { border-left-color: var(--hv-live); }
+
+.hv-alert__t {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  color: var(--hv-text-faint);
+  white-space: nowrap;
+}
+.hv-alert__b { font-size: var(--hv-size-small); color: var(--hv-text); }
+.hv-alert__b b { font-weight: 600; }
+.hv-alert__b em { font-style: normal; color: var(--hv-text-dim); }
+
+/* -------------------------------------------------------------- 18 catalogue
+   The model library. A catalogue lives or dies on two things: whether you can
+   tell the objects apart at a glance, and whether you can reorder the whole set
+   by the thing you actually care about. Hence a preview that is a real drawing
+   rather than a thumbnail placeholder, and a sort bar with the print-specific
+   keys (time, volume, price, difficulty) alongside the obvious ones.
+   ------------------------------------------------------------------------ */
+
+.hv-cat { display: grid; gap: var(--hv-3); grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.hv-cat--wide { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+/* List view is the same grid collapsed to one column; only the card changes. */
+.hv-cat--list { display: flex; flex-direction: column; gap: 1px; background: var(--hv-line-dim); }
+.hv-cat--list > [data-model] { background: var(--hv-bg-raised); }
+[data-model][hidden] { display: none; }
+
+.hv-model {
+  display: flex;
+  flex-direction: column;
+  background: var(--hv-bg-raised);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.12s linear;
+}
+.hv-model:hover { --ink: var(--hv-text); background-color: var(--hv-bg-hover); }
+
+/* The preview well. Graph paper behind the object sells "engineering drawing"
+   in a way a photo never would, and it costs one gradient. */
+.hv-model__view {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background-color: var(--hv-bg-inset);
+  background-image:
+    linear-gradient(var(--hv-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hv-grid) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.hv-model__view svg { width: 78%; height: 78%; overflow: visible; }
+.hv-model__view svg [data-face] { fill: currentColor; opacity: 0.07; }
+.hv-model__view svg [data-edge] { fill: none; stroke: currentColor; stroke-width: 1.25; vector-effect: non-scaling-stroke; }
+.hv-model__view svg [data-accent] { fill: none; stroke: var(--hv-live); stroke-width: 1.25; vector-effect: non-scaling-stroke; }
+
+.hv-model:hover .hv-model__view svg { transform: rotate(-1.5deg) scale(1.03); }
+.hv-model__view svg { transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.3, 1); }
+@media (prefers-reduced-motion: reduce) { .hv-model__view svg { transition: none; } }
+
+/* Corner tags on the preview: the two facts that decide whether you keep
+   looking — how long it prints and what it costs. */
+.hv-model__tag {
+  position: absolute;
+  padding: 2px var(--hv-2);
+  background: var(--hv-void);
+  border: 1px solid var(--hv-line);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+.hv-model__tag--tl { top: var(--hv-2); left: var(--hv-2); }
+.hv-model__tag--tr { top: var(--hv-2); right: var(--hv-2); }
+.hv-model__tag--br { bottom: var(--hv-2); right: var(--hv-2); color: var(--hv-text); }
+:root[data-theme='paper'] .hv-model__tag { background: var(--hv-bg-raised); }
+
+.hv-model__body { display: flex; flex-direction: column; gap: var(--hv-1); padding: var(--hv-3); }
+
+.hv-model__title {
+  margin: 0;
+  font-size: var(--hv-size-body);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--hv-text);
+}
+.hv-model:hover .hv-model__title { text-decoration: underline; text-underline-offset: 3px; }
+
+.hv-model__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hv-2);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+.hv-model__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-2);
+  margin-top: auto;
+  padding: var(--hv-2) var(--hv-3);
+  border-top: 1px solid var(--hv-line-dim);
+}
+
+.hv-model__price {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-base);
+  font-variant-numeric: tabular-nums;
+  color: var(--hv-text);
+}
+.hv-model__price small { color: var(--hv-text-faint); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); }
+
+/* List row — same data, one line, for when you are comparing forty of them. */
+.hv-model--row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) repeat(4, auto) auto;
+  gap: var(--hv-3);
+  align-items: center;
+  padding: var(--hv-2);
+}
+.hv-model--row .hv-model__view { aspect-ratio: 1; }
+.hv-model--row .hv-model__body,
+.hv-model--row .hv-model__foot { padding: 0; border: 0; margin: 0; }
+.hv-model--row .hv-model__tag { display: none; }
+
+/* Rating as five blocks. Stars are the wrong shape for this system. */
+.hv-rate { display: inline-flex; gap: 2px; align-items: center; }
+.hv-rate i { width: 6px; height: 11px; background: var(--hv-line); }
+.hv-rate i[data-on] { background: var(--hv-text); }
+.hv-rate b { margin-left: var(--hv-1); font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); font-weight: 400; color: var(--hv-text-faint); }
+
+/* A spec as a labelled 0–10 bar, for comparing two models side by side. */
+.hv-spec { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) 2.5rem; gap: var(--hv-2); align-items: center; }
+.hv-spec + .hv-spec { margin-top: var(--hv-1); }
+.hv-spec__k { font-size: var(--hv-size-tiny); letter-spacing: var(--hv-track-label); text-transform: uppercase; color: var(--hv-text-dim); }
+.hv-spec__bar { height: 8px; background: var(--hv-bg-inset); border: 1px solid var(--hv-line-dim); }
+.hv-spec__bar i { display: block; height: 100%; background: var(--hv-text); }
+.hv-spec[data-tone='live'] .hv-spec__bar i { background: var(--hv-live); }
+.hv-spec[data-tone='warn'] .hv-spec__bar i { background: var(--hv-warn); }
+.hv-spec__v { text-align: right; font-family: var(--hv-font-mono); font-size: var(--hv-size-tiny); font-variant-numeric: tabular-nums; }
+
+/* --------------------------------------------------------------- sort bar */
+
+.hv-sortbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-2);
+  flex-wrap: wrap;
+  padding: var(--hv-2) var(--hv-3);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-raised);
+}
+
+/* Each sort key is a button that also carries its own direction. Clicking the
+   active key flips it — the same gesture as a table header, which is where the
+   user learned it. */
+.hv-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-1);
+  padding: var(--hv-1) var(--hv-2);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--hv-text-faint);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.hv-sort:hover { color: var(--hv-text); border-color: var(--hv-line); }
+.hv-sort[aria-pressed='true'] { color: var(--hv-text-invert); background: var(--hv-bg-invert); border-color: var(--hv-bg-invert); }
+.hv-sort__dir { font-size: 0.75em; opacity: 0; }
+.hv-sort[aria-pressed='true'] .hv-sort__dir { opacity: 1; }
+
+/* Active filter chip, removable. */
+.hv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-2);
+  padding: 2px var(--hv-2);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+  cursor: pointer;
+}
+.hv-chip:hover { border-color: var(--hv-bad); color: var(--hv-text); }
+.hv-chip::after { content: '✕'; opacity: 0.6; }
+
+/* Facet group in the filter rail. */
+.hv-facet + .hv-facet { border-top: 1px solid var(--hv-line-dim); }
+.hv-facet__h {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--hv-2);
+  padding: var(--hv-2) var(--hv-3);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text);
+}
+.hv-facet__b { padding: 0 var(--hv-3) var(--hv-3); display: flex; flex-direction: column; gap: var(--hv-1); }
+
+.hv-facet__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-2);
+  font-size: var(--hv-size-small);
+  color: var(--hv-text-dim);
+  cursor: pointer;
+}
+.hv-facet__opt:hover { color: var(--hv-text); }
+.hv-facet__opt input { margin: 0; }
+.hv-facet__n { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); color: var(--hv-text-faint); }
+
+/* ------------------------------------------------------- 19 account & auth
+   Two surfaces that have to feel like the same machine as the shop floor: the
+   customer's own record, and the door they come through. No soft shapes, no
+   avatar circles — an account here is a file, and signing in is a terminal
+   granting access.
+   ------------------------------------------------------------------------ */
+
+/* Monogram plate. A square with initials beats an uploaded photo in a system
+   with no photos anywhere else, and it can never fail to load. */
+.hv-avatar {
+  display: grid;
+  place-items: center;
+  width: var(--sz, 64px);
+  height: var(--sz, 64px);
+  flex: none;
+  border: 1px solid var(--hv-line);
+  background:
+    radial-gradient(120% 120% at 50% 120%, rgba(76, 215, 232, 0.10), transparent 70%),
+    var(--hv-bg-inset);
+  font-family: var(--hv-font-display);
+  font-size: calc(var(--sz, 64px) * 0.36);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--hv-text);
+}
+.hv-avatar--sm { --sz: 34px; }
+.hv-avatar--lg { --sz: 96px; }
+
+.hv-ident { display: flex; gap: var(--hv-4); align-items: flex-start; }
+.hv-ident__body { min-width: 0; }
+
+/* Tier ladder. The point is not the current tier but the distance to the next
+   one, so the remaining amount is the loudest thing in the block. */
+.hv-tier { display: flex; flex-direction: column; gap: var(--hv-2); }
+
+.hv-tier__track {
+  position: relative;
+  height: 6px;
+  background: var(--hv-bg-inset);
+  border: 1px solid var(--hv-line);
+}
+.hv-tier__fill { height: 100%; background: var(--hv-text); width: var(--p, 0%); }
+
+.hv-tier__marks {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+.hv-tier__marks b[data-on] { color: var(--hv-text); font-weight: 400; }
+
+/* Password strength: four segments, because a continuous bar implies a
+   precision the check does not have. */
+.hv-pw { display: flex; gap: 3px; }
+.hv-pw i { flex: 1; height: 4px; background: var(--hv-line); }
+.hv-pw[data-level='1'] i:nth-child(-n+1) { background: var(--hv-bad); }
+.hv-pw[data-level='2'] i:nth-child(-n+2) { background: var(--hv-warn); }
+.hv-pw[data-level='3'] i:nth-child(-n+3) { background: var(--hv-live); }
+.hv-pw[data-level='4'] i { background: var(--hv-good); }
+
+/* Saved card / address: a record with a default flag, not a rounded tile. */
+.hv-record {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--hv-3);
+  align-items: start;
+  padding: var(--hv-3);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-raised);
+}
+.hv-record[data-default='true'] { border-color: var(--hv-text-faint); box-shadow: inset 2px 0 0 var(--hv-text); }
+.hv-record__k { font-size: var(--hv-size-base); font-weight: 600; color: var(--hv-text); }
+.hv-record__v {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-small);
+  color: var(--hv-text-dim);
+  line-height: 1.5;
+}
+.hv-record__badge {
+  align-self: center;
+  padding: 1px var(--hv-2);
+  border: 1px solid var(--hv-line);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+  white-space: nowrap;
+}
+.hv-record[data-default='true'] .hv-record__badge { border-color: var(--hv-text); color: var(--hv-text); }
+
+/* Card brand mark — two overlapping squares rather than a vendor logo. */
+.hv-brand-mark {
+  position: relative;
+  width: 34px; height: 22px;
+  flex: none;
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-inset);
+}
+.hv-brand-mark::before,
+.hv-brand-mark::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  width: 11px; height: 11px;
+  border: 1px solid var(--hv-text-faint);
+}
+.hv-brand-mark::before { left: 5px; }
+.hv-brand-mark::after  { left: 13px; }
+
+/* ---------------------------------------------------------------- the door
+   A two-panel screen: identity on the left, the form on the right. The left
+   panel is not decoration — it states what the farm is before asking for an
+   address, which is the only argument a sign-up screen ever has. */
+
+.hv-auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+  min-height: 100vh;
+}
+
+.hv-auth__poster {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--hv-6);
+  padding: var(--hv-6);
+  border-right: 1px solid var(--hv-line);
+  overflow: hidden;
+}
+
+.hv-auth__form {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--hv-4);
+  padding: var(--hv-6);
+}
+
+.hv-auth__box { width: min(420px, 100%); margin: 0 auto; }
+
+/* Code entry, for the emailed confirmation. Character boxes make the length
+   of the code obvious without a hint line. */
+.hv-otp { display: flex; gap: var(--hv-2); }
+.hv-otp input {
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  color: var(--hv-text);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-lead);
+  text-align: center;
+}
+.hv-otp input:focus { border-color: var(--hv-live); outline: none; box-shadow: 0 0 0 1px var(--hv-live-glow); }
+
+/* Divider with a word in it, for the "or" between methods. */
+.hv-or {
+  display: flex;
+  align-items: center;
+  gap: var(--hv-3);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+.hv-or::before, .hv-or::after { content: ''; flex: 1; height: 1px; background: var(--hv-line); }
+
+/* Inline field-level error, tied to the input above it. */
+.hv-field[data-invalid='true'] .hv-input { border-color: var(--hv-bad); }
+.hv-field__err {
+  display: none;
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-bad);
+}
+.hv-field[data-invalid='true'] .hv-field__err { display: block; }
+
+/* Account chip in the app bar. */
+.hv-who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hv-2);
+  padding: 2px var(--hv-2) 2px 2px;
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  color: var(--hv-text-dim);
+  text-decoration: none;
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+}
+.hv-who:hover { border-color: var(--hv-text-faint); color: var(--hv-text); }
+
+/* ---------------------------------------------------------- 20 operations
+   The shop-floor vocabulary, shared by post-production, packaging and service.
+   Every one of those screens answers the same three questions in the same
+   order, so they get the same three shapes:
+
+     what do I do next   -> a board of task cards, ordered by urgency
+     how do I do it      -> a numbered instruction with a time norm per step
+     how am I doing      -> earned badges and a scorecard, not a manager's note
+
+   The third one is the reason the badges exist. A norm you only hear about
+   when you miss it is a stick; the same norm shown continuously is a gauge.
+   ------------------------------------------------------------------------ */
+
+.hv-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: var(--hv-2); overflow-x: auto; align-items: start; }
+
+.hv-col { border: 1px solid var(--hv-line); background: var(--hv-bg); min-width: 0; }
+.hv-col__h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-2);
+  padding: var(--hv-2) var(--hv-3);
+  border-bottom: 1px solid var(--hv-line);
+  background: var(--hv-bg-inset);
+  font-size: var(--hv-size-tiny);
+  font-weight: 700;
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+}
+.hv-col__n { font-family: var(--hv-font-mono); color: var(--hv-text-dim); }
+.hv-col__b { display: flex; flex-direction: column; gap: 1px; padding: 1px; background: var(--hv-line-dim); min-height: 60px; }
+.hv-col--wip .hv-col__h { color: var(--hv-live); }
+.hv-col--done .hv-col__h { color: var(--hv-good); }
+
+/* Task card. The left stripe is priority, the only always-present colour. */
+.hv-task {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hv-1);
+  padding: var(--hv-2) var(--hv-3);
+  border-left: 2px solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  width: 100%;
+}
+.hv-task:hover { background: var(--hv-bg-hover); }
+.hv-task[data-pri='rush'] { border-left-color: var(--hv-bad); }
+.hv-task[data-pri='soon'] { border-left-color: var(--hv-warn); }
+.hv-task[data-pri='normal'] { border-left-color: var(--hv-line); }
+.hv-task[data-pri='live'] { border-left-color: var(--hv-live); }
+
+.hv-task__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hv-2);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+.hv-task__t { font-size: var(--hv-size-base); font-weight: 600; color: var(--hv-text); line-height: 1.25; }
+.hv-task__m {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hv-2);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-dim);
+}
+
+/* Countdown against a promise. Colour is earned by lateness, not assigned. */
+.hv-due {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.hv-due[data-state='ok']   { color: var(--hv-text-dim); }
+.hv-due[data-state='soon'] { color: var(--hv-warn); }
+.hv-due[data-state='late'] { color: var(--hv-bad); }
+
+/* ------------------------------------------------------------ instruction
+   A step carries its own norm. Showing "норма 6 мин" next to the checkbox is
+   what turns a checklist into a measurable process — and it tells a new
+   operator how long the job is supposed to take before they start it. */
+
+.hv-steps { counter-reset: hv-step; display: flex; flex-direction: column; }
+
+.hv-step {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  gap: var(--hv-3);
+  align-items: start;
+  padding: var(--hv-3);
+  border-bottom: 1px solid var(--hv-line-dim);
+}
+.hv-step:last-child { border-bottom: 0; }
+.hv-step::before {
+  counter-increment: hv-step;
+  content: counter(hv-step, decimal-leading-zero);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-micro);
+  color: var(--hv-text-faint);
+  padding-top: 2px;
+}
+.hv-step[data-done='true'] { background: var(--hv-bg-inset); }
+.hv-step[data-done='true'] .hv-step__t { color: var(--hv-text-faint); text-decoration: line-through; }
+.hv-step[data-done='true']::before { color: var(--hv-good); }
+
+.hv-step__t { font-size: var(--hv-size-base); color: var(--hv-text); }
+.hv-step__d { font-size: var(--hv-size-small); color: var(--hv-text-dim); margin-top: 2px; }
+.hv-step__n {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Warning inside an instruction. Operators skim; this must not be skimmable. */
+.hv-step__warn {
+  display: block;
+  margin-top: var(--hv-2);
+  padding: var(--hv-2);
+  border-left: 2px solid var(--hv-warn);
+  background: var(--hv-bg-inset);
+  font-size: var(--hv-size-small);
+  color: var(--hv-text);
+}
+
+/* ---------------------------------------------------------------- badges
+   Earned markers. Three tiers in a monochrome system: outline, bright
+   outline, filled. Colour is never used for tier — it stays reserved for
+   machine state, and a badge is not a state. */
+
+.hv-badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--hv-2); }
+
+.hv-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hv-1);
+  padding: var(--hv-3) var(--hv-2);
+  border: 1px solid var(--hv-line-dim);
+  background: var(--hv-bg-raised);
+  text-align: center;
+}
+.hv-badge__g {
+  display: grid;
+  place-items: center;
+  width: 38px; height: 38px;
+  border: 1px solid currentColor;
+  font-family: var(--hv-font-display);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--hv-text-faint);
+}
+.hv-badge__k { font-size: var(--hv-size-tiny); font-weight: 700; letter-spacing: var(--hv-track-label); text-transform: uppercase; color: var(--hv-text-dim); }
+.hv-badge__n { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); color: var(--hv-text-faint); }
+
+.hv-badge[data-tier='2'] { border-color: var(--hv-line); }
+.hv-badge[data-tier='2'] .hv-badge__g { color: var(--hv-text); }
+.hv-badge[data-tier='2'] .hv-badge__k { color: var(--hv-text); }
+.hv-badge[data-tier='3'] { border-color: var(--hv-text); }
+.hv-badge[data-tier='3'] .hv-badge__g { background: var(--hv-bg-invert); color: var(--hv-text-invert); border-color: var(--hv-bg-invert); }
+.hv-badge[data-tier='3'] .hv-badge__k { color: var(--hv-text); }
+/* Not yet earned: present, so the operator can see what there is to earn. */
+.hv-badge[data-tier='0'] { opacity: 0.4; border-style: dashed; }
+
+/* Ten-block evaluation. Segmented, because nothing here is round and because
+   a score of 7 should be countable, not estimated off a bar's length. */
+.hv-blocks { display: inline-flex; gap: 2px; align-items: center; }
+.hv-blocks i { width: 7px; height: 12px; background: var(--hv-line); }
+.hv-blocks i[data-on] { background: var(--hv-text); }
+.hv-blocks[data-tone='good'] i[data-on] { background: var(--hv-good); }
+.hv-blocks[data-tone='warn'] i[data-on] { background: var(--hv-warn); }
+.hv-blocks[data-tone='bad']  i[data-on] { background: var(--hv-bad); }
+.hv-blocks b { margin-left: var(--hv-2); font-family: var(--hv-font-mono); font-weight: 400; font-size: var(--hv-size-tiny); color: var(--hv-text-dim); }
+
+/* Operator scorecard. */
+.hv-score {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--hv-3);
+  align-items: center;
+  padding: var(--hv-3);
+  border-bottom: 1px solid var(--hv-line-dim);
+}
+.hv-score:last-child { border-bottom: 0; }
+.hv-score__n { font-size: var(--hv-size-base); font-weight: 600; color: var(--hv-text); }
+.hv-score__m {
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-micro);
+  letter-spacing: var(--hv-track-micro);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+
+/* Norm vs fact, side by side. The comparison is the whole point of showing
+   either number, so they share one component. */
+.hv-vs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--hv-line-dim);
+  border: 1px solid var(--hv-line);
+}
+.hv-vs > div { padding: var(--hv-2) var(--hv-3); background: var(--hv-bg-raised); }
+.hv-vs__k { display: block; font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); text-transform: uppercase; color: var(--hv-text-faint); }
+.hv-vs__v { display: block; font-family: var(--hv-font-mono); font-size: var(--hv-size-lead); font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+/* --------------------------------------------------------------- 21 promo
+   The one outward-facing page. It uses the same parts at a larger size rather
+   than a second visual language — the argument of the whole product is that
+   the instrument panel *is* the brand, so the landing page must look like the
+   thing it is selling.
+   ------------------------------------------------------------------------ */
+
+.hv-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--hv-5);
+  min-height: min(78vh, 660px);
+  padding: var(--hv-7) var(--hv-5);
+  overflow: hidden;
+}
+
+.hv-hero__title {
+  margin: 0;
+  font-family: var(--hv-font-display);
+  font-size: clamp(3rem, 13vw, 11rem);
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  width: calc(100% / var(--hv-stretch));
+  transform: scaleX(var(--hv-stretch));
+  transform-origin: left center;
+}
+
+.hv-hero__sub { max-width: 62ch; font-size: clamp(0.95rem, 1.6vw, 1.2rem); line-height: 1.5; color: var(--hv-text-dim); }
+.hv-hero__sub b { color: var(--hv-text); font-weight: 600; }
+
+/* Live ticker along the bottom of the hero: the farm's real numbers, which is
+   a better proof than any adjective. */
+.hv-ticker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hv-2) var(--hv-5);
+  padding-top: var(--hv-4);
+  border-top: 1px solid var(--hv-line);
+  font-family: var(--hv-font-mono);
+  font-size: var(--hv-size-tiny);
+  letter-spacing: var(--hv-track-label);
+  text-transform: uppercase;
+  color: var(--hv-text-faint);
+}
+.hv-ticker b { color: var(--hv-text); font-weight: 400; }
+.hv-ticker .hv-live { color: var(--hv-live); }
+
+/* Numbered feature block. */
+.hv-feature { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); gap: var(--hv-4); align-items: start; }
+.hv-feature__n {
+  font-family: var(--hv-font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--hv-text-faint);
+}
+.hv-feature__t { margin: 0 0 var(--hv-2); font-size: var(--hv-size-lead); font-weight: 700; letter-spacing: 0.02em; color: var(--hv-text); }
+.hv-feature__b { font-size: var(--hv-size-body); line-height: 1.55; color: var(--hv-text-dim); margin: 0; }
+
+/* Poster-scale number for the proof band. */
+.hv-bignum { display: flex; flex-direction: column; gap: var(--hv-1); }
+.hv-bignum__v {
+  font-family: var(--hv-font-display);
+  font-size: clamp(2rem, 5.5vw, 3.6rem);
+  font-weight: 900;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  width: calc(100% / var(--hv-stretch-brand));
+  transform: scaleX(var(--hv-stretch-brand));
+  transform-origin: left center;
+}
+.hv-bignum__k { font-size: var(--hv-size-tiny); font-weight: 700; letter-spacing: var(--hv-track-label); text-transform: uppercase; color: var(--hv-text-dim); }
+.hv-bignum__d { font-family: var(--hv-font-mono); font-size: var(--hv-size-micro); letter-spacing: var(--hv-track-micro); text-transform: uppercase; color: var(--hv-text-faint); }
+
+/* Full-width call to action. */
+.hv-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hv-4);
+  padding: var(--hv-6) var(--hv-5);
+  background: var(--hv-bg-invert);
+  color: var(--hv-text-invert);
+}
+.hv-cta .hv-btn { --ink: var(--hv-text-invert); color: var(--hv-text-invert); background-color: transparent; }
+.hv-cta .hv-btn:hover { background-color: rgba(255,255,255,0.12); }
+.hv-cta .hv-btn--primary { background-color: var(--hv-void); color: var(--hv-text); --ink: var(--hv-void); }
+:root[data-theme='paper'] .hv-cta .hv-btn--primary { background-color: var(--hv-bg-raised); color: var(--hv-text); --ink: var(--hv-bg-raised); }
+
+/* Us / them comparison. Two columns, one of which is deliberately dim. */
+.hv-vs-table th:nth-child(2), .hv-vs-table td:nth-child(2) { color: var(--hv-text); }
+.hv-vs-table th:nth-child(3), .hv-vs-table td:nth-child(3) { color: var(--hv-text-faint); }
+
+/* --------------------------------------------------------- 22 tab switching
+   Tabs that behave like tabs: the rail stays put, only the panel changes, and
+   the change is visible. Without the transition a switch reads as the page
+   having jumped — you cannot tell whether you moved or the content did.
+
+   The sequence is the same grammar as the nav overlay, one notch quieter: a
+   left-edge wipe for the panel, then its blocks resolving in on a short
+   stagger. ~360ms end to end, once per switch, nothing loops.
+   ------------------------------------------------------------------------ */
+
+.hv-tabview { position: relative; }
+
+/* The panel that just became current. `.is-entering` is added by the switcher
+   and removed on animationend, so the animation can be re-triggered on every
+   switch rather than only on first paint. */
+.hv-tabview > [data-tab-panel].is-entering {
+  animation: hv-panel-in 260ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+@keyframes hv-panel-in {
+  from { opacity: 0; transform: translateX(-10px); clip-path: inset(0 100% 0 0); }
+  to   { opacity: 1; transform: none;              clip-path: inset(0 0 0 0); }
+}
+
+/* Direct children resolve after the wipe. Capped at eight: past that the last
+   card would land half a second late and the page would feel slow rather than
+   alive. */
+.hv-tabview > [data-tab-panel].is-entering > * {
+  animation: hv-panel-block 240ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+.hv-tabview > [data-tab-panel].is-entering > *:nth-child(1) { animation-delay: 90ms; }
+.hv-tabview > [data-tab-panel].is-entering > *:nth-child(2) { animation-delay: 130ms; }
+.hv-tabview > [data-tab-panel].is-entering > *:nth-child(3) { animation-delay: 170ms; }
+.hv-tabview > [data-tab-panel].is-entering > *:nth-child(4) { animation-delay: 210ms; }
+.hv-tabview > [data-tab-panel].is-entering > *:nth-child(n+5) { animation-delay: 250ms; }
+
+@keyframes hv-panel-block {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* One scan pass across the panel on switch — the same power-on gesture the nav
+   overlay uses, so a section change reads as the console re-drawing. */
+.hv-tabview > [data-tab-panel].is-entering::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 40%,
+    rgba(76, 215, 232, 0.10) 50%,
+    transparent 60%
+  );
+  background-size: 250% 100%;
+  animation: hv-panel-scan 420ms cubic-bezier(0.35, 0, 0.2, 1) both;
+}
+
+@keyframes hv-panel-scan {
+  from { background-position: 120% 0; opacity: 1; }
+  to   { background-position: -60% 0; opacity: 0; }
+}
+
+/* ------------------------------------------------------------- the rail
+   A single marker that travels between entries, instead of one blinking off
+   and another blinking on. The movement is what tells you the two rows are
+   the same control in two states. */
+
+.hv-rail { position: relative; }
+
+.hv-rail__mark {
+  position: absolute;
+  left: 0;
+  width: 2px;
+  background: var(--hv-text);
+  transform: translateY(var(--y, 0));
+  height: var(--h, 0);
+  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1),
+              height 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  pointer-events: none;
+}
+/* Before the first measurement there is nothing to point at. */
+.hv-rail__mark[data-ready='false'] { opacity: 0; }
+
+/* The travelling marker replaces the per-item border, or the two would fight. */
+.hv-rail .hv-tree__item { border-left-color: transparent !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hv-tabview > [data-tab-panel].is-entering,
+  .hv-tabview > [data-tab-panel].is-entering > *,
+  .hv-tabview > [data-tab-panel].is-entering::after { animation: none; }
+  .hv-rail__mark { transition: none; }
+}
+
+/* ------------------------------------------------------------- responsive */
+
+@media (max-width: 1180px) {
+  .hv-cols--3, .hv-cols--3r { grid-template-columns: minmax(180px, 13rem) minmax(0, 1fr); }
+  .hv-cols--3 > :last-child, .hv-cols--3r > :last-child { grid-column: 1 / -1; }
+  .hv-grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  /* The plan and the timeline keep their proportions rather than reflowing —
+     a floor plan that rewraps is no longer a floor plan. Both scroll instead. */
+  .hv-floor-scroll, .hv-gantt-scroll { overflow-x: auto; }
+  .hv-floor-scroll > *, .hv-gantt-scroll > * { min-width: 640px; }
+  .hv-heat-scroll { overflow-x: auto; }
+  .hv-heat-scroll > * { min-width: 520px; }
+  .hv-funnel__row { grid-template-columns: 7rem minmax(0, 1fr) 2.2rem; }
+  /* The door collapses to one column and the poster leads, so a phone still
+     gets the argument before the form. */
+  .hv-auth { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .hv-auth__poster { border-right: 0; border-bottom: 1px solid var(--hv-line); padding: var(--hv-4); }
+  .hv-auth__form { padding: var(--hv-4); }
+  .hv-record { grid-template-columns: auto minmax(0, 1fr); }
+  .hv-record__badge { grid-column: 2; justify-self: start; }
+  /* The board keeps its columns and scrolls — collapsing kanban to one column
+     destroys the only thing it is for. */
+  .hv-board { grid-auto-columns: minmax(200px, 78vw); }
+  .hv-step { grid-template-columns: 1.6rem minmax(0, 1fr); }
+  .hv-step__n { grid-column: 2; text-align: left; }
+  .hv-score { grid-template-columns: auto minmax(0, 1fr); }
+  .hv-score > :last-child { grid-column: 2; }
+  .hv-vs { grid-template-columns: minmax(0, 1fr); }
+  .hv-feature { grid-template-columns: minmax(0, 1fr); gap: var(--hv-2); }
+  .hv-hero { padding: var(--hv-5) var(--hv-3); min-height: 0; }
+  .hv-cta { padding: var(--hv-5) var(--hv-3); }
+  .hv-model--row { grid-template-columns: 72px minmax(0, 1fr) auto; }
+  .hv-model--row > .hv-model__hide-sm { display: none; }
+  .hv-set { grid-template-columns: minmax(0, 1fr); gap: var(--hv-2); }
+  .hv-set__v { justify-content: flex-start; }
+  .hv-cols--2, .hv-cols--2l, .hv-cols--3, .hv-cols--3r { grid-template-columns: minmax(0, 1fr); }
+  .hv-cols--3 > :last-child, .hv-cols--3r > :last-child { grid-column: auto; }
+  .hv-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hv-os { flex: 0 1 auto; }
+  .hv-os__label { display: none; }
+  .hv-sticky { position: static; }
+}
+
+@media (max-width: 680px) {
+  .hv-chrome__row { flex-wrap: wrap; }
+  .hv-meta { order: 3; flex-basis: 100%; }
+  .hv-grid--2, .hv-grid--3, .hv-grid--4 { grid-template-columns: minmax(0, 1fr); }
+
+  /* Drop the synthetic stretch. A transform paints outside the element's own
+     box, so at this width the poster headline would scroll the whole page —
+     and there is no room left to spend on the widened proportion anyway. */
+  :root {
+    --hv-size-display: clamp(2rem, 12vw, 3rem);
+    --hv-stretch: 1;
+    --hv-stretch-mark: 1;
+    --hv-stretch-brand: 1;
+  }
+}

@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+.coverage
+htmlcov/
+.import_linter_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Generated
+frontend/packages/api-client/src/generated/
+frontend/.openapi-schema.json
+backend/openapi.json
+
+# Runtime state. The object store holds uploaded meshes and prepared plates
+# (core.config.storage_root); it is data the farm accumulates, not source.
+backend/var/
+
+# Claude Code: launch.json is shared project config and is committed; the rest
+# is per-machine.
+.claude/worktrees/
+.claude/settings.local.json
+
+# Local
+.env
+# Printer LAN access codes — credentials, never committed (ADR-0014).
+backend/printers.local.toml
+.env.local
+*.db
+*.sqlite3
+data/local/
+# Unreferenced scratch output — nothing in backend/, frontend/ or design/ reads
+# it. Delete this line if it turns out to be a real fixture.
+data/qr.png
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Electron build output (electron-vite)
+out/

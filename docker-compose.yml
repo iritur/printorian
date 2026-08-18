@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: printorian-postgres
+    environment:
+      POSTGRES_USER: printorian
+      POSTGRES_PASSWORD: printorian
+      POSTGRES_DB: printorian
+    ports:
+      - "5433:5432"
+    volumes:
+      - printorian-pgdata:/var/lib/postgresql/data
+      # Where base backups and archived WAL land. A named volume here so a dev
+      # machine works out of the box; on the farm this is a bind mount onto the
+      # backup disk, which must not be the disk holding pgdata (see the runbook).
+      - printorian-pgbackup:/backup
+    # Stock postgres:17-alpine ships 128 MB of shared_buffers and a
+    # 4 MB working set, sized for a container that might be sharing a laptop.
+    # The farm's box is dedicated (ADR-0003), so most of it sat unused.
+    #
+    # These are dev-scale numbers deliberately — this file runs on developer
+    # machines too. The runbook has the on-prem figures, which are derived from
+    # that machine's RAM rather than guessed here.
+    command:
+      - postgres
+      # -- memory
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1536MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=128MB
+      # -- WAL archiving: the difference between a 24-hour RPO and a one-minute
+      #    one. `archive_mode` cannot be changed without a restart, so it is on
+      #    from the start even in development, where the archive is simply a copy
+      #    into the backup volume.
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      # `mkdir -p` because the volume starts empty and an archive_command that
+      # fails leaves PostgreSQL retrying the same segment forever, holding WAL on
+      # the data disk until it fills. Refusing to overwrite an existing segment is
+      # the documented safety rule: a silent overwrite corrupts the archive.
+      - archive_command=mkdir -p /backup/wal && test ! -f /backup/wal/%f && cp %p /backup/wal/%f
+      - -c
+      - archive_timeout=60
+      # -- planner and maintenance
+      - -c
+      - random_page_cost=1.1          # SSD, not spinning rust
+      - -c
+      - max_connections=100
+      # Telemetry is append-only and partitioned; frequent, cheap autovacuum keeps
+      # the visibility map current so index-only scans stay index-only.
+      - -c
+      - autovacuum_vacuum_scale_factor=0.05
+      - -c
+      - autovacuum_analyze_scale_factor=0.02
+      - -c
+      - log_min_duration_statement=1000
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U printorian -d printorian"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: printorian-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  printorian-pgdata:
+  printorian-pgbackup:
