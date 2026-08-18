@@ -40,9 +40,9 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: pip
@@ -94,7 +94,7 @@ jobs:
         run: python tools/export_openapi.py --out openapi.json
 
       - name: Upload OpenAPI schema
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: openapi
           path: backend/openapi.json
@@ -110,9 +110,9 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: npm
@@ -125,7 +125,7 @@ jobs:
       # then typechecking is what makes a breaking backend change fail the build
       # at the commit that caused it.
       - name: Download OpenAPI schema
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: openapi
           path: backend
@@ -173,7 +173,7 @@ jobs:
       CONSOLE_IMAGE: ghcr.io/${{ github.repository }}-console
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: docker/setup-buildx-action@v3
 
