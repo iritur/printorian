@@ -212,8 +212,32 @@ jobs:
           PRINTORIAN_SECRET_KEY=release-gate-only-not-a-real-secret
           PRINTORIAN_ENVIRONMENT=staging
           EOF
-          docker compose -f deploy/compose.prod.yml --env-file deploy/.env \
-            up -d --wait --wait-timeout 180
+          docker compose -f deploy/compose.prod.yml --env-file deploy/.env up -d
+
+      # Deliberately not `up --wait`: it refuses to wait on a stack containing a
+      # service with no healthcheck, and the workers container has none on
+      # purpose — it serves no HTTP, and a process check that cannot tell working
+      # from wedged is worse than none (deploy/compose.prod.yml).
+      #
+      # Waiting explicitly is also more precise: `--wait` asserts "docker thinks
+      # everything is fine", this asserts what the gate actually cares about and
+      # names whichever part failed.
+      - name: Wait for the stack
+        run: |
+          set -euo pipefail
+          await() {
+            for _ in $(seq 60); do
+              [ "$(docker inspect -f "$2" "$1" 2>/dev/null)" = "$3" ] && { echo "$1 -> $3"; return 0; }
+              sleep 3
+            done
+            echo "::error::$1 never reached $3"
+            docker logs "$1" 2>&1 | tail -40
+            return 1
+          }
+          await printorian-migrate-1 '{{.State.Status}}' exited
+          test "$(docker inspect -f '{{.State.ExitCode}}' printorian-migrate-1)" = 0
+          await printorian-api-1     '{{.State.Health.Status}}' healthy
+          await printorian-console-1 '{{.State.Health.Status}}' healthy
 
       - name: Migrations apply, reverse and re-apply in the image
         run: |
