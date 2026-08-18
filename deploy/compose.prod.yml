@@ -85,6 +85,12 @@ services:
     image: ${PRINTORIAN_IMAGE:?PRINTORIAN_IMAGE must be set}
     restart: "no"
     command: ["alembic", "upgrade", "head"]
+    # Same inherited-healthcheck problem as workers, and worse here: migrate is a
+    # one-shot that exits, so the curl never succeeds and docker records the
+    # container as unhealthy for having done its job correctly. What matters is
+    # its exit code, which is what the gate and the deploy timer read.
+    healthcheck:
+      disable: true
     environment: &backend_env
       PRINTORIAN_ENVIRONMENT: ${PRINTORIAN_ENVIRONMENT:-production}
       PRINTORIAN_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-printorian}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-printorian}
