@@ -94,7 +94,7 @@ jobs:
         run: python tools/export_openapi.py --out openapi.json
 
       - name: Upload OpenAPI schema
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: openapi
           path: backend/openapi.json
@@ -125,7 +125,7 @@ jobs:
       # then typechecking is what makes a breaking backend change fail the build
       # at the commit that caused it.
       - name: Download OpenAPI schema
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: openapi
           path: backend
