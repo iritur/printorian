@@ -951,6 +951,23 @@
 }
 .hv-model:hover { --ink: var(--hv-text); background-color: var(--hv-bg-hover); }
 
+/* The card as a real control.
+
+   The catalogue draws it as an `<article>` with a click handler and the kit as
+   an `<a>`. The promo teaser makes it a `<button>`, so that it is reachable by
+   keyboard and announced as something you can press — and the price of that is
+   the user agent's own chrome, which drew a second rectangle right around the
+   card and centred every line of text inside it.
+
+   `background` is deliberately not restated: `.hv-model` sets it just above, and
+   a shorthand here would wipe it. */
+button.hv-model {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+}
+
 /* The preview well. Graph paper behind the object sells "engineering drawing"
    in a way a photo never would, and it costs one gradient. */
 .hv-model__view {
@@ -1235,6 +1252,29 @@
   white-space: nowrap;
 }
 .hv-record[data-default='true'] .hv-record__badge { border-color: var(--hv-text); color: var(--hv-text); }
+
+/* The badge is an action as often as it is a label — the kit's own «Сделать
+   основным» and «Удалить» sit in that slot. A `<button>` there arrives with the
+   user agent's own font, padding and centre alignment, which is why every one
+   of those is restated rather than inherited. Same reset `.hv-post` needed for
+   the same reason. */
+button.hv-record__badge {
+  appearance: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--hv-font-mono);
+}
+button.hv-record__badge:hover { border-color: var(--hv-text); color: var(--hv-text); }
+
+/* Actions stacked in the record's third column. `align-self: center` on the
+   badge centres one control; two need the group centred instead. */
+.hv-record__acts {
+  display: flex;
+  align-self: center;
+  gap: var(--hv-1);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 
 /* Card brand mark — two overlapping squares rather than a vendor logo. */
 .hv-brand-mark {
