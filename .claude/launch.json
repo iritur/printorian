@@ -3,21 +3,56 @@
   "autoPort": true,
   "configurations": [
     {
+      "name": "api",
+      "runtimeExecutable": ".venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "printorian.api.app:create_app",
+        "--factory",
+        "--port",
+        "8000",
+        "--reload"
+      ],
+      "port": 8000,
+      "cwd": "backend"
+    },
+    {
       "name": "design-kit",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "http-server", "design", "-c-1", "--silent"],
+      "runtimeArgs": [
+        "--yes",
+        "http-server",
+        "design",
+        "-c-1",
+        "--silent"
+      ],
       "port": 4180
     },
     {
       "name": "console",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "dev", "--workspace", "@printorian/console"],
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev",
+        "--workspace",
+        "@printorian/console"
+      ],
       "port": 5174
     },
     {
       "name": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "dev", "--workspace", "@printorian/web"],
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev",
+        "--workspace",
+        "@printorian/web"
+      ],
       "port": 5173
     },
     {
