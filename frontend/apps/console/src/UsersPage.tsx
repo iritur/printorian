@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
 import type { Column, Locale, MessageKey, StatusTag } from '@printorian/ui'
-import { DataTable, api, translate, translateError, useSession } from '@printorian/ui'
+import { DataTable, api, translate, translateError, useChrome, useSession } from '@printorian/ui'
 
 import { Field } from './FleetAdmin'
 
@@ -33,6 +33,22 @@ export function UsersPage({ locale }: { locale: Locale }) {
   const t = useCallback((key: MessageKey) => translate(locale, key), [locale])
 
   const [users, setUsers] = useState<User[] | null>(null)
+
+  /*
+    The kit's chrome here says «SESSIONS :: 6 АКТИВНЫХ», which this screen cannot
+    count: sessions are listed per user and only for the caller's own account.
+    Accounts and how many of them are active is what it does know.
+  */
+  useChrome(
+    users
+      ? {
+          meta: [
+            { label: 'IDENTITY.USERS', value: String(users.length) },
+            { label: 'АКТИВНЫХ', value: String(users.filter((row) => row.is_active).length) },
+          ],
+        }
+      : null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
 

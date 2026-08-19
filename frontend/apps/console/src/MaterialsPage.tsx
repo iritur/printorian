@@ -10,6 +10,7 @@ import {
   summarizeLocations,
   translate,
   translateError,
+  useChrome,
   useSession,
 } from '@printorian/ui'
 
@@ -62,6 +63,21 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
   const t = useCallback((key: MessageKey) => translate(locale, key), [locale])
 
   const [table, setTable] = useState<MaterialTable | null>(null)
+
+  /* The kit's `INVENTORY.SPECS[24] · LOTS[61]`, split into two labelled pairs. */
+  useChrome(
+    table
+      ? {
+          meta: [
+            { label: 'INVENTORY.SPECS', value: String(table.rows.length) },
+            {
+              label: 'LOTS',
+              value: String(table.rows.reduce((sum, row) => sum + (row.lots?.length ?? 0), 0)),
+            },
+          ],
+        }
+      : null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Material | null>(null)
   const [adding, setAdding] = useState(false)

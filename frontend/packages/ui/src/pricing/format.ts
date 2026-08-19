@@ -171,3 +171,19 @@ export function lineLabel(code: string, locale: Locale): string {
     return code
   }
 }
+
+/**
+ * A rate snapshot id, short enough for the chrome's one-line strip.
+ *
+ * `rates_8f41c2…` becomes `SNAP.8F41C2` — the kit's own form. Six characters
+ * because the strip has to fit three of these beside a clock, and because the
+ * full id is on the breakdown that owns it: this is the handle a support
+ * conversation quotes, not the key anything is looked up by.
+ *
+ * An order placed before snapshots were persisted has no id, and gets «—»
+ * rather than `SNAP.` with nothing after it.
+ */
+export function snapshotLabel(id: string | null | undefined): string {
+  if (!id) return '—'
+  return `SNAP.${id.replace(/^rates_/, '').slice(0, 6).toUpperCase()}`
+}
