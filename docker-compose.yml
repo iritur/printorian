@@ -1,7 +1,40 @@
 services:
+  # Makes the backup volume writable before PostgreSQL wants it.
+  #
+  # A named volume mounted at a path the image does not contain is created by
+  # Docker as root:root, and the server runs as uid 70. So `archive_command`
+  # could never create its directory: the archiver failed 1 385 times in a row,
+  # archived nothing at all, and `pg_wal` grew to 23 GB — because a segment
+  # cannot be recycled until it is archived. The comment on `archive_command`
+  # below had described this exact failure since the day it was written.
+  #
+  # Idempotent and runs to completion before the server starts, so a fresh
+  # machine and an existing one both end up with a volume postgres owns.
+  #
+  # It also prunes, which the farm does differently and for a different reason.
+  # There, `backup.sh` runs `pg_archivecleanup` nightly against the last base
+  # backup — the only correct rule, because a segment older than that backup is
+  # still needed to replay from it. Here there are no base backups and nobody has
+  # ever restored a laptop, so the archive exists only to prove the mechanism
+  # works; two days of it proves that as well as two months, and copying the
+  # farm's rule would mean copying its cron too.
+  backup-init:
+    image: postgres:17-alpine
+    container_name: printorian-backup-init
+    user: root
+    volumes:
+      - printorian-pgbackup:/backup
+    command: >
+      sh -c "mkdir -p /backup/wal
+      && find /backup/wal -type f -mtime +2 -delete
+      && chown -R 70:70 /backup"
+
   postgres:
     image: postgres:17-alpine
     container_name: printorian-postgres
+    depends_on:
+      backup-init:
+        condition: service_completed_successfully
     environment:
       POSTGRES_USER: printorian
       POSTGRES_PASSWORD: printorian
@@ -32,22 +65,31 @@ services:
       - work_mem=16MB
       - -c
       - maintenance_work_mem=128MB
-      # -- WAL archiving: the difference between a 24-hour RPO and a one-minute
-      #    one. `archive_mode` cannot be changed without a restart, so it is on
-      #    from the start even in development, where the archive is simply a copy
-      #    into the backup volume.
+      # -- WAL archiving.
+      #
+      #    On in development too, and that has already paid for itself: the
+      #    `archive_command` permission bug that would have filled the farm's data
+      #    disk was found here instead, because this file runs the same mechanism.
+      #    `archive_mode` also cannot be changed without a restart, which is a poor
+      #    thing to discover on a farm that has run for a year.
+      #
+      #    What is *not* copied from the farm is `archive_timeout`. There it buys a
+      #    one-minute RPO; here it forced a segment switch every sixty seconds on an
+      #    idle laptop — a full 16 MB file a minute, 23 GB a day, measured. Without
+      #    it a segment is archived when it fills, so the mechanism is exercised by
+      #    real work and costs nothing when there is none.
       - -c
       - wal_level=replica
       - -c
       - archive_mode=on
       - -c
-      # `mkdir -p` because the volume starts empty and an archive_command that
-      # fails leaves PostgreSQL retrying the same segment forever, holding WAL on
-      # the data disk until it fills. Refusing to overwrite an existing segment is
-      # the documented safety rule: a silent overwrite corrupts the archive.
-      - archive_command=mkdir -p /backup/wal && test ! -f /backup/wal/%f && cp %p /backup/wal/%f
-      - -c
-      - archive_timeout=60
+      # The directory is prepared by `backup-init`, not here: a `mkdir` that the
+      # server has no permission to run fails silently forever, and PostgreSQL
+      # then retries the same segment for ever, holding WAL on the data disk
+      # until it fills. Refusing to overwrite an existing segment stays: it is
+      # the documented safety rule, because a silent overwrite corrupts the
+      # archive that a restore depends on.
+      - archive_command=test ! -f /backup/wal/%f && cp %p /backup/wal/%f
       # -- planner and maintenance
       - -c
       - random_page_cost=1.1          # SSD, not spinning rust

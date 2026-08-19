@@ -20,7 +20,7 @@ from printorian.core.clock import FixedClock
 from printorian.core.events import EventBus
 from printorian.core.ids import new_id
 from printorian.drivers import PrinterState
-from tests.conftest import ensure_order, ensure_plate
+from tests.conftest import ensure_order, ensure_plate, ensure_printer
 
 #: One order, reused by every job this module builds.
 #:
@@ -201,3 +201,52 @@ async def test_a_job_queueing_for_capacity_gets_a_place_and_a_time(
     assert position.reason == "waitlist.awaiting_capacity"
     assert position.position == 1
     assert position.predicted_start == finishes
+
+
+async def test_the_position_names_the_machine_and_the_attempt(
+    production: ProductionService, db_session: AsyncSession
+) -> None:
+    """What the cabinet's pipeline dates its «Назначен» stage from.
+
+    The `printer_id` travels rather than a name: `production` knows an id and
+    nothing about what a printer *is*, and resolving one crosses into `fleet` —
+    which the API layer does, because it is the only layer allowed to know both.
+    """
+    chosen = new_id()
+    await ensure_printer(db_session, chosen, name="P-01")
+    job = await production.create_job(a_job())
+    await production.attach_prepared_plate(
+        job.id,
+        plate_id=SEED_PLATE_ID,
+        filename="cube.3mf",
+        print_minutes=Decimal(60),
+        total_grams=Decimal(20),
+        quoted_cost=Decimal(1000),
+        prepared_cost=Decimal(1000),
+        tolerance=TOLERANCE,
+    )
+    free = SchedulablePrinter(
+        capability=PrinterCapability(
+            printer_id=str(chosen),
+            state=PrinterState.IDLE,
+            width_mm=Decimal(256),
+            depth_mm=Decimal(256),
+            height_mm=Decimal(256),
+            nozzle_diameter_mm=Decimal("0.4"),
+            supports_multi_material=False,
+            loaded=(("PLA", "white", Decimal(800)),),
+        )
+    )
+    await production.plan_pass([free])
+
+    position = await production.queue_position(job.order_id)
+
+    assert position is not None
+    assert position.printer_id == chosen
+    assert position.attempt == 1
+    # Dated by the *database's* clock, not the injected one: `JobEvent.created_at`
+    # is a server default, the same split `Session.expires_at` documents. Which
+    # means the assertion here is that it happened, not when.
+    assert position.assigned_at is not None
+    # Assigned, not started: the machine has not confirmed it is running.
+    assert position.started_at is None

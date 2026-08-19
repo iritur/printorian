@@ -27,10 +27,13 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from printorian.contexts.catalog.catalogue import CatalogModel
+from printorian.contexts.fleet.models import Printer
 from printorian.contexts.ordering.models import Order
 from printorian.contexts.ordering.policies import OrderStatus
 from printorian.contexts.production.models import PrintJob
 from printorian.contexts.production.policies import JobStatus
+from printorian.drivers.base import PrinterState
 
 #: The window the promo page quotes. Ninety days is long enough to smooth a bad
 #: week and short enough that it describes the farm as it is now.
@@ -52,6 +55,24 @@ class FarmStats:
     print_hours: Decimal | None
     #: Share of finished jobs that failed, 0–100.
     failure_percent: Decimal | None
+
+    # -- live, rather than windowed --------------------------------------
+    #: Machines the farm runs, and how many are printing this second.
+    #:
+    #: A capacity figure, and publishing it is a deliberate choice rather than an
+    #: oversight: the kit puts «сейчас печатается 7 из 12» at the top of the
+    #: outward-facing page, and a shop whose argument is that its numbers can be
+    #: checked cannot make the busiest one of them a secret. What stays private
+    #: is *which* machines and where they stand — that is the console's, and the
+    #: console is not on the internet (ADR-0016).
+    printers_total: int = 0
+    printers_printing: int = 0
+    #: Minutes until a machine is free: `0` when one already is, otherwise the
+    #: shortest remaining print. ``None`` when no machine has reported one —
+    #: which is not "immediately", and the page must not round it to that.
+    next_free_minutes: int | None = None
+    #: Published models in the catalogue, for the «N готовых моделей» button.
+    catalog_models: int = 0
 
     @property
     def has_history(self) -> bool:
@@ -153,6 +174,16 @@ async def farm_stats(
         or 0
     )
 
+    fleet = await _fleet(db)
+    catalogue = int(
+        await db.scalar(
+            select(func.count())
+            .select_from(CatalogModel)
+            .where(CatalogModel.published_at.is_not(None))
+        )
+        or 0
+    )
+
     return FarmStats(
         window_days=window.days,
         orders_delivered=total,
@@ -163,7 +194,41 @@ async def farm_stats(
             else None
         ),
         failure_percent=_percent(failed, finished),
+        printers_total=fleet[0],
+        printers_printing=fleet[1],
+        next_free_minutes=fleet[2],
+        catalog_models=catalogue,
     )
+
+
+async def _fleet(db: AsyncSession) -> tuple[int, int, int | None]:
+    """How many machines the farm runs, how many are busy, and the shortest wait.
+
+    Counted over *active* printers only. A machine somebody has retired is not
+    capacity the customer can be offered, and including it would inflate the
+    denominator of the one figure on the page that describes right now.
+
+    The wait comes from each machine's own last report — never from an estimate.
+    A printer that has not said how long it has left contributes nothing, so a
+    farm whose telemetry is down reports `None` rather than a comforting number.
+    That is ADR-0007's rule, applied where it is most tempting to break.
+    """
+    printers = list(await db.scalars(select(Printer).where(Printer.is_active.is_(True))))
+    printing = [p for p in printers if p.state is PrinterState.PRINTING]
+
+    # A machine standing idle *is* the answer to "when is one free", and it is
+    # nought minutes rather than an absent figure.
+    if any(p.state is PrinterState.IDLE for p in printers):
+        return len(printers), len(printing), 0
+
+    remaining = [
+        int(value)
+        for value in (
+            (printer.last_telemetry or {}).get("remaining_minutes") for printer in printing
+        )
+        if value is not None
+    ]
+    return len(printers), len(printing), min(remaining) if remaining else None
 
 
 def _percent(part: int, whole: int) -> Decimal | None:

@@ -32,10 +32,32 @@ provider's dashboard by hand is the kind of week nobody plans for.
 
 ## 2. Daily operation
 
-WAL archiving is on in `docker-compose.yml` and needs nothing further. It is
+WAL archiving is on in `docker-compose.yml` and in `deploy/compose.prod.yml`. It is
 configured there rather than left to the operator because `archive_mode` cannot be
 changed without a restart, and a farm that has been running for a year is exactly
 where nobody wants to discover that.
+
+**Check it once, on the first day.** This paragraph used to end "and needs nothing
+further", which was wrong in the worst possible way: the archive target is mounted
+into a container that runs as uid 70, and the mount is owned by root until somebody
+changes it. The server then cannot write a single segment. Nothing surfaces — the
+farm runs normally, `archive_command` fails silently on every segment, and because
+a segment cannot be recycled until it is archived, `pg_wal` grows until the data
+disk fills and PostgreSQL stops. Meanwhile the recovery point this table promises
+does not exist. On the development stack that ran to 1 385 consecutive failures,
+zero successes and 23 GB of WAL before anybody looked.
+
+The `backup-init` service now chowns the mount before PostgreSQL starts, so a fresh
+deployment is correct by construction. Verify anyway — it costs one command, and it
+is the only thing that distinguishes a working backup from a believed one:
+
+```bash
+docker exec printorian-postgres psql -U printorian -d printorian   -c "select archived_count, failed_count, last_failed_error from pg_stat_archiver;"
+```
+
+`failed_count` must be 0 and `archived_count` must climb. If it does not, nothing
+below this line will save the farm, and §6's monitoring signal is the alert that
+should have told you.
 
 Nightly, on the farm's server. The script runs on the **host** and connects over
 the network — it needs `pg_dump`, `pg_basebackup` and `pg_archivecleanup` from a

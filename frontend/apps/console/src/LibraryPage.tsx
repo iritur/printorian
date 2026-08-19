@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
 import type { Locale } from '@printorian/ui'
-import { api, translateError, useSession } from '@printorian/ui'
+import { api, translateError, useChrome, useSession } from '@printorian/ui'
 
 import { Field } from './FleetAdmin'
 
@@ -145,6 +145,23 @@ export function LibraryPage({ locale }: { locale: Locale }) {
   const may = actor?.permissions.includes(MANAGE_LIBRARY) ?? false
 
   const [rows, setRows] = useState<CatalogRow[] | null>(null)
+
+  /* The catalogue as staff see it: everything, published or not. */
+  useChrome(
+    rows
+      ? {
+          meta: [
+            { label: 'CATALOG.MODELS', value: String(rows.length) },
+            {
+              // `published_at` rather than a flag: the row carries the date it
+              // went live and nothing else, and a null date *is* the draft.
+              label: 'ОПУБЛИКОВАНО',
+              value: String(rows.filter((row) => row.published_at !== null).length),
+            },
+          ],
+        }
+      : null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [geometry, setGeometry] = useState<UploadedGeometry | null>(null)
   const [draft, setDraft] = useState<Draft>(EMPTY)

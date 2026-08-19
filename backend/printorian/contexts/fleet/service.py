@@ -325,6 +325,8 @@ class FleetService:
                 else None
             ),
             current_job=telemetry.get("job_handle"),
+            layer_current=telemetry.get("layer_current"),
+            layer_total=telemetry.get("layer_total"),
             build_width_mm=printer.build_width_mm,
             build_depth_mm=printer.build_depth_mm,
             build_height_mm=printer.build_height_mm,

@@ -35,23 +35,26 @@ if not exist "frontend\node_modules" (
 )
 
 echo [1/5] Database and cache...
-REM  --wait, not a bare `up -d`. Without it compose returns as soon as the
-REM  containers have *started*, which is several seconds before Postgres accepts
-REM  connections - and the migration on the next step then dies with
-REM  "the database system is starting up". Both services already declare a
-REM  healthcheck; this is what makes compose honour them.
+REM  A bare `up -d` returns as soon as the containers have *started*, which is
+REM  several seconds before Postgres accepts connections - and the migration on
+REM  the next step then dies with "the database system is starting up".
 REM
-REM  The timeout is generous because a cold volume runs crash recovery first, and
-REM  failing early there would be the same race in the other direction.
-docker compose up -d --wait --wait-timeout 120
+REM  Waited for explicitly rather than with `--wait`. That flag refuses to run at
+REM  all on a stack containing a service with no healthcheck, and this one has
+REM  `backup-init` - a one-shot that chowns the WAL archive volume and exits.
+REM  Whether a given compose refuses is version-dependent, which is how the
+REM  release gate passed locally and failed on the runner (f947a5e). Polling the
+REM  two containers we actually depend on has no such hole, and says which one
+REM  did not come up.
+docker compose up -d
 if errorlevel 1 (
-    echo [!] Database and cache did not come up.
-    echo     If Docker Desktop is not running, start it and try again.
-    echo     Otherwise check the containers:  docker compose ps
-    echo                                      docker compose logs postgres
+    echo [!] Docker is not running. Start Docker Desktop and try again.
     pause
     exit /b 1
 )
+
+call :await printorian-postgres || exit /b 1
+call :await printorian-redis    || exit /b 1
 
 echo [2/5] API on port 8000...
 curl -s -m 2 -o NUL http://127.0.0.1:8000/health
@@ -128,3 +131,32 @@ echo.
 ping -n 4 127.0.0.1 >NUL
 start http://127.0.0.1:5174
 endlocal
+
+exit /b 0
+
+REM ---------------------------------------------------------------------------
+REM  Block until one container reports healthy.
+REM
+REM  60 tries at roughly two seconds: a cold volume runs crash recovery before
+REM  it accepts connections, and failing early there would be the same race in
+REM  the other direction. Reports the container's own log tail on giving up,
+REM  because "did not become healthy" alone sends people to the wrong place.
+REM
+REM  `ping`, not `timeout`, and the rest of this file already agrees. Launched
+REM  from a shell whose PATH puts GNU coreutils first - Git Bash, say -
+REM  `timeout` resolves to the coreutils one, which rejects `/t`, sleeps not at
+REM  all, and turns a two-minute wait into sixty instant failures.
+REM ---------------------------------------------------------------------------
+:await
+setlocal
+set "name=%~1"
+for /l %%i in (1,1,60) do (
+    for /f "delims=" %%s in ('docker inspect -f "{{.State.Health.Status}}" %name% 2^>NUL') do (
+        if "%%s"=="healthy" endlocal & exit /b 0
+    )
+    ping -n 3 127.0.0.1 >NUL
+)
+echo [!] %name% did not become healthy.
+docker logs --tail 40 %name%
+pause
+endlocal & exit /b 1

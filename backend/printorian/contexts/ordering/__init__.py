@@ -5,6 +5,14 @@ Public interface. The defining rule: an order's price is **pinned** at placement
 it). Nothing here ever reprices an existing order.
 """
 
+from printorian.contexts.ordering.history import (
+    MONTHS_SHOWN,
+    NOT_REVENUE,
+    lifetime,
+    lines_per_asset,
+    order_numbers,
+    spent,
+)
 from printorian.contexts.ordering.policies import (
     POLICIES,
     TRANSITIONS,
@@ -24,6 +32,8 @@ from printorian.contexts.ordering.promise import (
 from printorian.contexts.ordering.schemas import (
     Delivery,
     DraftLine,
+    Lifetime,
+    MonthPoint,
     OrderEventView,
     OrderLineView,
     OrderTable,
@@ -36,6 +46,8 @@ from printorian.contexts.ordering.service import OrderingService
 
 __all__ = [
     "MIN_LEAD_HOURS",
+    "MONTHS_SHOWN",
+    "NOT_REVENUE",
     "POLICIES",
     "PROMISE_BUFFER_PERCENT",
     "RUSH_LEAD_HOURS",
@@ -44,6 +56,8 @@ __all__ = [
     "Delivery",
     "DeliveryMethod",
     "DraftLine",
+    "Lifetime",
+    "MonthPoint",
     "OrderEventView",
     "OrderLineView",
     "OrderStatus",
@@ -55,6 +69,10 @@ __all__ = [
     "StatusCount",
     "assert_transition",
     "can_transition",
+    "lifetime",
+    "lines_per_asset",
+    "order_numbers",
     "policy",
     "promised_hours",
+    "spent",
 ]

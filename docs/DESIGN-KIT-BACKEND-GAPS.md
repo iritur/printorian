@@ -72,20 +72,36 @@ The desk shows margin per order. `OrderView` has no such field, though the pinne
 
 ## 3. Medium — new entities, no new subsystems
 
-### 3.1 The customer's own record — `account.html`
-Identity, orders and `pricing.CustomerTier` exist. Four sections have nothing:
+### 3.1 The customer's own record — `account.html` — **done**
 
-| Section | Needed |
+Built as `contexts/account` plus the `/account` router. What landed:
+
+| Section | Built as |
 |---|---|
-| Адреса доставки | `Address` entity, per customer, one default |
-| Оплата и документы | Saved payment methods (provider token only — never a PAN), invoices/receipts list |
-| Уведомления | Per-channel, per-event preferences, plus the kit's "quiet hours" |
-| Мои модели | Customer-owned `ModelAsset` listing — the entity exists, the scoped query does not |
+| Адреса доставки | `Address`, per customer, one default; copied into an order at checkout, never linked |
+| Оплата и документы | Receipts and refunds **derived** from settled payments — no documents table. Saved cards deliberately absent, see below |
+| Уведомления | Five per-event switches on `notification_prefs`, plus the locked lateness-credit row and the journal subscription |
+| Мои модели | `ModelLibrary.uploaded_by`, with a scoped `/account/models/{id}/file` so a customer can re-order their own upload |
+| Безопасность | Session listing with device, address and last-seen; end-one and end-all-but-current; password change; export; account closure |
 
-The **tier ladder** needs one figure the backend does not expose: distance to the
-next tier. The screen deliberately shows the gap rather than the badge, so it
-needs the thresholds and the customer's running total, not just their current
-tier.
+The **tier ladder** is `contexts/pricing/loyalty.py` — thresholds in roubles of
+lifetime spend — projected onto one customer by `account/ladder.py`, which is what
+supplies the gap the screen leads with. It is also *applied*: every path that
+produces a price resolves the caller's tier through `api/routers/_loyalty.py`, so
+the «−4%» on the badge is the same four percent the engine takes off.
+
+Two things were **not** built, and both because the alternative would have been a
+promise the farm cannot keep:
+
+- **Saved payment methods.** A saved card is a gateway token; no gateway has been
+  exercised against the real thing (README), so the entity would be plumbing that
+  can never be tested. The panel states the position instead.
+- **Two-factor authentication.** No TOTP anywhere in the backend. The row is drawn
+  disabled with the reason on it, using the kit's own idiom for a control that
+  cannot move.
+
+Mail delivery is still absent — the preferences are stored and honoured by nothing,
+because nothing in this system sends email. The panel's footer says so.
 
 ### 3.2 The settings store — `settings.html`
 15 sections, ~100 parameters, all currently constants in code. The kit's

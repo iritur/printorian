@@ -16,10 +16,13 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.api.farm_stats import farm_stats
+from printorian.contexts.fleet.models import Printer
 from printorian.contexts.ordering.models import Order
 from printorian.contexts.ordering.policies import OrderStatus
 from printorian.contexts.production.models import PrintJob
 from printorian.contexts.production.policies import JobStatus
+from printorian.core.clock import FixedClock
+from printorian.drivers.base import PrinterState
 
 NOW = datetime(2026, 8, 13, 12, 0, tzinfo=UTC)
 
@@ -183,3 +186,68 @@ async def test_the_window_is_reported_with_the_figures(
     """A percentage without its period is not a fact anyone can check."""
     stats = await farm_stats(db_session, now=NOW, window=window)
     assert stats.window_days == window.days
+
+
+def _printing(*, name: str, remaining: int) -> Printer:
+    """A machine mid-print, reporting how long it has left."""
+    return Printer(
+        name=name,
+        state=PrinterState.PRINTING,
+        last_telemetry={"remaining_minutes": remaining},
+    )
+
+
+async def test_the_fleet_line_counts_only_machines_the_farm_still_runs(
+    db_session: AsyncSession, clock: FixedClock
+) -> None:
+    """«Сейчас печатается 7 из 12» — over active printers, not every row ever.
+
+    A retired machine is not capacity anybody can be offered, and counting it
+    would inflate the denominator of the one figure on the promo page that
+    describes this second rather than the last ninety days.
+    """
+    db_session.add_all(
+        [
+            _printing(name="P-01", remaining=90),
+            _printing(name="P-02", remaining=21),
+            Printer(name="P-03", state=PrinterState.OFFLINE),
+            Printer(name="P-04", state=PrinterState.IDLE, is_active=False),
+        ]
+    )
+    await db_session.flush()
+
+    stats = await farm_stats(db_session, now=clock.now())
+
+    assert stats.printers_total == 3
+    assert stats.printers_printing == 2
+    # The shortest remaining print, from the machines' own reports.
+    assert stats.next_free_minutes == 21
+
+
+async def test_an_idle_machine_means_no_wait_at_all(
+    db_session: AsyncSession, clock: FixedClock
+) -> None:
+    db_session.add_all(
+        [
+            _printing(name="P-01", remaining=90),
+            Printer(name="P-02", state=PrinterState.IDLE),
+        ]
+    )
+    await db_session.flush()
+
+    assert (await farm_stats(db_session, now=clock.now())).next_free_minutes == 0
+
+
+async def test_a_fleet_that_has_not_reported_offers_no_wait(
+    db_session: AsyncSession, clock: FixedClock
+) -> None:
+    """`None`, not nought. A farm whose telemetry is down must not answer
+    «свободная машина через 0 мин» — that is the comforting number ADR-0007
+    forbids a driver from inventing, printed on the landing page instead."""
+    db_session.add(Printer(name="P-01", state=PrinterState.PRINTING))
+    await db_session.flush()
+
+    stats = await farm_stats(db_session, now=clock.now())
+
+    assert stats.printers_printing == 1
+    assert stats.next_free_minutes is None

@@ -234,6 +234,12 @@ jobs:
             docker logs "$1" 2>&1 | tail -40
             return 1
           }
+          # backup-init first: everything else depends on it, so when it fails the
+          # symptom is postgres never starting and migrate never running — which
+          # would be reported here as a migrate timeout, sending whoever reads the
+          # log to the wrong container.
+          await printorian-backup-init-1 '{{.State.Status}}' exited
+          test "$(docker inspect -f '{{.State.ExitCode}}' printorian-backup-init-1)" = 0
           await printorian-migrate-1 '{{.State.Status}}' exited
           test "$(docker inspect -f '{{.State.ExitCode}}' printorian-migrate-1)" = 0
           await printorian-api-1     '{{.State.Health.Status}}' healthy

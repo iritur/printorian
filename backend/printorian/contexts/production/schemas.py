@@ -134,3 +134,16 @@ class QueuePosition(BaseModel):
     #: and the client says so rather than showing a date nobody can stand behind.
     predicted_start: datetime | None = None
     progress_percent: int | None = None
+
+    #: Which attempt this is. Above one means an earlier print failed and the
+    #: farm is reprinting at its own cost — the customer should be told that
+    #: rather than left wondering why the promised date moved.
+    attempt: int = 1
+    #: The machine chosen, when one has been. Resolved to a name by the API,
+    #: which is the only layer allowed to know both contexts.
+    printer_id: EntityId | None = None
+    #: When the planner picked a machine, and when the machine confirmed it was
+    #: running. Both from the job's own event log, so the pipeline can date its
+    #: stages from what happened rather than from when somebody looked.
+    assigned_at: datetime | None = None
+    started_at: datetime | None = None

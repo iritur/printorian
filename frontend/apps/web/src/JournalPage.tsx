@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { SECTIONS, SECTION_META, api } from '@printorian/ui'
+import { SECTIONS, SECTION_META, api, useChrome } from '@printorian/ui'
 import type { Locale, Section } from '@printorian/ui'
 
 /**
@@ -165,6 +165,25 @@ export function JournalPage({
   const [index, setIndex] = useState<JournalIndex | null>(null)
   const [featured, setFeatured] = useState<PostCard | null>(null)
   const [section, setSection] = useState<Section | null>(null)
+
+  /*
+    The kit's `JOURNAL.INDEX[18]` plus the filter, because the filter is the one
+    thing about this screen's state that a link does not carry — «PRESET ::
+    ALL_REPORTS» in the kit, and the chosen section when there is one.
+  */
+  useChrome(
+    index
+      ? {
+          meta: [
+            { label: 'JOURNAL.INDEX', value: String(index.published_total) },
+            {
+              label: 'PRESET',
+              value: section ? SECTION_META[section].label.toUpperCase() : 'ALL_REPORTS',
+            },
+          ],
+        }
+      : null,
+  )
   const [text, setText] = useState('')
   const [debounced, setDebounced] = useState('')
 

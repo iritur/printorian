@@ -14,9 +14,35 @@
 name: printorian
 
 services:
+  # Makes the backup target writable before PostgreSQL wants it.
+  #
+  # `archive_command` used to open with `mkdir -p /backup/wal`, which the server
+  # cannot run: it is uid 70, and the mount underneath is owned by root — a fresh
+  # named volume always, and a bind mount on the farm unless somebody remembered
+  # to chown it. The archiver then fails on every segment, and because a segment
+  # cannot be recycled until it is archived, `pg_wal` grows without bound until
+  # the data disk fills and the farm stops.
+  #
+  # Observed on the development stack before it could happen here: 1 385 failed
+  # archives, zero successes, 23 GB of WAL — and a backup guarantee (ADR-0019)
+  # that had never once worked while reporting nothing.
+  #
+  # Root, because chowning a mount is the one thing the server itself cannot do.
+  # It exits immediately and everything else waits for it to succeed.
+  backup-init:
+    image: postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    user: root
+    restart: "no"
+    volumes:
+      - ${PRINTORIAN_BACKUP_ROOT:-pgbackup}:/backup
+    command: sh -c "mkdir -p /backup/wal && chown -R 70:70 /backup"
+
   postgres:
     image: postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
     restart: unless-stopped
+    depends_on:
+      backup-init:
+        condition: service_completed_successfully
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-printorian}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
@@ -51,7 +77,11 @@ services:
       - -c
       - archive_mode=on
       - -c
-      - archive_command=mkdir -p /backup/wal && test ! -f /backup/wal/%f && cp %p /backup/wal/%f
+      # No `mkdir` here — see `backup-init`. A command the server has no
+      # permission to run fails silently for ever, and PostgreSQL retries the
+      # same segment until the disk is gone. Refusing to overwrite an existing
+      # segment stays: a silent overwrite corrupts the archive a restore needs.
+      - archive_command=test ! -f /backup/wal/%f && cp %p /backup/wal/%f
       - -c
       - archive_timeout=60
       - -c

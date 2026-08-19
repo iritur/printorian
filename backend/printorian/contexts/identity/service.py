@@ -18,7 +18,9 @@ from printorian.contexts.identity.schemas import (
     Actor,
     CreateUser,
     SessionGranted,
+    SessionView,
     SignIn,
+    UpdateProfile,
     UserView,
 )
 from printorian.core.clock import Clock
@@ -43,6 +45,14 @@ _TOKEN_BYTES = 32
 
 #: Kept in step with ``CreateUser.password``; asserted equal in the identity tests.
 MIN_PASSWORD_LENGTH = 10
+
+#: How stale ``Session.last_seen_at`` is allowed to get before a read writes.
+#:
+#: Every authenticated request resolves a token, so touching the row each time
+#: would put an UPDATE in front of every GET the farm serves. Five minutes is
+#: finer than the screen that consumes it can show and coarse enough that a busy
+#: session costs twelve writes an hour rather than thousands.
+SEEN_GRANULARITY = timedelta(minutes=5)
 
 
 def hash_token(token: str) -> str:
@@ -132,9 +142,37 @@ class IdentityService:
         await self._db.flush()
         return UserView.model_validate(user)
 
+    async def update_profile(self, user_id: EntityId, data: UpdateProfile) -> UserView:
+        """Change what someone may change about themselves.
+
+        `exclude_unset`, so a screen that edits one field sends one field and the
+        rest are left as they were rather than blanked. `display_name` is stripped
+        and must survive it — a name of three spaces is an empty name with extra
+        steps, and the column is not nullable.
+        """
+        user = await self._db.get(User, user_id)
+        if user is None:
+            raise NotFoundError("error.identity.user_not_found", user_id=str(user_id))
+
+        changes = data.model_dump(exclude_unset=True, exclude_none=True)
+        if "display_name" in changes:
+            name = str(changes["display_name"]).strip()
+            if not name:
+                raise ValidationError("error.identity.display_name_required")
+            changes["display_name"] = name
+        if "phone" in changes:
+            changes["phone"] = str(changes["phone"]).strip()
+
+        for field, value in changes.items():
+            setattr(user, field, value)
+        await self._db.flush()
+        return UserView.model_validate(user)
+
     # -- authentication --------------------------------------------------
 
-    async def sign_in(self, data: SignIn, *, user_agent: str | None = None) -> SessionGranted:
+    async def sign_in(
+        self, data: SignIn, *, user_agent: str | None = None, client_ip: str = ""
+    ) -> SessionGranted:
         email = _normalize_email(data.email)
         user = await self._db.scalar(select(User).where(User.email == email))
 
@@ -151,7 +189,7 @@ class IdentityService:
         if not user.is_active:
             raise UnauthenticatedError("error.identity.account_disabled")
 
-        granted = await self._issue_session(user, user_agent=user_agent)
+        granted = await self._issue_session(user, user_agent=user_agent, client_ip=client_ip)
         await self._bus.publish(events.SignInSucceeded(user_id=user.id))
         return granted
 
@@ -172,6 +210,7 @@ class IdentityService:
         if user is None or not user.is_active:
             raise UnauthenticatedError("error.identity.account_disabled")
 
+        self._touch(session)
         return actor_of(user)
 
     async def sign_out(self, token: str) -> None:
@@ -181,6 +220,88 @@ class IdentityService:
         if session is not None and session.revoked_at is None:
             session.revoked_at = self._clock.now()
             await self._db.flush()
+
+    # -- sessions --------------------------------------------------------
+
+    async def list_sessions(self, user_id: EntityId, *, current: str = "") -> list[SessionView]:
+        """Live sessions, newest first, with the caller's own one marked.
+
+        Live means not revoked and not expired. An expired row is not a device
+        somebody could still be signed in on, so listing it invites people to
+        "end" sessions that ended by themselves — and the reaper deletes it
+        anyway.
+        """
+        now = self._clock.now()
+        rows = await self._db.scalars(
+            select(Session)
+            .where(
+                Session.user_id == user_id,
+                Session.revoked_at.is_(None),
+                Session.expires_at > now,
+            )
+            .order_by(Session.created_at.desc())
+        )
+        mine = hash_token(current) if current else ""
+        return [
+            SessionView(
+                id=row.id,
+                user_agent=row.user_agent,
+                client_ip=row.client_ip,
+                created_at=row.created_at,
+                last_seen_at=row.last_seen_at,
+                expires_at=row.expires_at,
+                is_current=bool(mine) and row.token_hash == mine,
+            )
+            for row in rows
+        ]
+
+    async def revoke_session(self, user_id: EntityId, session_id: EntityId) -> None:
+        """End one session. Scoped by owner, so an id from elsewhere finds nothing.
+
+        `NotFoundError` rather than a permission error for a session belonging to
+        somebody else: the two answers differ, and a caller who can tell them
+        apart can probe for live session ids.
+        """
+        session = await self._db.scalar(
+            select(Session).where(Session.id == session_id, Session.user_id == user_id)
+        )
+        if session is None:
+            raise NotFoundError("error.identity.session_not_found", session_id=str(session_id))
+        if session.revoked_at is None:
+            session.revoked_at = self._clock.now()
+            await self._db.flush()
+
+    async def revoke_others(self, user_id: EntityId, *, keep: str) -> int:
+        """End every session except the one making the request. Returns the count.
+
+        `keep` is the caller's own token. Without it this is `_revoke_all`, which
+        is what deactivation wants and what a person pressing «Завершить все,
+        кроме текущего» very much does not — they would be signed out by their
+        own click.
+        """
+        keeping = hash_token(keep) if keep else ""
+        sessions = await self._db.scalars(
+            select(Session).where(
+                Session.user_id == user_id,
+                Session.revoked_at.is_(None),
+                Session.token_hash != keeping,
+            )
+        )
+        now = self._clock.now()
+        ended = 0
+        for session in sessions:
+            session.revoked_at = now
+            ended += 1
+        await self._db.flush()
+        return ended
+
+    def _touch(self, session: Session) -> None:
+        """Record that this session was used, at `SEEN_GRANULARITY`."""
+        now = self._clock.now()
+        if session.last_seen_at is None or now - session.last_seen_at >= SEEN_GRANULARITY:
+            session.last_seen_at = now
+
+    # -- passwords -------------------------------------------------------
 
     async def change_password(self, user_id: EntityId, *, current: str, replacement: str) -> None:
         user = await self._db.get(User, user_id)
@@ -221,7 +342,9 @@ class IdentityService:
 
     # -- internals -------------------------------------------------------
 
-    async def _issue_session(self, user: User, *, user_agent: str | None) -> SessionGranted:
+    async def _issue_session(
+        self, user: User, *, user_agent: str | None, client_ip: str = ""
+    ) -> SessionGranted:
         token = secrets.token_urlsafe(_TOKEN_BYTES)
         expires_at = self._clock.now() + timedelta(hours=self._settings.session_ttl_hours)
 
@@ -231,6 +354,8 @@ class IdentityService:
                 token_hash=hash_token(token),
                 expires_at=expires_at,
                 user_agent=(user_agent or "")[:300] or None,
+                client_ip=client_ip[:45],
+                last_seen_at=self._clock.now(),
             )
         )
         await self._db.flush()

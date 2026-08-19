@@ -7,10 +7,13 @@ thing is moving, and if not, whether waiting will fix it.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.production.models import PrintJob, WaitListEntry
+from printorian.contexts.production.models import JobEvent, PrintJob, WaitListEntry
+from printorian.contexts.production.policies import JobStatus
 from printorian.contexts.production.schemas import QueuePosition
 from printorian.core.ids import EntityId
 
@@ -34,10 +37,19 @@ async def queue_position(db: AsyncSession, order_id: EntityId) -> QueuePosition 
     if job is None:
         return None
 
+    machine = {
+        "attempt": job.attempt,
+        "printer_id": job.printer_id,
+        "assigned_at": await _first_entered(db, job.id, JobStatus.ASSIGNED),
+        "started_at": job.started_at,
+    }
+
     entry = await db.scalar(select(WaitListEntry).where(WaitListEntry.job_id == job.id))
     if entry is None:
         # Not waiting: assigned, printing, finished, or held.
-        return QueuePosition(job_status=job.status, progress_percent=job.progress_percent)
+        return QueuePosition(
+            job_status=job.status, progress_percent=job.progress_percent, **machine
+        )
 
     position: int | None = None
     if entry.predicted_start is not None:
@@ -57,4 +69,30 @@ async def queue_position(db: AsyncSession, order_id: EntityId) -> QueuePosition 
         reason=entry.reason,
         predicted_start=entry.predicted_start,
         progress_percent=job.progress_percent,
+        **machine,
     )
+
+
+async def _first_entered(db: AsyncSession, job_id: EntityId, status: JobStatus) -> datetime | None:
+    """When this job *first* reached a status, from its own event log.
+
+    First rather than last, deliberately. A job that failed and was reassigned
+    enters `assigned` twice, and the cabinet's pipeline dates the stage the
+    customer's order passed through — the moment a machine was first chosen for
+    it. The reprint is reported separately, by `attempt`.
+
+    ``None`` for a status never reached, which is exactly what an unlit stage on
+    the pipeline means.
+
+    The timestamp is the *database's*, because `JobEvent.created_at` is a server
+    default — the same split `Session.expires_at` documents, where the injected
+    clock and the server clock are deliberately different sources. For a stage
+    label read by a person the two are indistinguishable.
+    """
+    when: datetime | None = await db.scalar(
+        select(JobEvent.created_at)
+        .where(JobEvent.job_id == job_id, JobEvent.to_status == status.value)
+        .order_by(JobEvent.created_at)
+        .limit(1)
+    )
+    return when
