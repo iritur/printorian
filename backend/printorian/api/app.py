@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from printorian.api.errors import install_error_handlers
 from printorian.api.routers import (
+    account,
     auth,
     catalog,
     health,
@@ -88,6 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_error_handlers(app)
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(account.router)
     app.include_router(users.router)
     app.include_router(catalog.router)
     app.include_router(journal.router)

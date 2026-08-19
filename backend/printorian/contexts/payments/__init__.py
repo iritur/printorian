@@ -32,6 +32,7 @@ from printorian.contexts.payments.provider import (
 )
 from printorian.contexts.payments.providers import ManualPaymentProvider, MockPaymentProvider
 from printorian.contexts.payments.schemas import (
+    PaymentDocument,
     PaymentView,
     RefundRequest,
     RefundView,
@@ -43,6 +44,7 @@ __all__ = [
     "RECONCILIATION_TOLERANCE",
     "ManualPaymentProvider",
     "MockPaymentProvider",
+    "PaymentDocument",
     "PaymentProvider",
     "PaymentProviderError",
     "PaymentRequest",

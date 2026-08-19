@@ -12,6 +12,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from printorian.contexts.account import AccountService
 from printorian.contexts.catalog import ModelLibrary, PlateLibrary
 from printorian.contexts.fleet import FleetService
 from printorian.contexts.identity import Actor, IdentityService, Permission
@@ -73,6 +74,13 @@ def get_model_library(db: DbSession, store: Storage, clock: AppClock) -> ModelLi
 Models = Annotated[ModelLibrary, Depends(get_model_library)]
 
 
+def get_account_service(db: DbSession) -> AccountService:
+    return AccountService(db)
+
+
+Account = Annotated[AccountService, Depends(get_account_service)]
+
+
 def get_identity_service(
     db: DbSession, settings: AppSettings, clock: AppClock, bus: AppEventBus
 ) -> IdentityService:
@@ -130,16 +138,42 @@ def get_plate_library(db: DbSession, clock: AppClock) -> PlateLibrary:
 Plates = Annotated[PlateLibrary, Depends(get_plate_library)]
 
 
-def _extract_token(request: Request) -> str:
+def session_token(request: Request) -> str:
+    """The caller's session token, from the header or the cookie.
+
+    Public because two routes need the token itself rather than the actor it
+    resolves to: signing out, and «Завершить все, кроме текущего» — which has to
+    know which session *is* the current one in order to spare it.
+    """
     header = request.headers.get("Authorization", "")
     if header.startswith("Bearer "):
         return header.removeprefix("Bearer ").strip()
     return request.cookies.get(SESSION_COOKIE, "")
 
 
+def client_ip(request: Request) -> str:
+    """Where the request came from, as best the API can tell.
+
+    Behind the reverse proxy both apps are served through (ADR-0016), the socket
+    peer is always the proxy, so the first hop of `X-Forwarded-For` is the only
+    thing that varies per client. It is also client-controlled and therefore not
+    evidence of anything — which is exactly why it is used here and nowhere near
+    an authorization decision. The security screen shows it so a person can say
+    "that was not me", and a wrong address is no worse than the proxy's own on
+    every row.
+
+    One place, so that the day this becomes a trust boundary there is one line to
+    change rather than a search.
+    """
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()[:45]
+    return (request.client.host if request.client else "")[:45]
+
+
 async def get_current_actor(request: Request, identity: Identity) -> Actor:
     """Resolve the caller, or raise :class:`UnauthenticatedError`."""
-    return await identity.resolve(_extract_token(request))
+    return await identity.resolve(session_token(request))
 
 
 CurrentActor = Annotated[Actor, Depends(get_current_actor)]
@@ -148,7 +182,7 @@ CurrentActor = Annotated[Actor, Depends(get_current_actor)]
 async def get_optional_actor(request: Request, identity: Identity) -> Actor | None:
     """Resolve the caller if one is present; ``None`` for anonymous browsing."""
     try:
-        return await identity.resolve(_extract_token(request))
+        return await identity.resolve(session_token(request))
     except UnauthenticatedError:
         return None
 

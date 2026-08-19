@@ -17,6 +17,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, File, Form, UploadFile
 
 from printorian.api.deps import AppSettings, DbSession, Models, OptionalActor
+from printorian.api.routers._loyalty import tier_for
 from printorian.api.routers._pricing_render import _render, _render_delta
 from printorian.contexts.catalog import (
     EstimationProfile,
@@ -272,7 +273,10 @@ async def quote(
     rates = RateSnapshot()
     return {
         "model": context,
-        "breakdown": _render(price(spec, rates)),
+        # The signed-in caller's loyalty tier, so the configurator quotes the
+        # figure the checkout will charge. Anonymous browsing is priced at the
+        # standard book, which can only be the higher of the two.
+        "breakdown": _render(price(spec, rates, await tier_for(db, actor))),
         # The whole ladder, not just the rung that applied.
         #
         # The kit's «03 :: Размер и количество» shows the threshold reached *and*
@@ -292,6 +296,7 @@ async def quote(
 @router.post("/preview")
 async def preview_option(
     db: DbSession,
+    actor: OptionalActor,
     model: Annotated[UploadFile, File()],
     material_code: Annotated[str, Form()],
     #: Every product on the plate, one per colour. `material_code` alone still
@@ -358,5 +363,8 @@ async def preview_option(
         raise ValidationError("error.pricing.no_option_change")
 
     rates = RateSnapshot()
-    delta = diff(price(spec, rates), price(spec.with_changes(**changes), rates))
+    # Both sides of the diff at the same tier, or the delta would carry the
+    # customer's loyalty discount as though the option had caused it.
+    tier = await tier_for(db, actor)
+    delta = diff(price(spec, rates, tier), price(spec.with_changes(**changes), rates, tier))
     return {"model": context, "delta": _render_delta(delta)}

@@ -21,6 +21,7 @@ contract, and this imports them.
 
 from __future__ import annotations
 
+from printorian.contexts.account import models as account_models
 from printorian.contexts.catalog import catalogue as catalog_catalogue
 from printorian.contexts.catalog import models as catalog_models
 from printorian.contexts.fleet import models as fleet_models
@@ -36,6 +37,7 @@ from printorian.core.db import Base
 metadata = Base.metadata
 
 __all__ = [
+    "account_models",
     "catalog_catalogue",
     "catalog_models",
     "fleet_models",
