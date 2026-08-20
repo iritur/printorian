@@ -161,6 +161,18 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+REM  The packing bench cannot open without its instruction and its tara: a parcel
+REM  raised against no published instruction has no steps and no norm, and an
+REM  empty shelf has no box to recommend. Idempotent - tara is keyed by code and
+REM  an already-published version is left alone - so running it every start costs
+REM  nothing and a fresh checkout gets a working post.
+.venv\Scripts\python.exe scripts\seed_packaging.py
+if errorlevel 1 (
+    echo [!] Could not seed the packing bench. See the error above.
+    popd
+    pause
+    exit /b 1
+)
 popd
 
 echo [4/7] API on port %API_PORT%...

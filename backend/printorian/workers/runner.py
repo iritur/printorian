@@ -38,6 +38,7 @@ from printorian.contexts.fleet import FleetService
 from printorian.contexts.fleet.models import Printer
 from printorian.contexts.identity import IdentityService
 from printorian.contexts.ordering import OrderingService
+from printorian.contexts.packaging import PackagingService
 from printorian.contexts.postproduction import PostProductionService
 from printorian.contexts.production import ProductionService
 from printorian.core.clock import SystemClock
@@ -47,7 +48,14 @@ from printorian.core.events import EventBus
 from printorian.core.logging import configure_logging
 from printorian.core.secrets import SecretBox
 from printorian.core.storage import build_object_store, prepare_root
-from printorian.workers import maintenance, postproduction, scheduler, sla, telemetry
+from printorian.workers import (
+    maintenance,
+    packaging,
+    postproduction,
+    scheduler,
+    sla,
+    telemetry,
+)
 from printorian.workers.drivers import DriverPool
 
 logger = structlog.get_logger(__name__)
@@ -123,6 +131,39 @@ class _SessionScopedPostProduction:
             service = PostProductionService(session, self._runtime.clock, self._runtime.bus)
             return await postproduction.PostProductionSweep(
                 session, service, self._runtime.clock
+            ).sweep()
+
+
+async def _packaging_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> None:
+    """Turn inspected orders into parcels for the packing bench.
+
+    Its own loop rather than a step inside the post-production pass, though the
+    two are adjacent: the parcel is raised by *all* of an order's finishing work
+    being done, which is a fact about the order and not about the task that
+    happened to finish last.
+    """
+
+    async def build() -> _SessionScopedPackaging:
+        return _SessionScopedPackaging(runtime)
+
+    await packaging.run_forever(
+        build,
+        interval_seconds=runtime.settings.packaging_sweep_seconds,
+        stop=stop,
+    )
+
+
+class _SessionScopedPackaging:
+    """A packing pass that opens, uses and commits its own session."""
+
+    def __init__(self, runtime: WorkerRuntime) -> None:
+        self._runtime = runtime
+
+    async def sweep(self) -> packaging.SweepOutcome:
+        async with self._runtime.session() as session:
+            service = PackagingService(session, self._runtime.clock, self._runtime.bus)
+            return await packaging.PackagingSweep(
+                session, service, self._runtime.clock, self._runtime.settings.farm_timezone
             ).sweep()
 
 
@@ -291,6 +332,7 @@ async def main(settings: Settings | None = None) -> None:
         asyncio.create_task(_telemetry_forever(runtime, pool, stop), name="telemetry"),
         asyncio.create_task(_sla_forever(runtime, stop), name="sla"),
         asyncio.create_task(_postproduction_forever(runtime, stop), name="postproduction"),
+        asyncio.create_task(_packaging_forever(runtime, stop), name="packaging"),
         asyncio.create_task(_maintenance_forever(runtime, stop), name="maintenance"),
     ]
     try:

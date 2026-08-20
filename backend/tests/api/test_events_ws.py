@@ -167,6 +167,18 @@ def test_identity_events_are_not_broadcast() -> None:
     assert "order.*" in LIVE_PATTERNS
 
 
+def test_the_shop_floor_posts_are_forwarded() -> None:
+    """Both boards claim to be live, and neither was.
+
+    Each subscribes to its own prefix and neither prefix was in this tuple, so a
+    task moving updated nobody's screen until they reloaded. Nothing failed —
+    which is exactly why it went unnoticed, and why the claim is pinned here
+    rather than left to whoever next opens the board on a quiet afternoon.
+    """
+    assert "postproduction.*" in LIVE_PATTERNS
+    assert "packaging.*" in LIVE_PATTERNS
+
+
 def test_every_forwarded_event_is_modelled_by_the_client() -> None:
     """An event nobody can parse is an event nobody reacts to.
 

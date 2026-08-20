@@ -83,6 +83,7 @@ class Settings(BaseSettings):
     #: minutes to appear on the board is five minutes of somebody watching a
     #: screen. The pass reconciles, so it is cheap to run often.
     postproduction_sweep_seconds: int = Field(default=60, ge=1)
+    packaging_sweep_seconds: int = Field(default=60, ge=1)
 
     # -- pricing guardrails ----------------------------------------------
     #: Fraction by which a sliced plate may exceed the quoted cost before the job

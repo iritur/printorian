@@ -18,6 +18,7 @@ from printorian.api.routers import (
     journal,
     materials,
     orders,
+    packaging,
     payments,
     postproduction,
     pricing,
@@ -100,6 +101,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(orders.router)
     app.include_router(payments.router)
     app.include_router(postproduction.router)
+    app.include_router(packaging.router)
     app.include_router(printers.router)
     app.include_router(jobs.router)
     app.include_router(ws_router)

@@ -38,7 +38,19 @@ router = APIRouter(tags=["events"])
 
 #: What a watching client is subscribed to. Deliberately explicit rather than "all":
 #: identity events carry account activity and have no business on a floor display.
-LIVE_PATTERNS = ("fleet.*", "order.*", "payment.settled", "attention.*")
+#:
+#: The two shop-floor posts are here because their boards claim to be live and
+#: were not: each subscribes to its own prefix and neither prefix was forwarded,
+#: so both were quietly refetch-on-mount. What they publish is a task number, an
+#: order id and a status — floor-display material by definition.
+LIVE_PATTERNS = (
+    "fleet.*",
+    "order.*",
+    "payment.settled",
+    "attention.*",
+    "postproduction.*",
+    "packaging.*",
+)
 
 #: Drop a client that cannot keep up rather than buffering without limit. A stalled
 #: browser tab must not become an unbounded queue in the server.

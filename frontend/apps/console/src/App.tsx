@@ -10,6 +10,7 @@ import { JournalPage } from './JournalPage'
 import { LibraryPage } from './LibraryPage'
 import { MaterialsPage } from './MaterialsPage'
 import { OrdersPage } from './OrdersPage'
+import { PackagingPage } from './packaging/PackagingPage'
 import { PostProductionPage } from './postproduction/PostProductionPage'
 import { PrepPage } from './PrepPage'
 import { UsersPage } from './UsersPage'
@@ -18,6 +19,7 @@ type Screen =
   | 'dashboard'
   | 'orders'
   | 'postproduction'
+  | 'packaging'
   | 'prep'
   | 'library'
   | 'journal'
@@ -162,6 +164,19 @@ function Shell() {
       shape: 'pipe',
     },
     {
+      // After the post and before prep in the list, because that is where it
+      // sits in the flow: the part is finished, inspected, and now has to reach
+      // a van before half past seven.
+      key: 'packaging',
+      label: t('pk.title'),
+      note: 'ОЧЕРЕДЬ · ТАРА · ОТСЕЧКА',
+      permission: VIEW_PRODUCTION,
+      mark: 'PACK',
+      kicker: 'C:/PRODUCTION/PACKING/QUEUE',
+      text: 'Очередь упаковки по времени забора курьера, подбор тары по габариту и комплектность против заказа.',
+      shape: 'pipe',
+    },
+    {
       key: 'prep',
       label: t('prep.title'),
       note: 'НАРЕЗКА · ПЛАСТИНЫ',
@@ -225,9 +240,7 @@ function Shell() {
   ]
   // The masthead lists only what this actor may reach *and* only this realm's
   // own screens. The overlay is where the other territory becomes visible.
-  const tabs = routes.filter(
-    (route) => !route.href && (!route.permission || may(route.permission)),
-  )
+  const tabs = routes.filter((route) => !route.href && (!route.permission || may(route.permission)))
 
   // The screen actually shown: the chosen one while it is still reachable, else
   // the first one that is. Permissions can change under a signed-in session — a
@@ -250,6 +263,7 @@ function Shell() {
     dashboard: '/DASHBOARD/FARM.OVERVIEW',
     orders: '/ORDERS/DESK',
     postproduction: '/PRODUCTION/POSTPROCESS',
+    packaging: '/PRODUCTION/PACKING/QUEUE',
     prep: '/PRODUCTION/PREP.QUEUE',
     library: '/CATALOG/CURATION',
     journal: '/JOURNAL/EDITOR',
@@ -276,6 +290,7 @@ function Shell() {
       )}
       {active === 'orders' && <OrdersPage locale={locale} />}
       {active === 'postproduction' && <PostProductionPage locale={locale} />}
+      {active === 'packaging' && <PackagingPage locale={locale} />}
       {active === 'prep' && <PrepPage locale={locale} />}
       {active === 'library' && <LibraryPage locale={locale} />}
       {active === 'journal' && <JournalPage locale={locale} />}

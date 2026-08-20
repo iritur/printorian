@@ -17,6 +17,7 @@ from printorian.contexts.fleet import FleetService
 from printorian.contexts.identity import Actor, IdentityService, Permission
 from printorian.contexts.journal import JournalService
 from printorian.contexts.ordering import OrderingService
+from printorian.contexts.packaging import PackagingService, PackingCatalogue
 from printorian.contexts.payments import PaymentsService
 from printorian.contexts.postproduction import PostProductionService
 from printorian.contexts.production import ProductionService
@@ -131,6 +132,20 @@ def get_postproduction_service(
 
 
 PostProduction = Annotated[PostProductionService, Depends(get_postproduction_service)]
+
+
+def get_packaging_service(db: DbSession, clock: AppClock, bus: AppEventBus) -> PackagingService:
+    return PackagingService(db, clock, bus)
+
+
+Packaging = Annotated[PackagingService, Depends(get_packaging_service)]
+
+
+def get_packing_catalogue(db: DbSession) -> PackingCatalogue:
+    return PackingCatalogue(db)
+
+
+PackingShelf = Annotated[PackingCatalogue, Depends(get_packing_catalogue)]
 
 
 def get_plate_library(db: DbSession, clock: AppClock) -> PlateLibrary:

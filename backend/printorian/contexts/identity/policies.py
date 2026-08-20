@@ -35,6 +35,11 @@ class Permission(StrEnum):
     OPERATE_PRINTER = "operate_printer"
     ADVANCE_POSTPRODUCTION = "advance_postproduction"
     RECORD_QC = "record_qc"
+    #: Make up the parcel. Its own permission rather than part of
+    #: `ADVANCE_POSTPRODUCTION`, because the packing bench is a post like any
+    #: other and a farm that hires somebody only to pack should be able to say
+    #: so — the same reason inspection is separate from doing the work.
+    PACK_ORDER = "pack_order"
 
     # engineering
     PREPARE_PLATE = "prepare_plate"
@@ -74,6 +79,7 @@ _OPERATOR: frozenset[Permission] = frozenset(
         Permission.OPERATE_PRINTER,
         Permission.ADVANCE_POSTPRODUCTION,
         Permission.RECORD_QC,
+        Permission.PACK_ORDER,
     }
 )
 

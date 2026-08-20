@@ -70,16 +70,16 @@ have since been acted on — see §8 for what changed.*
 | `account.html` | public | — | **Not built** |
 | `auth.html` | public | `AuthPanel` (inline only) | **Not built as a screen or a popup** |
 | `blog.html`, `blog-post.html` | public | — | **Not built** |
-| `dashboard.html` | control | — | **Not built** |
+| `dashboard.html` | control | `dashboard/DashboardPage.tsx` | **Built** — synced section for section with the kit |
 | `settings.html` | control | — | **Not built** |
-| `postproduction.html` | control | — | **Not built** |
-| `packaging.html` | control | — | **Not built** |
+| `postproduction.html` | control | `postproduction/PostProductionPage.tsx` | **Built** — board, per-step norms, scorecards |
+| `packaging.html` | control | `packaging/PackagingPage.tsx` | **Built** — cutoff countdown, box recommendation, tara ledger |
 | `service.html` | control | — | **Not built** |
 | `purchasing.html` | control | — | **Not built** |
 | `store.html` | control | — | **Not built** |
 | `logistics.html` | control | — | **Not built** |
 
-**9 built (2 of them partial), 13 missing, 1 extra app screen with no kit design.**
+**12 built (2 of them partial), 10 missing, 1 extra app screen with no kit design.**
 
 ### 1.2 Stylesheets
 
