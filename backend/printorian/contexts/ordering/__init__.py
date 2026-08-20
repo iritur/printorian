@@ -5,6 +5,19 @@ Public interface. The defining rule: an order's price is **pinned** at placement
 it). Nothing here ever reprices an existing order.
 """
 
+from printorian.contexts.ordering.finance import (
+    CategorySpend,
+    DayRevenue,
+    FinanceOverview,
+    finance_overview,
+)
+from printorian.contexts.ordering.measures import Period, Trend, Window, window_for
+from printorian.contexts.ordering.overview import (
+    OrdersOverview,
+    StatusSlice,
+    numbers_for,
+    orders_overview,
+)
 from printorian.contexts.ordering.policies import (
     POLICIES,
     TRANSITIONS,
@@ -40,21 +53,33 @@ __all__ = [
     "PROMISE_BUFFER_PERCENT",
     "RUSH_LEAD_HOURS",
     "TRANSITIONS",
+    "CategorySpend",
+    "DayRevenue",
     "DecayPolicy",
     "Delivery",
     "DeliveryMethod",
     "DraftLine",
+    "FinanceOverview",
     "OrderEventView",
     "OrderLineView",
     "OrderStatus",
     "OrderTable",
     "OrderView",
     "OrderingService",
+    "OrdersOverview",
+    "Period",
     "PlaceOrder",
     "RepriceLine",
     "StatusCount",
+    "StatusSlice",
+    "Trend",
+    "Window",
     "assert_transition",
     "can_transition",
+    "finance_overview",
+    "numbers_for",
+    "orders_overview",
     "policy",
     "promised_hours",
+    "window_for",
 ]

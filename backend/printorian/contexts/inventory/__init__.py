@@ -5,6 +5,7 @@ identity and price; a **lot** is a physical spool with a mass and a location.
 Status is derived from the lots, never stored.
 """
 
+from printorian.contexts.inventory.headroom import MaterialStock, headroom
 from printorian.contexts.inventory.policies import (
     Location,
     LocationKind,
@@ -31,8 +32,10 @@ __all__ = [
     "LotView",
     "MaterialSpecView",
     "MaterialStatus",
+    "MaterialStock",
     "MaterialTable",
     "ScenarioMatch",
     "StatusCount",
     "derive_status",
+    "headroom",
 ]

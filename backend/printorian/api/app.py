@@ -12,6 +12,7 @@ from printorian.api.errors import install_error_handlers
 from printorian.api.routers import (
     auth,
     catalog,
+    dashboard,
     health,
     jobs,
     journal,
@@ -90,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth.router)
     app.include_router(users.router)
     app.include_router(catalog.router)
+    app.include_router(dashboard.router)
     app.include_router(journal.router)
     app.include_router(materials.router)
     app.include_router(pricing.router)

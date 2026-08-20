@@ -29,6 +29,15 @@ from printorian.contexts.production.prep import (
     VarianceVerdict,
     assess_variance,
 )
+from printorian.contexts.production.schedule import (
+    CommittedMaterial,
+    Schedule,
+    ScheduleBar,
+    ScheduleRow,
+    committed_material,
+    schedule,
+    wait_list_size,
+)
 from printorian.contexts.production.schemas import (
     AssignmentRecordView,
     CandidateView,
@@ -40,12 +49,14 @@ from printorian.contexts.production.schemas import (
     WaitListEntryView,
 )
 from printorian.contexts.production.service import ProductionService
+from printorian.contexts.production.throughput import Throughput, throughput
 
 __all__ = [
     "TRANSITIONS",
     "AssignmentRecord",
     "AssignmentRecordView",
     "CandidateView",
+    "CommittedMaterial",
     "CreateJob",
     "EstimateSource",
     "EstimateVariance",
@@ -66,10 +77,18 @@ __all__ = [
     "PrinterBecameFree",
     "ProductionService",
     "QueuePosition",
+    "Schedule",
+    "ScheduleBar",
+    "ScheduleRow",
+    "Throughput",
     "VarianceVerdict",
     "WaitListEntry",
     "WaitListEntryView",
     "assert_transition",
     "assess_variance",
     "can_transition",
+    "committed_material",
+    "schedule",
+    "throughput",
+    "wait_list_size",
 ]

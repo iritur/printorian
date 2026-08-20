@@ -52,6 +52,7 @@ Hosts four loops, each with its own session per pass:
 | `scheduler` | `scheduler_tick_seconds` (30) | Plans ready work onto machines and dispatches it. Also wakes on `job.ready`, `printer.became_free` and fleet state changes, so a machine finishing a second after a tick does not idle for the rest of it |
 | `telemetry` | `telemetry_poll_seconds` (5) | Asks every reachable machine what it is doing; unreachable ones are recorded offline, never left showing a stale happy state |
 | `sla` | `sla_sweep_seconds` (300) | Recomputes lateness credits, so a customer sees what they are owed while still waiting rather than only once the parcel ships |
+| `postproduction` | `postproduction_sweep_seconds` (60) | Turns finished prints into floor work and ends the drying timers. **Reconciling, not reactive**: it asks which succeeded prints have no task yet, so a missed tick costs latency and never a lost batch |
 | `maintenance` | `maintenance_sweep_seconds` (3600) | Partitions, retention, expired sessions |
 
 The two that talk to printers share one **driver pool**, which keeps connections
@@ -181,10 +182,24 @@ farm-day of printing runs in milliseconds and never flakes.
 
 ## The farm console
 
-The staff app (ADR-0016): fleet, materials, the order desk and access. It is
-served from the on-prem server on the farm LAN, so — like the storefront behind
-its tunnel — it is **same-origin with the API** and uses the same session cookie.
-No CORS, no bearer token, no `PRINTORIAN_CORS_ORIGINS`.
+The staff app (ADR-0016): the farm summary, post-production, fleet, materials,
+the order desk and access. It is served from the on-prem server on the farm LAN, so — like the
+storefront behind its tunnel — it is **same-origin with the API** and uses the
+same session cookie. No CORS, no bearer token, no `PRINTORIAN_CORS_ORIGINS`.
+
+The summary is one request, `GET /dashboard`, assembled across five contexts in
+`api/routers/_dashboard_model.py`. Every panel on it is read against a single
+instant on purpose: nine concurrent requests would let the KPI tiles and the
+status wall disagree by a few seconds, which on a screen whose whole job is
+"what is happening right now" is worse than being a moment slower. It needs
+`view_all_orders`, not `view_production` — it carries revenue, spend and margin
+beside the machine states, so an operator entitled to walk the fleet screen is
+not thereby entitled to the farm's finances.
+
+Post-production is the floor's own screen and needs only `view_production`, with
+`advance_postproduction` to move a task and `record_qc` to pass or fail one.
+Nothing financial appears on it. Its board is likewise one request,
+`GET /postproduction/board`.
 
 ```bash
 cd frontend && npm run dev --workspace @printorian/console

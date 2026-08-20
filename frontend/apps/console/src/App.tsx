@@ -4,6 +4,7 @@ import type { Locale } from '@printorian/ui'
 import type { NavRoute, Realm } from '@printorian/ui'
 import { AppShell, AuthPanel, SessionProvider, translate, useSession } from '@printorian/ui'
 
+import { DashboardPage } from './dashboard/DashboardPage'
 import { FleetPage } from './FleetPage'
 import { JournalPage } from './JournalPage'
 import { LibraryPage } from './LibraryPage'
@@ -12,7 +13,15 @@ import { OrdersPage } from './OrdersPage'
 import { PrepPage } from './PrepPage'
 import { UsersPage } from './UsersPage'
 
-type Screen = 'orders' | 'prep' | 'library' | 'journal' | 'fleet' | 'materials' | 'users'
+type Screen =
+  | 'dashboard'
+  | 'orders'
+  | 'prep'
+  | 'library'
+  | 'journal'
+  | 'fleet'
+  | 'materials'
+  | 'users'
 
 /**
  * Screens are offered by permission, not by role.
@@ -112,6 +121,18 @@ function Shell() {
   // the same list, so the two can never disagree about what this actor may reach.
   const routes: NavRoute[] = [
     {
+      // First, and first for a reason: the summary is the screen someone opens
+      // the console *to* look at, and the order desk is one click from it.
+      key: 'dashboard',
+      label: t('dashboard.title'),
+      note: 'СОСТОЯНИЕ ФЕРМЫ · KPI',
+      permission: VIEW_ALL_ORDERS,
+      mark: 'FARM',
+      kicker: 'C:/DASHBOARD/FARM.OVERVIEW',
+      text: 'Заказы, парк, финансы и расписание на одном экране. Состояние каждой машины — светящимся квадратом, детали — по клику.',
+      shape: 'grid',
+    },
+    {
       key: 'orders',
       label: t('orders.all.title'),
       note: 'ЗАКАЗЫ · СТАТУСЫ · ВОЗВРАТЫ',
@@ -207,6 +228,7 @@ function Shell() {
   }
 
   const paths: Record<Screen, string> = {
+    dashboard: '/DASHBOARD/FARM.OVERVIEW',
     orders: '/ORDERS/DESK',
     prep: '/PRODUCTION/PREP.QUEUE',
     library: '/CATALOG/CURATION',
@@ -229,6 +251,9 @@ function Shell() {
       onNavigate={(key) => setScreen(key as Screen)}
       statusNote="PRINTORIAN · ПУЛЬТ ЦЕХА · ЛОКАЛЬНАЯ СЕТЬ"
     >
+      {active === 'dashboard' && (
+        <DashboardPage locale={locale} onOpenOrders={() => setScreen('orders')} />
+      )}
       {active === 'orders' && <OrdersPage locale={locale} />}
       {active === 'prep' && <PrepPage locale={locale} />}
       {active === 'library' && <LibraryPage locale={locale} />}
