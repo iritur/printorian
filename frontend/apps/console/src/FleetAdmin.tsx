@@ -321,7 +321,7 @@ export function PrinterDetail({
                 onChange={(event) => setCode(event.target.value)}
               />
             </label>
-            <button type="submit" disabled={busy}>
+            <button className="hv-btn hv-btn--sm" type="submit" disabled={busy}>
               {t('common.save')}
             </button>
           </form>
@@ -358,7 +358,7 @@ export function PrinterDetail({
                 onChange={(event) => setInterval(event.target.value)}
               />
             </label>
-            <button type="submit" disabled={busy}>
+            <button className="hv-btn hv-btn--sm" type="submit" disabled={busy}>
               {t('fleet.service.add')}
             </button>
           </form>
@@ -376,6 +376,7 @@ export function PrinterDetail({
                   : `${t('fleet.service.interval')}: ${service.interval_hours}`}
               </span>
               <button
+                className="hv-btn hv-btn--sm"
                 type="button"
                 disabled={busy}
                 onClick={() =>

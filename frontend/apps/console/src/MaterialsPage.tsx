@@ -193,7 +193,12 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
             because a disabled control cannot take focus either. `aria-expanded`
             carries the state, and the backdrop is what stops it being clicked. */}
         {mayManage && (
-          <button type="button" onClick={() => setAdding(true)} aria-expanded={adding}>
+          <button
+            className="hv-btn"
+            type="button"
+            onClick={() => setAdding(true)}
+            aria-expanded={adding}
+          >
             {t('materials.add')}
           </button>
         )}
@@ -342,7 +347,7 @@ function UnmountButton({
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)}>
+      <button className="hv-btn hv-btn--sm" type="button" onClick={() => setOpen(true)}>
         {t('materials.unmount')}
       </button>
     )
@@ -354,10 +359,20 @@ function UnmountButton({
         <span>{t('materials.unmount.shelf')}</span>
         <input value={shelf} onChange={(event) => setShelf(event.target.value)} />
       </label>
-      <button type="button" disabled={busy} onClick={submit}>
+      <button
+        className="hv-btn hv-btn--sm hv-btn--danger"
+        type="button"
+        disabled={busy}
+        onClick={submit}
+      >
         {t('common.save')}
       </button>
-      <button type="button" disabled={busy} onClick={() => setOpen(false)}>
+      <button
+        className="hv-btn hv-btn--sm"
+        type="button"
+        disabled={busy}
+        onClick={() => setOpen(false)}
+      >
         {t('common.cancel')}
       </button>
       {error && <span className="cfg__error">{error}</span>}
@@ -547,7 +562,7 @@ function LotForm({
       <Field label={t('materials.lot.shelf')}>
         <input value={shelf} onChange={(event) => setShelf(event.target.value)} />
       </Field>
-      <button type="submit" disabled={busy}>
+      <button className="hv-btn hv-btn--sm" type="submit" disabled={busy}>
         {t('materials.add_lot')}
       </button>
       {error && (

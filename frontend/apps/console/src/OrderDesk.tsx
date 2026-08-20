@@ -129,7 +129,11 @@ export function OrderDesk({
                 <span>{t('desk.advance.reason')}</span>
                 <input value={reason} onChange={(event) => setReason(event.target.value)} />
               </label>
-              <button type="submit" disabled={busy || !target}>
+              <button
+                className="hv-btn hv-btn--sm hv-btn--primary"
+                type="submit"
+                disabled={busy || !target}
+              >
                 {t('common.save')}
               </button>
             </>
@@ -141,7 +145,11 @@ export function OrderDesk({
         <section className="desk__payments">
           <h4>{t('desk.payments')}</h4>
           {payments === null ? (
-            <button type="button" onClick={() => void loadPayments()}>
+            <button
+              className="hv-btn hv-btn--sm"
+              type="button"
+              onClick={() => void loadPayments()}
+            >
               {t('desk.payments')}
             </button>
           ) : payments.length === 0 ? (
@@ -194,7 +202,12 @@ function RefundControls({
   if (!open) {
     return (
       <span className="desk__refund-actions">
-        <button type="button" disabled={busy} onClick={() => setOpen(true)}>
+        <button
+          className="hv-btn hv-btn--sm hv-btn--danger"
+          type="button"
+          disabled={busy}
+          onClick={() => setOpen(true)}
+        >
           {t('desk.refund')}
         </button>
         {/* A dedicated call, because "pay back exactly what lateness owes" is a
@@ -240,10 +253,15 @@ function RefundControls({
         <span>{t('desk.refund.reason')}</span>
         <input required value={reason} onChange={(event) => setReason(event.target.value)} />
       </label>
-      <button type="submit" disabled={busy}>
+      <button className="hv-btn hv-btn--danger" type="submit" disabled={busy}>
         {t('desk.refund.confirm')}
       </button>
-      <button type="button" onClick={() => setOpen(false)} disabled={busy}>
+      <button
+        className="hv-btn"
+        type="button"
+        onClick={() => setOpen(false)}
+        disabled={busy}
+      >
         {t('common.cancel')}
       </button>
     </form>

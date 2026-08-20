@@ -127,6 +127,7 @@ export function UsersPage({ locale }: { locale: Locale }) {
             '—'
           ) : (
             <button
+              className="hv-btn hv-btn--sm"
               type="button"
               onClick={() =>
                 void mutate(() =>
@@ -170,7 +171,12 @@ export function UsersPage({ locale }: { locale: Locale }) {
             to; disabling it instead was the same bug in a different costume,
             because a disabled control cannot take focus either. `aria-expanded`
             carries the state, and the backdrop is what stops it being clicked. */}
-        <button type="button" onClick={() => setAdding(true)} aria-expanded={adding}>
+        <button
+          className="hv-btn"
+          type="button"
+          onClick={() => setAdding(true)}
+          aria-expanded={adding}
+        >
           {t('users.add')}
         </button>
       </header>

@@ -228,7 +228,12 @@ export function FleetPage({ locale }: { locale: Locale }) {
               because a disabled control cannot take focus either. `aria-expanded`
               carries the state, and the backdrop is what stops it being clicked. */}
           {mayManage && (
-            <button type="button" onClick={() => setAdding(true)} aria-expanded={adding}>
+            <button
+              className="hv-btn"
+              type="button"
+              onClick={() => setAdding(true)}
+              aria-expanded={adding}
+            >
               {t('fleet.add')}
             </button>
           )}

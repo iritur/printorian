@@ -150,6 +150,7 @@ export function PrepPage({ locale }: { locale: Locale }) {
                   <span className="prep__unavailable">{t('prep.no_model')}</span>
                 ) : (
                   <button
+                    className="hv-btn hv-btn--sm"
                     type="button"
                     disabled={working !== ''}
                     onClick={() => void downloadModel(job)}
@@ -174,6 +175,7 @@ export function PrepPage({ locale }: { locale: Locale }) {
                   }}
                 />
                 <button
+                  className="hv-btn hv-btn--sm hv-btn--primary"
                   type="button"
                   disabled={working !== ''}
                   onClick={() => pickers.current[job.id]?.click()}
