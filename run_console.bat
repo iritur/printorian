@@ -69,17 +69,35 @@ REM  its slug, its port offset and its database. Doing it in batch would mean
 REM  hand-rolling a hash out of string slicing, which is exactly the kind of code
 REM  nobody can read six months later.
 REM
-REM  The offset is an MD5 of the full path folded into 1..40, so two worktrees
-REM  land on different ports without either having to be told about the other.
-REM  A worktree named `x` always gets the same port, which matters: a bookmark
-REM  and a running dev server have to agree from one day to the next.
+REM  Ports follow the CHECKOUT. The offset is an MD5 of the full path folded into
+REM  1..40, so two worktrees land on different ports without either having to be
+REM  told about the other, and a given worktree always gets the same port - which
+REM  matters, because a bookmark and a running dev server have to agree from one
+REM  day to the next. Switching branch must not move them.
 REM
-REM  The slug drops a leading `printorian_`, because worktrees are usually named
-REM  after the project and `printorian_printorian_farm_console` helps nobody.
-for /f "tokens=1,2,3 delims=|" %%a in ('powershell -NoProfile -Command "$p = '%~dp0'.TrimEnd('\'); if ($p -match '\\\.claude\\worktrees\\([^\\]+)$') { $slug = ($Matches[1] -replace '[^A-Za-z0-9]', '_').ToLower() -replace '^printorian_', ''; $md5 = [System.Security.Cryptography.MD5]::Create(); $sum = 0; foreach ($b in $md5.ComputeHash([Text.Encoding]::UTF8.GetBytes($p))) { $sum = ($sum + $b) %% 40 }; $offset = $sum + 1 } else { $slug = ''; $offset = 0 }; $db = if ($slug) { 'printorian_' + $slug } else { 'printorian' }; $name = if ($slug) { $slug } else { 'main' }; Write-Output ($offset.ToString() + '|' + $db + '|' + $name)"') do (
+REM  The database follows the BRANCH, because the branch is what decides which
+REM  migrations exist. One database shared by branches whose migration graphs have
+REM  diverged is how `alembic upgrade head` ends up unable to locate the revision
+REM  the database is stamped with. That is not hypothetical: it is what
+REM  `0014_account` and `0015_postproduction` did to each other.
+REM
+REM  `main` keeps the plain `printorian` name, so the ordinary case is unchanged
+REM  and the farm's own data stays where it is. Every other branch gets its own,
+REM  named after it in full. The redundant `printorian` in the middle of
+REM  `printorian_claude_printorian_farm_console` is ugly, and stripping it would
+REM  let two differently-named branches land on one database - which is the whole
+REM  failure this exists to prevent, so ugly wins.
+REM
+REM  A detached HEAD, or no git on PATH, falls back to naming by checkout.
+REM
+REM  The checkout slug drops a leading `printorian_`, because worktrees are
+REM  usually named after the project and `printorian_printorian_farm_console`
+REM  helps nobody.
+for /f "tokens=1,2,3,4 delims=|" %%a in ('powershell -NoProfile -Command "$p = '%~dp0'.TrimEnd('\'); if ($p -match '\\\.claude\\worktrees\\([^\\]+)$') { $slug = ($Matches[1] -replace '[^A-Za-z0-9]', '_').ToLower() -replace '^printorian_', ''; $md5 = [System.Security.Cryptography.MD5]::Create(); $sum = 0; foreach ($b in $md5.ComputeHash([Text.Encoding]::UTF8.GetBytes($p))) { $sum = ($sum + $b) %% 40 }; $offset = $sum + 1 } else { $slug = ''; $offset = 0 }; $name = if ($slug) { $slug } else { 'main' }; $branch = ''; if ((Test-Path (Join-Path $p '.git')) -and (Get-Command git -ErrorAction SilentlyContinue)) { $found = @(& git -C $p rev-parse --abbrev-ref HEAD); if ($found.Count) { $branch = $found[0] } }; if (-not $branch -or $branch -eq 'HEAD') { $branch = '' }; if ($branch -and $branch -ne 'main') { $db = 'printorian_' + (($branch -replace '[^A-Za-z0-9]', '_').ToLower()) } elseif ($slug) { $db = 'printorian_' + $slug } else { $db = 'printorian' }; $shown = if ($branch) { $branch } else { 'detached' }; Write-Output ($offset.ToString() + '|' + $db + '|' + $name + '|' + $shown)"') do (
     set "OFFSET=%%a"
     set "PGDATABASE=%%b"
     set "CHECKOUT=%%c"
+    set "BRANCH=%%d"
 )
 if not defined OFFSET (
     echo [!] Could not work out which checkout this is. Is PowerShell available?
@@ -94,7 +112,7 @@ set "PRINTORIAN_API_URL=http://127.0.0.1:%API_PORT%"
 set "PRINTORIAN_CONSOLE_PORT=%WEB_PORT%"
 
 echo.
-echo   Checkout :: %CHECKOUT%
+echo   Checkout :: %CHECKOUT%      Branch :: %BRANCH%
 echo   API      :: %API_PORT%      Console :: %WEB_PORT%      Database :: %PGDATABASE%
 echo.
 
