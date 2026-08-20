@@ -4,7 +4,14 @@ import type { Locale, MessageKey } from '@printorian/ui'
 import { translate } from '@printorian/ui'
 
 import { formatDay, formatGrams, formatMoney, formatTime, percentOf } from './format'
-import type { CategorySpend, DayRevenue, FilamentBar, Schedule, StatusSlice } from './types'
+import type {
+  CategorySpend,
+  DayRevenue,
+  FilamentBar,
+  HeatRow,
+  Schedule,
+  StatusSlice,
+} from './types'
 
 /**
  * The 12-hour schedule strip.
@@ -309,4 +316,44 @@ export function sparkExtremes(series: DayRevenue[], locale: Locale) {
       value: formatMoney(low.amount, locale),
     }),
   }
+}
+
+
+/**
+ * The week's load, hour by hour: seven rows of twenty-four cells.
+ *
+ * Its point is the shape rather than any one cell. A farm that runs hot every
+ * afternoon and dark every night has capacity nobody is selling, and that fact
+ * does not appear in a daily utilisation figure — which is exactly why the kit
+ * draws this beside the figure rather than instead of it.
+ *
+ * Brightness is the value, carried as `--v` so the cell's own rule owns the
+ * ramp. Colour would be wrong here: it means machine state everywhere else in
+ * this system, and an hour is not a machine.
+ */
+export function HeatMap({ rows, locale }: { rows: HeatRow[]; locale: Locale }) {
+  const t = (key: MessageKey) => translate(locale, key)
+  if (rows.length === 0) return <p className="hv-hint">{t('dashboard.load.empty')}</p>
+
+  return (
+    <div className="hv-heat">
+      {rows.map((row) => (
+        <div className="hv-heat__row" key={`${row.weekday}-${row.hours.length}`}>
+          <span className="hv-heat__d">
+            {translate(locale, `weekday.${row.weekday}` as MessageKey)}
+          </span>
+          {row.hours.map((value, hour) => (
+            <i
+              className="hv-heat__c"
+              // The hour *is* the identity here — twenty-four fixed columns, a
+              // ruler rather than a list of things.
+              key={`h${hour}`}
+              style={{ '--v': Number(value) } as CSSProperties}
+              title={`${String(hour).padStart(2, '0')}:00 · ${Math.round(Number(value) * 100)}%`}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
 }

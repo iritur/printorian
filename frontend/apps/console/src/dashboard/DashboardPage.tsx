@@ -12,6 +12,7 @@ import { AlertFeed, StatusWall } from './StatusWall'
 import {
   FilamentPanel,
   Funnel,
+  HeatMap,
   ScheduleStrip,
   Sparkline,
   spendRows,
@@ -184,10 +185,67 @@ export function DashboardPage({
         </span>
       </div>
 
-      {/* ------------------------------------------------- wall + attention
-          First on the screen. "What is each machine doing" is the question this
-          console is opened to answer, and the one the kit's own README puts at
-          the head of the dashboard's four. */}
+      {/* ------------------------------------------------------------ orders */}
+      <section>
+        <div className="hv-row" style={{ marginBottom: 'var(--hv-2)' }}>
+          <h2 className="hv-h">{t('dashboard.orders')}</h2>
+          <span className="hv-micro">{t('dashboard.orders.note')}</span>
+          <span className="hv-spacer" />
+          {onOpenOrders && (
+            <button className="hv-btn hv-btn--sm" type="button" onClick={onOpenOrders}>
+              {t('dashboard.orders.desk')}
+            </button>
+          )}
+        </div>
+        <div className="hv-grid hv-grid--4">
+          <Kpi
+            locale={locale}
+            label={t('dashboard.orders.placed')}
+            value={formatNumber(orders.placed.value, locale)}
+            trend={orders.placed}
+            polarity="more_is_better"
+            note={comparison(orders.placed.previous, locale, t)}
+            foot={[
+              t('dashboard.orders.paid', { count: orders.paid }),
+              t('dashboard.orders.awaiting', { count: orders.awaiting_payment }),
+            ]}
+          />
+          <Kpi
+            locale={locale}
+            label={t('dashboard.orders.month')}
+            value={formatNumber(orders.placed_month.value, locale)}
+            trend={orders.placed_month}
+            polarity="more_is_better"
+            note={t('dashboard.orders.last_month', {
+              value: formatNumber(orders.placed_month.previous, locale),
+            })}
+          />
+          <Kpi
+            locale={locale}
+            label={t('dashboard.orders.in_progress')}
+            value={formatNumber(orders.in_progress, locale)}
+            tone="live"
+            foot={[
+              t('dashboard.orders.wait_list'),
+              <span className={waitList > 0 ? 'hv-warn' : undefined}>{waitList}</span>,
+            ]}
+          />
+          <Kpi
+            locale={locale}
+            label={t('dashboard.orders.average')}
+            value={formatNumber(orders.average_order.value, locale)}
+            unit="₽"
+            trend={orders.average_order}
+            polarity="more_is_better"
+            note={t('dashboard.orders.median', {
+              value: formatMoney(orders.median_order, locale),
+            })}
+            foot={[t('dashboard.orders.lines'), formatNumber(orders.lines_per_order, locale, 1)]}
+          />
+        </div>
+      </section>
+
+      {/* ------------------------------------------------- wall + attention */}
       <section className="hv-cols hv-cols--2">
         <div className="hv-panel">
           <div className="hv-panel__head">
@@ -283,62 +341,6 @@ export function DashboardPage({
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ orders
-          Below the wall, and dense. This row answers "how is trade", which is a
-          question somebody asks after they have seen what the machines are doing
-          — and at full tile size it pushed the wall off a 720px screen entirely. */}
-      <section>
-        <div className="hv-row" style={{ marginBottom: 'var(--hv-2)' }}>
-          <h2 className="hv-h">{t('dashboard.orders')}</h2>
-          <span className="hv-micro">{t('dashboard.orders.note')}</span>
-          <span className="hv-spacer" />
-          {onOpenOrders && (
-            <button className="hv-btn hv-btn--sm" type="button" onClick={onOpenOrders}>
-              {t('dashboard.orders.desk')}
-            </button>
-          )}
-        </div>
-        <div className="hv-grid hv-grid--3">
-          <Kpi
-            compact
-            locale={locale}
-            label={t('dashboard.orders.placed')}
-            value={formatNumber(orders.placed.value, locale)}
-            trend={orders.placed}
-            polarity="more_is_better"
-            note={comparison(orders.placed.previous, locale, t)}
-            foot={[
-              t('dashboard.orders.paid', { count: orders.paid }),
-              t('dashboard.orders.awaiting', { count: orders.awaiting_payment }),
-            ]}
-          />
-          <Kpi
-            compact
-            locale={locale}
-            label={t('dashboard.orders.in_progress')}
-            value={formatNumber(orders.in_progress, locale)}
-            tone="live"
-            foot={[
-              t('dashboard.orders.wait_list'),
-              <span className={waitList > 0 ? 'hv-warn' : undefined}>{waitList}</span>,
-            ]}
-          />
-          <Kpi
-            compact
-            locale={locale}
-            label={t('dashboard.orders.average')}
-            value={formatNumber(orders.average_order.value, locale)}
-            unit="₽"
-            trend={orders.average_order}
-            polarity="more_is_better"
-            note={t('dashboard.orders.median', {
-              value: formatMoney(orders.median_order, locale),
-            })}
-            foot={[t('dashboard.orders.lines'), formatNumber(orders.lines_per_order, locale, 1)]}
-          />
-        </div>
-      </section>
-
       {/* ----------------------------------------------------------- finance */}
       <section>
         <div className="hv-row" style={{ marginBottom: 'var(--hv-2)' }}>
@@ -425,10 +427,7 @@ export function DashboardPage({
         </div>
       </section>
 
-      {/* ------------------------------------------------- schedule + stages
-          Paired because they are the same question at two scales: which machine
-          frees up next, and which stage the queue is piling up in. */}
-      <section className="hv-cols hv-cols--2">
+      {/* ---------------------------------------------------------- schedule */}
       <section className="hv-panel">
         <div className="hv-panel__head">
           <span>{t('dashboard.schedule')}</span>
@@ -458,25 +457,50 @@ export function DashboardPage({
         </div>
       </section>
 
-        <section className="hv-panel">
+      {/* -------------------------------------------- filament + stages + load
+          The kit's last section: the material question on the left, and on the
+          right the two shapes that answer "where is the work" — which stage the
+          queue is piling up in, and which hours of the week the farm is idle. */}
+      <section className="hv-cols hv-cols--2">
+        <div className="hv-panel">
           <div className="hv-panel__head">
-            <span>{t('dashboard.orders.stages')}</span>
-            <span className="hv-panel__aside">{t('dashboard.orders.stages_aside')}</span>
+            <span>{t('dashboard.filament')}</span>
+            <span className="hv-panel__aside">{t('dashboard.filament.aside')}</span>
           </div>
-          <div className="hv-panel__body hv-panel__body--tight">
-            <Funnel rows={stageRows(orders.funnel, locale)} locale={locale} />
+          <div className="hv-panel__body hv-stack">
+            <FilamentPanel bars={filament} locale={locale} />
           </div>
-        </section>
-      </section>
-
-      {/* ---------------------------------------------------------- filament */}
-      <section className="hv-panel">
-        <div className="hv-panel__head">
-          <span>{t('dashboard.filament')}</span>
-          <span className="hv-panel__aside">{t('dashboard.filament.aside')}</span>
         </div>
-        <div className="hv-panel__body hv-stack">
-          <FilamentPanel bars={filament} locale={locale} />
+
+        <div className="hv-stack">
+          <section className="hv-panel">
+            <div className="hv-panel__head">
+              <span>{t('dashboard.orders.stages')}</span>
+              <span className="hv-panel__aside">
+                {t('dashboard.orders.stages_aside', { count: orders.in_progress })}
+              </span>
+            </div>
+            <div className="hv-panel__body hv-panel__body--tight">
+              <Funnel rows={stageRows(orders.funnel, locale)} locale={locale} />
+            </div>
+            <div className="hv-panel__foot">
+              <span>{bottleneck(orders.funnel, locale)}</span>
+            </div>
+          </section>
+
+          <section className="hv-panel">
+            <div className="hv-panel__head">
+              <span>{t('dashboard.load')}</span>
+              <span className="hv-panel__aside">{t('dashboard.load.aside')}</span>
+            </div>
+            <div className="hv-panel__body hv-heat-scroll">
+              <HeatMap rows={fleet.hourly_load} locale={locale} />
+            </div>
+            <div className="hv-panel__foot">
+              <span>{t('dashboard.load.foot')}</span>
+              <span>{t('dashboard.load.night', { percent: nightLoad(fleet.hourly_load) })}</span>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -494,6 +518,44 @@ export function DashboardPage({
       )}
     </div>
   )
+}
+
+/**
+ * The stage with the most orders in it, for the funnel's footer.
+ *
+ * The kit states the bottleneck rather than leaving the reader to compare eight
+ * bars, which is the whole reason the panel is bars and not a table.
+ */
+function bottleneck(funnel: FarmSummary['orders']['funnel'], locale: Locale): string {
+  const worst = funnel.reduce<FarmSummary['orders']['funnel'][number] | null>(
+    (top, slice) => (top === null || slice.count > top.count ? slice : top),
+    null,
+  )
+  if (!worst || worst.count === 0) return translate(locale, 'dashboard.orders.no_bottleneck')
+  return translate(locale, 'dashboard.orders.bottleneck', {
+    stage: translate(locale, `order.status.${worst.status}` as MessageKey),
+  })
+}
+
+/**
+ * How busy the farm is between midnight and six, as a percentage of its day.
+ *
+ * The figure the load map exists to produce: machines that sit idle every night
+ * are capacity nobody is selling, and it does not show up in a daily total.
+ */
+function nightLoad(rows: FarmSummary['fleet']['hourly_load']): string {
+  if (rows.length === 0) return '0'
+  let night = 0
+  let all = 0
+  for (const row of rows) {
+    row.hours.forEach((value, hour) => {
+      const load = Number(value)
+      all += load
+      if (hour < 6) night += load
+    })
+  }
+  if (all === 0) return '0'
+  return ((night / all) * 100).toFixed(0)
 }
 
 /**

@@ -35,9 +35,11 @@ from printorian.contexts.ordering import (
 )
 from printorian.contexts.production import (
     CommittedMaterial,
+    HeatRow,
     Schedule,
     Throughput,
     committed_material,
+    hourly_load,
     schedule,
     throughput,
     wait_list_size,
@@ -88,6 +90,10 @@ class FleetOverview(BaseModel):
     attention: int
     utilisation_percent: Decimal
     throughput: Throughput
+    #: Seven days × 24 hours of machine-hours over capacity, for the kit's load
+    #: map. Its point is the shape: a farm idle every night has capacity nobody
+    #: is selling, and that is invisible in a daily total.
+    hourly_load: list[HeatRow] = Field(default_factory=list)
 
 
 class Alert(BaseModel):
@@ -162,6 +168,7 @@ async def farm_summary(
             throughput=await throughput(
                 db, since=window.start, until=window.end, machines=table.total
             ),
+            hourly_load=await hourly_load(db, now=now, machines=table.total),
         ),
         schedule=await _named_schedule(db, now=now),
         filament=[_bar(stock, committed) for stock in stocks],

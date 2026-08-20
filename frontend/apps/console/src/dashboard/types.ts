@@ -33,6 +33,8 @@ export interface StatusSlice {
 
 export interface OrdersOverview {
   placed: Trend
+  /** This calendar month against the whole of the previous one. */
+  placed_month: Trend
   paid: number
   awaiting_payment: number
   in_progress: number
@@ -95,6 +97,13 @@ export interface Throughput {
   truncated: boolean
 }
 
+export interface HeatRow {
+  /** Monday is 0, matching `datetime.weekday()`. The client names it. */
+  weekday: number
+  /** Twenty-four values, each 0..1 of the farm's capacity for that hour. */
+  hours: string[]
+}
+
 export interface FleetOverview {
   zones: Zone[]
   counts: { state: string; count: number }[]
@@ -103,6 +112,7 @@ export interface FleetOverview {
   attention: number
   utilisation_percent: string
   throughput: Throughput
+  hourly_load: HeatRow[]
 }
 
 export interface Alert {

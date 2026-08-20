@@ -74,6 +74,7 @@ function aSummary(overrides: Partial<FarmSummary> = {}): FarmSummary {
     },
     orders: {
       placed: trend('14', '11', '27.3'),
+      placed_month: trend('248', '227', '9.3'),
       paid: 12,
       awaiting_payment: 2,
       in_progress: 18,
@@ -155,6 +156,10 @@ function aSummary(overrides: Partial<FarmSummary> = {}): FarmSummary {
         success_percent: '90.0',
         truncated: false,
       },
+      hourly_load: Array.from({ length: 7 }, (_, day) => ({
+        weekday: day,
+        hours: Array.from({ length: 24 }, (_, hour) => (hour < 6 ? '0.20' : '0.80')),
+      })),
     },
     schedule: {
       starts_at: '2026-08-19T15:00:00Z',

@@ -18,7 +18,13 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.ordering import Period, finance_overview, orders_overview, window_for
+from printorian.contexts.ordering import (
+    Period,
+    finance_overview,
+    month_window,
+    orders_overview,
+    window_for,
+)
 from printorian.contexts.ordering.policies import OrderStatus
 from tests.unit._dashboard_support import NOW, an_order
 
@@ -185,3 +191,20 @@ async def test_the_sparkline_carries_a_point_for_every_day(db_session: AsyncSess
 
     assert len(finance.revenue_by_day) == 30
     assert finance.revenue_by_day[-1].day.date() == NOW.date()
+
+
+async def test_the_month_tile_compares_against_a_whole_previous_month(
+    db_session: AsyncSession,
+) -> None:
+    """The one place the equal-length rule is deliberately not applied.
+
+    "За месяц" compares a running month with a finished one, because that is what
+    a reader means by "last month" — forcing equal windows here would compare
+    August-so-far against a fortnight of July nobody thinks in.
+    """
+    window = month_window(NOW)
+
+    assert window.start == datetime(2026, 8, 1, tzinfo=UTC)
+    assert window.previous_start == datetime(2026, 7, 1, tzinfo=UTC)
+    # Deliberately unequal: 19 days against 31.
+    assert window.end - window.start != window.start - window.previous_start

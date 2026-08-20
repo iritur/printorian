@@ -11,7 +11,13 @@ from printorian.contexts.ordering.finance import (
     FinanceOverview,
     finance_overview,
 )
-from printorian.contexts.ordering.measures import Period, Trend, Window, window_for
+from printorian.contexts.ordering.measures import (
+    Period,
+    Trend,
+    Window,
+    month_window,
+    window_for,
+)
 from printorian.contexts.ordering.overview import (
     OrdersOverview,
     StatusSlice,
@@ -77,6 +83,7 @@ __all__ = [
     "assert_transition",
     "can_transition",
     "finance_overview",
+    "month_window",
     "numbers_for",
     "orders_overview",
     "policy",

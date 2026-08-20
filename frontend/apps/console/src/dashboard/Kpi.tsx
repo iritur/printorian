@@ -24,7 +24,6 @@ export function Kpi({
   note,
   foot,
   tone,
-  compact = false,
   locale,
 }: {
   label: string
@@ -36,23 +35,12 @@ export function Kpi({
   note?: ReactNode | undefined
   foot?: [ReactNode, ReactNode] | undefined
   tone?: 'live' | 'good' | 'warn' | 'bad' | undefined
-  /**
-   * A denser tile, for a row that is context rather than the screen's subject.
-   *
-   * The dashboard's orders row is read *after* the status wall — it answers "how
-   * is trade", not "what is the farm doing right now" — and at full size it
-   * pushed the wall off the first screen entirely.
-   */
-  compact?: boolean | undefined
   locale: Locale
 }) {
   const change = trend ? changeLabel(trend, locale) : null
 
   return (
-    <div
-      className={compact ? 'hv-frame hv-kpi hv-kpi--compact' : 'hv-frame hv-kpi'}
-      {...(tone ? { 'data-tone': tone } : {})}
-    >
+    <div className="hv-frame hv-kpi" {...(tone ? { 'data-tone': tone } : {})}>
       <span className="hv-label">{label}</span>
       <span className="hv-kpi__v">
         {value}

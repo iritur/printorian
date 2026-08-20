@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from printorian.contexts.inventory import headroom
 from printorian.contexts.inventory.models import MaterialLot
 from printorian.contexts.inventory.policies import LocationKind
-from printorian.contexts.production import committed_material, schedule, throughput
+from printorian.contexts.production import committed_material, hourly_load, schedule, throughput
 from printorian.contexts.production.policies import JobStatus
 from tests.unit._dashboard_support import NOW, a_job, a_material, a_printer, an_order_id
 
@@ -179,3 +179,74 @@ async def test_run_hours_come_from_the_jobs_own_start_and_end(db_session: AsyncS
     assert measured.succeeded == 1
     assert measured.failed == 1
     assert measured.success_percent == Decimal("50.0")
+
+
+# ------------------------------------------------------------- the load map
+
+
+async def test_a_print_lights_every_hour_it_covered(db_session: AsyncSession) -> None:
+    """Not only the hour it finished in.
+
+    An eight-hour print is eight hours of a machine being busy, and a map that
+    credited the finishing hour alone would show a farm that works in bursts it
+    never worked in.
+    """
+    order_id = await an_order_id(db_session)
+    printer_id = await a_printer(db_session, name="P-01")
+    job = a_job(order_id, status=JobStatus.SUCCEEDED, grams=Decimal(10), printer_id=printer_id)
+    job.started_at = NOW.replace(hour=9, minute=0)
+    job.finished_at = NOW.replace(hour=13, minute=0)
+    db_session.add(job)
+    await db_session.flush()
+
+    rows = await hourly_load(db_session, now=NOW, machines=1)
+
+    today = rows[-1]
+    assert today.weekday == NOW.weekday()
+    # 09:00–13:00 is four whole hours on a one-machine farm: full for each.
+    assert [today.hours[hour] for hour in (9, 10, 11, 12)] == [Decimal(1)] * 4
+    assert today.hours[8] == Decimal(0)
+    assert today.hours[13] == Decimal(0)
+
+
+async def test_load_is_capped_at_the_farms_capacity(db_session: AsyncSession) -> None:
+    """Two machines printing through one hour on a two-machine farm is full.
+
+    Without the clamp it reads 100% per machine and sums past it, which turns the
+    map's brightest cell into a number that cannot happen.
+    """
+    order_id = await an_order_id(db_session)
+    for index in range(4):
+        printer_id = await a_printer(db_session, name=f"P-{index}")
+        job = a_job(order_id, status=JobStatus.SUCCEEDED, grams=Decimal(10), printer_id=printer_id)
+        job.started_at = NOW.replace(hour=9, minute=0)
+        job.finished_at = NOW.replace(hour=10, minute=0)
+        db_session.add(job)
+    await db_session.flush()
+
+    rows = await hourly_load(db_session, now=NOW, machines=2)
+
+    assert rows[-1].hours[9] == Decimal(1)
+
+
+async def test_a_farm_with_no_machines_has_no_map(db_session: AsyncSession) -> None:
+    """Capacity is the denominator; there is no load to express without one."""
+    assert await hourly_load(db_session, now=NOW, machines=0) == []
+
+
+async def test_a_running_print_counts_as_busy(db_session: AsyncSession) -> None:
+    """The map is about occupancy, not about completions.
+
+    A job still on a machine is the clearest case of that machine being busy, and
+    counting only finished work would leave the current hour looking idle.
+    """
+    order_id = await an_order_id(db_session)
+    printer_id = await a_printer(db_session, name="P-01")
+    job = a_job(order_id, status=JobStatus.PRINTING, grams=Decimal(10), printer_id=printer_id)
+    job.started_at = NOW - timedelta(hours=3)
+    db_session.add(job)
+    await db_session.flush()
+
+    rows = await hourly_load(db_session, now=NOW, machines=1)
+
+    assert rows[-1].hours[(NOW - timedelta(hours=2)).hour] == Decimal(1)

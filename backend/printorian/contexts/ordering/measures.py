@@ -76,6 +76,19 @@ def window_for(period: Period, now: datetime) -> Window:
     return Window(period=period, start=start, end=end, previous_start=start - (end - start))
 
 
+def month_window(now: datetime) -> Window:
+    """This calendar month against the whole of the previous one.
+
+    The one place the equal-length rule is deliberately not applied. The kit's
+    "За месяц" tile compares a running month with a finished one — that is what
+    the reader means by "last month", and forcing equal lengths here would
+    compare August-so-far with a fortnight of July that nobody thinks in.
+    """
+    start = midnight_of(now).replace(day=1)
+    previous_start = midnight_of(start - timedelta(days=1)).replace(day=1)
+    return Window(period=Period.MONTH, start=start, end=now, previous_start=previous_start)
+
+
 def midnight_of(moment: datetime) -> datetime:
     """The start of ``moment``'s UTC day."""
     return moment.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -120,6 +133,7 @@ __all__ = [
     "as_trend",
     "change_percent",
     "midnight_of",
+    "month_window",
     "share",
     "sum_between",
     "trend_of",

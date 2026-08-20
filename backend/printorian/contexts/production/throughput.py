@@ -17,17 +17,29 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from pydantic import BaseModel
-from sqlalchemy import select
+from pydantic import BaseModel, Field
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.production.models import PrintJob
 from printorian.contexts.production.policies import JobStatus
 
+#: How many days the load map covers. Seven, so a week's shape is visible and
+#: Saturday can be compared with Tuesday.
+HEAT_DAYS = 7
+
 #: Most finished jobs one window will be summed over. A quarter on a busy farm
 #: stays well inside this; beyond it the KPI is reported from the newest jobs and
 #: the caller is told, rather than the query being allowed to grow without bound.
 THROUGHPUT_LIMIT = 5_000
+
+
+class HeatRow(BaseModel):
+    """One weekday of the load map: 24 hours, each 0..1 of the farm's capacity."""
+
+    #: Monday is 0, matching `datetime.weekday()`. The client names it.
+    weekday: int
+    hours: list[Decimal] = Field(default_factory=list)
 
 
 class Throughput(BaseModel):
@@ -124,4 +136,69 @@ def _assemble(
     )
 
 
-__all__ = ["THROUGHPUT_LIMIT", "Throughput", "throughput"]
+__all__ = ["HEAT_DAYS", "THROUGHPUT_LIMIT", "HeatRow", "Throughput", "hourly_load", "throughput"]
+
+
+async def hourly_load(
+    db: AsyncSession, *, now: datetime, machines: int, days: int = HEAT_DAYS
+) -> list[HeatRow]:
+    """How busy the farm was, hour by hour, over the last week.
+
+    The kit's load map: seven rows of twenty-four cells, brighter meaning busier.
+    Its point is the shape rather than any one cell — a farm that is idle every
+    night is a farm with capacity nobody is selling, and that is invisible in a
+    daily total.
+
+    A job contributes to every hour it overlapped, in proportion to how much of
+    that hour it covered, so an eight-hour print lights eight cells rather than
+    the one it happened to finish in. Value is machine-hours over capacity, and
+    it is clamped at 1: two machines printing through one hour on a two-machine
+    farm is full, not 200%.
+    """
+    if machines <= 0:
+        return []
+
+    first = (now - timedelta(days=days - 1)).replace(minute=0, second=0, microsecond=0)
+    first = first.replace(hour=0)
+    jobs = (
+        await db.execute(
+            select(PrintJob.started_at, PrintJob.finished_at).where(
+                PrintJob.started_at.is_not(None),
+                # Anything that overlapped the window, not only what finished in
+                # it: a print still running now is exactly what "busy" means.
+                or_(PrintJob.finished_at.is_(None), PrintJob.finished_at >= first),
+                PrintJob.started_at < now,
+            )
+        )
+    ).all()
+
+    # (day offset, hour) -> machine-minutes
+    spent: dict[tuple[int, int], float] = {}
+    for started_at, finished_at in jobs:
+        ended = finished_at or now
+        for offset in range(days):
+            midnight = first + timedelta(days=offset)
+            for hour in range(24):
+                bucket_start = midnight + timedelta(hours=hour)
+                bucket_end = bucket_start + timedelta(hours=1)
+                overlap = min(ended, bucket_end) - max(started_at, bucket_start)
+                if overlap > timedelta():
+                    key = (offset, hour)
+                    spent[key] = spent.get(key, 0.0) + overlap / timedelta(minutes=1)
+
+    rows: list[HeatRow] = []
+    for offset in range(days):
+        midnight = first + timedelta(days=offset)
+        capacity = float(machines) * 60.0
+        rows.append(
+            HeatRow(
+                weekday=midnight.weekday(),
+                hours=[
+                    Decimal(str(min(1.0, spent.get((offset, hour), 0.0) / capacity))).quantize(
+                        Decimal("0.01")
+                    )
+                    for hour in range(24)
+                ],
+            )
+        )
+    return rows

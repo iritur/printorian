@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.ordering.measures import Trend, Window, trend_of
+from printorian.contexts.ordering.measures import Trend, Window, month_window, trend_of
 from printorian.contexts.ordering.models import Order, OrderLine
 from printorian.contexts.ordering.policies import OrderStatus
 from printorian.core.ids import EntityId
@@ -48,6 +48,12 @@ class OrdersOverview(BaseModel):
     """The scenario's orders row: what came in, what is moving, what it is worth."""
 
     placed: Trend
+    #: Orders this calendar month, against the whole of last month.
+    #:
+    #: Separate from `placed`, which follows the period switch: the kit's orders
+    #: row carries both, because "14 today" and "248 this month" answer different
+    #: questions and a farm reads them together.
+    placed_month: Trend
     paid: int
     awaiting_payment: int
     in_progress: int
@@ -62,11 +68,15 @@ class OrdersOverview(BaseModel):
 async def orders_overview(db: AsyncSession, window: Window) -> OrdersOverview:
     """The orders row, for one window."""
     placed = await trend_of(db, window, func.count(Order.id), Order.created_at)
+    placed_month = await trend_of(
+        db, month_window(window.end), func.count(Order.id), Order.created_at
+    )
     average = await trend_of(db, window, func.avg(Order.total), Order.created_at)
     tally = await _tally(db)
 
     return OrdersOverview(
         placed=placed,
+        placed_month=placed_month,
         paid=await _count_created_in(db, window, OrderStatus.PAID),
         awaiting_payment=await _count_created_in(db, window, OrderStatus.AWAITING_PAYMENT),
         # The funnel counts the farm as it stands, not as it traded this window: an
