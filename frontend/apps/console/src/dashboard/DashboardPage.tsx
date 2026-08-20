@@ -184,66 +184,10 @@ export function DashboardPage({
         </span>
       </div>
 
-      {/* ------------------------------------------------------------ orders */}
-      <section>
-        <div className="hv-row" style={{ marginBottom: 'var(--hv-2)' }}>
-          <h2 className="hv-h">{t('dashboard.orders')}</h2>
-          <span className="hv-micro">{t('dashboard.orders.note')}</span>
-          <span className="hv-spacer" />
-          {onOpenOrders && (
-            <button className="hv-btn hv-btn--sm" type="button" onClick={onOpenOrders}>
-              {t('dashboard.orders.desk')}
-            </button>
-          )}
-        </div>
-        <div className="hv-grid hv-grid--4">
-          <Kpi
-            locale={locale}
-            label={t('dashboard.orders.placed')}
-            value={formatNumber(orders.placed.value, locale)}
-            trend={orders.placed}
-            polarity="more_is_better"
-            note={comparison(orders.placed.previous, locale, t)}
-            foot={[
-              t('dashboard.orders.paid', { count: orders.paid }),
-              t('dashboard.orders.awaiting', { count: orders.awaiting_payment }),
-            ]}
-          />
-          <Kpi
-            locale={locale}
-            label={t('dashboard.orders.in_progress')}
-            value={formatNumber(orders.in_progress, locale)}
-            tone="live"
-            foot={[
-              t('dashboard.orders.wait_list'),
-              <span className={waitList > 0 ? 'hv-warn' : undefined}>{waitList}</span>,
-            ]}
-          />
-          <Kpi
-            locale={locale}
-            label={t('dashboard.orders.average')}
-            value={formatNumber(orders.average_order.value, locale)}
-            unit="₽"
-            trend={orders.average_order}
-            polarity="more_is_better"
-            note={t('dashboard.orders.median', {
-              value: formatMoney(orders.median_order, locale),
-            })}
-            foot={[t('dashboard.orders.lines'), formatNumber(orders.lines_per_order, locale, 1)]}
-          />
-          <div className="hv-panel">
-            <div className="hv-panel__head">
-              <span>{t('dashboard.orders.stages')}</span>
-              <span className="hv-panel__aside">{t('dashboard.orders.stages_aside')}</span>
-            </div>
-            <div className="hv-panel__body hv-panel__body--tight">
-              <Funnel rows={stageRows(orders.funnel, locale)} locale={locale} />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------- wall + attention */}
+      {/* ------------------------------------------------- wall + attention
+          First on the screen. "What is each machine doing" is the question this
+          console is opened to answer, and the one the kit's own README puts at
+          the head of the dashboard's four. */}
       <section className="hv-cols hv-cols--2">
         <div className="hv-panel">
           <div className="hv-panel__head">
@@ -339,6 +283,62 @@ export function DashboardPage({
         </div>
       </section>
 
+      {/* ------------------------------------------------------------ orders
+          Below the wall, and dense. This row answers "how is trade", which is a
+          question somebody asks after they have seen what the machines are doing
+          — and at full tile size it pushed the wall off a 720px screen entirely. */}
+      <section>
+        <div className="hv-row" style={{ marginBottom: 'var(--hv-2)' }}>
+          <h2 className="hv-h">{t('dashboard.orders')}</h2>
+          <span className="hv-micro">{t('dashboard.orders.note')}</span>
+          <span className="hv-spacer" />
+          {onOpenOrders && (
+            <button className="hv-btn hv-btn--sm" type="button" onClick={onOpenOrders}>
+              {t('dashboard.orders.desk')}
+            </button>
+          )}
+        </div>
+        <div className="hv-grid hv-grid--3">
+          <Kpi
+            compact
+            locale={locale}
+            label={t('dashboard.orders.placed')}
+            value={formatNumber(orders.placed.value, locale)}
+            trend={orders.placed}
+            polarity="more_is_better"
+            note={comparison(orders.placed.previous, locale, t)}
+            foot={[
+              t('dashboard.orders.paid', { count: orders.paid }),
+              t('dashboard.orders.awaiting', { count: orders.awaiting_payment }),
+            ]}
+          />
+          <Kpi
+            compact
+            locale={locale}
+            label={t('dashboard.orders.in_progress')}
+            value={formatNumber(orders.in_progress, locale)}
+            tone="live"
+            foot={[
+              t('dashboard.orders.wait_list'),
+              <span className={waitList > 0 ? 'hv-warn' : undefined}>{waitList}</span>,
+            ]}
+          />
+          <Kpi
+            compact
+            locale={locale}
+            label={t('dashboard.orders.average')}
+            value={formatNumber(orders.average_order.value, locale)}
+            unit="₽"
+            trend={orders.average_order}
+            polarity="more_is_better"
+            note={t('dashboard.orders.median', {
+              value: formatMoney(orders.median_order, locale),
+            })}
+            foot={[t('dashboard.orders.lines'), formatNumber(orders.lines_per_order, locale, 1)]}
+          />
+        </div>
+      </section>
+
       {/* ----------------------------------------------------------- finance */}
       <section>
         <div className="hv-row" style={{ marginBottom: 'var(--hv-2)' }}>
@@ -425,7 +425,10 @@ export function DashboardPage({
         </div>
       </section>
 
-      {/* ---------------------------------------------------------- schedule */}
+      {/* ------------------------------------------------- schedule + stages
+          Paired because they are the same question at two scales: which machine
+          frees up next, and which stage the queue is piling up in. */}
+      <section className="hv-cols hv-cols--2">
       <section className="hv-panel">
         <div className="hv-panel__head">
           <span>{t('dashboard.schedule')}</span>
@@ -453,6 +456,17 @@ export function DashboardPage({
               : t('dashboard.schedule.all_busy')}
           </span>
         </div>
+      </section>
+
+        <section className="hv-panel">
+          <div className="hv-panel__head">
+            <span>{t('dashboard.orders.stages')}</span>
+            <span className="hv-panel__aside">{t('dashboard.orders.stages_aside')}</span>
+          </div>
+          <div className="hv-panel__body hv-panel__body--tight">
+            <Funnel rows={stageRows(orders.funnel, locale)} locale={locale} />
+          </div>
+        </section>
       </section>
 
       {/* ---------------------------------------------------------- filament */}

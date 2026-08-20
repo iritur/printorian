@@ -653,6 +653,14 @@
   padding: var(--hv-3);
 }
 
+/* A tile for a row that is context rather than the screen's subject: same three
+   parts, set so the row can be scanned without competing with what sits above
+   it. The figure keeps tabular numerals and its delta — shrinking a KPI must not
+   cost the comparison, only the shouting. */
+.hv-kpi--compact { padding: var(--hv-2) var(--hv-3); gap: 2px; }
+.hv-kpi--compact .hv-kpi__v { font-size: 1.05rem; }
+.hv-kpi--compact .hv-kpi__foot { padding-top: var(--hv-1); }
+
 .hv-kpi__v {
   display: flex;
   align-items: baseline;
