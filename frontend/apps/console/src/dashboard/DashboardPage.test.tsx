@@ -292,7 +292,12 @@ describe('the status wall', () => {
     await userEvent.click(await screen.findByRole('button', { name: /P-01/ }))
 
     // The wall carries only what a square needs; the popup is read on demand.
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'P-01' })).toBeInTheDocument())
+    // Asserted on the dialog rather than on a heading inside it: the machine's
+    // name lives in the popup's chrome now, and "a dialog for P-01 opened" is
+    // the claim worth making either way.
+    await waitFor(() =>
+      expect(screen.getByRole('dialog', { name: /P-01/ })).toBeInTheDocument(),
+    )
   })
 })
 

@@ -242,15 +242,38 @@ export function PrinterDetail({
     }
   }
 
-  return (
-    <section className="admin-detail">
-      <header className="admin-detail__head">
-        <h3>{printer.name}</h3>
-        <button type="button" onClick={onClose}>
-          {t('common.close')}
-        </button>
-      </header>
+  /*
+    The machine's own window.
 
+    The scenario asks for a popup here (item M2) and the kit draws one; this was a
+    panel that appeared under the table, so opening a printer pushed the row you
+    clicked out from under the pointer. It is also what the dashboard's status
+    wall already expects — clicking a square should open a machine, not rearrange
+    the page behind it.
+  */
+  return (
+    <Modal
+      wide
+      title={`${printer.name} :: ${t('fleet.title')}`}
+      meta={[
+        { label: 'МОДЕЛЬ', value: printer.model || '—' },
+        { label: 'S/N', value: printer.serial || '—' },
+      ]}
+      status={translate(locale, `printer.state.${printer.state}` as MessageKey)}
+      path={`/FLEET/PRINTERS/${printer.name.toUpperCase()}`}
+      pathStatus={printer.needs_attention ? 'ТРЕБУЕТ ВНИМАНИЯ' : 'В НОРМЕ'}
+      onClose={onClose}
+      footer={
+        <>
+          <span>
+            {t('fleet.printed_hours')} :: {printer.printed_hours}
+          </span>
+          <button className="hv-btn hv-btn--sm" type="button" onClick={onClose}>
+            {t('common.close')}
+          </button>
+        </>
+      }
+    >
       <dl className="admin-detail__facts">
         <dt>{t('fleet.field.model')}</dt>
         <dd>{printer.model || '—'}</dd>
@@ -369,7 +392,7 @@ export function PrinterDetail({
           ))}
         </ul>
       )}
-    </section>
+    </Modal>
   )
 }
 

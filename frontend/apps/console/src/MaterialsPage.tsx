@@ -65,6 +65,19 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
   const [table, setTable] = useState<MaterialTable | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Material | null>(null)
+
+  /*
+    The material as the *table* currently has it, not the snapshot taken when the
+    row was clicked.
+
+    Adding a lot used to close the popup, because `selected` was a captured object
+    and would have gone on showing the old lots. Re-reading it here is what the
+    fleet detail already does with printer telemetry, and it means the window can
+    stay open and simply update — which is the behaviour a popup implies.
+  */
+  const shown = selected
+    ? (table?.rows.find((row) => row.code === selected.code) ?? selected)
+    : null
   const [adding, setAdding] = useState(false)
   const [printerNames, setPrinterNames] = useState<Record<string, string>>({})
 
@@ -216,26 +229,43 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
         onRowActivate={setSelected}
       />
 
-      {selected && (
-        <section className="admin-detail">
-          <header className="admin-detail__head">
-            <h3>
-              {selected.code} · {selected.name}
-            </h3>
-            <button type="button" onClick={() => setSelected(null)}>
-              {t('common.close')}
-            </button>
-          </header>
-
+      {/* The material's own window, as the scenario's table asks (item M1) and
+          the kit draws it. It was a panel below the table, so opening a row
+          pushed that row out from under the pointer — and the "add lot" form
+          inside it now sits in a popup for free. */}
+      {shown && (
+        <Modal
+          wide
+          title={`${shown.code} :: ${t('materials.title')}`}
+          meta={[
+            { label: 'СЕМЕЙСТВО', value: shown.family },
+            { label: 'ЦВЕТ', value: shown.color_name || '—' },
+          ]}
+          status={translate(locale, `material.status.${shown.status}` as MessageKey)}
+          path={`/INVENTORY/MATERIALS/${shown.code.toUpperCase()}`}
+          onClose={() => setSelected(null)}
+          footer={
+            <>
+              <span>{shown.name}</span>
+              <button
+                className="hv-btn hv-btn--sm"
+                type="button"
+                onClick={() => setSelected(null)}
+              >
+                {t('common.close')}
+              </button>
+            </>
+          }
+        >
           <dl className="admin-detail__facts">
             <dt>{t('materials.family')}</dt>
-            <dd>{selected.family}</dd>
+            <dd>{shown.family}</dd>
             <dt>{t('materials.stock')}</dt>
-            <dd>{Number(selected.total_remaining_grams).toFixed(0)}</dd>
+            <dd>{Number(shown.total_remaining_grams).toFixed(0)}</dd>
             <dt>{t('materials.price')}</dt>
             <dd>
               {formatMoney(
-                (Number(selected.sell_price_per_gram) * 1000).toFixed(2),
+                (Number(shown.sell_price_per_gram) * 1000).toFixed(2),
                 'RUB',
                 locale,
               )}
@@ -245,11 +275,11 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
           {/* Per-lot, because the column above collapses duplicates: this is
               where someone finds which spool to physically fetch. */}
           <h4>{t('materials.lots')}</h4>
-          {selected.lots.length === 0 ? (
+          {shown.lots.length === 0 ? (
             <p className="admin-detail__muted">{t('common.empty')}</p>
           ) : (
             <ul className="admin-detail__list">
-              {selected.lots.map((lot) => (
+              {shown.lots.map((lot) => (
                 <li key={lot.id}>
                   <span>{lot.label || lot.id.slice(0, 8)}</span>
                   <span className="admin-detail__muted">
@@ -259,14 +289,7 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
                   {/* Only for a spool actually in a machine — there is nothing
                       to remove from a shelf. */}
                   {mayManage && lot.location_kind === 'printer' && lot.printer_id && (
-                    <UnmountButton
-                      lot={lot}
-                      locale={locale}
-                      onDone={() => {
-                        setSelected(null)
-                        void load()
-                      }}
-                    />
+                    <UnmountButton lot={lot} locale={locale} onDone={() => void load()} />
                   )}
                 </li>
               ))}
@@ -274,16 +297,9 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
           )}
 
           {mayManage && (
-            <LotForm
-              material={selected}
-              locale={locale}
-              onDone={() => {
-                setSelected(null)
-                void load()
-              }}
-            />
+            <LotForm material={shown} locale={locale} onDone={() => void load()} />
           )}
-        </section>
+        </Modal>
       )}
     </section>
   )
