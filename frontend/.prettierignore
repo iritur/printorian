@@ -1,0 +1,17 @@
+# Generated from the backend's OpenAPI document and never hand-edited
+# (ADR-0005). Formatting it would produce a diff that the next `npm run
+# generate:api` throws away, and make a real contract change hard to read.
+packages/api-client/src/generated/
+
+# Build output.
+**/dist/
+**/out/
+**/*.tsbuildinfo
+node_modules/
+
+# The kit's stylesheets are hand-set: the token tables are aligned in columns so
+# a colour can be compared with the one under it, and the component sections are
+# numbered with rules Prettier would unwrap. It reformats CSS by its own idea of
+# a line, and here that idea loses information.
+packages/ui/src/harvester/
+packages/ui/src/tokens.css

@@ -9,6 +9,8 @@
   "scripts": {
     "typecheck": "tsc --build",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "build": "npm run build --workspaces --if-present",
     "generate:api": "node scripts/generate-api-client.mjs"
@@ -25,6 +27,7 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "jsdom": "^26.0.0",
     "openapi-typescript": "^7.5.2",
+    "prettier": "3.4.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "vitest": "^3.0.2"
