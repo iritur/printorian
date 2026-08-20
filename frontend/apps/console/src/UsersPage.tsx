@@ -59,6 +59,13 @@ export function UsersPage({ locale }: { locale: Locale }) {
   )
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  /*
+    Held by id, not by value. A captured row would go stale the moment the popup
+    saved anything — the same trap the materials detail documents — so the open
+    account is looked up again out of whatever the last fetch returned.
+  */
+  const [editing, setEditing] = useState<User | null>(null)
+  const open = editing ? (users?.find((row) => row.id === editing.id) ?? editing) : null
 
   const entitled = actor?.permissions.includes(MANAGE_USERS) ?? false
 
@@ -115,53 +122,31 @@ export function UsersPage({ locale }: { locale: Locale }) {
         ),
       },
       { key: 'name', header: t('users.name'), value: (row) => row.display_name },
+      /*
+        Both of these used to be live controls sitting in the cells: a `<select>`
+        that fired a PUT on every change, and a button that flipped an account's
+        access. In a sortable table that is a bad place for either — the row you
+        are pointing at is one re-sort away from being a different person, and
+        neither action announced whose account it had just changed.
+
+        They read as facts here and are edited in the popup, where the person is
+        named in the title and the change is pressed deliberately.
+      */
       {
         key: 'role',
         header: t('users.role'),
         value: (row) => row.role,
-        render: (row) => {
-          // Your own role is shown, not offered: changing it is refused by the
-          // API, so a live dropdown here would be a control that cannot work.
-          if (row.id === actor?.user_id) return translate(locale, `role.${row.role}` as MessageKey)
-          return (
-            <select
-              value={row.role}
-              aria-label={`${t('users.role')} — ${row.email}`}
-              onChange={(event) =>
-                void mutate(() =>
-                  api.put(`/users/${row.id}/role?role=${event.target.value}`, undefined),
-                )
-              }
-            >
-              {ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {translate(locale, `role.${role}` as MessageKey)}
-                </option>
-              ))}
-            </select>
-          )
-        },
+        render: (row) => translate(locale, `role.${row.role}` as MessageKey),
       },
       {
         key: 'active',
         header: t('users.active'),
         value: (row) => row.is_active,
-        render: (row) =>
-          row.id === actor?.user_id ? (
-            '—'
-          ) : (
-            <button
-              className="hv-btn hv-btn--sm"
-              type="button"
-              onClick={() =>
-                void mutate(() =>
-                  api.put(`/users/${row.id}/active?is_active=${!row.is_active}`, undefined),
-                )
-              }
-            >
-              {t(row.is_active ? 'users.deactivate' : 'users.activate')}
-            </button>
-          ),
+        render: (row) => (
+          <span className="hv-state" data-state={row.is_active ? 'idle' : 'paused'}>
+            {t(row.is_active ? 'users.state_active' : 'users.state_inactive')}
+          </span>
+        ),
       },
       {
         key: 'created_at',
@@ -170,7 +155,9 @@ export function UsersPage({ locale }: { locale: Locale }) {
         render: (row) => new Date(row.created_at).toLocaleDateString(locale),
       },
     ],
-    [actor, locale, mutate, t],
+    // `mutate` is gone from here with the controls that used it: the columns
+    // render facts now, and nothing in them writes.
+    [actor, locale, t],
   )
 
   const tags = useMemo<StatusTag<User>[]>(
@@ -217,10 +204,10 @@ export function UsersPage({ locale }: { locale: Locale }) {
       )}
 
       {error && (
-          <p className="hv-hint hv-bad" role="alert">
-            {error}
-          </p>
-        )}
+        <p className="hv-hint hv-bad" role="alert">
+          {error}
+        </p>
+      )}
 
       <DataTable
         rows={users ?? []}
@@ -232,8 +219,143 @@ export function UsersPage({ locale }: { locale: Locale }) {
         isLoading={users === null}
         loadingLabel={t('common.loading')}
         initialSort={{ key: 'email', direction: 'asc' }}
+        onRowActivate={(row) => setEditing(row)}
       />
+
+      {/* Re-read from the freshly fetched list rather than held by value, so the
+          popup follows the server: after a role change the window shows what was
+          actually saved, not what the client sent. */}
+      {open && (
+        <StaffDetail
+          user={open}
+          locale={locale}
+          isSelf={open.id === actor?.user_id}
+          onRun={mutate}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </section>
+  )
+}
+
+/**
+ * One staff account, open.
+ *
+ * The role is a draft until «Сохранить» — a dropdown that saved on change was
+ * how somebody's access could be altered by a stray scroll wheel. Access itself
+ * is its own footer button rather than part of the save, because switching an
+ * account off is not an edit to a field: it takes effect at once and reads as a
+ * decision, the same shape the journal gives «Удалить».
+ *
+ * Your own account shows both and offers neither. The API refuses a self-role
+ * change and a self-deactivation, so a live control here would be a button that
+ * cannot work — and finding that out by pressing it is not a design.
+ */
+function StaffDetail({
+  user,
+  locale,
+  isSelf,
+  onRun,
+  onClose,
+}: {
+  user: User
+  locale: Locale
+  isSelf: boolean
+  onRun: (work: () => Promise<unknown>) => Promise<void>
+  onClose: () => void
+}) {
+  const t = (key: MessageKey) => translate(locale, key)
+  const [role, setRole] = useState<RoleName>(user.role)
+  const [busy, setBusy] = useState(false)
+
+  // The saved role is the one the server last returned. Re-syncing on it means
+  // the button stops offering a save the moment the save has landed.
+  useEffect(() => setRole(user.role), [user.role])
+
+  const run = async (work: () => Promise<unknown>) => {
+    setBusy(true)
+    try {
+      await onRun(work)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      title={`${t('users.detail')} :: ${user.display_name || user.email}`}
+      meta={[
+        { label: 'EMAIL', value: user.email },
+        { label: 'РОЛЬ', value: translate(locale, `role.${user.role}` as MessageKey) },
+      ]}
+      status={t(user.is_active ? 'users.state_active' : 'users.state_inactive')}
+      path={`/IDENTITY/USERS.DB/${user.email.split('@')[0]?.toUpperCase() ?? ''}`}
+      onClose={onClose}
+      footer={
+        <>
+          <span className="hv-row">
+            {isSelf ? (
+              <span className="hv-micro">{t('users.self_hint')}</span>
+            ) : (
+              <button
+                className={
+                  user.is_active ? 'hv-btn hv-btn--sm hv-btn--danger' : 'hv-btn hv-btn--sm'
+                }
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void run(() =>
+                    api.put(`/users/${user.id}/active?is_active=${!user.is_active}`, undefined),
+                  )
+                }
+              >
+                {t(user.is_active ? 'users.deactivate' : 'users.activate')}
+              </button>
+            )}
+          </span>
+          <span className="hv-row">
+            <button className="hv-btn" type="button" onClick={onClose}>
+              {t('common.close')}
+            </button>
+            <button
+              className="hv-btn hv-btn--primary"
+              type="button"
+              disabled={busy || isSelf || role === user.role}
+              onClick={() =>
+                void run(() => api.put(`/users/${user.id}/role?role=${role}`, undefined))
+              }
+            >
+              {t('common.save')}
+            </button>
+          </span>
+        </>
+      }
+    >
+      <dl className="admin-detail__facts">
+        <dt>{t('users.name')}</dt>
+        <dd>{user.display_name || '—'}</dd>
+        <dt>{t('users.email')}</dt>
+        <dd>{user.email}</dd>
+        <dt>{t('users.created')}</dt>
+        <dd>{new Date(user.created_at).toLocaleDateString(locale)}</dd>
+      </dl>
+
+      <label className="hv-field">
+        <span className="hv-label">{t('users.role')}</span>
+        <select
+          className="hv-select"
+          value={role}
+          disabled={isSelf || busy}
+          onChange={(event) => setRole(event.target.value as RoleName)}
+        >
+          {ROLES.map((one) => (
+            <option key={one} value={one}>
+              {translate(locale, `role.${one}` as MessageKey)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </Modal>
   )
 }
 
@@ -275,7 +397,7 @@ function StaffForm({
   }
 
   return (
-  /*
+    /*
     A popup, like every other create in the console.
 
     This one has a second reason to be one: it is the only screen that takes a
@@ -307,55 +429,53 @@ function StaffForm({
       }
     >
       <form className="admin-form" id="staff-form" onSubmit={(event) => void submit(event)}>
+        <div className="admin-form__grid">
+          <Field label={t('users.email')}>
+            <input
+              type="email"
+              required
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </Field>
+          <Field label={t('users.name')}>
+            <input
+              required
+              value={form.display_name}
+              onChange={(e) => setForm({ ...form, display_name: e.target.value })}
+            />
+          </Field>
+          <Field label={t('checkout.password')}>
+            <input
+              type="password"
+              autoComplete="new-password"
+              required
+              // Matches the server's rule, so a rejection happens in the field
+              // rather than after a round-trip.
+              minLength={10}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+          </Field>
+          <Field label={t('users.role')}>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value as RoleName })}
+            >
+              {ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {translate(locale, `role.${role}` as MessageKey)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
 
-      <div className="admin-form__grid">
-        <Field label={t('users.email')}>
-          <input
-            type="email"
-            required
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-        </Field>
-        <Field label={t('users.name')}>
-          <input
-            required
-            value={form.display_name}
-            onChange={(e) => setForm({ ...form, display_name: e.target.value })}
-          />
-        </Field>
-        <Field label={t('checkout.password')}>
-          <input
-            type="password"
-            autoComplete="new-password"
-            required
-            // Matches the server's rule, so a rejection happens in the field
-            // rather than after a round-trip.
-            minLength={10}
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-        </Field>
-        <Field label={t('users.role')}>
-          <select
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as RoleName })}
-          >
-            {ROLES.map((role) => (
-              <option key={role} value={role}>
-                {translate(locale, `role.${role}` as MessageKey)}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-
-      {error && (
+        {error && (
           <p className="hv-hint hv-bad" role="alert">
             {error}
           </p>
         )}
-
       </form>
     </Modal>
   )

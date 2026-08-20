@@ -746,6 +746,9 @@ export const ru = {
   'users.activate': 'Включить',
   'users.created': 'Создан',
   'users.self_hint': 'Это вы',
+  'users.detail': 'Сотрудник',
+  'users.state_active': 'Активен',
+  'users.state_inactive': 'Отключён',
 
   // -- materials (manage_inventory)
   'materials.title': 'Материалы',
@@ -1540,6 +1543,9 @@ export const en: Messages = {
   'users.activate': 'Activate',
   'users.created': 'Created',
   'users.self_hint': 'This is you',
+  'users.detail': 'Staff member',
+  'users.state_active': 'Active',
+  'users.state_inactive': 'Disabled',
 
   'materials.title': 'Materials',
   'materials.code': 'Code',

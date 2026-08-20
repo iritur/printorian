@@ -125,10 +125,39 @@ const EMPTY: Draft = {
 
 /** `Кронштейн угловой V4` → `kronshteyn-uglovoy-v4`, near enough to start from. */
 const TRANSLIT: Record<string, string> = {
-  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i',
-  й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't',
-  у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '',
-  э: 'e', ю: 'yu', я: 'ya',
+  а: 'a',
+  б: 'b',
+  в: 'v',
+  г: 'g',
+  д: 'd',
+  е: 'e',
+  ё: 'e',
+  ж: 'zh',
+  з: 'z',
+  и: 'i',
+  й: 'y',
+  к: 'k',
+  л: 'l',
+  м: 'm',
+  н: 'n',
+  о: 'o',
+  п: 'p',
+  р: 'r',
+  с: 's',
+  т: 't',
+  у: 'u',
+  ф: 'f',
+  х: 'h',
+  ц: 'c',
+  ч: 'ch',
+  ш: 'sh',
+  щ: 'sch',
+  ъ: '',
+  ы: 'y',
+  ь: '',
+  э: 'e',
+  ю: 'yu',
+  я: 'ya',
 }
 
 function slugify(title: string): string {
@@ -181,8 +210,7 @@ export function LibraryPage({ locale }: { locale: Locale }) {
   // silenced. The backend sends codes, never prose (ADR-0012), so every error
   // the user reads is translated here.
   const report = useCallback(
-    (exc: unknown) =>
-      setError(exc instanceof ApiError ? translateError(locale, exc) : String(exc)),
+    (exc: unknown) => setError(exc instanceof ApiError ? translateError(locale, exc) : String(exc)),
     [locale],
   )
 
@@ -277,9 +305,7 @@ export function LibraryPage({ locale }: { locale: Locale }) {
       try {
         const full = await api.get<
           CatalogRow & Draft & Record<BarKey, number> & { suitable_materials: SuitableMaterial[] }
-        >(
-          `/catalog/${row.slug}`,
-        )
+        >(`/catalog/${row.slug}`)
         setDraft({
           slug: full.slug,
           code: full.code,
@@ -300,9 +326,10 @@ export function LibraryPage({ locale }: { locale: Locale }) {
           })),
           multicolor: Boolean(full.multicolor),
           is_published: Boolean(full.published_at),
-          bars: Object.fromEntries(
-            BARS.map(([key]) => [key, Number(full[key] ?? 0)]),
-          ) as Record<BarKey, number>,
+          bars: Object.fromEntries(BARS.map(([key]) => [key, Number(full[key] ?? 0)])) as Record<
+            BarKey,
+            number
+          >,
         })
       } catch (exc) {
         report(exc)
@@ -383,17 +410,15 @@ export function LibraryPage({ locale }: { locale: Locale }) {
                       </span>
                     )}
                   </td>
+                  {/* One way in, and it is not destructive. «Удалить» used to sit
+                      here beside «Править», one row-height away from the wrong
+                      model on a list that re-sorts — and a row is the last place
+                      an irreversible action belongs. It now lives in the popup's
+                      footer, where the thing being deleted is named in the title
+                      above it. */}
                   <td data-align="end">
                     <button type="button" className="hv-btn hv-btn--sm" onClick={() => edit(row)}>
-                      Править
-                    </button>{' '}
-                    <button
-                      type="button"
-                      className="hv-btn hv-btn--sm"
-                      disabled={busy}
-                      onClick={() => void remove(row.slug)}
-                    >
-                      Удалить
+                      Открыть
                     </button>
                   </td>
                 </tr>
@@ -428,8 +453,24 @@ export function LibraryPage({ locale }: { locale: Locale }) {
           }}
           footer={
             <>
-              <span>
-                {!editing && !geometry ? 'СНАЧАЛА ЗАГРУЗИТЕ ГЕОМЕТРИЮ' : 'ГЕОМЕТРИЯ ИЗМЕРЯЕТСЯ ПРИ ЗАГРУЗКЕ'}
+              <span className="hv-row">
+                {/* Only when editing: there is nothing to delete while composing,
+                    and a delete button on a blank form is a trap with no target. */}
+                {editing && (
+                  <button
+                    className="hv-btn hv-btn--sm hv-btn--danger"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void remove(editing)}
+                  >
+                    Удалить
+                  </button>
+                )}
+                <span className="hv-micro">
+                  {!editing && !geometry
+                    ? 'СНАЧАЛА ЗАГРУЗИТЕ ГЕОМЕТРИЮ'
+                    : 'ГЕОМЕТРИЯ ИЗМЕРЯЕТСЯ ПРИ ЗАГРУЗКЕ'}
+                </span>
               </span>
               <span className="hv-row">
                 <button
@@ -522,7 +563,10 @@ export function LibraryPage({ locale }: { locale: Locale }) {
             />
           </Field>
 
-          <Field label="Адрес (slug)" hint="Появляется в ссылке. Менять у опубликованной модели не стоит.">
+          <Field
+            label="Адрес (slug)"
+            hint="Появляется в ссылке. Менять у опубликованной модели не стоит."
+          >
             <input
               className="hv-input"
               value={draft.slug}
