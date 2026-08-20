@@ -107,8 +107,13 @@ REM  healthcheck; this is what makes compose honour them.
 REM
 REM  The timeout is generous because a cold volume runs crash recovery first, and
 REM  failing early there would be the same race in the other direction.
-docker compose up -d --wait --wait-timeout 120
-if errorlevel 1 (
+REM  `||` rather than `if errorlevel 1` here and in every other failure check
+REM  below. `if errorlevel 1` means "exit code >= 1", and a Python tool that ends
+REM  in `sys.exit(-1)` - which alembic does when it cannot locate a revision -
+REM  sails straight through it. That is not hypothetical: it is how a failed
+REM  migration once let this script carry on to the seed and bury the real error
+REM  under an unrelated traceback.
+docker compose up -d --wait --wait-timeout 120 || (
     echo [!] Database and cache did not come up.
     echo     If Docker Desktop is not running, start it and try again.
     echo     Otherwise check the containers:  docker compose ps
@@ -123,8 +128,7 @@ REM  IF NOT EXISTS, and the second run must not fail - so the existence check is
 REM  separate query and the create only happens when it comes back empty.
 for /f "tokens=*" %%d in ('docker compose exec -T postgres psql -U printorian -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '%PGDATABASE%'" 2^>NUL') do set "DBEXISTS=%%d"
 if not defined DBEXISTS (
-    docker compose exec -T postgres psql -U printorian -d postgres -c "CREATE DATABASE %PGDATABASE%"
-    if errorlevel 1 (
+    docker compose exec -T postgres psql -U printorian -d postgres -c "CREATE DATABASE %PGDATABASE%" || (
         echo [!] Could not create the database. See the error above.
         pause
         exit /b 1
@@ -140,9 +144,11 @@ REM  fails in ways that look like application bugs.
 REM  Run from backend\: alembic.ini resolves script_location relative to the
 REM  working directory, so this fails from the repo root.
 pushd backend
-.venv\Scripts\python.exe -m alembic upgrade head
-if errorlevel 1 (
+.venv\Scripts\python.exe -m alembic upgrade head || (
     echo [!] Migrations failed. See the error above.
+    echo     "Can't locate revision" means this database was last migrated by a
+    echo     branch whose migrations this checkout does not have. Switch back to
+    echo     that branch, or point PRINTORIAN_DATABASE_URL at a fresh database.
     popd
     pause
     exit /b 1
@@ -154,8 +160,7 @@ REM  finishes by opening a sign-in screen nobody can pass.
 REM
 REM  The script refuses on a populated database, so running it here cannot mint an
 REM  owner on a farm that already has one.
-.venv\Scripts\python.exe scripts\create_owner.py
-if errorlevel 1 (
+.venv\Scripts\python.exe scripts\create_owner.py || (
     echo [!] Could not create the first owner. See the error above.
     popd
     pause
@@ -166,8 +171,7 @@ REM  raised against no published instruction has no steps and no norm, and an
 REM  empty shelf has no box to recommend. Idempotent - tara is keyed by code and
 REM  an already-published version is left alone - so running it every start costs
 REM  nothing and a fresh checkout gets a working post.
-.venv\Scripts\python.exe scripts\seed_packaging.py
-if errorlevel 1 (
+.venv\Scripts\python.exe scripts\seed_packaging.py || (
     echo [!] Could not seed the packing bench. See the error above.
     popd
     pause
