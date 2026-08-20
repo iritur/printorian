@@ -10,12 +10,14 @@ import { JournalPage } from './JournalPage'
 import { LibraryPage } from './LibraryPage'
 import { MaterialsPage } from './MaterialsPage'
 import { OrdersPage } from './OrdersPage'
+import { PostProductionPage } from './postproduction/PostProductionPage'
 import { PrepPage } from './PrepPage'
 import { UsersPage } from './UsersPage'
 
 type Screen =
   | 'dashboard'
   | 'orders'
+  | 'postproduction'
   | 'prep'
   | 'library'
   | 'journal'
@@ -143,6 +145,18 @@ function Shell() {
       shape: 'grid',
     },
     {
+      // Between the order desk and the prep queue, because that is where it sits
+      // in the flow: the print is done, and the part is now a person's problem.
+      key: 'postproduction',
+      label: t('pp.title'),
+      note: 'ЗАДАНИЯ · ИНСТРУКЦИИ',
+      permission: VIEW_PRODUCTION,
+      mark: 'POST',
+      kicker: 'C:/PRODUCTION/POSTPROCESS',
+      text: 'Очередь заданий поста, пошаговые инструкции с нормами времени и накопленные отметки операторов.',
+      shape: 'pipe',
+    },
+    {
       key: 'prep',
       label: t('prep.title'),
       note: 'НАРЕЗКА · ПЛАСТИНЫ',
@@ -230,6 +244,7 @@ function Shell() {
   const paths: Record<Screen, string> = {
     dashboard: '/DASHBOARD/FARM.OVERVIEW',
     orders: '/ORDERS/DESK',
+    postproduction: '/PRODUCTION/POSTPROCESS',
     prep: '/PRODUCTION/PREP.QUEUE',
     library: '/CATALOG/CURATION',
     journal: '/JOURNAL/EDITOR',
@@ -255,6 +270,7 @@ function Shell() {
         <DashboardPage locale={locale} onOpenOrders={() => setScreen('orders')} />
       )}
       {active === 'orders' && <OrdersPage locale={locale} />}
+      {active === 'postproduction' && <PostProductionPage locale={locale} />}
       {active === 'prep' && <PrepPage locale={locale} />}
       {active === 'library' && <LibraryPage locale={locale} />}
       {active === 'journal' && <JournalPage locale={locale} />}

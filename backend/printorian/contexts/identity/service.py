@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from collections.abc import Sequence
 from datetime import timedelta
 
 from argon2 import PasswordHasher
@@ -13,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.identity import events
 from printorian.contexts.identity.models import Session, User
-from printorian.contexts.identity.policies import Role, permissions_for
+from printorian.contexts.identity.policies import STAFF_ROLES, Role, permissions_for
 from printorian.contexts.identity.schemas import (
     Actor,
     CreateUser,
@@ -99,6 +100,25 @@ class IdentityService:
     async def list_users(self) -> list[UserView]:
         result = await self._db.scalars(select(User).order_by(User.created_at))
         return [UserView.model_validate(u) for u in result]
+
+    async def display_names(self, ids: Sequence[EntityId] | None = None) -> dict[EntityId, str]:
+        """What these people are called.
+
+        Deliberately narrow, and deliberately not `list_users`: a screen that
+        wants to put a name beside an operator id should not thereby receive
+        everyone's email, role and active flag. Passing no ids answers for every
+        staff account, which is what a shift panel needs and is bounded by the
+        size of the farm rather than by its customer list.
+        """
+        query = select(User.id, User.display_name)
+        if ids is not None:
+            if not ids:
+                return {}
+            query = query.where(User.id.in_(set(ids)))
+        else:
+            query = query.where(User.role.in_(STAFF_ROLES))
+        rows = await self._db.execute(query)
+        return dict(rows.all())  # type: ignore[arg-type]
 
     async def set_role(
         self, user_id: EntityId, role: Role, *, actor_id: EntityId | None = None

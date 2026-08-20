@@ -29,6 +29,7 @@ from printorian.contexts.inventory import models as inventory_models
 from printorian.contexts.journal import models as journal_models
 from printorian.contexts.ordering import models as ordering_models
 from printorian.contexts.payments import models as payment_models
+from printorian.contexts.postproduction import models as postproduction_models
 from printorian.contexts.production import models as production_models
 from printorian.core.db import Base
 
@@ -45,5 +46,6 @@ __all__ = [
     "metadata",
     "ordering_models",
     "payment_models",
+    "postproduction_models",
     "production_models",
 ]

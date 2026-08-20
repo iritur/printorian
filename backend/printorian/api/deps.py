@@ -18,6 +18,7 @@ from printorian.contexts.identity import Actor, IdentityService, Permission
 from printorian.contexts.journal import JournalService
 from printorian.contexts.ordering import OrderingService
 from printorian.contexts.payments import PaymentsService
+from printorian.contexts.postproduction import PostProductionService
 from printorian.contexts.production import ProductionService
 from printorian.core.clock import Clock
 from printorian.core.config import Settings
@@ -121,6 +122,15 @@ def get_production_service(
 
 
 Production = Annotated[ProductionService, Depends(get_production_service)]
+
+
+def get_postproduction_service(
+    db: DbSession, clock: AppClock, bus: AppEventBus
+) -> PostProductionService:
+    return PostProductionService(db, clock, bus)
+
+
+PostProduction = Annotated[PostProductionService, Depends(get_postproduction_service)]
 
 
 def get_plate_library(db: DbSession, clock: AppClock) -> PlateLibrary:

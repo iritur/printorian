@@ -77,6 +77,12 @@ class Settings(BaseSettings):
     #: the order. Frequent enough that a customer refreshing a late order sees it
     #: move, cheap enough to ignore.
     sla_sweep_seconds: int = Field(default=300, ge=1)
+    #: How often finished prints become tasks on the post-production board, and
+    #: drying timers run out. Sixty seconds because the first of those is what an
+    #: operator is standing there waiting for — a part off the bed that takes five
+    #: minutes to appear on the board is five minutes of somebody watching a
+    #: screen. The pass reconciles, so it is cheap to run often.
+    postproduction_sweep_seconds: int = Field(default=60, ge=1)
 
     # -- pricing guardrails ----------------------------------------------
     #: Fraction by which a sliced plate may exceed the quoted cost before the job
