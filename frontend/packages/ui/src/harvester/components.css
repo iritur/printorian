@@ -167,6 +167,18 @@
    a positioned dialog, and `position: sticky` there makes it drift on scroll. */
 .hv-chrome--static { position: static; padding: var(--hv-3) var(--hv-3) 0; }
 
+/* A popup's chrome is the same row as a screen's, with two parts optional: a
+   popup need not carry a meta strip, and need not carry a status label. Both
+   omissions break the row, because the layout leans on them:
+
+   `.hv-meta` is the `flex: 1` that absorbs the row's slack, so without it the
+   whole group packs to the left and the OS bar never reaches the right edge.
+   And inside that bar `justify-content: space-between` puts a *lone* child at
+   the start, so a ✕ with no label beside it lands on the left of its own box —
+   which is what it did. */
+.hv-chrome--static .hv-chrome__row > .hv-tab + .hv-os { margin-left: auto; }
+.hv-chrome--static .hv-os > .hv-os__x:only-child { margin-left: auto; }
+
 @media (max-width: 900px) {
   .hv-model__view--tall { min-height: 220px; }
 }
