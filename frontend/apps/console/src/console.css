@@ -260,7 +260,11 @@ body {
 
 /* -------------------------------------------------------------- fleet */
 
-.fleet { max-width: 1100px; }
+/* No `max-width` here, deliberately.
+   The fleet screen used to cap itself at 1100px while `.materials` and `.users`
+   filled the window, so the one table with the *most* columns — eight, against
+   seven and five — was the only one squeezed. On a farm monitor it left a third
+   of the screen empty beside a table with nothing to spare. */
 
 .fleet__header {
   display: flex;
