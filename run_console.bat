@@ -3,7 +3,7 @@ REM ---------------------------------------------------------------------------
 REM  Printorian - farm console
 REM
 REM  Brings up everything the console needs and opens it:
-REM    Postgres + Redis  ->  API on :8000  ->  workers  ->  Vite on :5174
+REM    Postgres + Redis  ->  API  ->  workers  ->  Vite
 REM
 REM  The console is staff-only and is served from the farm's own server on the
 REM  LAN (ADR-0016). It shares this backend with the storefront, so running
@@ -13,12 +13,41 @@ REM  The workers are a separate process on purpose: the SLA clock recomputes
 REM  lateness credits on a timer, and running it inside the API would run one
 REM  copy per API worker, each recomputing the same credits.
 REM
-REM  Safe to run twice. Each step checks whether it is already running, so this
-REM  will not start a second API and collide on the port - which is also what
-REM  lets run_web.bat and run_app.bat share one backend.
+REM  ---------------------------------------------------------------------------
+REM  PORTS AND DATABASE ARE DERIVED FROM THIS CHECKOUT
+REM
+REM  The main checkout keeps the familiar 8000 / 5174 / `printorian`. A git
+REM  worktree gets its own pair of ports and its own database, named after the
+REM  worktree.
+REM
+REM  This is not tidiness. The old script decided "is it already running?" by
+REM  probing the port - which answers "is *something* on 5174", not "is *this*
+REM  checkout on 5174". Start a worktree while another checkout's stack is up and
+REM  it attached to the stranger, then opened the browser at it: you got the other
+REM  branch's console, its API and its schema, with nothing on screen saying so.
+REM  Worse, both then ran migrations against one database, so whichever branch
+REM  moved first left the other unable to migrate at all.
+REM
+REM  Deriving the ports removes the collision instead of detecting it. Deriving
+REM  the database is what makes it safe: two branches with different migrations
+REM  can no longer stamp the same `alembic_version`.
+REM
+REM  Safe to run twice. Each step still checks whether it is already running -
+REM  but now the thing it finds on the port is this checkout's, because no other
+REM  checkout uses that port.
 REM ---------------------------------------------------------------------------
-setlocal
+setlocal enabledelayedexpansion
 cd /d "%~dp0"
+
+REM  One Postgres for every checkout, many databases inside it.
+REM
+REM  Compose names its project after the directory it is run from, so a worktree
+REM  would form its own project - and then `docker compose exec postgres` cannot
+REM  see the running container ("service postgres is not running"), while
+REM  `docker compose up` fails outright on the fixed `container_name`. Pinning the
+REM  project makes every checkout address the one server, which is what we want:
+REM  the isolation that matters is the database, not the container.
+set "COMPOSE_PROJECT_NAME=printorian"
 
 if not exist "backend\.venv\Scripts\python.exe" (
     echo [!] No Python virtualenv found at backend\.venv
@@ -34,7 +63,42 @@ if not exist "frontend\node_modules" (
     exit /b 1
 )
 
-echo [1/5] Database and cache...
+REM --------------------------------------------------------------- identity
+REM  One PowerShell call decides everything about *where* this checkout lives:
+REM  its slug, its port offset and its database. Doing it in batch would mean
+REM  hand-rolling a hash out of string slicing, which is exactly the kind of code
+REM  nobody can read six months later.
+REM
+REM  The offset is an MD5 of the full path folded into 1..40, so two worktrees
+REM  land on different ports without either having to be told about the other.
+REM  A worktree named `x` always gets the same port, which matters: a bookmark
+REM  and a running dev server have to agree from one day to the next.
+REM
+REM  The slug drops a leading `printorian_`, because worktrees are usually named
+REM  after the project and `printorian_printorian_farm_console` helps nobody.
+for /f "tokens=1,2,3 delims=|" %%a in ('powershell -NoProfile -Command "$p = '%~dp0'.TrimEnd('\'); if ($p -match '\\\.claude\\worktrees\\([^\\]+)$') { $slug = ($Matches[1] -replace '[^A-Za-z0-9]', '_').ToLower() -replace '^printorian_', ''; $md5 = [System.Security.Cryptography.MD5]::Create(); $sum = 0; foreach ($b in $md5.ComputeHash([Text.Encoding]::UTF8.GetBytes($p))) { $sum = ($sum + $b) %% 40 }; $offset = $sum + 1 } else { $slug = ''; $offset = 0 }; $db = if ($slug) { 'printorian_' + $slug } else { 'printorian' }; $name = if ($slug) { $slug } else { 'main' }; Write-Output ($offset.ToString() + '|' + $db + '|' + $name)"') do (
+    set "OFFSET=%%a"
+    set "PGDATABASE=%%b"
+    set "CHECKOUT=%%c"
+)
+if not defined OFFSET (
+    echo [!] Could not work out which checkout this is. Is PowerShell available?
+    pause
+    exit /b 1
+)
+
+set /a API_PORT=8000 + %OFFSET%
+set /a WEB_PORT=5174 + %OFFSET%
+set "PRINTORIAN_DATABASE_URL=postgresql+asyncpg://printorian:printorian@localhost:5433/%PGDATABASE%"
+set "PRINTORIAN_API_URL=http://127.0.0.1:%API_PORT%"
+set "PRINTORIAN_CONSOLE_PORT=%WEB_PORT%"
+
+echo.
+echo   Checkout :: %CHECKOUT%
+echo   API      :: %API_PORT%      Console :: %WEB_PORT%      Database :: %PGDATABASE%
+echo.
+
+echo [1/7] Database and cache...
 REM  --wait, not a bare `up -d`. Without it compose returns as soon as the
 REM  containers have *started*, which is several seconds before Postgres accepts
 REM  connections - and the migration on the next step then dies with
@@ -53,38 +117,71 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [2/5] API on port 8000...
-curl -s -m 2 -o NUL http://127.0.0.1:8000/health
-if errorlevel 1 (
-    REM Migrations first: starting against an out-of-date schema fails in ways
-    REM that look like application bugs.
-    REM Run from backend\: alembic.ini resolves script_location relative to the
-    REM working directory, so this fails from the repo root.
-    pushd backend
-    .venv\Scripts\python.exe -m alembic upgrade head
+echo [2/7] Database "%PGDATABASE%"...
+REM  A worktree's database will not exist the first time. `CREATE DATABASE` has no
+REM  IF NOT EXISTS, and the second run must not fail - so the existence check is a
+REM  separate query and the create only happens when it comes back empty.
+for /f "tokens=*" %%d in ('docker compose exec -T postgres psql -U printorian -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '%PGDATABASE%'" 2^>NUL') do set "DBEXISTS=%%d"
+if not defined DBEXISTS (
+    docker compose exec -T postgres psql -U printorian -d postgres -c "CREATE DATABASE %PGDATABASE%"
     if errorlevel 1 (
-        echo [!] Migrations failed. See the error above.
-        popd
+        echo [!] Could not create the database. See the error above.
         pause
         exit /b 1
     )
+    echo     created
+) else (
+    echo     already there
+)
+
+echo [3/7] Schema and first owner...
+REM  Migrations before anything starts: an API against an out-of-date schema
+REM  fails in ways that look like application bugs.
+REM  Run from backend\: alembic.ini resolves script_location relative to the
+REM  working directory, so this fails from the repo root.
+pushd backend
+.venv\Scripts\python.exe -m alembic upgrade head
+if errorlevel 1 (
+    echo [!] Migrations failed. See the error above.
     popd
+    pause
+    exit /b 1
+)
+REM  A checkout with its own database starts with no accounts, and there is no way
+REM  in from outside: public registration always produces a customer, and staff are
+REM  created by somebody who already has an account. Without this the script
+REM  finishes by opening a sign-in screen nobody can pass.
+REM
+REM  The script refuses on a populated database, so running it here cannot mint an
+REM  owner on a farm that already has one.
+.venv\Scripts\python.exe scripts\create_owner.py
+if errorlevel 1 (
+    echo [!] Could not create the first owner. See the error above.
+    popd
+    pause
+    exit /b 1
+)
+popd
+
+echo [4/7] API on port %API_PORT%...
+curl -s -m 2 -o NUL http://127.0.0.1:%API_PORT%/health
+if errorlevel 1 (
     REM No CORS. Both apps reach the API through their own dev proxy on the same
     REM origin, exactly as they do in production - the storefront behind the
     REM tunnel and the console on the farm LAN (ADR-0016). The desktop shell that
     REM needed cross-origin access is gone.
-    start "Printorian API" /d "%~dp0backend" cmd /k .venv\Scripts\python.exe -m uvicorn printorian.api.app:create_app --factory --reload
+    start "Printorian API (%CHECKOUT%)" /d "%~dp0backend" cmd /k .venv\Scripts\python.exe -m uvicorn printorian.api.app:create_app --factory --reload --port %API_PORT%
     echo     started in a new window
 ) else (
     echo     already running - reusing it
 )
 
-echo [3/5] Waiting for the API...
+echo [5/7] Waiting for the API...
 set /a tries=0
 :wait_api
-curl -s -m 2 -o NUL http://127.0.0.1:8000/health && goto api_ready
+curl -s -m 2 -o NUL http://127.0.0.1:%API_PORT%/health && goto api_ready
 set /a tries+=1
-if %tries% GEQ 30 (
+if !tries! GEQ 30 (
     echo [!] The API did not answer in 30 tries. Check its window for the error.
     pause
     exit /b 1
@@ -94,37 +191,45 @@ goto wait_api
 :api_ready
 echo     ready
 
-echo [4/5] Background workers...
-REM No port to probe, so the check looks for the process itself. Enumerating
-REM every process is slower than a filtered query but needs no nested quoting,
-REM which a .bat mangles.
+echo [6/7] Background workers...
+REM No port to probe, so the check looks for the process itself - and for *this*
+REM checkout's, which is what the database name in the match is doing. Without it
+REM a worktree would see the main checkout's workers and start none of its own,
+REM leaving its own SLA clock and post-production sweep stopped.
 REM
-REM The name filter is not cosmetic: without it this command matches *itself*,
-REM because its own command line contains the string it searches for - so the
-REM check would report "already running" every time and never start anything.
-powershell -NoProfile -Command "if (Get-CimInstance Win32_Process | Where-Object { $_.Name -like 'python*' -and $_.CommandLine -like '*printorian.workers*' }) { exit 0 }; exit 1"
+REM It matches the `cmd` wrapper rather than the python process, because the
+REM database name is on the wrapper's command line and not on python's. That
+REM means the old `Name -like 'python*'` filter cannot be used, and it was not
+REM cosmetic: without it the query matches *itself*, since a PowerShell process
+REM searching for a string has that string on its own command line. Excluding
+REM the shells by name does the same job.
+powershell -NoProfile -Command "if (Get-CimInstance Win32_Process | Where-Object { $_.Name -notlike 'powershell*' -and $_.Name -notlike 'pwsh*' -and $_.CommandLine -like '*printorian.workers*' -and $_.CommandLine -like '*%PGDATABASE%*' }) { exit 0 }; exit 1"
 if errorlevel 1 (
-    start "Printorian Workers" /d "%~dp0backend" cmd /k .venv\Scripts\python.exe -m printorian.workers
+    REM The database goes on the command line rather than only in the environment
+    REM so the check above can see it. It is a local dev credential in a local dev
+    REM script; nothing here is a secret.
+    start "Printorian Workers (%CHECKOUT%)" /d "%~dp0backend" cmd /k "set PRINTORIAN_DATABASE_URL=%PRINTORIAN_DATABASE_URL%&& .venv\Scripts\python.exe -m printorian.workers"
     echo     started in a new window
 ) else (
     echo     already running - reusing it
 )
 
-echo [5/5] Console on port 5174...
-curl -s -m 2 -o NUL http://127.0.0.1:5174/
+echo [7/7] Console on port %WEB_PORT%...
+curl -s -m 2 -o NUL http://127.0.0.1:%WEB_PORT%/
 if errorlevel 1 (
-    start "Printorian Console" /d "%~dp0frontend" cmd /k npm run dev --workspace @printorian/console
+    start "Printorian Console (%CHECKOUT%)" /d "%~dp0frontend" cmd /k npm run dev --workspace @printorian/console
 ) else (
     echo     already running - reusing it
 )
 
 echo.
-echo   Console:     http://127.0.0.1:5174
-echo   API docs:    http://127.0.0.1:8000/docs
+echo   Console:     http://127.0.0.1:%WEB_PORT%
+echo   API docs:    http://127.0.0.1:%API_PORT%/docs
+echo   Database:    %PGDATABASE%
 echo.
 echo   Tip: if a window stops responding, click in it and press Esc. Windows
 echo        console QuickEdit freezes a process when text is selected.
 echo.
 ping -n 4 127.0.0.1 >NUL
-start http://127.0.0.1:5174
+start http://127.0.0.1:%WEB_PORT%
 endlocal
