@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
 import type { Column, Locale, MessageKey, StatusTag } from '@printorian/ui'
-import { DataTable, api, translate, translateError, useSession } from '@printorian/ui'
+import { DataTable, Modal, api, translate, translateError, useSession } from '@printorian/ui'
 
 import { Field } from './FleetAdmin'
 
@@ -165,11 +165,14 @@ export function UsersPage({ locale }: { locale: Locale }) {
     <section className="users">
       <header className="fleet__header">
         <h2>{t('users.title')}</h2>
-        {!adding && (
-          <button type="button" onClick={() => setAdding(true)}>
-            {t('users.add')}
-          </button>
-        )}
+        {/* Stays mounted *and* focusable while the popup is open. It used to
+            unmount, which left the modal's focus-restore with nothing to return
+            to; disabling it instead was the same bug in a different costume,
+            because a disabled control cannot take focus either. `aria-expanded`
+            carries the state, and the backdrop is what stops it being clicked. */}
+        <button type="button" onClick={() => setAdding(true)} aria-expanded={adding}>
+          {t('users.add')}
+        </button>
       </header>
 
       {adding && (
@@ -183,7 +186,11 @@ export function UsersPage({ locale }: { locale: Locale }) {
         />
       )}
 
-      {error && <p className="cfg__error">{error}</p>}
+      {error && (
+          <p className="hv-hint hv-bad" role="alert">
+            {error}
+          </p>
+        )}
 
       <DataTable
         rows={users ?? []}
@@ -238,8 +245,38 @@ function StaffForm({
   }
 
   return (
-    <form className="admin-form" onSubmit={(event) => void submit(event)}>
-      <h3>{t('users.add')}</h3>
+  /*
+    A popup, like every other create in the console.
+
+    This one has a second reason to be one: it is the only screen that takes a
+    password, and a password field sitting inline in a list is a password field
+    somebody fills in with the shop floor reading over their shoulder.
+  */
+    <Modal
+      title={`${t('users.add')} :: ${t('users.title')}`}
+      path="/IDENTITY/USERS/NEW"
+      pathStatus="РОЛЬ — НАБОР ПРАВ, А НЕ ДОЛЖНОСТЬ"
+      onClose={onCancel}
+      footer={
+        <>
+          <span>ПАРОЛЬ ХРАНИТСЯ ХЭШЕМ ARGON2ID И НИКОГДА НЕ ПОКАЗЫВАЕТСЯ</span>
+          <span className="hv-row">
+            <button className="hv-btn" type="button" onClick={onCancel} disabled={busy}>
+              {t('common.cancel')}
+            </button>
+            <button
+              className="hv-btn hv-btn--primary"
+              type="submit"
+              form="staff-form"
+              disabled={busy}
+            >
+              {t('common.save')}
+            </button>
+          </span>
+        </>
+      }
+    >
+      <form className="admin-form" id="staff-form" onSubmit={(event) => void submit(event)}>
 
       <div className="admin-form__grid">
         <Field label={t('users.email')}>
@@ -283,16 +320,13 @@ function StaffForm({
         </Field>
       </div>
 
-      {error && <p className="cfg__error">{error}</p>}
+      {error && (
+          <p className="hv-hint hv-bad" role="alert">
+            {error}
+          </p>
+        )}
 
-      <div className="admin-form__actions">
-        <button type="submit" disabled={busy}>
-          {t('common.save')}
-        </button>
-        <button type="button" onClick={onCancel} disabled={busy}>
-          {t('common.cancel')}
-        </button>
-      </div>
-    </form>
+      </form>
+    </Modal>
   )
 }

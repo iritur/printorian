@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
-import { Article, SECTION_META, api, translateError, useSession } from '@printorian/ui'
+import { Article, Modal, SECTION_META, api, translateError, useSession } from '@printorian/ui'
 import type { Block, Locale, Section } from '@printorian/ui'
 
 import { BlockList, Meta, incomplete } from './JournalEditor'
@@ -151,91 +151,14 @@ export function JournalPage({ locale }: { locale: Locale }) {
 
   if (!may) return <p className="hv-hint">Нужно право «manage_journal».</p>
 
-  if (editing !== null) {
-    return (
-      <div className="hv-stack">
-        <div className="hv-row hv-row--between">
-          <button className="hv-btn" type="button" onClick={() => setEditing(null)}>
-            ← К списку
-          </button>
-          <span className="hv-row">
-            <span className="hv-state" data-state={draft.is_published ? 'idle' : 'paused'}>
-              {draft.is_published ? 'Опубликован' : 'Черновик'}
-            </span>
-            <button
-              className="hv-btn hv-btn--sm"
-              type="button"
-              aria-pressed={preview}
-              onClick={() => setPreview(!preview)}
-            >
-              Предпросмотр
-            </button>
-          </span>
-        </div>
+  /*
+    A window, not a takeover.
 
-        {error && (
-          <p className="hv-hint hv-bad" role="alert">
-            {error}
-          </p>
-        )}
-
-        <Meta draft={draft} onChange={(patch) => setDraft({ ...draft, ...patch })} />
-
-        {/*
-          The reader's own renderer, not an approximation of it. Sharing `Article`
-          between the storefront and this preview is what stops the two drifting —
-          an author sees exactly what a reader will.
-        */}
-        {preview ? (
-          <section className="hv-panel">
-            <div className="hv-panel__head">
-              <span>Предпросмотр</span>
-              <span className="hv-panel__aside">КАК УВИДИТ ЧИТАТЕЛЬ</span>
-            </div>
-            <div className="hv-panel__body">
-              <Article blocks={draft.blocks} />
-            </div>
-          </section>
-        ) : (
-          <BlockList
-            blocks={draft.blocks}
-            flagged={flagged}
-            onChange={(blocks) => setDraft({ ...draft, blocks })}
-          />
-        )}
-
-        <div className="hv-row">
-          <button
-            className="hv-btn hv-btn--primary"
-            type="button"
-            disabled={busy || !draft.title.trim()}
-            onClick={() => void save()}
-          >
-            Сохранить
-          </button>
-          <button
-            className="hv-btn"
-            type="button"
-            disabled={busy || !draft.title.trim()}
-            onClick={() => void save(!draft.is_published)}
-          >
-            {draft.is_published ? 'Снять с публикации' : 'Опубликовать'}
-          </button>
-          <span className="hv-spacer" />
-          {editing && (
-            <button
-              className="hv-btn hv-btn--sm"
-              type="button"
-              disabled={busy}
-              onClick={() => void remove(editing)}
-            >
-              Удалить
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
+    The editor replaced the whole screen, so "back to the list" was a button you
+    had to find and the list itself was gone while you worked. It is a popup like
+    every other create in the console now, and the list stays behind it — which is
+    also what makes the ✕ mean something.
+  */
 
   return (
     <div className="hv-stack">
@@ -299,6 +222,94 @@ export function JournalPage({ locale }: { locale: Locale }) {
       </div>
 
       {rows.length === 0 && <p className="hv-hint">Ни одного отчёта. Начните с первого.</p>}
+
+      {/* The list stays behind the popup rather than being replaced by it. The
+          editor used to return instead of the list, so "back to the list" was a
+          button you had to find and the list was gone while you worked — which is
+          the difference between a window and a takeover. */}
+      {editing !== null && (
+        <Modal
+          wide
+          title={editing ? `Правка :: ${editing}` : 'Новый отчёт :: Журнал'}
+          path={editing ? `/JOURNAL/EDITOR/${editing.toUpperCase()}` : '/JOURNAL/EDITOR/NEW'}
+          pathStatus={draft.is_published ? 'СТАТУС :: ОПУБЛИКОВАН' : 'СТАТУС :: ЧЕРНОВИК'}
+          status={preview ? 'ПРЕДПРОСМОТР' : 'ПРАВКА'}
+          onClose={() => setEditing(null)}
+          footer={
+            <>
+              <span className="hv-row">
+                <button
+                  className="hv-btn hv-btn--sm"
+                  type="button"
+                  aria-pressed={preview}
+                  onClick={() => setPreview(!preview)}
+                >
+                  Предпросмотр
+                </button>
+                {editing && (
+                  <button
+                    className="hv-btn hv-btn--sm hv-btn--danger"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void remove(editing)}
+                  >
+                    Удалить
+                  </button>
+                )}
+              </span>
+              <span className="hv-row">
+                <button
+                  className="hv-btn"
+                  type="button"
+                  disabled={busy || !draft.title.trim()}
+                  onClick={() => void save(!draft.is_published)}
+                >
+                  {draft.is_published ? 'Снять с публикации' : 'Опубликовать'}
+                </button>
+                <button
+                  className="hv-btn hv-btn--primary"
+                  type="button"
+                  disabled={busy || !draft.title.trim()}
+                  onClick={() => void save()}
+                >
+                  Сохранить
+                </button>
+              </span>
+            </>
+          }
+        >
+          {error && (
+            <p className="hv-hint hv-bad" role="alert">
+              {error}
+            </p>
+          )}
+
+          <Meta draft={draft} onChange={(patch) => setDraft({ ...draft, ...patch })} />
+
+          {/*
+            The reader's own renderer, not an approximation of it. Sharing `Article`
+            between the storefront and this preview is what stops the two drifting —
+            an author sees exactly what a reader will.
+          */}
+          {preview ? (
+            <section className="hv-panel">
+              <div className="hv-panel__head">
+                <span>Предпросмотр</span>
+                <span className="hv-panel__aside">КАК УВИДИТ ЧИТАТЕЛЬ</span>
+              </div>
+              <div className="hv-panel__body">
+                <Article blocks={draft.blocks} />
+              </div>
+            </section>
+          ) : (
+            <BlockList
+              blocks={draft.blocks}
+              flagged={flagged}
+              onChange={(blocks) => setDraft({ ...draft, blocks })}
+            />
+          )}
+        </Modal>
+      )}
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
 import type { Locale } from '@printorian/ui'
-import { api, translateError, useSession } from '@printorian/ui'
+import { Modal, api, translateError, useSession } from '@printorian/ui'
 
 import { Field } from './FleetAdmin'
 
@@ -149,6 +149,15 @@ export function LibraryPage({ locale }: { locale: Locale }) {
   const [geometry, setGeometry] = useState<UploadedGeometry | null>(null)
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [editing, setEditing] = useState<string | null>(null)
+  /*
+    Whether the editor popup is open for a *new* model.
+
+    `editing` already carries "which model is loaded", but the panel used to be
+    permanently on screen so creating had no state of its own. A popup has to
+    know whether it is open, and the two cases stay separate because they are:
+    one loads a record, the other starts an empty one.
+  */
+  const [composing, setComposing] = useState(false)
   const [busy, setBusy] = useState(false)
 
   // Stable, so `load` can depend on it honestly instead of the lint rule being
@@ -243,6 +252,7 @@ export function LibraryPage({ locale }: { locale: Locale }) {
   }
 
   const edit = (row: CatalogRow) => {
+    setComposing(false)
     setEditing(row.slug)
     setGeometry(null)
     setError(null)
@@ -300,12 +310,25 @@ export function LibraryPage({ locale }: { locale: Locale }) {
   }
 
   return (
-    <div className="hv-cols hv-cols--2">
+    <div className="hv-stack">
       {/* ------------------------------------------------------------ list */}
       <section className="hv-panel">
         <div className="hv-panel__head">
           <span>Библиотека моделей</span>
           <span className="hv-panel__aside">{rows?.length ?? 0} ЗАПИСЕЙ</span>
+          <button
+            className="hv-btn hv-btn--sm"
+            type="button"
+            onClick={() => {
+              setComposing(true)
+              setEditing(null)
+              setDraft(EMPTY)
+              setGeometry(null)
+              setError(null)
+            }}
+          >
+            Новая модель
+          </button>
         </div>
         <div className="hv-table-wrap">
           <table className="hv-table">
@@ -370,26 +393,52 @@ export function LibraryPage({ locale }: { locale: Locale }) {
         </div>
       </section>
 
-      {/* ------------------------------------------------------------ form */}
-      <section className="hv-panel">
-        <div className="hv-panel__head">
-          <span>{editing ? `Правка :: ${editing}` : 'Новая модель'}</span>
-          {editing && (
-            <button
-              type="button"
-              className="hv-btn hv-btn--sm"
-              onClick={() => {
-                setEditing(null)
-                setDraft(EMPTY)
-                setGeometry(null)
-              }}
-            >
-              Отменить
-            </button>
-          )}
-        </div>
-
-        <div className="hv-panel__body hv-stack">
+      {/* ---------------------------------------------------------- editor
+          A window rather than a second column. The editor carries a file upload,
+          a materials table and a dozen fields; beside the list it squeezed both,
+          and below it the list scrolled away from whatever was being edited. */}
+      {(composing || editing !== null) && (
+        <Modal
+          wide
+          title={editing ? `Правка :: ${editing}` : 'Новая модель :: Каталог'}
+          path={editing ? `/CATALOG/CURATION/${editing.toUpperCase()}` : '/CATALOG/CURATION/NEW'}
+          pathStatus={draft.is_published ? 'СТАТУС :: В ВИТРИНЕ' : 'СТАТУС :: ЧЕРНОВИК'}
+          onClose={() => {
+            setComposing(false)
+            setEditing(null)
+            setDraft(EMPTY)
+            setGeometry(null)
+          }}
+          footer={
+            <>
+              <span>
+                {!editing && !geometry ? 'СНАЧАЛА ЗАГРУЗИТЕ ГЕОМЕТРИЮ' : 'ГЕОМЕТРИЯ ИЗМЕРЯЕТСЯ ПРИ ЗАГРУЗКЕ'}
+              </span>
+              <span className="hv-row">
+                <button
+                  className="hv-btn"
+                  type="button"
+                  onClick={() => {
+                    setComposing(false)
+                    setEditing(null)
+                    setDraft(EMPTY)
+                    setGeometry(null)
+                  }}
+                >
+                  Отменить
+                </button>
+                <button
+                  className="hv-btn hv-btn--primary"
+                  type="button"
+                  disabled={busy || !draft.title || !draft.slug || (!editing && !geometry)}
+                  onClick={() => void save()}
+                >
+                  {editing ? 'Сохранить' : 'Добавить в каталог'}
+                </button>
+              </span>
+            </>
+          }
+        >
           {error && <p className="hv-hint hv-bad">{error}</p>}
 
           <Field
@@ -662,22 +711,8 @@ export function LibraryPage({ locale }: { locale: Locale }) {
             />
             <span className="hv-check__body">Показывать в витрине</span>
           </label>
-        </div>
-
-        <div className="hv-panel__foot">
-          <button
-            type="button"
-            className="hv-btn"
-            disabled={busy || !draft.title || !draft.slug || (!editing && !geometry)}
-            onClick={() => void save()}
-          >
-            {editing ? 'Сохранить' : 'Добавить в каталог'}
-          </button>
-          {!editing && !geometry && (
-            <span className="hv-micro">СНАЧАЛА ЗАГРУЗИТЕ ГЕОМЕТРИЮ</span>
-          )}
-        </div>
-      </section>
+        </Modal>
+      )}
     </div>
   )
 }

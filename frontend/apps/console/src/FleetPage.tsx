@@ -222,8 +222,13 @@ export function FleetPage({ locale }: { locale: Locale }) {
         <h2>{t('fleet.title')}</h2>
         <div className="fleet__head-right">
           <ConnectionBadge status={status} locale={locale} />
-          {mayManage && !adding && (
-            <button type="button" onClick={() => setAdding(true)}>
+          {/* Stays mounted *and* focusable while the popup is open. It used to
+              unmount, which left the modal's focus-restore with nothing to return
+              to; disabling it instead was the same bug in a different costume,
+              because a disabled control cannot take focus either. `aria-expanded`
+              carries the state, and the backdrop is what stops it being clicked. */}
+          {mayManage && (
+            <button type="button" onClick={() => setAdding(true)} aria-expanded={adding}>
               {t('fleet.add')}
             </button>
           )}

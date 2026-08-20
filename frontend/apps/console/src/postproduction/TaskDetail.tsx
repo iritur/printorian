@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { api, translate, translateError } from '@printorian/ui'
+import { Modal, api, translate, translateError } from '@printorian/ui'
 import type { Locale, MessageKey } from '@printorian/ui'
 
 import { formatDateTime, formatMinutes, formatStopwatch } from './format'
@@ -58,34 +58,27 @@ export function TaskDetail({
   const done = task.steps.filter((step) => step.done_at !== null).length
 
   return (
-    <div className="hv-overlay" role="dialog" aria-modal="true" aria-label={task.number}>
-      <div className="hv-modal hv-modal--wide">
-        <div className="hv-chrome hv-chrome--static">
-          <div className="hv-chrome__row">
-            <span className="hv-tab">
-              {t('pp.detail.title')} :: {task.number}
-            </span>
-            <div className="hv-meta">
-              <span>
-                {t('pp.detail.order')} :: <strong>{task.order_number || '—'}</strong>
-              </span>
-              <i className="hv-meta__sep" />
-              <span>
-                {t('pp.detail.operation')} ::{' '}
-                <strong>{t(`pp.kind.${task.kind}` as MessageKey)}</strong>
-              </span>
-              <i className="hv-meta__sep" />
-              <span>{t(`pp.status.${task.status}` as MessageKey)}</span>
-            </div>
-            <div className="hv-os">
-              <button className="hv-os__x" type="button" onClick={onClose} aria-label="✕">
-                ✕
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="hv-modal__body hv-stack">
+    <Modal
+      wide
+      title={`${t('pp.detail.title')} :: ${task.number}`}
+      meta={[
+        { label: t('pp.detail.order'), value: task.order_number || '—' },
+        { label: t('pp.detail.operation'), value: t(`pp.kind.${task.kind}` as MessageKey) },
+      ]}
+      status={t(`pp.status.${task.status}` as MessageKey)}
+      path={`/PRODUCTION/POSTPROCESS/${task.number}`}
+      onClose={onClose}
+      footer={
+        <>
+          <span>
+            {task.number} · {task.operator_name || '—'}
+          </span>
+          <button className="hv-btn hv-btn--sm" type="button" onClick={onClose}>
+            {t('common.close')}
+          </button>
+        </>
+      }
+    >
           {/* Norm, fact and forecast side by side: the comparison is the whole
               reason for showing any of the three. */}
           <div className="hv-vs">
@@ -323,18 +316,7 @@ export function TaskDetail({
               )}
             </div>
           )}
-        </div>
-
-        <div className="hv-panel__foot">
-          <span>
-            {task.number} · {task.operator_name || '—'}
-          </span>
-          <button className="hv-btn hv-btn--sm" type="button" onClick={onClose}>
-            {t('common.close')}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 

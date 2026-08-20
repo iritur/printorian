@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
 import type { Locale, MessageKey } from '@printorian/ui'
-import { api, translate, translateError } from '@printorian/ui'
+import { Modal, api, translate, translateError } from '@printorian/ui'
 
 import type { PrinterRow } from './FleetPage'
 
@@ -90,9 +90,45 @@ export function PrinterForm({
 
   const lan = form.connection_mode === 'lan'
 
+  /*
+    A popup rather than a panel pushed into the page.
+
+    The table is the context you are adding *to*, and a form that shoves it down
+    the screen makes creating a machine look like editing the list. The kit's
+    modal is a second window of the same instrument, which is what this is — and
+    it is already the shape the storefront uses for anything with an identity of
+    its own.
+
+    The actions live in the chrome's footer rather than in the form, tied back to
+    it by `form=`: they belong to the window, and a submit button that scrolls
+    away with a long form is a submit button people stop finding.
+  */
   return (
-    <form className="admin-form" onSubmit={(event) => void submit(event)}>
-      <h3>{t('fleet.add.title')}</h3>
+    <Modal
+      title={`${t('fleet.add.title')} :: ${t('fleet.title')}`}
+      path="/FLEET/PRINTERS/NEW"
+      pathStatus={lan ? 'ПОДКЛЮЧЕНИЕ :: LAN' : 'ПОДКЛЮЧЕНИЕ :: ВРУЧНУЮ'}
+      onClose={onCancel}
+      footer={
+        <>
+          <span>{t('fleet.access_code.hint')}</span>
+          <span className="hv-row">
+            <button className="hv-btn" type="button" onClick={onCancel} disabled={busy}>
+              {t('common.cancel')}
+            </button>
+            <button
+              className="hv-btn hv-btn--primary"
+              type="submit"
+              form="printer-form"
+              disabled={busy}
+            >
+              {t('common.save')}
+            </button>
+          </span>
+        </>
+      }
+    >
+      <form className="admin-form" id="printer-form" onSubmit={(event) => void submit(event)}>
 
       <div className="admin-form__grid">
         <Field label={t('fleet.field.name')}>
@@ -161,17 +197,14 @@ export function PrinterForm({
         </Field>
       </div>
 
-      {error && <p className="cfg__error">{error}</p>}
+      {error && (
+        <p className="hv-hint hv-bad" role="alert">
+          {error}
+        </p>
+      )}
 
-      <div className="admin-form__actions">
-        <button type="submit" disabled={busy}>
-          {t('common.save')}
-        </button>
-        <button type="button" onClick={onCancel} disabled={busy}>
-          {t('common.cancel')}
-        </button>
-      </div>
-    </form>
+      </form>
+    </Modal>
   )
 }
 

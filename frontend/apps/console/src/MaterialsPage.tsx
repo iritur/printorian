@@ -4,6 +4,7 @@ import { ApiError } from '@printorian/api-client'
 import type { Column, Locale, MessageKey, StatusTag } from '@printorian/ui'
 import {
   DataTable,
+  Modal,
   api,
   formatLocation,
   formatMoney,
@@ -173,8 +174,13 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
     <section className="materials">
       <header className="fleet__header">
         <h2>{t('materials.title')}</h2>
-        {mayManage && !adding && (
-          <button type="button" onClick={() => setAdding(true)}>
+        {/* Stays mounted *and* focusable while the popup is open. It used to
+            unmount, which left the modal's focus-restore with nothing to return
+            to; disabling it instead was the same bug in a different costume,
+            because a disabled control cannot take focus either. `aria-expanded`
+            carries the state, and the backdrop is what stops it being clicked. */}
+        {mayManage && (
+          <button type="button" onClick={() => setAdding(true)} aria-expanded={adding}>
             {t('materials.add')}
           </button>
         )}
@@ -191,7 +197,11 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
         />
       )}
 
-      {error && <p className="cfg__error">{error}</p>}
+      {error && (
+          <p className="hv-hint hv-bad" role="alert">
+            {error}
+          </p>
+        )}
 
       <DataTable
         rows={table?.rows ?? []}
@@ -363,11 +373,38 @@ function MaterialForm({
 
   const set = (key: keyof typeof form) => (value: string) =>
     setForm((current) => ({ ...current, [key]: value }))
-
+  /*
+    The same popup the fleet uses, for the same reason: a material is a thing with
+    an identity, and creating one is not an edit to the table it will appear in.
+  */
   return (
-    <form
-      className="admin-form"
-      onSubmit={(event) => {
+    <Modal
+      title={`${t('materials.add.title')} :: ${t('materials.title')}`}
+      path="/INVENTORY/MATERIALS/NEW"
+      onClose={onCancel}
+      footer={
+        <>
+          <span>ЦЕНА ДЛЯ ЗАКАЗЧИКА ЗАДАЁТСЯ ЗА ГРАММ</span>
+          <span className="hv-row">
+            <button className="hv-btn" type="button" onClick={onCancel} disabled={busy}>
+              {t('common.cancel')}
+            </button>
+            <button
+              className="hv-btn hv-btn--primary"
+              type="submit"
+              form="material-form"
+              disabled={busy}
+            >
+              {t('common.save')}
+            </button>
+          </span>
+        </>
+      }
+    >
+      <form
+        className="admin-form"
+        id="material-form"
+        onSubmit={(event) => {
         event.preventDefault()
         setBusy(true)
         setError(null)
@@ -384,7 +421,6 @@ function MaterialForm({
           .finally(() => setBusy(false))
       }}
     >
-      <h3>{t('materials.add.title')}</h3>
 
       <div className="admin-form__grid">
         <Field label={t('materials.code')}>
@@ -433,17 +469,14 @@ function MaterialForm({
         </Field>
       </div>
 
-      {error && <p className="cfg__error">{error}</p>}
+      {error && (
+          <p className="hv-hint hv-bad" role="alert">
+            {error}
+          </p>
+        )}
 
-      <div className="admin-form__actions">
-        <button type="submit" disabled={busy}>
-          {t('common.save')}
-        </button>
-        <button type="button" onClick={onCancel} disabled={busy}>
-          {t('common.cancel')}
-        </button>
-      </div>
-    </form>
+      </form>
+    </Modal>
   )
 }
 
@@ -501,7 +534,11 @@ function LotForm({
       <button type="submit" disabled={busy}>
         {t('materials.add_lot')}
       </button>
-      {error && <p className="cfg__error">{error}</p>}
+      {error && (
+          <p className="hv-hint hv-bad" role="alert">
+            {error}
+          </p>
+        )}
     </form>
   )
 }

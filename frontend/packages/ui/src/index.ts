@@ -51,6 +51,11 @@ export type { ShapeName } from './nav/shapes'
 // The window chrome both apps sit in, and the kit's Void/Paper switch.
 export { AppShell } from './shell/AppShell'
 export type { AppShellProps, MetaItem } from './shell/AppShell'
+
+// The kit's popup, with the behaviour attached once: Esc, backdrop, focus in
+// and back, a tab trap, and no scrolling behind it.
+export { Modal } from './shell/Modal'
+export type { ModalProps } from './shell/Modal'
 export { THEMES, ThemeSwitch } from './shell/ThemeSwitch'
 export type { Theme } from './shell/ThemeSwitch'
 export { StatusBar } from './shell/StatusBar'
