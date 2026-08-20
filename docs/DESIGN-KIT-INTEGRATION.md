@@ -59,7 +59,7 @@ have since been acted on — see §8 for what changed.*
 | `promo.html` | public | `PromoPage.tsx` | Built, styled |
 | `configurator.html` | public | `ConfiguratorPage.tsx` | Built, **old tokens** |
 | `checkout.html` | public | `CheckoutPage.tsx` | Built, **old tokens** |
-| `cabinet.html` | public | `CabinetPage.tsx` (27 lines) | Thin — wraps `OrdersScreen`, which does render the breakdown and event history; the kit's 9-stage `.hv-pipe`, leaders and layout are absent |
+| `cabinet.html` | public | `CabinetPage.tsx` + pipeline/summary/history/aside | **Built** — the kit's three-column layout, 9-stage `.hv-pipe` dated from the order's own events, queue position, machine and layer counter, SLA credit |
 | `orders.html` | control | `OrderDesk.tsx` / `OrdersPage.tsx` | Built, **old tokens**, no margin panel |
 | `fleet.html` | control | `FleetPage.tsx` / `FleetAdmin.tsx` | Built, **old tokens**, no 4-tab detail popup |
 | `materials.html` | control | `MaterialsPage.tsx` | Built, **old tokens** |
@@ -67,9 +67,9 @@ have since been acted on — see §8 for what changed.*
 | — | control | `PrepPage.tsx` | **Exists with no kit screen.** Needs one drawn, or folding into the order desk |
 | `catalog.html` | public | `CatalogPage.tsx` | **Built** — search, 5 facet groups, 8 sort keys, grid/list, detail panel with 3D view |
 | — | control | `LibraryPage.tsx` | **Built, no kit screen** — catalogue curation, gated on `manage_library` |
-| `account.html` | public | — | **Not built** |
+| `account.html` | public | `AccountPage.tsx` + seven panels | **Built** — all seven sections, loyalty ladder wired into pricing, addresses, uploads, receipts, sessions, export, account closure |
 | `auth.html` | public | `AuthPanel` (inline only) | **Not built as a screen or a popup** |
-| `blog.html`, `blog-post.html` | public | — | **Not built** |
+| `blog.html`, `blog-post.html` | public | `JournalPage.tsx` / `JournalPostPage.tsx` | **Built** — index, filters, archive, article renderer, RSS |
 | `dashboard.html` | control | `dashboard/DashboardPage.tsx` | **Built** — synced section for section with the kit |
 | `settings.html` | control | — | **Not built** |
 | `postproduction.html` | control | `postproduction/PostProductionPage.tsx` | **Built** — board, per-step norms, scorecards |
@@ -79,7 +79,9 @@ have since been acted on — see §8 for what changed.*
 | `store.html` | control | — | **Not built** |
 | `logistics.html` | control | — | **Not built** |
 
-**12 built (2 of them partial), 10 missing, 1 extra app screen with no kit design.**
+**15 built, 6 missing, 2 extra app screens with no kit design.** Six of the built ones still carry the old tokens — see the rows above.
+
+Missing: `auth`, `settings`, `service`, `purchasing`, `store`, `logistics`.
 
 ### 1.2 Stylesheets
 
@@ -159,8 +161,14 @@ health    health · ready
 ```
 
 Nothing serves settings, post-production, packaging, purchasing, warehouse,
-logistics, the journal, the model library, dashboard aggregates, sessions,
-password recovery, addresses, saved payment methods or notification preferences.
+logistics, dashboard aggregates, password recovery, or saved payment methods.
+
+Sessions, addresses and notification preferences are served since the account
+screen landed — `/account/*`, all scoped to the caller. Saved payment methods are
+the one item on that list that is *deliberately* absent rather than pending: a
+saved card is a gateway token, and no gateway has been exercised (README). The
+panel says so instead of drawing an empty list under a heading that promises
+one.
 
 ---
 
@@ -359,17 +367,37 @@ All ✅ except: the address fields are free text with **no saved-address picker*
 (§3.5), and sign-in here should use the **popup** rather than a tab that can lose
 the quote.
 
-### 2.5 cabinet.html — public · stub
+### 2.5 cabinet.html — public · **built**
 
-Order list (14) · **9-stage pipeline** `.hv-pipe` (ЭТАП 5 ИЗ 9) · Состав заказа ·
-Оплата · **История заказа, 11 событий** (Время · Событие · Кто/что · Изменение) ·
-Другие заказы · queue position · SLA credit.
+Order list · **9-stage pipeline** `.hv-pipe` · Состав заказа · Оплата ·
+История заказа · Другие заказы · queue position · SLA credit. Deep-linked as
+`/cabinet/<number>`, because «где мой заказ» is a question people forward.
 
 | Element | Backing |
 |---|---|
 | Orders, pipeline, queue position, predicted start, SLA credit | ✅ `GET /orders/mine`, `/orders/{id}/queue` |
-| Event history with actor and delta | ✅ `OrderEvent` |
-| The rendering | ❌ `CabinetPage.tsx` is 27 lines and shows none of it |
+| Machine name, model, progress, layer counter | ✅ `/orders/{id}/queue` composes `fleet` — the printer's *own* last report, never an estimate |
+| Event history | ◐ `OrderEvent` exists and is rendered; the kit's «Кто / что» is not, see below |
+
+**Two deviations, both because the alternative would be invention.**
+
+The kit's «Кто / что» column names the scheduler, the slicer, the gateway.
+`OrderEvent` records an `actor_id` — a user id, useless to a customer and
+somebody's identity besides — and nothing else, so the column is «Причина» and
+carries the reason a transition was given when one was. Filling it with
+«Планировщик» on every row would look like the kit and mean nothing. **Recording
+a source on each event is the fix**, and it is small: the writer knows whether it
+was the scheduler, a driver or a person.
+
+The kit's machine line ends «ЦЕХ A СТОЙКА 1». The rack is omitted: the console is
+LAN-only so the farm's internals stay off the internet (ADR-0016), and a
+storefront publishing the floor plan one order at a time gives that away by
+instalments. The machine and its model are shown — it is the customer's part on
+it.
+
+Stages 06 `post_production` and 07 `quality_check` have no context advancing them
+(§3.7), so orders pass *over* them. The pipeline renders those «НЕ ОТМЕЧЕН»
+rather than «—»: an em dash on a delivered order reads as "still to come".
 
 Stage names come from `OrderStatus`: `awaiting_payment · prep · price_review ·
 queued · printing · post_production · quality_check · packing · shipped`. The kit

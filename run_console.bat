@@ -99,21 +99,25 @@ echo   API      :: %API_PORT%      Console :: %WEB_PORT%      Database :: %PGDAT
 echo.
 
 echo [1/7] Database and cache...
-REM  --wait, not a bare `up -d`. Without it compose returns as soon as the
-REM  containers have *started*, which is several seconds before Postgres accepts
-REM  connections - and the migration on the next step then dies with
-REM  "the database system is starting up". Both services already declare a
-REM  healthcheck; this is what makes compose honour them.
+REM  A bare `up -d` returns as soon as the containers have *started*, which is
+REM  several seconds before Postgres accepts connections - and the migration on
+REM  the next step then dies with "the database system is starting up".
 REM
-REM  The timeout is generous because a cold volume runs crash recovery first, and
-REM  failing early there would be the same race in the other direction.
+REM  Waited for explicitly rather than with `--wait`. That flag refuses to run at
+REM  all on a stack containing a service with no healthcheck, and this one has
+REM  `backup-init` - a one-shot that chowns the WAL archive volume and exits.
+REM  Whether a given compose refuses is version-dependent, which is how a release
+REM  gate passed locally and failed on the runner (f947a5e). Polling the two
+REM  containers we actually depend on has no such hole, and says which one did
+REM  not come up.
+REM
 REM  `||` rather than `if errorlevel 1` here and in every other failure check
 REM  below. `if errorlevel 1` means "exit code >= 1", and a Python tool that ends
 REM  in `sys.exit(-1)` - which alembic does when it cannot locate a revision -
 REM  sails straight through it. That is not hypothetical: it is how a failed
 REM  migration once let this script carry on to the seed and bury the real error
 REM  under an unrelated traceback.
-docker compose up -d --wait --wait-timeout 120 || (
+docker compose up -d || (
     echo [!] Database and cache did not come up.
     echo     If Docker Desktop is not running, start it and try again.
     echo     Otherwise check the containers:  docker compose ps
@@ -121,6 +125,8 @@ docker compose up -d --wait --wait-timeout 120 || (
     pause
     exit /b 1
 )
+call :await printorian-postgres || exit /b 1
+call :await printorian-redis    || exit /b 1
 
 echo [2/7] Database "%PGDATABASE%"...
 REM  A worktree's database will not exist the first time. `CREATE DATABASE` has no
@@ -249,3 +255,23 @@ echo.
 ping -n 4 127.0.0.1 >NUL
 start http://127.0.0.1:%WEB_PORT%
 endlocal
+exit /b 0
+
+REM ---------------------------------------------------------------------------
+REM  Wait for one container to report healthy, or say which one did not.
+REM  Three minutes at three seconds a poll: a cold volume runs crash recovery
+REM  before Postgres answers, and failing early there is the same race in the
+REM  other direction.
+:await
+setlocal
+set "name=%~1"
+for /l %%i in (1,1,60) do (
+    for /f "delims=" %%s in ('docker inspect -f "{{.State.Health.Status}}" %name% 2^>NUL') do (
+        if "%%s"=="healthy" endlocal & exit /b 0
+    )
+    ping -n 3 127.0.0.1 >NUL
+)
+echo [!] %name% did not become healthy.
+docker logs --tail 40 %name%
+pause
+endlocal & exit /b 1

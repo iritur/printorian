@@ -13,6 +13,7 @@ export type {
 
 export { DEFAULT_LOCALE, catalogues, en, ru } from './i18n/messages'
 export type { Locale, MessageKey, Messages } from './i18n/messages'
+export { plural } from './i18n/plural'
 export { createTranslator, translate, translateError } from './i18n/translate'
 export type { ApiErrorBody, Details, Translator } from './i18n/translate'
 
@@ -21,7 +22,7 @@ export type { LotLocation } from './inventory/location'
 
 export { DeltaPreview } from './pricing/DeltaPreview'
 export { PriceBreakdown } from './pricing/PriceBreakdown'
-export { formatBasis, formatChange, formatMoney, lineLabel } from './pricing/format'
+export { formatBasis, formatChange, formatMoney, lineLabel, snapshotLabel } from './pricing/format'
 export type {
   Basis,
   BasisKind,
@@ -50,7 +51,11 @@ export type { ShapeName } from './nav/shapes'
 
 // The window chrome both apps sit in, and the kit's Void/Paper switch.
 export { AppShell } from './shell/AppShell'
-export type { AppShellProps, MetaItem } from './shell/AppShell'
+export { useChrome } from './shell/chrome'
+export type { Chrome, MetaItem } from './shell/chrome'
+export { TabRail, TabView } from './shell/TabRail'
+export type { TabRailProps } from './shell/TabRail'
+export type { AppShellProps } from './shell/AppShell'
 
 // The kit's popup, with the behaviour attached once: Esc, backdrop, focus in
 // and back, a tab trap, and no scrolling behind it.
@@ -61,8 +66,6 @@ export type { Theme } from './shell/ThemeSwitch'
 export { StatusBar } from './shell/StatusBar'
 
 // The public/control split: витрина and пульт.
-export { RealmBadge } from './shell/RealmBadge'
-export type { RealmBadgeProps } from './shell/RealmBadge'
 export { OTHER_REALM, REALM_LABEL, applyRealm } from './shell/realm'
 export type { Realm } from './shell/realm'
 export { useHealth } from './shell/useHealth'

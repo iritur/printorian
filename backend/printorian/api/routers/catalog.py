@@ -130,8 +130,11 @@ async def model_detail(
     return card
 
 
-def _safe_filename(name: str) -> str:
+def safe_filename(name: str) -> str:
     """A filename safe to put in a header.
+
+    Public because `_account_*` serves a customer's own uploads under the same
+    rule, and two escapers for one header is one escaper that will be forgotten.
 
     Quotes and newlines in a ``Content-Disposition`` are a header-injection
     vector, and this name came from a customer's upload.
@@ -164,7 +167,7 @@ async def model_geometry(
         content=content,
         media_type="model/stl",
         headers={
-            "Content-Disposition": f'inline; filename="{_safe_filename(filename)}"',
+            "Content-Disposition": f'inline; filename="{safe_filename(filename)}"',
             # Content-addressed storage: the bytes behind a slug never change
             # without the asset changing, so this is safe to keep for a while.
             "Cache-Control": "public, max-age=3600",

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { api } from '@printorian/ui'
+import { api, useChrome } from '@printorian/ui'
+
+import { Preview, hours, money } from './modelCard'
+import type { MeasuredPrint } from './modelCard'
 import type { Locale } from '@printorian/ui'
 
 import { ModelViewer } from './ModelViewer'
@@ -14,14 +17,6 @@ import type { ViewAngle } from './ModelViewer'
  * has printed says so rather than showing a prediction dressed as a fact; see
  * `measured` below, and ADR-0007, whose rule against inventing data this is.
  */
-
-interface MeasuredPrint {
-  at: string
-  minutes: string
-  grams: string
-  price: string | null
-  printer_name: string
-}
 
 interface SuitableMaterial {
   code: string
@@ -65,6 +60,16 @@ interface PriceRung {
  */
 export interface CatalogPick {
   slug: string
+  /**
+   * Where the geometry is, when it is not the catalogue's own.
+   *
+   * The account screen re-orders a customer's *own* upload through this same
+   * handoff, and that file is not reachable at `/catalog/{slug}/model` — the
+   * catalogue publishes what the farm chose to publish and refuses to serve
+   * somebody's private upload. Absent for a catalogue model, which is found by
+   * slug as before.
+   */
+  href?: string
   /** Names the file in the model well until the server's own name arrives. */
   code: string
   title: string
@@ -257,13 +262,6 @@ const MATERIAL_LABELS: Record<string, string> = {
   tpu: 'TPU',
 }
 
-function hours(minutes: string): string {
-  const total = Math.round(Number(minutes))
-  const h = Math.floor(total / 60)
-  const m = total % 60
-  return h > 0 ? `${h} ч ${m} м` : `${m} м`
-}
-
 /**
  * What the headline price was measured on.
  *
@@ -332,35 +330,6 @@ function formatStock(grams: string | null): string {
 /** Under a kilogram is not enough for a batch, and the kit marks it. */
 function lowStock(grams: string | null): boolean {
   return grams !== null && Number(grams) < 1000
-}
-
-function money(value: string, locale: Locale): string {
-  return `${Math.round(Number(value)).toLocaleString(locale)} ₽`
-}
-
-/**
- * A schematic line drawing for a model with no stored preview.
- *
- * The kit's previews are deliberately engineering drawings rather than renders —
- * honest about a part that does not exist yet, and legible in both themes. A
- * model whose `preview` is empty still gets a shape rather than an empty frame.
- */
-function Preview({ card }: { card: CatalogCard }) {
-  const paths = Array.isArray(card.preview?.paths) ? (card.preview.paths as string[]) : []
-  return (
-    <svg viewBox="0 0 200 150" aria-hidden="true">
-      {paths.length > 0 ? (
-        paths.map((d, index) => <path key={index} data-edge="" d={d} />)
-      ) : (
-        <>
-          <path data-face="" d="M30 100 L100 60 L170 100 L100 140 Z" />
-          <path data-edge="" d="M30 100 L100 60 L170 100 L100 140 Z" />
-          <path data-edge="" d="M30 100 L30 62 L100 22 L170 62 L170 100" />
-          <path data-edge="" d="M100 60 L100 22" />
-        </>
-      )}
-    </svg>
-  )
 }
 
 function Card({
@@ -1010,6 +979,15 @@ export function CatalogPage({
   const [list, setList] = useState(false)
   const [limit, setLimit] = useState(PAGE)
   const [table, setTable] = useState<CatalogTable | null>(null)
+
+  /*
+    The kit's `CATALOG.MODELS[146]`, as a labelled pair like every other item in
+    the strip. `null` while the first page is in flight — a count that starts at
+    nought and jumps is worse than one that arrives.
+  */
+  useChrome(
+    table ? { meta: [{ label: 'CATALOG.MODELS', value: String(table.total) }] } : null,
+  )
   const [open, setOpen] = useState<CatalogCard | null>(null)
   const [failed, setFailed] = useState(false)
 

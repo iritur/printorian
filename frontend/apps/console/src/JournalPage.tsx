@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
-import { Article, Modal, SECTION_META, api, translateError, useSession } from '@printorian/ui'
+import {
+  Article,
+  Modal,
+  SECTION_META,
+  api,
+  translateError,
+  useChrome,
+  useSession,
+} from '@printorian/ui'
 import type { Block, Locale, Section } from '@printorian/ui'
 
 import { BlockList, Meta, incomplete } from './JournalEditor'
@@ -53,6 +61,14 @@ const EMPTY: Draft = {
 export function JournalPage({ locale }: { locale: Locale }) {
   const { actor } = useSession()
   const [rows, setRows] = useState<PostRow[]>([])
+
+  /* Reports and how many of them are live — a draft count staff act on. */
+  useChrome({
+    meta: [
+      { label: 'JOURNAL.POSTS', value: String(rows.length) },
+      { label: 'ЧЕРНОВИКОВ', value: String(rows.filter((row) => !row.is_published).length) },
+    ],
+  })
   /** The slug being edited, `""` for a new report, `null` for neither. */
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState<Draft>(EMPTY)

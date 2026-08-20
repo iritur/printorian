@@ -11,8 +11,18 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, status
 
-from printorian.api.deps import CurrentActor, DbSession, Ordering, Production, requires
+from printorian.api.deps import (
+    CurrentActor,
+    DbSession,
+    Fleet,
+    OptionalActor,
+    Ordering,
+    Production,
+    requires,
+)
+from printorian.api.routers._cabinet_views import Machine, OrderProgress
 from printorian.api.routers._line_pricing import spec_for
+from printorian.api.routers._loyalty import tier_for
 from printorian.api.routers._pricing_render import _render
 
 # Shared with the pricing router so a finish cannot be priced one way in the
@@ -29,8 +39,7 @@ from printorian.contexts.pricing import (
     RateSnapshot,
     price,
 )
-from printorian.contexts.production import QueuePosition
-from printorian.core.errors import PermissionDeniedError
+from printorian.core.errors import NotFoundError, PermissionDeniedError
 from printorian.core.ids import EntityId
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -60,11 +69,16 @@ async def place_order(
     # engine (ADR-0002). The order stores both the resulting breakdown and these
     # rates, so the quote can be rebuilt later rather than merely displayed.
     rates = RateSnapshot()
-    return await ordering.place(data, price(spec, rates), rates, customer_id=actor.user_id)
+    # The loyalty discount, resolved from what this customer has already spent.
+    # Resolved here rather than inside the engine, which is given its rates and
+    # looks nothing up (ADR-0002) — and *before* the order is written, so the
+    # order that creates a promotion is not itself priced at the new rate.
+    tier = await tier_for(db, actor)
+    return await ordering.place(data, price(spec, rates, tier), rates, customer_id=actor.user_id)
 
 
 @router.post("/reprice")
-async def reprice(data: RepriceLine, db: DbSession) -> dict[str, Any]:
+async def reprice(data: RepriceLine, db: DbSession, actor: OptionalActor) -> dict[str, Any]:
     """What this configuration costs with *this* delivery, without ordering it.
 
     The checkout needs it because the configurator cannot ask where the parts are
@@ -82,7 +96,7 @@ async def reprice(data: RepriceLine, db: DbSession) -> dict[str, Any]:
     showing them a stale number.
     """
     spec = await spec_for(db, data.lines[0], include_shipping=data.method.is_shipped)
-    return {"breakdown": _render(price(spec, RateSnapshot()))}
+    return {"breakdown": _render(price(spec, RateSnapshot(), await tier_for(db, actor)))}
 
 
 @router.get("/mine")
@@ -137,24 +151,54 @@ async def get_order(order_id: EntityId, actor: CurrentActor, ordering: Ordering)
 
 @router.get("/{order_id}/queue")
 async def order_queue(
-    order_id: EntityId, actor: CurrentActor, ordering: Ordering, production: Production
-) -> QueuePosition | None:
-    """Where this order's work stands — position, and an honest predicted start.
+    order_id: EntityId,
+    actor: CurrentActor,
+    ordering: Ordering,
+    production: Production,
+    fleet: Fleet,
+) -> OrderProgress:
+    """Where this order's work stands, and on which machine.
 
     The scenario's C7. Guarded by the same ownership rule as the order itself:
     queue depth would otherwise let a stranger measure the farm's workload, and
     the refusal is deliberately identical to a plain permission failure so it
     cannot be used to discover which orders exist.
 
-    Returns null when the order has no job yet — it is paid but nothing has been
-    created for it, which is a real state and not an error.
+    Both halves may be absent and each means something different. No `queue` at
+    all is an order with no job yet — paid, nothing created for it, a real state
+    rather than an error. A queue with no `machine` is work that has not been
+    given one, which is the ordinary case for anything still waiting.
     """
     order = await ordering.get(order_id)
     if not (order.customer_id == actor.user_id or actor.can(Permission.VIEW_ALL_ORDERS)):
         raise PermissionDeniedError(
             "error.permission_denied", permission=Permission.VIEW_ALL_ORDERS.value
         )
-    return await production.queue_position(order_id)
+
+    queue = await production.queue_position(order_id)
+    machine: Machine | None = None
+    if queue is not None and queue.printer_id is not None:
+        try:
+            printer = await fleet.get(queue.printer_id)
+        except NotFoundError:
+            # Retired since the job was assigned. The pipeline still shows the
+            # stage; it just cannot name what ran it, which beats failing the
+            # whole panel over a machine the farm no longer owns.
+            printer = None
+        if printer is not None:
+            machine = Machine(
+                name=printer.name,
+                brand=printer.brand,
+                model=printer.model,
+                state=printer.state.value,
+                progress_percent=printer.progress_percent,
+                remaining_minutes=printer.remaining_minutes,
+                eta=printer.eta,
+                layer_current=printer.layer_current,
+                layer_total=printer.layer_total,
+            )
+
+    return OrderProgress(queue=queue, machine=machine)
 
 
 @router.post("/{order_id}/advance", dependencies=[Depends(requires(Permission.MANAGE_ORDER))])

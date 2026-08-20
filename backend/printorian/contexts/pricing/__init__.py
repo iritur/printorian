@@ -46,6 +46,13 @@ from printorian.contexts.pricing.codes import (
 )
 from printorian.contexts.pricing.delta import diff, preview
 from printorian.contexts.pricing.engine import price
+from printorian.contexts.pricing.loyalty import (
+    LOYALTY_LADDER,
+    LoyaltyStep,
+    next_step,
+    step_for_spend,
+    tier_for_spend,
+)
 from printorian.contexts.pricing.rates import (
     ENGINE_VERSION,
     CustomerTier,
@@ -80,6 +87,7 @@ __all__ = [
     "LABOR_SUPERVISION",
     "LOGISTICS_PACKAGING",
     "LOGISTICS_SHIPPING",
+    "LOYALTY_LADDER",
     "MACHINE_DEPRECIATION",
     "MACHINE_ELECTRICITY",
     "MARGIN",
@@ -102,6 +110,7 @@ __all__ = [
     "FinishOption",
     "LineDelta",
     "LineItem",
+    "LoyaltyStep",
     "MaterialPrice",
     "PriceSpec",
     "PrintEstimate",
@@ -111,8 +120,11 @@ __all__ = [
     "breakdown_to_dict",
     "delta_to_dict",
     "diff",
+    "next_step",
     "preview",
     "price",
     "rates_from_dict",
     "rates_to_dict",
+    "step_for_spend",
+    "tier_for_spend",
 ]

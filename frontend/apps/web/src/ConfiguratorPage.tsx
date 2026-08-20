@@ -2,7 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ApiClient, ApiError } from '@printorian/api-client'
 import type { Breakdown, Delta, Locale } from '@printorian/ui'
-import { DeltaPreview, PriceBreakdown, translate, translateError } from '@printorian/ui'
+import {
+  DeltaPreview,
+  PriceBreakdown,
+  snapshotLabel,
+  translate,
+  translateError,
+  useChrome,
+} from '@printorian/ui'
 
 import type { CatalogPick } from './CatalogPage'
 import { ColourStep } from './ColourStep'
@@ -123,12 +130,6 @@ interface QuoteResponse {
  * key the plate cache and the print jobs are matched on, so it is what actually
  * makes this screen's state reproducible.
  */
-export interface QuoteChrome {
-  fileName: string
-  sha256: string
-  rateSnapshotId: string
-}
-
 export interface CheckoutHandoff {
   config: Config
   model: {
@@ -171,7 +172,6 @@ export function ConfiguratorPage({
   locale,
   onCheckout,
   onCatalog,
-  onQuoteChrome,
   fromCatalog,
 }: {
   locale: Locale
@@ -186,8 +186,6 @@ export function ConfiguratorPage({
    * a reader who opened the popup has usually already pulled it for the 3D view.
    */
   fromCatalog?: CatalogPick | null
-  /** Reports the quote's identifiers for the window chrome. `null` clears them. */
-  onQuoteChrome?: (chrome: QuoteChrome | null) => void
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [materials, setMaterials] = useState<Material[]>([])
@@ -266,7 +264,9 @@ export function ConfiguratorPage({
       setBusy(true)
       setError(null)
       try {
-        const response = await fetch(`/api/catalog/${fromCatalog.slug}/model`)
+        const response = await fetch(
+          fromCatalog.href ?? `/api/catalog/${fromCatalog.slug}/model`,
+        )
         if (!response.ok) throw new ApiError(response.status, await response.json())
         const bytes = await response.blob()
         if (!live) return
@@ -462,21 +462,42 @@ export function ConfiguratorPage({
     if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current)
   }, [])
 
-  useEffect(() => {
-    if (!onQuoteChrome) return
-    onQuoteChrome(
-      quote
-        ? {
-            fileName: quote.model.model_filename,
-            sha256: quote.model.model_sha256,
-            rateSnapshotId: quote.breakdown.rate_snapshot_id ?? '',
-          }
-        : null,
-    )
-    // Cleared on the way out, or the chrome would keep describing a quote the
-    // customer has navigated away from.
-    return () => onQuoteChrome(null)
-  }, [quote, onQuoteChrome])
+  /*
+    The chrome's strip, and the `QUOTE.LIVE` tail on the path with it.
+
+    Both say the same thing — there is a live quote on screen — and both are
+    absent before an upload, which is why they are reported together and why the
+    hook clears them when the customer navigates away.
+
+    Short forms: the strip is one line, and the full digest and snapshot id are
+    on the elements that own them.
+  */
+  useChrome(
+    quote
+      ? {
+          path: '/STORE/CONFIGURATOR/QUOTE.LIVE',
+          meta: [
+            { label: 'MESH', value: (quote.model.model_filename ?? '').toUpperCase() },
+            /*
+              Omitted rather than defaulted when the digest is absent.
+
+              An older API answers a quote without one, and this used to read
+              `.slice()` straight off it — which crashed the whole screen the
+              moment it was undefined. That it never did is luck: the expression
+              lived in `App.tsx`, which no unit test renders, so nothing
+              exercised it until it moved in here.
+            */
+            ...(quote.model.model_sha256
+              ? [{ label: 'SHA', value: quote.model.model_sha256.slice(0, 12).toUpperCase() }]
+              : []),
+            {
+              label: 'RATES',
+              value: snapshotLabel(quote.breakdown.rate_snapshot_id),
+            },
+          ],
+        }
+      : null,
+  )
 
   const apply = (patch: Partial<Config>, at = step) => {
     setStep(at)

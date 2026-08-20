@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request, Response, status
 
-from printorian.api.deps import SESSION_COOKIE, CurrentActor, Identity
+from printorian.api.deps import SESSION_COOKIE, CurrentActor, Identity, client_ip, session_token
 from printorian.contexts.identity import Actor, CreateUser, Role, SessionGranted, SignIn, UserView
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -28,7 +28,11 @@ async def register(data: CreateUser, identity: Identity) -> UserView:
 async def sign_in(
     data: SignIn, request: Request, response: Response, identity: Identity
 ) -> SessionGranted:
-    granted = await identity.sign_in(data, user_agent=request.headers.get("User-Agent"))
+    granted = await identity.sign_in(
+        data,
+        user_agent=request.headers.get("User-Agent"),
+        client_ip=client_ip(request),
+    )
     response.set_cookie(
         SESSION_COOKIE,
         granted.token,
@@ -42,10 +46,7 @@ async def sign_in(
 
 @router.post("/sign-out", status_code=status.HTTP_204_NO_CONTENT)
 async def sign_out(request: Request, response: Response, identity: Identity) -> None:
-    token = request.cookies.get(SESSION_COOKIE, "")
-    if not token:
-        header = request.headers.get("Authorization", "")
-        token = header.removeprefix("Bearer ").strip() if header.startswith("Bearer ") else ""
+    token = session_token(request)
     if token:
         await identity.sign_out(token)
     response.delete_cookie(SESSION_COOKIE)

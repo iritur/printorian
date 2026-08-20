@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useLiveEvents } from '@printorian/events'
 import type { LiveEvent } from '@printorian/events'
-import { DataTable, api, translate, useSession } from '@printorian/ui'
+import { DataTable, api, translate, useChrome, useSession } from '@printorian/ui'
 import type { Column, Locale, MessageKey, StatusTag } from '@printorian/ui'
 
 import { PrinterDetail, PrinterForm } from './FleetAdmin'
@@ -70,6 +70,24 @@ export function FleetPage({ locale }: { locale: Locale }) {
   const t = useCallback((key: MessageKey) => translate(locale, key), [locale])
 
   const [table, setTable] = useState<PrinterTable | null>(null)
+
+  /*
+    The kit's `FARM · NODES · STREAM`. `NODES` is the fleet size and `ВНИМАНИЕ`
+    is what the table already computes as `attention` — machines that need
+    somebody. The kit's third item is `STREAM :: SSE / EVENTS.LIVE`, which names
+    a transport rather than states a fact, so it is replaced by the count that
+    decides whether anyone should walk over to the racks.
+  */
+  useChrome(
+    table
+      ? {
+          meta: [
+            { label: 'NODES', value: String(table.total) },
+            { label: 'ВНИМАНИЕ', value: String(table.attention) },
+          ],
+        }
+      : null,
+  )
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
   const [selected, setSelected] = useState<PrinterRow | null>(null)

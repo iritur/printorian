@@ -120,6 +120,25 @@ class ModelLibrary:
         asset = await self._db.scalar(select(ModelAsset).where(ModelAsset.sha256 == sha256))
         return ModelAssetView.model_validate(asset) if asset is not None else None
 
+    async def uploaded_by(self, user_id: EntityId) -> list[ModelAssetView]:
+        """Everything one person has uploaded, most recently used first.
+
+        The order is «most recently used», not «most recently uploaded»: the
+        model somebody reprints every month should not sink below an experiment
+        from last year merely because the experiment was created later, and
+        `last_used_at` is the field retention already counts from.
+
+        Scoped by `uploaded_by`, which goes NULL when an account closes. A closed
+        account's geometry therefore belongs to nobody and appears in nobody's
+        list, while the open orders that still have to print it keep their file.
+        """
+        rows = await self._db.scalars(
+            select(ModelAsset)
+            .where(ModelAsset.uploaded_by == user_id)
+            .order_by(ModelAsset.last_used_at.desc())
+        )
+        return [ModelAssetView.model_validate(row) for row in rows]
+
     async def content(self, asset_id: EntityId) -> tuple[bytes, str]:
         """The bytes, and the filename to offer them under.
 

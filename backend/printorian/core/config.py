@@ -105,6 +105,13 @@ class Settings(BaseSettings):
     #: Largest upload accepted, in bytes. A mesh above this is refused before it is
     #: read into memory rather than after.
     max_upload_bytes: int = Field(default=200 * 1024 * 1024, ge=1024)
+    #: How much uploaded geometry one customer may keep, shown on «Мои модели».
+    #:
+    #: Not enforced at upload — a customer who has hit it should be told which of
+    #: their files to remove, not have a quote refused mid-configuration — so this
+    #: is the figure the account screen measures against and nothing else. Making
+    #: it a rule is a change to the configurator, not to this line.
+    customer_storage_quota_bytes: int = Field(default=2 * 1024 * 1024 * 1024, ge=1024)
     #: How long an uploaded model is kept after the last time anything used it.
     #: Counted from `last_used_at`, not from upload, so a model reprinted every
     #: month is never collected while an experiment from last year is.

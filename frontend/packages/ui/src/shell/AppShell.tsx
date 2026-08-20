@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import type { Locale } from '../i18n/messages'
@@ -6,18 +6,14 @@ import { translate } from '../i18n/translate'
 import { NavOverlay } from '../nav/NavOverlay'
 import type { NavRoute } from '../nav/NavOverlay'
 import { useSession } from '../session/session'
-import { RealmBadge } from './RealmBadge'
+import { Clock } from './Clock'
 import { StatusBar } from './StatusBar'
+import { ChromeProvider } from './chrome'
+import type { Chrome, MetaItem } from './chrome'
 import { ThemeSwitch } from './ThemeSwitch'
 import { applyRealm } from './realm'
 import type { Realm } from './realm'
 import { useHealth } from './useHealth'
-
-/** One `KEY :: value` pair in the chrome's meta strip. */
-export interface MetaItem {
-  label: string
-  value: string
-}
 
 export interface AppShellProps {
   locale: Locale
@@ -39,6 +35,10 @@ export interface AppShellProps {
    * snapshot, the mesh being priced. The kit puts them here rather than in the
    * body because they are what a support conversation needs and a customer never
    * reads.
+   *
+   * The *default*, shown until a screen reports its own through `useChromeMeta`
+   * and again once it unmounts. Most screens report; this is what the shell says
+   * when none is.
    */
   meta?: MetaItem[]
   /** The path strip, without the `C:/PRINTORIAN` root the shell adds. */
@@ -77,13 +77,15 @@ export function AppShell({
 }: AppShellProps) {
   const { actor, signOut } = useSession()
   const health = useHealth()
-  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key)
 
-  // The realm the overlay should open filtered to, set by the badge and cleared
-  // once the overlay has consumed it. `null` means "open on whatever you were
-  // showing", which is what Ctrl+K should do.
-  const [crossTo, setCrossTo] = useState<Realm | null>(null)
-  const openMenu = useRef<(() => void) | null>(null)
+  /*
+    What the open screen reports through `useChromeMeta`, or `null` when it
+    reports nothing — in which case the shell falls back to the `meta` prop.
+  */
+  const [reported, setReported] = useState<Chrome | null>(null)
+  const shown = reported?.meta ?? meta
+  const here = reported?.path ?? path
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key)
 
   useEffect(() => {
     applyRealm(realm)
@@ -112,13 +114,22 @@ export function AppShell({
         <div className="hv-chrome__row">
           <span className="hv-tab">{tab}</span>
 
+          {/*
+            The kit's strip: the screen's own facts, then a running clock. The
+            clock is the last item on every one of its twenty-one screens, and it
+            earns the place — a console read from across a room needs to say
+            whether it is live or frozen, and a second hand answers that without
+            anybody having to trust the data above it.
+          */}
           <div className="hv-meta">
-            {meta.map((item, index) => (
+            {shown.map((item, index) => (
               <span key={item.label}>
                 {index > 0 && <i className="hv-meta__sep" />}
                 {item.label} :: <strong>{item.value}</strong>
               </span>
             ))}
+            {shown.length > 0 && <i className="hv-meta__sep" />}
+            <Clock />
           </div>
 
           <div className="hv-os">
@@ -151,7 +162,7 @@ export function AppShell({
         */}
         <div className="hv-path">
           <div className="hv-path__crumbs">
-            C:/PRINTORIAN<span className="hv-path__here">{path}</span>
+            C:/PRINTORIAN<span className="hv-path__here">{here}</span>
           </div>
           {/*
             Read from `/health/ready`, not asserted. A strip that says ONLINE
@@ -165,6 +176,25 @@ export function AppShell({
       </header>
 
       <nav className="hv-appbar">
+        {/*
+          The menu trigger comes *before* the brand, which is where the kit puts
+          it — `menu.js` mounts it with `insertBefore(btn, host.firstChild)`.
+          Ours had drifted to the right-hand group, beside the account and the
+          theme switch, which reads as one more account control rather than as
+          the way into every screen on the farm.
+
+          The overlay itself renders from here too and does not care: `.hv-menu`
+          is `position: fixed; inset: 0`, so where it sits in the document has no
+          bearing on where it paints.
+        */}
+        <NavOverlay
+          locale={locale}
+          realm={realm}
+          routes={routes}
+          current={current}
+          onNavigate={onNavigate}
+        />
+
         <span className="hv-appbar__brand">Printorian</span>
 
         <div className="hv-appbar__nav">
@@ -184,27 +214,6 @@ export function AppShell({
         </div>
 
         <div className="hv-appbar__right">
-          <RealmBadge
-            realm={realm}
-            onCross={(to) => {
-              setCrossTo(to)
-              openMenu.current?.()
-            }}
-          />
-
-          <NavOverlay
-            locale={locale}
-            realm={realm}
-            routes={routes}
-            current={current}
-            onNavigate={onNavigate}
-            filterTo={crossTo}
-            onFilterConsumed={() => setCrossTo(null)}
-            registerOpener={(open) => {
-              openMenu.current = open
-            }}
-          />
-
           {actor && (
             <>
               <span className="hv-who">{actor.email}</span>
@@ -218,7 +227,9 @@ export function AppShell({
         </div>
       </nav>
 
-      <main className="hv-shell__body">{children}</main>
+      <main className="hv-shell__body">
+        <ChromeProvider value={setReported}>{children}</ChromeProvider>
+      </main>
 
       <StatusBar note={statusNote} />
     </div>

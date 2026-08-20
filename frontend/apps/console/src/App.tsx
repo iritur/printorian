@@ -278,6 +278,11 @@ function Shell() {
       onLocaleChange={setLocale}
       realm={REALM}
       tab={`${tabs.find((route) => route.key === active)?.label ?? ''} :: ${t('console.title')}`}
+      /*
+        The default, shown only until the open screen reports its own through
+        `useChrome` — which every one of them now does. It says which farm this
+        console is bolted to, which is the one fact true on all seven.
+      */
       meta={[{ label: 'REALM', value: 'IDENTITY.LOCAL' }]}
       path={paths[active as Screen]}
       routes={routes}

@@ -25,15 +25,16 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from printorian.contexts.catalog import models as _catalog_models  # noqa: F401
-from printorian.contexts.fleet import models as _fleet_models  # noqa: F401
-
-# Import every model module so ``create_all`` sees the full metadata.
-from printorian.contexts.identity import models as _identity_models  # noqa: F401
-from printorian.contexts.inventory import models as _inventory_models  # noqa: F401
-from printorian.contexts.ordering import models as _ordering_models  # noqa: F401
-from printorian.contexts.payments import models as _payment_models  # noqa: F401
-from printorian.contexts.production import models as _production_models  # noqa: F401
+# Every model module, so `create_all` and `drop_all` see the whole schema.
+#
+# `printorian.models` rather than a list of imports maintained here. The list
+# was already two contexts behind — `journal` and `account` were missing — and a
+# short metadata is worse than an obviously broken one: `create_all` quietly
+# builds a subset, and the once-per-process `drop_all` then fails on a foreign
+# key it cannot see, in whichever module happens to run first. That is the
+# `NoReferencedTableError` this module's docstring exists to prevent, and there
+# is already one canonical list of tables.
+import printorian.models  # noqa: F401
 from printorian.core.clock import FixedClock
 from printorian.core.config import Environment, Settings
 from printorian.core.db import Base

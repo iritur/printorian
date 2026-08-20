@@ -23,6 +23,18 @@ class Role(StrEnum):
     OWNER = "owner"
 
 
+class CustomerKind(StrEnum):
+    """Whether the person orders as themselves or on behalf of a company.
+
+    Not a role. A role says what someone may *do* on the farm; this says which
+    payment methods and which documents apply to them — an individual pays by
+    card, a company is invoiced and needs the invoice to carry its own name.
+    """
+
+    PERSON = "person"
+    COMPANY = "company"
+
+
 class Permission(StrEnum):
     """What someone may do."""
 

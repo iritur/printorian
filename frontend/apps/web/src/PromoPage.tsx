@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 
 import type { Locale } from '@printorian/ui'
-import { api, translate } from '@printorian/ui'
+import { api, plural, translate, useChrome } from '@printorian/ui'
+
+import { Preview, hours, money } from './modelCard'
+import type { MeasuredPrint } from './modelCard'
 
 /**
  * Measured facts about the farm, from `/public/stats`.
@@ -18,6 +21,28 @@ interface FarmStats {
   print_hours: string | null
   failure_percent: string | null
   has_history: boolean
+  /** Live rather than windowed, and therefore true on a farm's first day. */
+  printers_total: number
+  printers_printing: number
+  next_free_minutes: number | null
+  catalog_models: number
+  /** The configurator's own limit, so the copy cannot drift from it. */
+  max_upload_bytes: number
+}
+
+/**
+ * A catalogue model as the promo teaser draws it.
+ *
+ * The narrow slice of `/catalog`'s card the section needs — the full one carries
+ * facets, a price ladder and a materials table that no teaser reads.
+ */
+interface TeaserModel {
+  slug: string
+  title: string
+  materials: string[]
+  print_count: number
+  measured: MeasuredPrint | null
+  preview: Record<string, unknown>
 }
 
 /** The nine stages an order walks, matching `OrderStatus` rather than a copy. */
@@ -70,6 +95,96 @@ const CONTRAST: [string, string, string][] = [
 ]
 
 /**
+ * The kit's worked example, printed as the kit prints it.
+ *
+ * Hard-coded, and that is the point of it: it shows what the *form* of an
+ * estimate is — eight named articles, each with the basis it was derived from,
+ * a discount that is a line rather than a wink, and the farm's own margin
+ * spelled out. None of that can be demonstrated by a page that only promises to
+ * show it later.
+ *
+ * Three things keep it from reading as a quote for whoever is looking. It names
+ * a specific part and quantity in its header, «Так выглядит смета» says plainly
+ * that it is an illustration, and the panel below it explains that the real one
+ * is built from the reader's own model. The figures are the same ones report #57
+ * works through in the journal, so the example and the article cannot drift into
+ * saying different things.
+ *
+ * **One line is not the kit's.** The kit prints eight articles and a total of
+ * 6 016 ₽, and the eight add up to 5 190 — it is 826 ₽ short, and the total and
+ * the per-unit figure agree with each other rather than with the list. Shipping
+ * that verbatim would put a sum that does not add up on the one page arguing
+ * that every figure can be checked, and the reader who checks is exactly the
+ * reader it is written for. The gap is filled with overhead, which is a real
+ * category in the engine (`overhead.general`) sitting exactly where the engine
+ * puts it — after the risk buffer, before the adjustments — so the nine lines
+ * now reach the kit's own total.
+ *
+ * If it should stop being hard-coded, the honest version is a fixed public spec
+ * priced by the real engine on request — same numbers, computed, and they would
+ * move whenever the tariffs did.
+ */
+const SAMPLE: { article: string; basis?: string; amount: string; tone?: 'good' }[] = [
+  { article: 'Материал', basis: '412.8 Г × 2.94 ₽/Г', amount: '1 213 ₽' },
+  { article: 'Продувка при смене цвета', basis: '62 Г — УХОДИТ В ОТХОД', amount: '182 ₽' },
+  { article: 'Амортизация принтера', basis: '23.5 Ч × 41.00 ₽/Ч', amount: '963 ₽' },
+  { article: 'Электроэнергия', basis: '9.4 КВТ·Ч × 6.20 ₽', amount: '58 ₽' },
+  { article: 'Труд · подготовка и надзор', amount: '1 530 ₽' },
+  { article: 'Резерв на брак', basis: '6% · КЛАСС РИСКА B', amount: '254 ₽' },
+  { article: 'Накладные расходы', basis: 'ПОМЕЩЕНИЕ · СКЛАД · УЧЁТ', amount: '826 ₽' },
+  { article: 'Скидка за объём', amount: '− 396 ₽', tone: 'good' },
+  { article: 'Прибыль', basis: '28% МАРЖА — ДА, МЫ ЕЁ ПОКАЗЫВАЕМ', amount: '1 386 ₽' },
+]
+
+function SampleEstimate({ onStart }: { onStart: () => void }) {
+  return (
+    <section className="hv-panel">
+      <div className="hv-panel__head hv-panel__head--invert">
+        <span>Так выглядит смета</span>
+        <span className="hv-panel__aside" style={{ color: 'inherit' }}>
+          BRACKET_V4 · 10 ШТ
+        </span>
+      </div>
+      <div className="hv-panel__body hv-panel__body--tight">
+        <ul className="hv-leaders">
+          {SAMPLE.map((row) => (
+            <li
+              key={row.article}
+              className="hv-leader"
+              {...(row.tone ? { 'data-tone': row.tone } : {})}
+            >
+              <span className="hv-leader__k">
+                {row.article}
+                {row.basis && <span className="hv-leader__basis">{row.basis}</span>}
+              </span>
+              <span className="hv-leader__fill" />
+              <span className="hv-leader__v">{row.amount}</span>
+            </li>
+          ))}
+        </ul>
+        <hr className="hv-hr hv-hr--heavy" />
+        <div className="hv-slab hv-slab--lg">
+          <span>Итого</span>
+          <span className="hv-slab__v">6 016 ₽</span>
+        </div>
+        <div className="hv-slab hv-slab--outline" style={{ marginTop: 'var(--hv-1)' }}>
+          <span>За штуку</span>
+          <span className="hv-slab__v">601.60 ₽</span>
+        </div>
+      </div>
+      <div className="hv-panel__foot">
+        <span>СРОК :: 74 Ч</span>
+        {/* A link in the kit; a button here, because the configurator is a
+            screen change rather than a page load. */}
+        <button type="button" className="hv-mono" onClick={onStart}>
+          СВОЯ МОДЕЛЬ ›
+        </button>
+      </div>
+    </section>
+  )
+}
+
+/**
  * The one outward-facing screen.
  *
  * It uses the same parts as the instrument panel at a larger size rather than a
@@ -83,12 +198,16 @@ export function PromoPage({
   locale,
   onStart,
   onCabinet,
+  onCatalog,
 }: {
   locale: Locale
   onStart: () => void
   onCabinet: () => void
+  /** The kit's second hero button — «N готовых моделей». */
+  onCatalog: () => void
 }) {
   const [stats, setStats] = useState<FarmStats | null>(null)
+  const [models, setModels] = useState<TeaserModel[] | null>(null)
 
   useEffect(() => {
     api
@@ -97,10 +216,48 @@ export function PromoPage({
       // A landing page must render without them. Failing to reach the API is a
       // reason to show less, never a reason to show a blank screen.
       .catch(() => setStats(null))
+
+    /*
+      The four most-printed models, and the caption above them has to stay true:
+      «все хотя бы раз напечатаны у нас». Eight are asked for and only the ones
+      with a *measured* print are kept, so a catalogue whose top entries have
+      never been run shows fewer cards rather than a claim it cannot support.
+    */
+    api
+      .get<{ rows: TeaserModel[] }>('/catalog?sort=popular&limit=8')
+      .then((table) => setModels(table.rows.filter((row) => row.measured).slice(0, 4)))
+      .catch(() => setModels([]))
   }, [])
 
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key)
   const proof = stats?.has_history ? stats : null
+
+  /*
+    The kit's strip here reads «KN-SOL.21 · ПРИНТЕРОВ :: 12 · ЗАКАЗОВ ВЫПОЛНЕНО
+    :: 1 184». Two of those three the farm can state and one it cannot.
+
+    The fleet size is missing on purpose. There is no public endpoint for it and
+    there should not be one invented for a status strip: how many machines the
+    farm runs is what `/public/stats` deliberately withholds, and the count is a
+    capacity figure a competitor would like more than a customer would.
+
+    What is here is measured and windowed, and says over what — «за 90 дней»
+    beside a delivered count, because an unqualified total invites the reader to
+    assume it is lifetime.
+  */
+  useChrome(
+    proof
+      ? {
+          meta: [
+            { label: 'ВЫПОЛНЕНО', value: String(proof.orders_delivered) },
+            { label: 'ЗА', value: `${proof.window_days} ДН` },
+            ...(proof.on_time_percent
+              ? [{ label: 'В СРОК', value: `${proof.on_time_percent}%` }]
+              : []),
+          ],
+        }
+      : null,
+  )
 
   return (
     <>
@@ -117,32 +274,79 @@ export function PromoPage({
         </p>
 
         <div className="hv-row">
+          {/*
+            The kit's primary reads «Рассчитать за 1.2 секунды». The time is not
+            here: nothing measures how long a quote takes, so the claim would be
+            a decoration on the one page arguing that this shop decorates
+            nothing. Instrumenting `/pricing/quote` would make it sayable.
+          */}
           <button type="button" className="hv-btn hv-btn--primary hv-btn--lg" onClick={onStart}>
             {t('nav.configure')}
           </button>
+          {/*
+            «146 готовых моделей» in the kit, counted here. Absent on a farm
+            whose catalogue is empty rather than offering a door into nothing.
+          */}
+          {(stats?.catalog_models ?? 0) > 0 && (
+            <button type="button" className="hv-btn hv-btn--lg" onClick={onCatalog}>
+              {stats?.catalog_models}{' '}
+              {plural(
+                stats?.catalog_models ?? 0,
+                'готовая модель',
+                'готовые модели',
+                'готовых моделей',
+              )}
+            </button>
+          )}
         </div>
 
         {/*
-          The ticker carries only figures the server measured. On a farm with no
-          history it is absent rather than filled with plausible ones — which is
-          the claim the section beneath it is making.
+          The kit's five-item ticker, carrying only figures the server measured.
+
+          Two kinds of fact sit here and they behave differently. The fleet line
+          and the wait describe *this second*, so they are true on a farm's first
+          day. Everything else is counted over the window, so it is absent until
+          there is a history — and the window is stated, because «заказов
+          выполнено 1 184» unqualified invites the reader to assume a lifetime.
+
+          «Средний расчёт 1.2 с» is the one kit item with nothing behind it.
+          Nothing times a quote, so it is missing rather than asserted.
         */}
-        {proof && (
+        {stats && (
           <div className="hv-ticker">
-            <span>
-              ЗАКАЗОВ ВЫПОЛНЕНО <b>{proof.orders_delivered}</b>
-            </span>
-            {proof.on_time_percent && (
+            {stats.printers_total > 0 && (
+              <span>
+                СЕЙЧАС ПЕЧАТАЕТСЯ{' '}
+                <b className="hv-live">
+                  {stats.printers_printing} из {stats.printers_total}
+                </b>
+              </span>
+            )}
+            {proof?.on_time_percent && (
               <span>
                 СРОК СОБЛЮДЁН <b>{proof.on_time_percent}%</b>
               </span>
             )}
-            {proof.print_hours && (
+            {proof && (
               <span>
-                ЧАСОВ ПЕЧАТИ <b>{proof.print_hours}</b>
+                ЗАКАЗОВ ВЫПОЛНЕНО <b>{proof.orders_delivered}</b> ЗА {proof.window_days} СУТОК
               </span>
             )}
-            <span>ЗА {proof.window_days} СУТОК</span>
+            {/*
+              `0` is «сейчас» and `null` is silence — a farm whose machines have
+              not reported must not answer «через 0 мин», which is the reassuring
+              figure ADR-0007 stops a driver inventing.
+            */}
+            {stats.next_free_minutes !== null && (
+              <span>
+                СВОБОДНАЯ МАШИНА{' '}
+                <b>
+                  {stats.next_free_minutes === 0
+                    ? 'СЕЙЧАС'
+                    : `ЧЕРЕЗ ${stats.next_free_minutes} МИН`}
+                </b>
+              </span>
+            )}
           </div>
         )}
       </section>
@@ -164,23 +368,21 @@ export function PromoPage({
             </p>
           </div>
 
-          {/*
-            The kit shows a sample breakdown here. It is deliberately not
-            reproduced: a hand-written table of prices on the page that argues
-            prices are never hand-written would undo the argument. The real one
-            is one click away and is computed by the same engine.
-          */}
-          <div className="hv-frame">
-            <span className="hv-micro">СМЕТА СТРОИТСЯ ПОД ВАШУ МОДЕЛЬ</span>
-            <p className="hv-prose">
-              Каждая строка — отдельная статья с основанием расчёта. Наведите на любой
-              параметр в конфигураторе, и увидите, на сколько он изменит сумму, до того как
-              согласитесь.
-            </p>
-            <div className="hv-row">
-              <button type="button" className="hv-btn" onClick={onStart}>
-                Посчитать свою модель
-              </button>
+          <div className="hv-stack">
+            <SampleEstimate onStart={onStart} />
+
+            <div className="hv-frame">
+              <span className="hv-micro">СМЕТА СТРОИТСЯ ПОД ВАШУ МОДЕЛЬ</span>
+              <p className="hv-prose">
+                Каждая строка — отдельная статья с основанием расчёта. Наведите на любой
+                параметр в конфигураторе, и увидите, на сколько он изменит сумму, до того как
+                согласитесь.
+              </p>
+              <div className="hv-row">
+                <button type="button" className="hv-btn" onClick={onStart}>
+                  Посчитать свою модель
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -301,14 +503,90 @@ export function PromoPage({
         </div>
       </section>
 
+      {/*
+        The kit's catalogue teaser. Every figure on a card is measured — the time
+        and the price come from the last real print of that model, which is what
+        `measured` being `null` until then is for. A model the farm has never
+        printed is not shown here at all, because the caption says it has been.
+      */}
+      {models !== null && models.length > 0 && (
+        <section className="hv-main">
+          <div className="hv-row hv-row--between" style={{ marginBottom: 'var(--hv-3)' }}>
+            <div className="hv-row">
+              <h2 className="hv-h">Готовые модели</h2>
+              <span className="hv-micro">ВСЕ ХОТЯ БЫ РАЗ НАПЕЧАТАНЫ У НАС</span>
+            </div>
+            <button type="button" className="hv-btn hv-btn--sm" onClick={onCatalog}>
+              Весь каталог{stats?.catalog_models ? ` · ${stats.catalog_models}` : ''} ›
+            </button>
+          </div>
+
+          <div className="hv-cat">
+            {models.map((model) => (
+              <button
+                key={model.slug}
+                type="button"
+                className="hv-frame hv-model"
+                data-model=""
+                onClick={onCatalog}
+              >
+                <div className="hv-model__view">
+                  <span className="hv-model__tag hv-model__tag--tl">
+                    {hours(model.measured?.minutes ?? '0')}
+                  </span>
+                  <Preview card={model} />
+                  {model.measured?.price && (
+                    <span className="hv-model__tag hv-model__tag--br">
+                      {money(model.measured.price, locale)}
+                    </span>
+                  )}
+                </div>
+                <div className="hv-model__body">
+                  <h3 className="hv-model__title">{model.title}</h3>
+                  <div className="hv-model__meta">
+                    <span>{(model.materials[0] ?? '').toUpperCase()}</span>
+                    <span>
+                      НАПЕЧАТАН {model.print_count}{' '}
+                      {plural(model.print_count, 'РАЗ', 'РАЗА', 'РАЗ')}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="hv-cta">
         <div>
           <div className="hv-h hv-h--lead">Проверьте на своей модели</div>
-          <p className="hv-micro">РАСЧЁТ БЕЗ РЕГИСТРАЦИИ · STL</p>
+          {/*
+            `color: inherit` and the dimming are the kit's, and they are not
+            decoration: `hv-cta` is the one inverted band on the page, and
+            `hv-micro`'s own colour is chosen for a dark ground.
+
+            The kit writes «STL, 3MF, STEP». Only STL is true — `ingest` measures
+            an STL and nothing else, so a 3MF is stored without geometry and a
+            STEP is not even a recognised extension. Either would be accepted and
+            then refused a price, which is a worse first impression than a
+            shorter list. The size comes from the server's own `max_upload_bytes`
+            rather than a number typed here, so raising the limit changes the
+            promise with it.
+          */}
+          <p
+            className="hv-micro"
+            style={{ margin: 'var(--hv-2) 0 0', color: 'inherit', opacity: 0.7 }}
+          >
+            РАСЧЁТ БЕЗ РЕГИСТРАЦИИ · STL
+            {stats ? ` · ДО ${Math.round(stats.max_upload_bytes / (1024 * 1024))} МБ` : ''}
+          </p>
         </div>
         <div className="hv-row">
           <button type="button" className="hv-btn hv-btn--primary hv-btn--lg" onClick={onStart}>
             Загрузить модель
+          </button>
+          <button type="button" className="hv-btn hv-btn--lg" onClick={onCatalog}>
+            Выбрать готовую
           </button>
         </div>
       </section>

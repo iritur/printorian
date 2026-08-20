@@ -74,6 +74,14 @@ class PrinterView(BaseModel):
     #: every client recomputing it from a countdown that is already stale.
     eta: datetime | None = None
     current_job: str | None = None
+    #: Layers done and layers total, as the machine last reported them.
+    #:
+    #: Already recorded on every telemetry write; exposed because it is the one
+    #: progress figure that is a *count* rather than a percentage, and a customer
+    #: watching «слой 412 / 654» can tell a stalled print from a slow one in a way
+    #: «63%» does not allow.
+    layer_current: int | None = None
+    layer_total: int | None = None
 
     build_width_mm: Decimal
     build_depth_mm: Decimal

@@ -280,8 +280,30 @@ export function NavOverlay({
 
   return (
     <>
-      <button type="button" className="hv-btn hv-menu-open" onClick={show}>
-        {t('nav.menu')}
+      {/*
+        The kit's own trigger, not a plain button wearing `hv-btn`.
+
+        Three parts and each earns its place: the bars say "this opens
+        something" before the label is read, the label says what, and the hint
+        names the shortcut — which is real (Ctrl/Cmd+K, below) rather than
+        decorative. `menu.css` already carries the styling, including the hover
+        animation on the bars and the rule that drops the hint on a narrow
+        screen where it would push the brand off the bar.
+      */}
+      <button
+        type="button"
+        className="hv-menu-trigger"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={show}
+      >
+        <span className="hv-menu-trigger__bars">
+          <i />
+          <i />
+          <i />
+        </span>
+        <span>{t('nav.menu')}</span>
+        <span className="hv-menu-trigger__hint">CTRL K</span>
       </button>
 
       {/*

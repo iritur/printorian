@@ -26,6 +26,26 @@ cd backend && .venv/Scripts/python -m alembic upgrade head
 cd frontend && npm install
 ```
 
+### Seeded accounts
+
+The development database carries two accounts, created by hand rather than by a
+seed script. Nothing creates them anywhere else — but nothing refuses them either:
+`is_production` currently gates only the mock driver, the mock payment provider
+and log formatting, so a farm restored from a developer dump would keep them.
+Provisioning the farm's first owner belongs with Stage 2.
+
+| Account | Password | Role |
+|---|---|---|
+| `boss@printorian.example` | `owner-pass-12345` | owner — the console, every screen |
+| `floor@printorian.example` | `shop-floor-pass-1` | operator — production screens only |
+
+Two roles rather than one on purpose: most authorization bugs only show up when
+somebody who *should not* see a screen opens it, and that needs an account that
+cannot.
+
+Content for the catalogue, materials and journal comes from
+`backend/scripts/seed_*.py`, each idempotent.
+
 ## Every day
 
 Run the API:

@@ -218,6 +218,36 @@ class JournalService:
             await self._session.commit()
         return Subscription()
 
+    async def is_subscribed(self, email: str) -> bool:
+        """Whether this address is currently on the list.
+
+        Needed by the account screen, which draws the journal switch beside five
+        preferences that *are* columns on `notification_prefs`. This one is not:
+        it is a row keyed by address so that people without accounts can have one,
+        and the account screen reads across to it rather than keeping a second
+        copy that could disagree.
+        """
+        found = await self._session.scalar(
+            select(JournalSubscriber).where(JournalSubscriber.email == email.strip().lower())
+        )
+        return found is not None and found.is_active
+
+    async def unsubscribe_email(self, email: str) -> Subscription:
+        """Leave the list from the account screen, where the address is proved.
+
+        Distinct from :meth:`unsubscribe`, which takes the token out of a mail
+        footer because the reader there has proved nothing. A signed-in customer
+        has, so requiring them to find an old email to turn a switch off would be
+        friction for its own sake.
+        """
+        found = await self._session.scalar(
+            select(JournalSubscriber).where(JournalSubscriber.email == email.strip().lower())
+        )
+        if found is not None and found.is_active:
+            found.unsubscribed_at = self._clock.now()
+            await self._session.commit()
+        return Subscription()
+
     async def delete(self, slug: str) -> None:
         post = await self._find(slug, include_drafts=True)
         await self._session.delete(post)

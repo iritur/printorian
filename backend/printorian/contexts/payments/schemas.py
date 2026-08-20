@@ -48,6 +48,28 @@ class PaymentView(BaseModel):
         return self.amount - self.refunded_amount
 
 
+class PaymentDocument(BaseModel):
+    """A receipt or a refund note, derived rather than stored.
+
+    There is no documents table and there should not be one. A receipt *is* a
+    settled payment and a refund note *is* a succeeded refund; a second record of
+    either would be a second thing that can disagree with the money, and the one
+    that disagrees is always the copy.
+
+    ``kind`` is a code, not a caption (ADR-0012): ``receipt`` or ``refund``.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    kind: str
+    payment_id: EntityId
+    order_id: EntityId
+    provider: str
+    amount: Decimal
+    currency: str
+    issued_at: datetime
+
+
 class StartPayment(BaseModel):
     """Begin collecting for an order.
 

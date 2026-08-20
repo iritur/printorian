@@ -7,8 +7,10 @@ import {
   PriceBreakdown,
   api,
   formatMoney,
+  snapshotLabel,
   translate,
   translateError,
+  useChrome,
   useSession,
 } from '@printorian/ui'
 
@@ -81,6 +83,21 @@ export function CheckoutPage({
   const [busy, setBusy] = useState(false)
 
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key)
+
+  /*
+    The kit's third item here is `LOCK :: 23 Ч 41 М`, a countdown on a quote that
+    expires. Nothing in this system expires — a breakdown is pinned to its order
+    and never recomputed (ADR-0002) — so a timer would count down to an event
+    that does not happen. The snapshot id is the fact underneath the kit's
+    intent: it is what makes this exact price reproducible later.
+  */
+  useChrome({
+    meta: [
+      { label: 'MESH', value: model.fileName.toUpperCase() },
+      { label: 'MATERIAL', value: materialCode.toUpperCase() },
+      { label: 'RATES', value: snapshotLabel(breakdown.rate_snapshot_id) },
+    ],
+  })
 
   /** The order body, which is also exactly what re-pricing takes. */
   const asOrder = useCallback(

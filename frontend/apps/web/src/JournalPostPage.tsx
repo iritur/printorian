@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { Article, SECTION_META, anchorOf, api } from '@printorian/ui'
+import { Article, SECTION_META, anchorOf, api, useChrome } from '@printorian/ui'
 import type { Block, Locale, Section } from '@printorian/ui'
 
 /**
@@ -68,6 +68,27 @@ export function JournalPostPage({
       .then(setPost)
       .catch(() => setError(true))
   }, [slug])
+
+  /*
+    The kit's `CODE · REPORT_DATE · SECTION`, with the report number in place of
+    the code — the kit's `2AFPQJJTVNGDOBFF` is an account identifier and has no
+    business on a page anybody can read without signing in.
+
+    A draft says so here as well as on the page. The chrome is what ends up in a
+    screenshot, and an unpublished report that looked published in one is exactly
+    the confusion this strip should prevent.
+  */
+  useChrome(
+    post
+      ? {
+          meta: [
+            { label: 'ОТЧЁТ', value: `#${post.number}` },
+            { label: 'SECTION', value: SECTION_META[post.section].label.toUpperCase() },
+            ...(post.is_published ? [] : [{ label: 'СТАТУС', value: 'ЧЕРНОВИК' }]),
+          ],
+        }
+      : null,
+  )
 
   /**
    * The reading bar, and the contents entry that follows the reader down.

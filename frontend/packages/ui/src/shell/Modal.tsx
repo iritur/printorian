@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 
-import type { MetaItem } from './AppShell'
+import type { MetaItem } from './chrome'
 
 /**
  * The kit's popup: a window, not a drawer.

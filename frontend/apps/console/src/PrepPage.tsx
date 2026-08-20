@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
 import type { Locale } from '@printorian/ui'
-import { api, translate, translateError } from '@printorian/ui'
+import { api, translate, translateError, useChrome } from '@printorian/ui'
 
 /** One job waiting for an engineer, as `/jobs/prep-queue` returns it. */
 interface PrepJob {
@@ -33,6 +33,9 @@ interface PrepJob {
  */
 export function PrepPage({ locale }: { locale: Locale }) {
   const [jobs, setJobs] = useState<PrepJob[] | null>(null)
+
+  /* How much is waiting on an engineer — the only number this screen is about. */
+  useChrome(jobs ? { meta: [{ label: 'PREP.QUEUE', value: String(jobs.length) }] } : null)
   const [error, setError] = useState<string | null>(null)
   // Keyed by job: two engineers on two machines may be working the queue, and a
   // single `busy` flag would grey out the row someone else is holding.

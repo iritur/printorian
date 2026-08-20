@@ -205,6 +205,29 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hv-lang__btn:hover { color: var(--hv-text); background: var(--hv-bg-hover); }
 .hv-lang__btn[aria-pressed='true'] { background: var(--hv-bg-invert); color: var(--hv-text-invert); }
 
+/* Docked into the corner when the group is the last thing in the bar.
+
+   In the kit a window `✕` always follows it, so the group floats in the middle
+   of the bar with the close button taking the corner. The app shell has no
+   window to close — it is a page, not a desktop window — which left the group
+   short of the right border by the bar's own padding, and short of its height by
+   a hard-coded 18px.
+
+   Scoped with `:last-child` rather than applied to `.hv-lang` outright: the same
+   bar is used by the catalogue popup and the menu overlay, where a `✕` *is* the
+   last child and must keep its breathing room. */
+.hv-os:has(> .hv-lang:last-child) { padding-right: 0; }
+
+.hv-os > .hv-lang:last-child {
+  /* Beats the bar's `align-items: center`, so the group fills its height. */
+  align-self: stretch;
+  height: auto;
+  /* Three of its four sides are now the bar's own border; drawing them again
+     would double the hairline into two pixels along the whole edge. */
+  border: 0;
+  border-left: var(--hv-hair) solid var(--hv-line);
+}
+
 .hv-os__x {
   display: grid;
   place-items: center;
@@ -459,6 +482,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .hv-mono { font-family: var(--hv-font-mono); }
+
+/* An action in a panel's foot that reads as text rather than as a control.
+
+   The kit writes these as anchors with `color: inherit; text-decoration: none`.
+   Ours are buttons, because the destination is a screen change rather than a
+   page load — and a button arrives with the user agent's own font, padding,
+   border and centre alignment, every one of which has to be undone before it
+   can sit in a foot beside the label it belongs to. */
+.hv-panel__foot button.hv-mono {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-family: var(--hv-font-mono);
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.hv-panel__foot button.hv-mono:hover { color: var(--hv-text); }
 .hv-num  { font-variant-numeric: tabular-nums; }
 
 /* Prose is the one place tracking is dropped and mixed case allowed. */

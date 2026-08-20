@@ -6,7 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from printorian.contexts.ordering.policies import DeliveryMethod, OrderStatus
 from printorian.core.errors import ValidationError
@@ -83,9 +83,16 @@ class OrderView(BaseModel):
     lines: list[OrderLineView] = Field(default_factory=list)
     events: list[OrderEventView] = Field(default_factory=list)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def payable_now(self) -> Decimal:
-        """What the customer owes after any lateness credit."""
+        """What the customer owes after any lateness credit.
+
+        Serialised, not merely available in Python. The cabinet shows «К доплате»
+        beside the total, and the alternative was the browser subtracting one
+        decimal string from another — which is the one thing no client here does
+        with money, because a JavaScript number cannot hold it exactly.
+        """
         return max(Decimal(0), self.total - self.sla_credit)
 
 
@@ -163,6 +170,42 @@ class PlaceOrder(BaseModel):
     #: Set by the farm, not the customer — the configurator only shows it.
     promised_days: int = Field(default=5, ge=1, le=365)
     decay_policy: str = "standard"
+
+
+class MonthPoint(BaseModel):
+    """One column of the account screen's twelve-month activity chart."""
+
+    #: ``YYYY-MM``. The client owns month names (ADR-0012).
+    month: str
+    orders: int
+
+
+class Lifetime(BaseModel):
+    """Everything this customer's order history adds up to.
+
+    Every figure is counted from orders, and several of them can be absent. A
+    customer with nothing dispatched has no average lead time — not a lead time of
+    zero — and the screen shows an em dash for it. That distinction is why these
+    are optional rather than defaulted, and it is the same rule the rest of the
+    storefront follows: measured, or absent.
+    """
+
+    orders: int = 0
+    #: Paid for and not yet dispatched, cancellations excluded.
+    in_progress: int = 0
+    spend: Decimal = Decimal(0)
+    #: ``None`` until there is at least one order to average over.
+    average_order: Decimal | None = None
+    #: What the volume and loyalty discounts came to, read out of the pinned
+    #: breakdowns rather than recomputed — the stored figure is what was charged.
+    saved: Decimal = Decimal(0)
+    #: Mean days from payment to dispatch, over dispatched orders only.
+    average_days: Decimal | None = None
+    #: Dispatched on or before the promise, out of dispatched orders that had one.
+    on_time: int = 0
+    on_time_of: int = 0
+    #: Twelve entries ending with the current month, oldest first.
+    months: list[MonthPoint] = Field(default_factory=list)
 
 
 class StatusCount(BaseModel):

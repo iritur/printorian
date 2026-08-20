@@ -16,20 +16,21 @@ and what it cost them; republishing the instruction must not rewrite the job
 somebody is halfway through, and a norm that changed retroactively is a norm
 nobody trusts.
 
-Numbered 0015, not 0014, and still descending from 0013.
+Numbered 0015 because 0014 was reserved for the account work while it lived on
+its own branch, and now descends from it.
 
-`design-kit-account-cabinet` carries a `0014_account` that also descends from
-0013. Two revisions with one parent are two Alembic heads, and the one-head gate
-fails on whichever branch merges second. Renumbering here does not fix that on
-its own — heads are counted from the revision graph, not from filenames — but it
-reserves 0014 for the account work and reduces the eventual fix to one line:
-when both are on the same branch, point this at ``0014_account``.
+The two were written in parallel, each descending from 0013 — two revisions with
+one parent, which is two Alembic heads and a one-head gate that fails on whichever
+branch merges second. This file's original note said the fix was one line once
+both were on the same branch. They are, and this is that line.
 
-It cannot be pointed there now. `0014_account` does not exist on this branch, and
-``alembic upgrade head`` would fail to locate it before it did anything else.
+Nothing about the migration itself changed, and nothing needs to: the two are
+independent. `0014_account` adds columns to `users` and `sessions` and creates
+`addresses` and `notification_prefs`; none of it is touched here. Only the order
+in which a fresh database applies them is now decided.
 
 Revision ID: 0015_postproduction
-Revises: 0013_journal_subscribers
+Revises: 0014_account
 """
 
 from __future__ import annotations
@@ -42,7 +43,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0015_postproduction"
-down_revision: str | None = "0013_journal_subscribers"
+down_revision: str | None = "0014_account"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
