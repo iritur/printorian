@@ -102,11 +102,16 @@ function Shell() {
   // `ready` distinguishes "not signed in" from "we have not asked yet". Without
   // it the console flashes a sign-in form at someone who is already signed in,
   // every time they open it.
-  if (!ready) return <p className="console__loading">{t('common.loading')}</p>
+  if (!ready)
+    return (
+      <div className="hv-door console console--door">
+        <p className="hv-hint">{t('common.loading')}</p>
+      </div>
+    )
 
   if (!actor) {
     return (
-      <div className="console console--door">
+      <div className="hv-door console console--door">
         <h1>Printorian</h1>
         {/*
           Staff accounts are created in the users screen by someone who already
@@ -234,7 +239,7 @@ function Shell() {
     // Signed in, and entitled to nothing here. Saying so beats an empty console
     // that looks broken.
     return (
-      <div className="console console--door">
+      <div className="hv-door console console--door">
         <h1>Printorian</h1>
         <p className="hv-hint">{t('error.permission_denied')}</p>
       </div>

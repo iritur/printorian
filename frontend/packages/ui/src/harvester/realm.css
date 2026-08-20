@@ -88,7 +88,24 @@
   pointer-events: none;
 }
 
+/* Rail clearance.
+   The rail is fixed to the viewport, so every screen laid out at the top level
+   has to step around it - not only the ones inside the shell. `.hv-door` is that
+   second case: the sign-in screen is drawn *outside* `AppShell` deliberately,
+   because a door into the пульт that did not carry the rail would drop the realm
+   signal at exactly the moment somebody is deciding whether they are in the
+   right place. Granting the clearance to `.hv-shell` alone left the door beneath
+   the hatch, with the P of Printorian behind it. */
 [data-realm='control'] .hv-shell { padding-left: var(--hv-rail-w); }
+
+/* For a screen that sets its own gutter, the rail is a *floor* and not a
+   substitute. Writing it as a plain `padding-left` here wins on specificity and
+   silently replaces the gutter - the door came out tighter to the edge on a
+   phone than it asked to be. `max()` keeps whichever is larger, and the screen
+   declares its own width through `--hv-door-gutter`. */
+[data-realm='control'] .hv-door {
+  padding-left: max(var(--hv-rail-w), var(--hv-door-gutter, 0px));
+}
 
 /* The realm badge. Hatched, so it reads as the same object as the rail. */
 .hv-realm {

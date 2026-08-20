@@ -534,3 +534,65 @@ body {
 }
 
 .prep__done { color: var(--pr-good, #2e7d32); font-size: 0.875rem; }
+
+
+/* ---------------------------------------------------------------- the door
+   The three screens drawn outside the shell: still asking who you are, the
+   sign-in form itself, and "signed in, entitled to nothing here".
+
+   They had no rules at all, so the form ran the full width of the window and sat
+   under the hazard rail. A sign-in stretched across a farm monitor does not read
+   as minimal, it reads as broken - and the clipped wordmark said the page had
+   failed to load. One bounded column, centred, is the whole fix. */
+.console--door {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--hv-5);
+  /* Wide enough for an email address at the body size, and no wider: a form
+     field longer than its longest plausible value is harder to aim at. */
+  max-width: 26rem;
+  margin: 0 auto;
+  /* The gutter is declared as a token as well as applied, because the rail
+     clearance in `realm.css` has to be able to take the larger of the two. */
+  --hv-door-gutter: var(--hv-5);
+  padding: var(--hv-7) var(--hv-5);
+  box-sizing: border-box;
+}
+
+/* The wordmark, in the display face and stretched like every other one in the
+   kit. This is the first thing anyone sees of the console, so it is the one
+   place the brand is set rather than a heading. */
+.console--door h1 {
+  margin: 0;
+  font-family: var(--hv-font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: var(--hv-track-chrome);
+  text-transform: uppercase;
+  transform: scaleX(var(--hv-stretch-brand));
+  transform-origin: left center;
+  color: var(--hv-text);
+}
+
+@media (max-width: 680px) {
+  /* The stretch goes below 680px for the same reason it does in the kit: a
+     transform there overflows the viewport. */
+  .console--door h1 { transform: none; }
+  .console--door {
+    --hv-door-gutter: var(--hv-4);
+    padding: var(--hv-5) var(--hv-4);
+  }
+}
+
+/* "You are signed in and this screen is not yours." A statement, not an error -
+   nothing has gone wrong, and colouring it red would say otherwise. */
+.notice {
+  margin: 0;
+  padding: var(--hv-5);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-raised);
+  color: var(--hv-text-dim);
+  font-size: var(--hv-size-base);
+}
