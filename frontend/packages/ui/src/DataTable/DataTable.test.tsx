@@ -60,21 +60,29 @@ describe('DataTable', () => {
     expect(bodyRowNames()).toHaveLength(materials.length)
   })
 
+  /*
+    `\s*` between the label and the count, throughout: the chip renders them as
+    two adjacent spans, and whether the accessible name has a space between them
+    is decided by their computed `display` — which in jsdom depends on how much
+    of the UA stylesheet it implements. The component's contract is "this chip
+    says this label and this many rows"; the separator is not part of it, and a
+    test that pins it fails on an environment difference rather than a defect.
+  */
   it('shows a count on each status tag, and a total', () => {
     renderTable()
-    expect(screen.getByRole('button', { name: /На складе 2/ })).toBeDefined()
-    expect(screen.getByRole('button', { name: /В принтере 1/ })).toBeDefined()
-    expect(screen.getByRole('button', { name: /Материалы 4/ })).toBeDefined()
+    expect(screen.getByRole('button', { name: /На складе\s*2/ })).toBeDefined()
+    expect(screen.getByRole('button', { name: /В принтере\s*1/ })).toBeDefined()
+    expect(screen.getByRole('button', { name: /Материалы\s*4/ })).toBeDefined()
   })
 
   it('filters when a status tag is pressed, and clears when pressed again', async () => {
     const user = userEvent.setup()
     renderTable()
 
-    await user.click(screen.getByRole('button', { name: /На складе 2/ }))
+    await user.click(screen.getByRole('button', { name: /На складе\s*2/ }))
     expect(bodyRowNames()).toHaveLength(2)
 
-    await user.click(screen.getByRole('button', { name: /На складе 2/ }))
+    await user.click(screen.getByRole('button', { name: /На складе\s*2/ }))
     expect(bodyRowNames()).toHaveLength(4)
   })
 
@@ -82,9 +90,9 @@ describe('DataTable', () => {
     const user = userEvent.setup()
     renderTable()
 
-    await user.click(screen.getByRole('button', { name: /Заказан 1/ }))
+    await user.click(screen.getByRole('button', { name: /Заказан\s*1/ }))
     // Counts describe the whole set, not the filtered view.
-    expect(screen.getByRole('button', { name: /На складе 2/ })).toBeDefined()
+    expect(screen.getByRole('button', { name: /На складе\s*2/ })).toBeDefined()
   })
 
   it('cycles a header through ascending, descending, then unsorted', async () => {
