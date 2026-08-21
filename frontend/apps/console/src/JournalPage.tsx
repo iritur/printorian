@@ -92,7 +92,12 @@ export function JournalPage({ locale }: { locale: Locale }) {
   }, [locale])
 
   useEffect(() => {
-    if (may) void load()
+    if (!may) return
+    // The await is what makes the state update provably asynchronous — see
+    // `packages/ui/src/effects.ts` for why every fetch-on-mount is shaped so.
+    void (async () => {
+      await load()
+    })()
   }, [may, load])
 
   const open = async (slug: string) => {

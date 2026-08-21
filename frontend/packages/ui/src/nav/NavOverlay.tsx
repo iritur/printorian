@@ -103,7 +103,22 @@ export function NavOverlay({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
-  const [realmFilter, setRealmFilter] = useState<RealmFilter>('all')
+  /*
+    The chosen filter, paired with the incoming `filterTo` it was chosen against.
+    A badge that opens the overlay filtered to the other realm now *is* the
+    default rather than something written into state by an effect a render later,
+    and a click still wins because it re-pairs against the current `filterTo`.
+  */
+  const [chosenFilter, setChosenFilter] = useState<{
+    against: Realm | null
+    value: RealmFilter
+  } | null>(null)
+  const realmFilter: RealmFilter =
+    chosenFilter?.against === filterTo ? chosenFilter.value : (filterTo ?? 'all')
+  const setRealmFilter = useCallback(
+    (value: RealmFilter) => setChosenFilter({ against: filterTo, value }),
+    [filterTo],
+  )
   const input = useRef<HTMLInputElement | null>(null)
   // Where focus came from, so Esc puts it back rather than dropping it on body.
   const opener = useRef<HTMLElement | null>(null)
@@ -178,12 +193,12 @@ export function NavOverlay({
     setOpen(false)
     setRealmFilter('all')
     opener.current?.focus()
-  }, [])
+  }, [setRealmFilter])
 
-  // The realm badge opens this already filtered to the other side.
+  // `filterTo` is already reflected by the derivation above; what still belongs
+  // in an effect is telling the parent it has been taken account of.
   useEffect(() => {
     if (!filterTo) return
-    setRealmFilter(filterTo)
     onFilterConsumed?.()
   }, [filterTo, onFilterConsumed])
 
@@ -221,10 +236,10 @@ export function NavOverlay({
     if (open) input.current?.focus()
   }, [open])
 
-  // Filtering can leave the cursor past the end of a shorter list.
-  useEffect(() => {
-    setActive((current) => Math.min(current, Math.max(0, visible.length - 1)))
-  }, [visible.length])
+  // Filtering can leave the cursor past the end of a shorter list. Clamped where
+  // it is read rather than corrected by an effect afterwards — which rendered the
+  // out-of-range cursor once before fixing it.
+  const cursor = Math.min(active, Math.max(0, visible.length - 1))
 
   const go = (route: (typeof all)[number]) => {
     // A locked row is shown so the actor can see what they would need. Acting on
@@ -249,7 +264,7 @@ export function NavOverlay({
       setActive((current) => (current - 1 + visible.length) % Math.max(1, visible.length))
     } else if (event.key === 'Enter') {
       event.preventDefault()
-      const chosen = visible[active]
+      const chosen = visible[cursor]
       if (chosen) go(chosen)
     } else if (event.key === 'Escape') {
       event.preventDefault()
@@ -258,7 +273,7 @@ export function NavOverlay({
   }
 
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key)
-  const preview = visible[active]
+  const preview = visible[cursor]
 
   /**
    * Drives `.hv-menu__preview[data-swapping='true'] .hv-menu__pv`, the 180ms
@@ -268,13 +283,15 @@ export function NavOverlay({
    * is on *replaced content*: the flicker marks the swap itself, and there is no
    * property interpolating between the old route and the new one.
    */
-  const [swapping, setSwapping] = useState(false)
+  // Which preview has finished flickering. `swapping` is then a comparison rather
+  // than a flag an effect has to raise on arrival and lower on a timer.
+  const [settled, setSettled] = useState<string | null>(null)
   const previewKey = preview?.key
+  const swapping = previewKey != null && settled !== previewKey
 
   useEffect(() => {
     if (!previewKey) return
-    setSwapping(true)
-    const timer = setTimeout(() => setSwapping(false), 200)
+    const timer = setTimeout(() => setSettled(previewKey), 200)
     return () => clearTimeout(timer)
   }, [previewKey])
 
@@ -401,7 +418,7 @@ export function NavOverlay({
                         // Feeds `animation-delay: calc(var(--i) * 34ms + 140ms)`
                         // — the entry stagger, which is keyframes, not script.
                         style={{ ['--i' as string]: index }}
-                        data-active={index === active}
+                        data-active={index === cursor}
                         data-realm={route.realm}
                         data-locked={route.locked}
                         aria-disabled={route.locked}
@@ -417,7 +434,7 @@ export function NavOverlay({
                         <span className="hv-menu__n">{String(ordinal).padStart(2, '0')}</span>
                         <span className="hv-menu__label" data-text={route.label}>
                           <i className="hv-menu__flag" aria-hidden="true" />
-                          <DecodedLabel text={route.label} active={index === active} />
+                          <DecodedLabel text={route.label} active={index === cursor} />
                           <span className="hv-menu__go" aria-hidden="true">
                             ›
                           </span>

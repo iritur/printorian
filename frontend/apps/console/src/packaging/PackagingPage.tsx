@@ -82,7 +82,10 @@ export function PackagingPage({ locale }: { locale: Locale }) {
   // The first load does not wait for the stream: a console whose socket cannot
   // connect should show a stale board with a warning, not «Загрузка…» all shift.
   useEffect(() => {
-    if (ready && entitled) void refetch()
+    if (!ready || !entitled) return
+    void (async () => {
+      await refetch()
+    })()
   }, [ready, entitled, refetch])
 
   /**

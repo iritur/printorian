@@ -54,19 +54,30 @@ export function JournalPostPage({
   onRead: (slug: string) => void
   onConfigure: () => void
 }) {
-  const [post, setPost] = useState<PostView | null>(null)
-  const [error, setError] = useState(false)
+  /*
+    Tagged with the slug it was fetched for, and the rendered value derived from
+    that — so following a link to another report shows nothing rather than the
+    previous report's body under the new report's heading. Clearing in the effect
+    below is how that used to work, and it clears one render too late.
+  */
+  const [fetched, setFetched] = useState<{ slug: string; post: PostView | null } | null>(null)
+  const [failed, setFailed] = useState<string | null>(null)
   /** Which heading the reader is in, for the contents list's `aria-current`. */
   const [here, setHere] = useState<string | null>(null)
   const progress = useRef<HTMLDivElement | null>(null)
 
+  const post = fetched?.slug === slug ? fetched.post : null
+  const error = failed === slug
+
   useEffect(() => {
-    setPost(null)
-    setError(false)
+    let live = true
     void api
       .get<PostView>(`/journal/${slug}`)
-      .then(setPost)
-      .catch(() => setError(true))
+      .then((body) => live && setFetched({ slug, post: body }))
+      .catch(() => live && setFailed(slug))
+    return () => {
+      live = false
+    }
   }, [slug])
 
   /*

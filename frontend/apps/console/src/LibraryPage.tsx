@@ -226,7 +226,10 @@ export function LibraryPage({ locale }: { locale: Locale }) {
   }, [report])
 
   useEffect(() => {
-    if (may) void load()
+    if (!may) return
+    void (async () => {
+      await load()
+    })()
   }, [may, load])
 
   if (!may) {

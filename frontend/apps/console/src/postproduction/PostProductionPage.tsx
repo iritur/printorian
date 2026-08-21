@@ -89,7 +89,10 @@ export function PostProductionPage({ locale }: { locale: Locale }) {
   // WebSocket — and a console whose socket cannot connect should show a stale
   // board with a warning, not «Загрузка…» for the whole shift.
   useEffect(() => {
-    if (ready && entitled) void refetch()
+    if (!ready || !entitled) return
+    void (async () => {
+      await refetch()
+    })()
   }, [ready, entitled, refetch])
 
   /**

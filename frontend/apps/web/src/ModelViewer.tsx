@@ -36,7 +36,18 @@ export interface ModelViewerProps {
 
 export function ModelViewer({ url, angle, spin = false }: ModelViewerProps) {
   const mount = useRef<HTMLDivElement | null>(null)
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle')
+  /*
+    Only the *outcome* is state, tagged with the mesh it belongs to. `idle` and
+    `loading` then fall out of the url and the tag, so the effect no longer has to
+    announce either — which is what it used to do synchronously on the way past,
+    twice, before doing any work.
+  */
+  const [outcome, setOutcome] = useState<{ url: string; state: 'ready' | 'failed' } | null>(null)
+  const status: 'idle' | 'loading' | 'ready' | 'failed' = !url
+    ? 'idle'
+    : outcome?.url === url
+      ? outcome.state
+      : 'loading'
   // The camera and controls outlive each load, so the angle buttons can move an
   // already-loaded model without re-fetching it.
   const camera = useRef<THREE.PerspectiveCamera | null>(null)
@@ -45,12 +56,8 @@ export function ModelViewer({ url, angle, spin = false }: ModelViewerProps) {
 
   useEffect(() => {
     const host = mount.current
-    if (!host || !url) {
-      setStatus(url ? 'loading' : 'idle')
-      return
-    }
-
-    setStatus('loading')
+    if (!host || !url) return
+    const mesh = url
 
     const scene = new THREE.Scene()
     const width = host.clientWidth || 480
@@ -71,7 +78,10 @@ export function ModelViewer({ url, angle, spin = false }: ModelViewerProps) {
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     } catch {
-      setStatus('failed')
+      // Reported on a microtask rather than inline: a synchronous setState in an
+      // effect body is the cascading render `set-state-in-effect` objects to, and
+      // nothing needs the answer before this render has committed.
+      queueMicrotask(() => setOutcome({ url: mesh, state: 'failed' }))
       return
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -145,7 +155,7 @@ export function ModelViewer({ url, angle, spin = false }: ModelViewerProps) {
           orbit.update()
         }
         place(angle)
-        setStatus('ready')
+        setOutcome({ url: mesh, state: 'ready' })
 
         const tick = () => {
           frame = requestAnimationFrame(tick)
@@ -156,7 +166,7 @@ export function ModelViewer({ url, angle, spin = false }: ModelViewerProps) {
         tick()
       },
       undefined,
-      () => !disposed && setStatus('failed'),
+      () => !disposed && setOutcome({ url: mesh, state: 'failed' }),
     )
 
     const onResize = () => {

@@ -35,10 +35,13 @@ export interface UseLiveEventsOptions {
  */
 export function useLiveEvents(options: UseLiveEventsOptions): StreamStatus {
   const { url, enabled = true, protocols } = options
-  const [status, setStatus] = useState<StreamStatus>(enabled ? 'connecting' : 'closed')
+  const [socketStatus, setStatus] = useState<StreamStatus>('connecting')
+  const status: StreamStatus = enabled ? socketStatus : 'closed'
 
   const handlers = useRef(options)
-  handlers.current = options
+  useEffect(() => {
+    handlers.current = options
+  })
 
   // `protocols` is an array, so it has a new identity on every render. Keying
   // the effect on its contents means a reconnect happens when the *token*
@@ -46,10 +49,7 @@ export function useLiveEvents(options: UseLiveEventsOptions): StreamStatus {
   const protocolKey = (protocols ?? []).join(',')
 
   useEffect(() => {
-    if (!enabled) {
-      setStatus('closed')
-      return
-    }
+    if (!enabled) return
 
     const offered = protocolKey ? protocolKey.split(',') : []
     const stream = new EventStream({

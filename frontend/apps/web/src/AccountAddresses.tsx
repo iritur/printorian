@@ -37,7 +37,9 @@ export function AccountAddresses({ locale }: { locale: Locale }) {
   const load = async () => setRows(await api.get<Address[]>('/account/addresses'))
 
   useEffect(() => {
-    void load().catch(() => setRows([]))
+    void (async () => {
+      await load().catch(() => setRows([]))
+    })()
   }, [])
 
   const fail = (exc: unknown) =>

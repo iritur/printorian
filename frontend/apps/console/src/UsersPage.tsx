@@ -83,7 +83,10 @@ export function UsersPage({ locale }: { locale: Locale }) {
   }, [locale])
 
   useEffect(() => {
-    if (entitled) void refetch()
+    if (!entitled) return
+    void (async () => {
+      await refetch()
+    })()
   }, [entitled, refetch])
 
   const mutate = useCallback(
@@ -265,12 +268,18 @@ function StaffDetail({
   onClose: () => void
 }) {
   const t = (key: MessageKey) => translate(locale, key)
-  const [role, setRole] = useState<RoleName>(user.role)
+  /*
+    The edit in progress, remembered together with the server value it was made
+    against. That pairing *is* the re-sync: the moment a save lands, `user.role`
+    changes, `against` no longer matches, and the selector falls back to what the
+    server now says — so the button stops offering a save it has already made.
+    An effect did this before, one render later, and it is the shape
+    `react-hooks/set-state-in-effect` exists to discourage.
+  */
+  const [draft, setDraft] = useState<{ against: RoleName; value: RoleName } | null>(null)
+  const role = draft?.against === user.role ? draft.value : user.role
+  const setRole = (value: RoleName) => setDraft({ against: user.role, value })
   const [busy, setBusy] = useState(false)
-
-  // The saved role is the one the server last returned. Re-syncing on it means
-  // the button stops offering a save the moment the save has landed.
-  useEffect(() => setRole(user.role), [user.role])
 
   const run = async (work: () => Promise<unknown>) => {
     setBusy(true)

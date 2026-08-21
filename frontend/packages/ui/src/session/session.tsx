@@ -53,7 +53,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    void refresh()
+    void (async () => {
+      await refresh()
+    })()
   }, [refresh])
 
   const signIn = useCallback(

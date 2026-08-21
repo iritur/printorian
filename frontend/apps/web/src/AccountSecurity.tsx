@@ -27,7 +27,9 @@ export function AccountSecurity({ locale }: { locale: Locale }) {
   const load = async () => setSessions(await api.get<SessionRow[]>('/account/sessions'))
 
   useEffect(() => {
-    void load().catch(() => setSessions([]))
+    void (async () => {
+      await load().catch(() => setSessions([]))
+    })()
     void api
       .get<Notifications>('/account/notifications')
       .then(setNotify)

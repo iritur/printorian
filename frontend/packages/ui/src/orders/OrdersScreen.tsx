@@ -112,7 +112,9 @@ export function OrdersScreen({ locale, scope, title, renderDetail }: OrdersScree
   }, [actor, locale, t, seesAll])
 
   useEffect(() => {
-    void load()
+    void (async () => {
+      await load()
+    })()
   }, [load])
 
   const columns = useMemo<Column<Order>[]>(

@@ -196,7 +196,10 @@ export function MaterialStep({
   }, [chosen])
 
   useEffect(() => {
-    if (!manual) void recommend()
+    if (manual) return
+    void (async () => {
+      await recommend()
+    })()
   }, [manual, recommend])
 
   /** Colour-level matches collapsed to one row per family. */

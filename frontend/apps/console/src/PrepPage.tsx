@@ -66,7 +66,9 @@ export function PrepPage({ locale }: { locale: Locale }) {
   }, [describe])
 
   useEffect(() => {
-    void load()
+    void (async () => {
+      await load()
+    })()
   }, [load])
 
   /**

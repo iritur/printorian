@@ -209,7 +209,15 @@ export function ConfiguratorPage({
   /** What the pointer is on, for the live frame's «ПРИ ВЫБОРЕ ::». */
   const [hovered, setHovered] = useState<string | null>(null)
   /** A price change per finish and for rush, so every button carries its figure. */
-  const [optionDeltas, setOptionDeltas] = useState<OptionDeltas>({})
+  /*
+    Tagged with the quote they were computed against. Every delta is "what would
+    this option change *relative to that price*", so showing one beside a
+    different quote is showing a wrong number — which clearing them in an effect
+    permitted for exactly one render.
+  */
+  const [deltasFor, setDeltasFor] = useState<{ quote: unknown; deltas: OptionDeltas } | null>(
+    null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   /** Which panel the customer last worked on, for «ШАГ n / 4». */
@@ -280,7 +288,6 @@ export function ConfiguratorPage({
         })
         // The quote itself waits for the material catalogue — see `priced` below.
         // Both arrive from separate requests and either can be second.
-        priced.current = false
         setStep(1)
       } catch (exc: unknown) {
         if (live) setError(describe(exc, locale))
@@ -368,11 +375,11 @@ export function ConfiguratorPage({
    * The currently selected option is skipped: comparing a configuration with
    * itself is a round trip whose answer is known to be zero.
    */
+  const optionDeltas: OptionDeltas = deltasFor?.quote === quote ? deltasFor.deltas : {}
+
   useEffect(() => {
-    if (!file || !quote) {
-      setOptionDeltas({})
-      return
-    }
+    if (!file || !quote) return
+    const against = quote
     let live = true
     const wanted: { key: string; change: OptionChange }[] = [
       ...FINISHES.filter((code) => !config.finishes.includes(code)).map((code) => ({
@@ -394,7 +401,7 @@ export function ConfiguratorPage({
       // A configuration change that lands mid-flight invalidates all of them: the
       // deltas describe a comparison against the configuration they were asked
       // about, so keeping any would label a button with the wrong figure.
-      if (live) setOptionDeltas(Object.fromEntries(answers))
+      if (live) setDeltasFor({ quote: against, deltas: Object.fromEntries(answers) })
     })
 
     return () => {
@@ -403,19 +410,26 @@ export function ConfiguratorPage({
   }, [file, quote, config, askPreview])
 
   /**
-   * Whether the model on screen has been priced yet.
+   * The mesh the automatic quote has already been fired for.
    *
    * A quote needs a mesh *and* a material, and those arrive from two independent
    * requests — the upload (or the catalogue fetch) and `/materials`. Either can be
    * second, so neither can be the one that fires the quote. This fires it when the
    * pair is complete, once per model.
+   *
+   * It holds the `File` rather than a boolean, which is what retired the two
+   * `priced.current = false` resets that used to sit beside every `setFile`: a
+   * newly chosen mesh is a new object, so it cannot match, so it re-quotes. A
+   * latch that must be remembered to clear is a latch that will one day not be.
    */
-  const priced = useRef(false)
+  const priced = useRef<File | null>(null)
 
   useEffect(() => {
-    if (priced.current || !file || !config.material || config.colors.length === 0) return
-    priced.current = true
-    void requestQuote(config, file)
+    if (priced.current === file || !file || !config.material || config.colors.length === 0) return
+    void (async () => {
+      priced.current = file
+      await requestQuote(config, file)
+    })()
   }, [file, config, requestQuote])
 
   const hoverTimer = useRef<number | null>(null)
@@ -516,8 +530,8 @@ export function ConfiguratorPage({
     })
     setStep(1)
     // Not quoted here: a file alone is not enough, and the effect above owns that
-    // judgement for the catalogue path too.
-    priced.current = false
+    // judgement for the catalogue path too — it notices this mesh is a different
+    // object from the one it last priced.
   }
 
   const palette = coloursFor(config.material, materials)

@@ -445,15 +445,19 @@ function Detail({
    * twenty-four should pay for. Opening on the summary means the panel is never
    * blank while that second request is in flight.
    */
-  const [full, setFull] = useState<CatalogCard | null>(null)
+  // Tagged with the slug it describes, so opening a second model never shows the
+  // first model's table under the second one's name — which clearing inside the
+  // effect did for exactly one render.
+  const [fetched, setFetched] = useState<{ slug: string; detail: CatalogCard } | null>(null)
+  const full = fetched?.slug === summary.slug ? fetched.detail : null
   const card = full ?? summary
 
   useEffect(() => {
     let alive = true
-    setFull(null)
+    const slug = summary.slug
     api
-      .get<CatalogCard>(`/catalog/${summary.slug}`)
-      .then((detail) => alive && setFull(detail))
+      .get<CatalogCard>(`/catalog/${slug}`)
+      .then((detail) => alive && setFetched({ slug, detail }))
       // The summary is already on screen and correct as far as it goes, so a
       // failed enrichment loses the extra table rather than the whole popup.
       .catch(() => undefined)
@@ -1019,10 +1023,16 @@ export function CatalogPage({
 
   useEffect(() => {
     let alive = true
-    setFailed(false)
     api
       .get<CatalogTable>(`/catalog?${query}`)
-      .then((next) => alive && setTable(next))
+      .then((next) => {
+        if (!alive) return
+        // Cleared here rather than at the top of the effect: a search that
+        // succeeds clears the previous failure, and one still in flight leaves
+        // the last answer on screen instead of blanking it on every keystroke.
+        setFailed(false)
+        setTable(next)
+      })
       .catch(() => alive && setFailed(true))
     return () => {
       alive = false

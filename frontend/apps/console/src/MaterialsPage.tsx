@@ -114,7 +114,9 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
   }, [locale])
 
   useEffect(() => {
-    void load()
+    void (async () => {
+      await load()
+    })()
   }, [load])
 
   // Lots carry a printer id, not a name. Resolving it is a separate, optional

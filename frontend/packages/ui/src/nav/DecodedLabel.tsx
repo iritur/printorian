@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 /**
  * Glyphs the noise is drawn from.
@@ -45,18 +45,18 @@ function prefersReducedMotion(): boolean {
  *   long smear and loses the word count the eye is using to track the row.
  */
 export function DecodedLabel({ text, active }: { text: string; active: boolean }) {
-  const [shown, setShown] = useState(text)
-  // The value the running animation is resolving towards. Guards the case where
-  // the label changes (a locale switch) while its own scramble is mid-flight.
-  const target = useRef(text)
+  /*
+    Only the *noise* is state, and it is tagged with the label it belongs to.
+    Everything else falls out of that: with no scramble in flight the component
+    renders `text` directly, so the reduced-motion path and the label changing
+    mid-flight both need no state write at all — where they used to need one, a
+    render late. It also retires the ref that existed to guard the second case.
+  */
+  const [noise, setNoise] = useState<{ label: string; frame: string } | null>(null)
+  const shown = noise?.label === text ? noise.frame : text
 
   useEffect(() => {
-    target.current = text
-
-    if (!active || prefersReducedMotion()) {
-      setShown(text)
-      return
-    }
+    if (!active || prefersReducedMotion()) return
 
     let frame = 0
     const total = text.length + TAIL
@@ -65,7 +65,7 @@ export function DecodedLabel({ text, active }: { text: string; active: boolean }
       frame += 1
       if (frame > total) {
         clearInterval(timer)
-        setShown(target.current)
+        setNoise(null)
         return
       }
 
@@ -83,14 +83,14 @@ export function DecodedLabel({ text, active }: { text: string; active: boolean }
           out += ' '
         }
       }
-      setShown(out)
+      setNoise({ label: text, frame: out })
     }, FRAME_MS)
 
     return () => {
       clearInterval(timer)
       // Whatever interrupted this — a new active row, an unmount, a filter
       // keystroke — must not leave a half-resolved label frozen on screen.
-      setShown(target.current)
+      setNoise(null)
     }
   }, [active, text])
 

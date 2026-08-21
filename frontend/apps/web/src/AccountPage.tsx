@@ -56,20 +56,21 @@ export function AccountPage({
   onConfigure: (pick?: CatalogPick) => void
 }) {
   const { actor, ready } = useSession()
-  const [overview, setOverview] = useState<Overview | null>(null)
-  const [failed, setFailed] = useState(false)
+  // Tagged with whose account it describes, so a sign-out cannot leave the
+  // previous person's figures on screen for a render (see `ui/src/effects.ts`).
+  const [fetched, setFetched] = useState<{ actor: string; overview: Overview } | null>(null)
+  const [failedFor, setFailedFor] = useState<string | null>(null)
+  const overview = actor && fetched?.actor === actor.user_id ? fetched.overview : null
+  const failed = actor ? failedFor === actor.user_id : false
 
   useEffect(() => {
-    if (!actor) {
-      setOverview(null)
-      return
-    }
+    if (!actor) return
+    const mine = actor.user_id
     let live = true
-    setFailed(false)
     void api
       .get<Overview>('/account')
-      .then((body) => live && setOverview(body))
-      .catch(() => live && setFailed(true))
+      .then((body) => live && setFetched({ actor: mine, overview: body }))
+      .catch(() => live && setFailedFor(mine))
     return () => {
       live = false
     }
@@ -128,7 +129,12 @@ export function AccountPage({
   if (!overview) return <p className="hv-hint">Загрузка…</p>
 
   /** A saved profile replaces the header's copy without a second round trip. */
-  const adopt = (profile: Profile) => setOverview({ ...overview, profile })
+  const adopt = (profile: Profile) =>
+    // Updated in place so the tag is carried over untouched — rebuilding it here
+    // would mean naming the actor again, and the two could disagree.
+    setFetched((current) =>
+      current ? { ...current, overview: { ...current.overview, profile } } : current,
+    )
 
   /** One of the customer's own uploads, on its way into the configurator. */
   const reorder = (asset: ModelAsset) =>

@@ -83,7 +83,9 @@ export function DashboardPage({
   // Read through a ref so the refetch callback does not change identity with the
   // period — otherwise every period change would tear down the event stream.
   const periodRef = useRef(period)
-  periodRef.current = period
+  useEffect(() => {
+    periodRef.current = period
+  }, [period])
 
   const refetch = useCallback(async () => {
     try {

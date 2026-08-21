@@ -39,20 +39,35 @@ export function CabinetPage({
   onConfigure: (asset: { id: string; name: string } | null) => void
 }) {
   const { actor, ready } = useSession()
-  const [orders, setOrders] = useState<Order[] | null>(null)
-  const [progress, setProgress] = useState<Progress | null>(null)
+  /*
+    Both of these are *tagged* with what they were fetched for, and the value the
+    screen renders is derived from that tag rather than cleared by an effect.
+
+    Clearing in an effect is what this used to do, and it works only after a
+    render has already happened — so the previous order's machine and percentage
+    appeared under the new order's number for one frame, which is the one thing a
+    tracking screen must never do. Deriving means there is no such frame: the
+    moment `current` changes, the tag stops matching and the panel reads empty.
+    `react-hooks/set-state-in-effect` is what pointed at it.
+  */
+  const [fetchedOrders, setFetchedOrders] = useState<{ actor: string; rows: Order[] } | null>(
+    null,
+  )
+  const [fetchedProgress, setFetchedProgress] = useState<{ order: string; value: Progress } | null>(
+    null,
+  )
   const [colourNames, setColourNames] = useState<Record<string, string>>({})
 
+  const orders = actor && fetchedOrders?.actor === actor.user_id ? fetchedOrders.rows : null
+
   useEffect(() => {
-    if (!actor) {
-      setOrders(null)
-      return
-    }
+    if (!actor) return
+    const mine = actor.user_id
     let live = true
     void api
       .get<{ rows: Order[] }>('/orders/mine?limit=200')
-      .then((page) => live && setOrders(page.rows))
-      .catch(() => live && setOrders([]))
+      .then((page) => live && setFetchedOrders({ actor: mine, rows: page.rows }))
+      .catch(() => live && setFetchedOrders({ actor: mine, rows: [] }))
     /*
       The palette, so the composition panel can name the colours rather than
       print six hex codes. A miss falls back to the hex, which is what the order
@@ -82,19 +97,15 @@ export function CabinetPage({
   */
   const current = orders?.find((row) => row.number === open) ?? orders?.[0] ?? null
 
+  const progress = current && fetchedProgress?.order === current.id ? fetchedProgress.value : null
+
   useEffect(() => {
-    if (!current) {
-      setProgress(null)
-      return
-    }
+    if (!current) return
+    const shown = current.id
     let live = true
-    // Cleared first. Without this the previous order's machine and percentage
-    // stay on screen under the new order's number for as long as the request
-    // takes — which is the one thing a tracking screen must never do.
-    setProgress(null)
     void api
-      .get<Progress>(`/orders/${current.id}/queue`)
-      .then((body) => live && setProgress(body))
+      .get<Progress>(`/orders/${shown}/queue`)
+      .then((body) => live && setFetchedProgress({ order: shown, value: body }))
       .catch(() => undefined)
     return () => {
       live = false
