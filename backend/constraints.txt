@@ -17,6 +17,23 @@
 # then let CI prove the new set before it is merged — which is the whole point of
 # having it, and what makes Dependabot's grouped pull requests meaningful.
 #
+# **Nothing here may be a version some other package pins exactly.** `pydantic`
+# requires `pydantic-core==2.46.4` — the exact string, because the two ship as one
+# library in two halves — so listing the core here pinned a number that was
+# already decided, and handed Dependabot a package it could raise on its own.
+# It did, to 2.48.0, and the result was a file no resolver can satisfy:
+#
+#     pydantic 2.13.4 depends on pydantic-core==2.46.4
+#     The user requested (constraint) pydantic-core==2.48.0
+#     ERROR: ResolutionImpossible
+#
+# There was no forward fix either: no pydantic 2.x consumes 2.48.0 yet. So the
+# core is simply absent from this file. Nothing is lost — pinning `pydantic`
+# determines it exactly — and the conflict cannot recur, which is why there is no
+# `ignore` for it in `.github/dependabot.yml` either. Prefer this to an ignore
+# whenever a pin is redundant: an ignore silences the symptom, removing the
+# redundant pin removes the thing that could go wrong.
+#
 # **A constraint applies only if the package is installed at all**, so this file
 # does not have to know about platforms: `uvloop` is pulled by `uvicorn[standard]`
 # on Linux and not on Windows, and is simply absent here rather than wrong. The
@@ -70,7 +87,6 @@ psycopg2-binary==2.9.12
 pycparser==3.0
 pydantic-settings==2.15.0
 pydantic==2.13.4
-pydantic_core==2.46.4
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
 pytest==9.1.1

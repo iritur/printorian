@@ -19,19 +19,6 @@ updates:
     groups:
       backend-patch:
         update-types: [patch, minor]
-    ignore:
-      # `pydantic-core` is not a dependency this project chooses. It is pydantic's
-      # own compiled half, pinned by pydantic to an *exact* version, so bumping it
-      # alone produces a constraints file no resolver can satisfy:
-      #
-      #     pydantic 2.13.4 depends on pydantic-core==2.46.4
-      #     The user requested (constraint) pydantic-core==2.48.0
-      #     ERROR: ResolutionImpossible
-      #
-      # Which is what happened — and 2.48.0 was ahead of *every* pydantic 2.x, so
-      # there was no forward fix either; pip fell back to pydantic 1.10 looking for
-      # one. It moves when pydantic moves, and pydantic is already watched above.
-      - dependency-name: pydantic-core
 
   - package-ecosystem: npm
     directory: /frontend
@@ -56,19 +43,27 @@ updates:
       # `<6.1.0` for the same reason, which would leave the lint gate running
       # against a compiler it has never been tested with.
       #
-      # Lift it when openapi-typescript ships a release built for 7. Minor and
-      # patch bumps flow through meanwhile — this holds the major only.
+      # Three ways out were tried and none of them work, so this is a wait rather
+      # than a puzzle somebody should have another go at:
+      #
+      #   * Override the peer to the root's 7 — installs, then the generator dies
+      #     as above. The peer range is accurate, not cautious.
+      #   * Override it to a nested 5.9 so the generator keeps its own compiler —
+      #     `npm install` accepts it and `npm ci` does not. npm rewrites the range
+      #     and still satisfies it from the root: `peer overridden typescript
+      #     @"5.9.3" ... Conflicting peer dependency`. Peers do not nest.
+      #   * `--legacy-peer-deps` — turns peer checking off for the whole tree, so
+      #     the next genuine conflict lands as a runtime error instead of an
+      #     install failure. Trading a loud problem for a quiet one.
+      #
+      # Lift it when openapi-typescript ships a release built for 7. The check is
+      # one command, and it is the only thing that has to change:
+      #
+      #     npm view openapi-typescript peerDependencies
+      #
+      # Minor and patch bumps flow through meanwhile — this holds the major only.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
-      # `eslint-plugin-react-hooks` 7 bundles the React Compiler's rules, and they
-      # are not a stricter version of the old ones — they are a different model of
-      # what a component may do. It reports 30 errors against code that has always
-      # passed, 26 of them `set-state-in-effect`, across fifteen files.
-      #
-      # Adopting them is worth doing and is its own piece of work: each one is a
-      # question about whether an effect should be deriving state at all, and the
-      # answers change behaviour. It is not something a dependency bump should
-      # decide on a Tuesday. ESLint 10 itself is fine and stays.
 
   # The release gate signs and publishes what these actions build, so a stale
   # pinned action is part of the supply chain the gate is meant to protect.
