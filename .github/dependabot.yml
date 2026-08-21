@@ -41,6 +41,39 @@ updates:
     groups:
       frontend-patch:
         update-types: [patch, minor]
+    ignore:
+      # TypeScript is held at 5.x by `openapi-typescript`, which peer-requires
+      # `^5.x` and has no release that accepts 7 — 7.13.0 is the latest and still
+      # asks for 5. Bumping past it makes `npm ci` fail outright:
+      #
+      #     peer typescript@"^5.x" from openapi-typescript@7.13.0
+      #     ERESOLVE could not resolve
+      #
+      # Which is not a lint failure to work around: ADR-0005 makes that generator
+      # the *only* way the API client is produced, so a frontend that cannot
+      # install it cannot build. Lift this when openapi-typescript ships a release
+      # accepting 7 — minor and patch bumps still flow through in the meantime.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # `eslint-plugin-react-hooks` 7 bundles the React Compiler's rules, and they
+      # are not a stricter version of the old ones — they are a different model of
+      # what a component may do. It reports 30 errors against code that has always
+      # passed, 26 of them `set-state-in-effect`, across fifteen files.
+      #
+      # Adopting them is worth doing and is its own piece of work: each one is a
+      # question about whether an effect should be deriving state at all, and the
+      # answers change behaviour. It is not something a dependency bump should
+      # decide on a Tuesday. ESLint 10 itself is fine and stays.
+      # ESLint 10 and `eslint-plugin-react-hooks` 5 cannot coexist — the plugin
+      # peer-caps at ESLint 9 — so these three move together or not at all, and
+      # moving them means adopting the rules above. Held as one decision rather
+      # than arriving as three PRs that each look harmless alone.
+      - dependency-name: eslint-plugin-react-hooks
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
 
   # The release gate signs and publishes what these actions build, so a stale
   # pinned action is part of the supply chain the gate is meant to protect.
