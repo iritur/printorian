@@ -19,6 +19,19 @@ updates:
     groups:
       backend-patch:
         update-types: [patch, minor]
+    ignore:
+      # `pydantic-core` is not a dependency this project chooses. It is pydantic's
+      # own compiled half, pinned by pydantic to an *exact* version, so bumping it
+      # alone produces a constraints file no resolver can satisfy:
+      #
+      #     pydantic 2.13.4 depends on pydantic-core==2.46.4
+      #     The user requested (constraint) pydantic-core==2.48.0
+      #     ERROR: ResolutionImpossible
+      #
+      # Which is what happened — and 2.48.0 was ahead of *every* pydantic 2.x, so
+      # there was no forward fix either; pip fell back to pydantic 1.10 looking for
+      # one. It moves when pydantic moves, and pydantic is already watched above.
+      - dependency-name: pydantic-core
 
   - package-ecosystem: npm
     directory: /frontend
