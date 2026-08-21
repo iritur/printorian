@@ -180,12 +180,39 @@ class Settings(BaseSettings):
     #: five seconds, so one threshold that suits both does not exist. This is the
     #: multiple of a loop's own interval it may miss before it is called stale.
     worker_stale_intervals: int = Field(default=4, ge=2)
-    #: How long raw telemetry is kept, in days. **Zero disables dropping entirely**,
-    #: which is the default on purpose: partitions are dropped whole and
-    #: irreversibly, and until rollups exist (Slice G) the raw samples are the only
-    #: copy of what the farm measured. Turn this on in the same change that starts
-    #: summarising them, not before.
-    telemetry_retention_days: int = Field(default=0, ge=0)
+    #: How long raw telemetry is kept, in days. Zero still disables dropping
+    #: entirely, but it is no longer the default: `contexts.fleet.rollups`
+    #: summarises every closed hour into `metric_rollups` before the maintenance
+    #: sweep drops anything, and the drop cutoff is clamped to what has actually
+    #: been summarised — so the shape the dashboard draws survives the samples it
+    #: was drawn from.
+    #:
+    #: **Ninety days, read as "a quarter, at least".** The floor is forensic: raw
+    #: samples are the only per-second record, and a quarter covers "since the last
+    #: service" for a machine on a 500-hour interval. The ceiling is disk: about
+    #: 130–150 bytes a row with its index is roughly 45–55 GB a year at fifty
+    #: printers, where 90 days is some 12 GB — and about 1.5 GB at today's six
+    #: machines. Partitions are dropped whole, so the real window is 90 days *plus*
+    #: up to a month.
+    telemetry_retention_days: int = Field(default=90, ge=0)
+    #: The gap ceiling for rollup attribution, as a multiple of the poll interval.
+    #:
+    #: A sample speaks for the time until the next one, but no longer than
+    #: ``telemetry_poll_seconds × this`` — three polls, so 15 seconds by default.
+    #: Beyond it the seconds are attributed to *no state*, which is what keeps an
+    #: unpolled hour from reading as an idle one (ADR-0007).
+    #:
+    #: A multiple rather than a second absolute number, for the same reason
+    #: `worker_stale_intervals` is one: a farm that slows its poll to a minute
+    #: would otherwise have every hour look 75% unobserved until somebody noticed
+    #: the two settings had drifted apart.
+    rollup_gap_intervals: int = Field(default=3, ge=1)
+    #: How many hours one maintenance sweep may summarise. A day, which at an
+    #: hourly sweep is 24× the headroom it needs and still far inside
+    #: `db_statement_timeout_ms`: catching up a week over fifty printers would be
+    #: some six million sample rows in a single statement. Catch-up after a restore
+    #: is a deliberate script that loops, never the sweep widening its own window.
+    rollup_max_buckets_per_sweep: int = Field(default=24, ge=1)
 
     # -- cross-origin callers ---------------------------------------------
     #: Origins allowed to call the API from a browser context, comma-separated.

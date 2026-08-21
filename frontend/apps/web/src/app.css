@@ -1,16 +1,35 @@
+/* The storefront's pre-Harvester sheet, now written in `--hv-*` throughout: the
+   legacy-token compatibility aliases in `@printorian/ui/tokens.css` are gone,
+   so every token here resolves against `harvester/tokens.css` directly. Each
+   substitution is the one the alias file already made, value for value, so
+   nothing renders differently than it did through the bridge.
+
+   Worth knowing before editing anything below: every selector in this file is
+   currently unreachable. The storefront's components emit `.hv-*` classes and
+   nothing else, and the one shared component still emitting legacy classes
+   (`OrdersScreen`, which is where `.cabinet*` and `.cfg__error` come from) is
+   imported only by the console. The rules are kept because deleting them is a
+   separate change with a separate blast radius, not because they do anything.
+
+   One judgement is carried forward rather than re-made: the old decorative
+   accent becomes `--hv-live`, which is what its alias resolved to. Harvester has no
+   decorative accent — colour here means machine state — and `live` is the
+   nearest honest match rather than a translation. Slice C should choose again
+   in Harvester's own terms when it rebuilds these screens. */
+
 body {
   margin: 0;
-  background: var(--pr-bg);
-  color: var(--pr-text);
-  font-family: var(--pr-font);
+  background: var(--hv-bg);
+  color: var(--hv-text);
+  font-family: var(--hv-font-ui);
 }
 
 .app__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--pr-space-3) var(--pr-space-4);
-  border-bottom: 1px solid var(--pr-border);
+  padding: var(--hv-3) var(--hv-4);
+  border-bottom: 1px solid var(--hv-line);
 }
 
 .app__header h1 {
@@ -19,15 +38,15 @@ body {
 }
 
 .app__locale button {
-  border: 1px solid var(--pr-border);
-  background: var(--pr-bg-raised);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-raised);
   color: inherit;
-  padding: var(--pr-space-1) var(--pr-space-2);
+  padding: var(--hv-1) var(--hv-2);
   cursor: pointer;
 }
 
 .app__locale button[aria-pressed='true'] {
-  border-color: var(--pr-accent);
+  border-color: var(--hv-live);
 }
 
 /* Two columns: what you choose on the left, what it costs on the right, so the
@@ -35,8 +54,8 @@ body {
 .cfg {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(320px, 1fr);
-  gap: var(--pr-space-4);
-  padding: var(--pr-space-4);
+  gap: var(--hv-4);
+  padding: var(--hv-4);
   align-items: start;
 }
 
@@ -47,18 +66,18 @@ body {
 .cfg__panel {
   display: flex;
   flex-direction: column;
-  gap: var(--pr-space-3);
+  gap: var(--hv-3);
 }
 
 .cfg__panel--price {
   position: sticky;
-  top: var(--pr-space-4);
+  top: var(--hv-4);
 }
 
 .cfg__field {
   display: flex;
   flex-direction: column;
-  gap: var(--pr-space-1);
+  gap: var(--hv-1);
   border: 0;
   padding: 0;
   margin: 0;
@@ -67,69 +86,69 @@ body {
 .cfg__field--inline {
   flex-direction: row;
   align-items: center;
-  gap: var(--pr-space-2);
+  gap: var(--hv-2);
 }
 
 .cfg__field button {
-  border: 1px solid var(--pr-border);
-  background: var(--pr-bg-raised);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-raised);
   color: inherit;
-  padding: var(--pr-space-1) var(--pr-space-3);
-  margin-right: var(--pr-space-1);
-  border-radius: var(--pr-radius);
+  padding: var(--hv-1) var(--hv-3);
+  margin-right: var(--hv-1);
+  border-radius: var(--hv-radius);
   cursor: pointer;
 }
 
 .cfg__field button[aria-pressed='true'] {
-  border-color: var(--pr-accent);
-  box-shadow: inset 0 0 0 1px var(--pr-accent);
+  border-color: var(--hv-live);
+  box-shadow: inset 0 0 0 1px var(--hv-live);
 }
 
 .cfg__mesh {
   display: flex;
-  gap: var(--pr-space-4);
-  margin: 0 0 var(--pr-space-3);
-  color: var(--pr-text-muted);
+  gap: var(--hv-4);
+  margin: 0 0 var(--hv-3);
+  color: var(--hv-text-dim);
   font-size: 0.875rem;
 }
 
 .cfg__mesh dt { font-weight: 600; }
 .cfg__mesh dd { margin: 0; }
 
-.cfg__error { color: var(--pr-tone-bad); }
-.cfg__warning { color: var(--pr-tone-warn); font-size: 0.875rem; margin: 0; }
-.cfg__hint { color: var(--pr-text-muted); }
+.cfg__error { color: var(--hv-bad); }
+.cfg__warning { color: var(--hv-warn); font-size: 0.875rem; margin: 0; }
+.cfg__hint { color: var(--hv-text-dim); }
 
 /* ------------------------------------------------------------- shell */
 
 .app__header {
-  gap: var(--pr-space-4);
+  gap: var(--hv-4);
 }
 
 .app__nav,
 .app__right {
   display: flex;
   align-items: center;
-  gap: var(--pr-space-2);
+  gap: var(--hv-2);
 }
 
 .app__nav button,
 .app__right button {
-  border: 1px solid var(--pr-border);
-  background: var(--pr-bg-raised);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg-raised);
   color: inherit;
-  padding: var(--pr-space-1) var(--pr-space-3);
-  border-radius: var(--pr-radius);
+  padding: var(--hv-1) var(--hv-3);
+  border-radius: var(--hv-radius);
   cursor: pointer;
 }
 
 .app__nav button[aria-pressed='true'] {
-  border-color: var(--pr-accent);
-  box-shadow: inset 0 0 0 1px var(--pr-accent);
+  border-color: var(--hv-live);
+  box-shadow: inset 0 0 0 1px var(--hv-live);
 }
 
 .app__who {
-  color: var(--pr-text-muted);
+  color: var(--hv-text-dim);
   font-size: 0.875rem;
 }
 
@@ -138,27 +157,27 @@ body {
 .auth {
   display: flex;
   flex-direction: column;
-  gap: var(--pr-space-2);
-  margin-top: var(--pr-space-3);
-  padding: var(--pr-space-3);
-  border: 1px solid var(--pr-border);
-  border-radius: var(--pr-radius);
-  background: var(--pr-bg-raised);
+  gap: var(--hv-2);
+  margin-top: var(--hv-3);
+  padding: var(--hv-3);
+  border: 1px solid var(--hv-line);
+  border-radius: var(--hv-radius);
+  background: var(--hv-bg-raised);
 }
 
-.auth__hint { margin: 0; color: var(--pr-text-muted); }
+.auth__hint { margin: 0; color: var(--hv-text-dim); }
 
 .auth__actions {
   display: flex;
-  gap: var(--pr-space-2);
+  gap: var(--hv-2);
 }
 
 .auth__actions button {
-  border: 1px solid var(--pr-border);
-  background: var(--pr-bg);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg);
   color: inherit;
-  padding: var(--pr-space-2) var(--pr-space-3);
-  border-radius: var(--pr-radius);
+  padding: var(--hv-2) var(--hv-3);
+  border-radius: var(--hv-radius);
   cursor: pointer;
 }
 
@@ -168,17 +187,17 @@ body {
 .cabinet {
   max-width: 720px;
   margin: 0 auto;
-  padding: var(--pr-space-4);
+  padding: var(--hv-4);
   display: flex;
   flex-direction: column;
-  gap: var(--pr-space-3);
+  gap: var(--hv-3);
 }
 
 .checkout__back {
   align-self: flex-start;
   border: 0;
   background: none;
-  color: var(--pr-accent);
+  color: var(--hv-live);
   cursor: pointer;
   padding: 0;
 }
@@ -186,10 +205,10 @@ body {
 /* The primary action is deliberately the loudest thing on the screen. */
 .checkout__cta {
   display: inline-block;
-  padding: var(--pr-space-3) var(--pr-space-4);
+  padding: var(--hv-3) var(--hv-4);
   border: 0;
-  border-radius: var(--pr-radius);
-  background: var(--pr-accent);
+  border-radius: var(--hv-radius);
+  background: var(--hv-live);
   color: #fff;
   font: inherit;
   font-weight: 600;
@@ -204,7 +223,7 @@ body {
 .checkout__payment {
   display: flex;
   flex-direction: column;
-  gap: var(--pr-space-2);
+  gap: var(--hv-2);
 }
 
 /* --------------------------------------------------------- cabinet */
@@ -212,13 +231,13 @@ body {
 .cabinet { max-width: 900px; }
 
 .cabinet__detail {
-  border: 1px solid var(--pr-border);
-  border-radius: var(--pr-radius);
-  padding: var(--pr-space-3);
-  background: var(--pr-bg-raised);
+  border: 1px solid var(--hv-line);
+  border-radius: var(--hv-radius);
+  padding: var(--hv-3);
+  background: var(--hv-bg-raised);
   display: flex;
   flex-direction: column;
-  gap: var(--pr-space-3);
+  gap: var(--hv-3);
 }
 
 .cabinet__detail-head {
@@ -230,31 +249,31 @@ body {
 .cabinet__detail-head h3 { margin: 0; }
 
 .cabinet__detail-head button {
-  border: 1px solid var(--pr-border);
-  background: var(--pr-bg);
+  border: 1px solid var(--hv-line);
+  background: var(--hv-bg);
   color: inherit;
   cursor: pointer;
-  border-radius: var(--pr-radius);
-  padding: 0 var(--pr-space-2);
+  border-radius: var(--hv-radius);
+  padding: 0 var(--hv-2);
 }
 
 .cabinet__credit {
   margin: 0;
-  color: var(--pr-tone-good);
+  color: var(--hv-good);
   font-weight: 600;
 }
 
 .cabinet__history {
   margin: 0;
-  padding-left: var(--pr-space-4);
-  color: var(--pr-text-muted);
+  padding-left: var(--hv-4);
+  color: var(--hv-text-dim);
   font-size: 0.875rem;
 }
 
 .cabinet__history li {
   display: flex;
   justify-content: space-between;
-  gap: var(--pr-space-3);
+  gap: var(--hv-3);
   padding: 2px 0;
 }
 
@@ -266,7 +285,7 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--pr-space-4);
+  gap: var(--hv-4);
 }
 
 .fleet__header h2 { margin: 0; }
@@ -276,27 +295,27 @@ body {
 .fleet__status {
   display: inline-flex;
   align-items: center;
-  gap: var(--pr-space-2);
+  gap: var(--hv-2);
   margin: 0;
   font-size: 0.875rem;
-  color: var(--pr-tone-warn);
+  color: var(--hv-warn);
 }
 
-.fleet__status[data-live='true'] { color: var(--pr-text-muted); }
+.fleet__status[data-live='true'] { color: var(--hv-text-dim); }
 
 .fleet__dot {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: var(--pr-tone-warn);
+  background: var(--hv-warn);
 }
 
-.fleet__status[data-live='true'] .fleet__dot { background: var(--pr-tone-good); }
+.fleet__status[data-live='true'] .fleet__dot { background: var(--hv-good); }
 
 .fleet__name {
   display: inline-flex;
   align-items: center;
-  gap: var(--pr-space-2);
+  gap: var(--hv-2);
 }
 
 .fleet__flag {
@@ -306,40 +325,40 @@ body {
   min-width: 1.25rem;
   height: 1.25rem;
   padding: 0 0.25rem;
-  border-radius: var(--pr-radius);
-  background: var(--pr-tone-bad);
+  border-radius: var(--hv-radius);
+  background: var(--hv-bad);
   color: #fff;
   font-size: 0.75rem;
   line-height: 1;
 }
 
-.notice { color: var(--pr-text-muted); }
+.notice { color: var(--hv-text-dim); }
 
 /* ------------------------------------------------- admin forms & detail */
 
 .fleet__head-right {
   display: flex;
   align-items: center;
-  gap: var(--pr-space-4);
+  gap: var(--hv-4);
 }
 
 .admin-form,
 .admin-detail {
-  margin: var(--pr-space-4) 0;
-  padding: var(--pr-space-4);
-  border: 1px solid var(--pr-border);
-  border-radius: var(--pr-radius);
-  background: var(--pr-bg-raised);
+  margin: var(--hv-4) 0;
+  padding: var(--hv-4);
+  border: 1px solid var(--hv-line);
+  border-radius: var(--hv-radius);
+  background: var(--hv-bg-raised);
 }
 
 .admin-form h3,
-.admin-detail h3 { margin: 0 0 var(--pr-space-3); }
-.admin-detail h4 { margin: var(--pr-space-4) 0 var(--pr-space-2); }
+.admin-detail h3 { margin: 0 0 var(--hv-3); }
+.admin-detail h4 { margin: var(--hv-4) 0 var(--hv-2); }
 
 .admin-form__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: var(--pr-space-3);
+  gap: var(--hv-3);
 }
 
 .admin-form__actions,
@@ -347,74 +366,74 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  gap: var(--pr-space-3);
-  margin-top: var(--pr-space-3);
+  gap: var(--hv-3);
+  margin-top: var(--hv-3);
 }
 
 .admin-detail__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--pr-space-4);
+  gap: var(--hv-4);
 }
 
 .admin-detail__facts {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: var(--pr-space-2) var(--pr-space-4);
+  gap: var(--hv-2) var(--hv-4);
   margin: 0;
 }
 
-.admin-detail__facts dt { color: var(--pr-text-muted); }
+.admin-detail__facts dt { color: var(--hv-text-dim); }
 .admin-detail__facts dd { margin: 0; }
 
-.admin-detail__muted { color: var(--pr-text-muted); }
+.admin-detail__muted { color: var(--hv-text-dim); }
 
 .admin-detail__list {
   list-style: none;
-  margin: var(--pr-space-3) 0 0;
+  margin: var(--hv-3) 0 0;
   padding: 0;
 }
 
 .admin-detail__list li {
   display: flex;
   align-items: center;
-  gap: var(--pr-space-3);
-  padding: var(--pr-space-2) 0;
-  border-top: 1px solid var(--pr-border);
+  gap: var(--hv-3);
+  padding: var(--hv-2) 0;
+  border-top: 1px solid var(--hv-line);
 }
 
 .admin-detail__list li > span:first-child { flex: 1; }
-.admin-detail__list li[data-due='true'] > span:first-child { color: var(--pr-tone-warn); }
+.admin-detail__list li[data-due='true'] > span:first-child { color: var(--hv-warn); }
 
-.desk { margin: var(--pr-space-3) 0; }
-.desk__refund-actions { display: inline-flex; gap: var(--pr-space-2); }
+.desk { margin: var(--hv-3) 0; }
+.desk__refund-actions { display: inline-flex; gap: var(--hv-2); }
 
 .materials__name,
 .users__email {
   display: inline-flex;
   align-items: center;
-  gap: var(--pr-space-2);
+  gap: var(--hv-2);
 }
 
 .materials__swatch {
   width: 0.75rem;
   height: 0.75rem;
-  border: 1px solid var(--pr-border);
+  border: 1px solid var(--hv-line);
   border-radius: 50%;
 }
 
 /* --------------------------------------------------- customer queue (C7) */
 
 .queue {
-  margin: var(--pr-space-3) 0;
-  padding: var(--pr-space-3);
-  border-left: 3px solid var(--pr-accent);
-  background: var(--pr-bg-raised);
-  border-radius: var(--pr-radius);
+  margin: var(--hv-3) 0;
+  padding: var(--hv-3);
+  border-left: 3px solid var(--hv-live);
+  background: var(--hv-bg-raised);
+  border-radius: var(--hv-radius);
 }
 
-.queue p { margin: var(--pr-space-1) 0 0; }
+.queue p { margin: var(--hv-1) 0 0; }
 
 
 /* ------------------------------ colours and material (configurator 2–4) */
@@ -424,13 +443,13 @@ body {
 .cfg__row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--pr-space-2);
+  gap: var(--hv-2);
   align-items: center;
 }
 
 .cfg__count {
   min-width: 2.25rem;
-  padding: var(--pr-space-1) var(--pr-space-2);
+  padding: var(--hv-1) var(--hv-2);
 }
 
 /* The swatch is the label. A name beside every colour would push four choices
@@ -439,44 +458,44 @@ body {
   width: 1.75rem;
   height: 1.75rem;
   padding: 0;
-  border: 2px solid var(--pr-border);
+  border: 2px solid var(--hv-line);
   border-radius: 50%;
   cursor: pointer;
 }
 
 .cfg__colour[aria-pressed='true'] {
-  border-color: var(--pr-accent);
+  border-color: var(--hv-live);
   /* A ring rather than a thicker border, so the swatch does not change size and
      the row never reflows as choices are made. */
-  box-shadow: 0 0 0 2px var(--pr-bg), 0 0 0 4px var(--pr-accent);
+  box-shadow: 0 0 0 2px var(--hv-bg), 0 0 0 4px var(--hv-live);
 }
 
 /* Held by another slot too. Dimmer than the accent ring, because it is
    information rather than the current answer: picking it is allowed, and the
    plate then uses one filament in two slots. */
 .cfg__colour[data-used='true'] {
-  border-color: var(--pr-text-muted);
+  border-color: var(--hv-text-dim);
   border-style: dashed;
 }
 
 /* The slot row: which of the plate's colours the swatches below are filling. */
 .cfg__slots {
-  margin-bottom: var(--pr-space-1);
+  margin-bottom: var(--hv-1);
 }
 
 .cfg__slot {
   display: inline-flex;
   align-items: center;
-  gap: var(--pr-space-1);
+  gap: var(--hv-1);
   /* Overrides the shared `.cfg__field button` spacing — the row's own gap gives
      the separation, and a trailing margin would make it uneven. */
   margin-right: 0;
-  padding: var(--pr-space-1) var(--pr-space-2);
+  padding: var(--hv-1) var(--hv-2);
 }
 
 .cfg__slot-chip {
   width: 0.875rem;
   height: 0.875rem;
   border-radius: 50%;
-  border: 1px solid var(--pr-border);
+  border: 1px solid var(--hv-line);
 }

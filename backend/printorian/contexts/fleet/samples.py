@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from printorian.contexts.fleet.models import TelemetrySample
+from printorian.contexts.fleet.history import TelemetrySample
 from printorian.core.ids import EntityId
 from printorian.drivers import Telemetry
 

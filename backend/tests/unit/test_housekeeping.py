@@ -15,7 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.fleet import FleetService
-from printorian.contexts.fleet.models import TelemetrySample
+from printorian.contexts.fleet.history import TelemetrySample
 from printorian.contexts.fleet.schemas import CreatePrinter
 from printorian.contexts.identity import IdentityService
 from printorian.contexts.identity.models import Session

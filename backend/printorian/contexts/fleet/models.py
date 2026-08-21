@@ -1,7 +1,11 @@
-"""Persistent models for the fleet.
+"""Persistent models for the fleet: the machine, its slots, and its service card.
 
 The access code is stored **encrypted** (ADR-0014) and is write-only across the API:
 it can be set and replaced, never read back. A UI shows "set" or "not set".
+
+Everything here is *live* state — the row a poll overwrites and a screen reads for
+"now". The measured history it leaves behind, `telemetry_samples` and the hourly
+`metric_rollups` over them, lives in :mod:`printorian.contexts.fleet.history`.
 """
 
 from __future__ import annotations
@@ -19,13 +23,12 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
-    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from printorian.contexts.fleet.policies import ConnectionMode, MaintenanceKind
-from printorian.core.db import Base, Entity, JsonB, UtcDateTime, enum_column
-from printorian.core.ids import EntityId, new_id
+from printorian.core.db import Entity, JsonB, UtcDateTime, enum_column
+from printorian.core.ids import EntityId
 from printorian.drivers import PrinterState
 
 
@@ -190,74 +193,3 @@ class ServiceOperation(Entity):
 
     def is_due(self, printed_hours: Decimal) -> bool:
         return printed_hours - self.last_done_at_hours >= Decimal(self.interval_hours)
-
-
-class TelemetrySample(Base):
-    """One observation of one machine, kept.
-
-    `Printer.last_telemetry` holds the most recent reading and is overwritten every
-    poll — five seconds, by default. That is the right shape for "what is this
-    machine doing now" and it is the *only* shape the fleet had, which made three
-    already-promised things impossible: telemetry retention and rollups (ROADMAP
-    phase 3), the dashboard's twelve-hour schedule with a live now-line, and phase
-    6's true P&L, which is supposed to draw real electricity from real readings.
-    None of that can come from a column holding one row's worth of history.
-
-    **Partitioned by month, from the first row.** This is the table that decides
-    whether the database scales with the farm: at a five-second poll, fifty printers
-    write about 315 million rows a year, which is two orders of magnitude more than
-    everything else in the schema put together. Monthly range partitions cost nothing
-    to create now; retrofitting them onto a table that size is a rewrite with
-    downtime, and that asymmetry is the whole reason this exists before there is a
-    dashboard to read it.
-
-    Retention is then a matter of *detaching* a partition — instantaneous — rather
-    than a ``DELETE`` over tens of millions of rows, which would take hours and leave
-    the table bloated behind it. See :mod:`printorian.contexts.fleet.retention`.
-
-    Not an `Entity`: PostgreSQL requires the partition key to be part of every unique
-    constraint, so the primary key is ``(id, created_at)`` rather than ``id`` alone.
-    """
-
-    __tablename__ = "telemetry_samples"
-    __table_args__ = (
-        # The dashboard's question, and the rollup job's: "this machine, this
-        # window". Leading with the printer keeps a single machine's history
-        # contiguous; partition pruning handles the time half before the index is
-        # even consulted.
-        Index("ix_telemetry_samples_printer_id_created_at", "printer_id", "created_at"),
-        CheckConstraint(
-            "progress_percent IS NULL OR (progress_percent BETWEEN 0 AND 100)",
-            name="progress_range",
-        ),
-        {"postgresql_partition_by": "RANGE (created_at)"},
-    )
-
-    id: Mapped[EntityId] = mapped_column(primary_key=True, default=new_id)
-    #: Partition key, and half the primary key. Server-defaulted like every other
-    #: `created_at` in the schema, so a row cannot land in the wrong partition
-    #: because a caller's clock disagreed with the database's.
-    created_at: Mapped[datetime] = mapped_column(
-        UtcDateTime, primary_key=True, server_default=func.now(), nullable=False
-    )
-
-    #: Deliberately not a foreign key, for the same reason as
-    #: `AssignmentRecord.chosen_printer_id`: this is high-volume history that is
-    #: dropped a partition at a time, and a cascading delete through hundreds of
-    #: millions of rows is an outage rather than a cleanup. Decommissioning a
-    #: machine must not rewrite what it was measured doing.
-    printer_id: Mapped[EntityId] = mapped_column(nullable=False)
-
-    #: When the *machine* said this, as opposed to when the row was written. The two
-    #: differ by the poll's round trip, and phase 6 needs the machine's own timing.
-    observed_at: Mapped[datetime] = mapped_column(UtcDateTime, nullable=False)
-    state: Mapped[PrinterState] = mapped_column(enum_column(PrinterState), nullable=False)
-
-    job_handle: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    progress_percent: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    layer_current: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    layer_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    remaining_minutes: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
-    nozzle_temp_c: Mapped[Decimal | None] = mapped_column(Numeric(6, 2), nullable=True)
-    bed_temp_c: Mapped[Decimal | None] = mapped_column(Numeric(6, 2), nullable=True)
-    error_code: Mapped[str | None] = mapped_column(String(120), nullable=True)

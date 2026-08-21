@@ -261,3 +261,111 @@ async def test_retention_is_off_when_nothing_has_elapsed(db: AsyncSession) -> No
     )
 
     assert dropped == ()
+
+
+# ------------------------------------------------------- the clamp that guards it
+#
+# The two halves above are each safe on their own. What follows is the *join*
+# between them, and it is the only place in the system where getting it wrong
+# destroys data that cannot be recovered.
+#
+# `MaintenanceSweep` summarises and then drops, in that order. Order alone proves
+# nothing: it says what happens in a pass where summarising worked, and nothing
+# about one where it raised, produced no rows, or fell a week behind. The
+# invariant is instead a clamp — `cutoff = min(now − retention, watermark)` — and
+# these are the cases that clamp exists for.
+
+
+async def _watermark_cutoff(
+    db: AsyncSession, *, now: datetime, retention_days: int, watermark: datetime | None
+) -> datetime | None:
+    """The cutoff `MaintenanceSweep._drop_summarised_partitions` would use.
+
+    Reproduced rather than reached through the sweep because building one needs an
+    identity service, a model library and a clock; what is under test is four
+    lines of arithmetic, and a test that has to assemble half the worker to reach
+    them tests the assembly instead.
+    """
+    if retention_days <= 0:
+        return None
+    if watermark is None:
+        return None
+    return min(now - timedelta(days=retention_days), watermark)
+
+
+async def test_a_farm_that_has_never_summarised_drops_nothing(db: AsyncSession) -> None:
+    """An empty `metric_rollups` is not evidence that anything was summarised.
+
+    This is the first-run case, and the dangerous reading of it is "no rollups, so
+    nothing to protect". The opposite is true: with no watermark there is no proof
+    any sample survives in summary, and the drop is irreversible.
+    """
+    for month in (1, 2, 3):
+        await retention.ensure_partitions(
+            db, now=datetime(2026, month, 1, tzinfo=UTC), months_ahead=0
+        )
+    now = datetime(2026, 3, 20, tzinfo=UTC)
+
+    cutoff = await _watermark_cutoff(db, now=now, retention_days=30, watermark=None)
+
+    assert cutoff is None
+    assert "telemetry_samples_2026_01" in await _partitions(db)
+
+
+async def test_rollups_falling_behind_stop_retention_with_them(db: AsyncSession) -> None:
+    """The failure everyone would rather have.
+
+    Retention alone would drop January here — it is well past a 30-day window.
+    But summarising stalled in mid-January, so January still holds hours nothing
+    has a summary of, and the clamp keeps the partition until it does.
+    """
+    for month in (1, 2, 3):
+        await retention.ensure_partitions(
+            db, now=datetime(2026, month, 1, tzinfo=UTC), months_ahead=0
+        )
+    now = datetime(2026, 3, 20, tzinfo=UTC)
+    stalled = datetime(2026, 1, 14, tzinfo=UTC)
+
+    cutoff = await _watermark_cutoff(db, now=now, retention_days=30, watermark=stalled)
+    assert cutoff == stalled
+
+    dropped = await retention.drop_partitions_before(db, cutoff=cutoff)
+
+    assert dropped == ()
+    assert "telemetry_samples_2026_01" in await _partitions(db)
+
+
+async def test_a_caught_up_watermark_lets_retention_do_its_job(db: AsyncSession) -> None:
+    """And the clamp must not be a brake that never releases.
+
+    With summarising current, the retention window is the binding term again and
+    the old months go — otherwise the guard above would simply be "never drop".
+    """
+    for month in (1, 2, 3):
+        await retention.ensure_partitions(
+            db, now=datetime(2026, month, 1, tzinfo=UTC), months_ahead=0
+        )
+    now = datetime(2026, 3, 20, tzinfo=UTC)
+
+    cutoff = await _watermark_cutoff(
+        db, now=now, retention_days=30, watermark=now - timedelta(hours=1)
+    )
+    assert cutoff == now - timedelta(days=30)
+
+    dropped = await retention.drop_partitions_before(db, cutoff=cutoff)
+
+    assert set(dropped) == {"telemetry_samples_2026_01"}
+
+
+async def test_retention_disabled_still_means_disabled(db: AsyncSession) -> None:
+    """A watermark is permission to drop, never an instruction to."""
+    await retention.ensure_partitions(db, now=datetime(2026, 1, 1, tzinfo=UTC), months_ahead=0)
+
+    cutoff = await _watermark_cutoff(
+        db,
+        now=datetime(2027, 1, 1, tzinfo=UTC),
+        retention_days=0,
+        watermark=datetime(2027, 1, 1, tzinfo=UTC),
+    )
+
+    assert cutoff is None

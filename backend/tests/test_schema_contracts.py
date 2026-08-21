@@ -35,6 +35,14 @@ UNLINKED_IDS: dict[str, str] = {
         "rather than a cleanup, and decommissioning a machine must not rewrite "
         "what it was measured doing (ADR-0018)."
     ),
+    "metric_rollups.printer_id": (
+        "The same call as `telemetry_samples.printer_id`, one grain coarser. This "
+        "table is what survives when the raw samples are dropped, so retiring a "
+        "machine must not rewrite or delete it: SET NULL erases the only question "
+        "the row answers — which machine spent that hour printing — and RESTRICT "
+        "makes retirement impossible for as long as any hour of history remains, "
+        "which is for ever, because nothing ever drops from here (ADR-0018)."
+    ),
     "payments.provider_payment_id": (
         "The *gateway's* id for the payment, not a reference to anything here. "
         "Indexed for reconciliation lookups; there is no table to point at."

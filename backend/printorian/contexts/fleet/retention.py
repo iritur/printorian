@@ -68,9 +68,11 @@ def _next_month(moment: datetime) -> datetime:
 def _is_partitioned(db: AsyncSession) -> bool:
     """Whether this dialect has partitions at all.
 
-    SQLite — the fast test dialect, never production (D1) — builds
-    ``telemetry_samples`` as one ordinary table. Everything here is then a no-op
-    rather than an error, so the maintenance worker can run unchanged in tests.
+    Now always true in practice: the suite runs on real PostgreSQL (ADR-0021), and
+    the SQLite fallback this guard was written for is gone. Kept as a guard rather
+    than deleted because everything below builds DDL by string interpolation
+    against a dialect that has to support it, and a wrong answer there is a
+    confusing syntax error rather than a clear refusal.
     """
     return db.get_bind().dialect.name == "postgresql"
 
@@ -112,11 +114,14 @@ async def drop_partitions_before(db: AsyncSession, *, cutoff: datetime) -> tuple
     still inside the window. The practical effect is that data lives for the
     retention period *plus* up to a month, which is the price of the instant drop.
 
-    **This is destructive and irreversible.** It is driven by
-    ``telemetry_retention_days``, and it must not run before rollups exist — the
-    dashboard and phase-6 P&L are supposed to read summarised history, and dropping
-    raw samples with nothing summarising them first destroys the only copy. The
-    default retention is set wide enough that this does not bite before then.
+    **This is destructive and irreversible**, so the caller owes it a cutoff that
+    is safe, and this function cannot check that for itself — it knows about months
+    and partitions, not about what has been summarised. `workers.maintenance`
+    computes the cutoff as ``min(now − telemetry_retention_days, latest_bucket)``:
+    the second term is the hour :mod:`printorian.contexts.fleet.rollups` has
+    actually reached, so a farm whose summarising has stalled stops dropping raw
+    samples with it. That clamp, rather than the order the two are called in, is
+    what makes this safe.
     """
     if not _is_partitioned(db):
         return ()

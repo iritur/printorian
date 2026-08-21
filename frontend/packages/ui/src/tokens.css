@@ -1,68 +1,30 @@
 /*
- * The bridge from `--pr-*` to Harvester, for the length of Slice B.
+ * Bare controls, until the last one is converted.
  *
- * Every `--pr-*` token is now an alias onto its `--hv-*` counterpart. Nothing
- * outside this file changes, and every existing rule — the DataTable below, both
- * apps' stylesheets, every component not yet converted — picks up the Harvester
- * palette at once.
+ * This file used to be two things: an alias table mapping the pre-Harvester
+ * token names onto `--hv-*`, and the fallbacks below. The aliases are gone.
+ * Every stylesheet now names `--hv-*` tokens directly, and `tokens.test.ts`
+ * fails if a single one of the retired names comes back.
  *
- * The alternative was worse. `system.css` sets `body` to true black, so the
- * moment it is imported an app still styled in the old light values is a set of
- * pale panels floating on black. Aliasing means there is no broken intermediate
- * state: the language arrives coherently, and conversion to `.hv-*` classes
- * happens component by component afterwards.
+ * The fallbacks are **not** gone, and were never on the same schedule. Deleting
+ * them alongside the aliases would have looked like finishing the job and would
+ * have taken five console admin screens white-on-white with it.
  *
- * **These aliases are deleted when Slice B closes.** Their existence is what
- * "no `--pr-*` left in a shipped stylesheet" is measuring, so a token still
- * pointing here is a conversion that has not happened yet.
+ * Why they are needed: `system.css` resets `button { color: inherit }` but
+ * deliberately leaves the background alone, because Harvester expects `.hv-btn`.
+ * A bare `<button>` therefore inherits near-white text onto the browser's
+ * default light button face — white on white, and unreadable. Both apps still
+ * have plenty of those.
  *
- * The dark-mode media query is gone with them: Harvester's two themes are Void
- * and Paper, switched by `data-theme` on the root, not by the OS preference.
- * Two theming mechanisms disagreeing is how a screen ends up half-inverted.
+ * The rules give an unconverted control a legible Harvester surface and nothing
+ * more. They are deliberately plain — no bracket corners, no tracking — so a
+ * converted `.hv-btn` is visibly the finished thing and this is visibly not.
+ *
+ * When the last bare control becomes a `.hv-btn` / `.hv-input` / `.hv-select`,
+ * this file goes, and with it the `./tokens.css` export in `package.json`, both
+ * apps' imports of it, and its line in `.prettierignore`. Not before, and not
+ * with anything else.
  */
-
-:root {
-  --pr-bg: var(--hv-bg);
-  --pr-bg-raised: var(--hv-bg-raised);
-  --pr-bg-hover: var(--hv-bg-hover);
-  --pr-border: var(--hv-line);
-  --pr-text: var(--hv-text);
-  --pr-text-muted: var(--hv-text-dim);
-  /* Harvester has no decorative accent — colour means machine state. `live` is
-     the nearest honest match for "the thing you are pointing at". */
-  --pr-accent: var(--hv-live);
-
-  --pr-tone-neutral: var(--hv-text-dim);
-  --pr-tone-good: var(--hv-good);
-  --pr-tone-warn: var(--hv-warn);
-  --pr-tone-bad: var(--hv-bad);
-
-  --pr-space-1: var(--hv-1);
-  --pr-space-2: var(--hv-2);
-  --pr-space-3: var(--hv-3);
-  --pr-space-4: var(--hv-4);
-
-  /* Nothing is rounded in this system. */
-  --pr-radius: var(--hv-radius);
-  --pr-font: var(--hv-font-ui);
-  --pr-font-mono: var(--hv-font-mono);
-}
-
-/* ---------------------------------------------------------------------------
-   Bare controls, for the length of Slice B.
-
-   `system.css` resets `button { color: inherit }` but deliberately leaves the
-   background alone — Harvester expects `.hv-btn`. A bare `<button>` therefore
-   inherits near-white text onto the browser's default light button face, which
-   is white on white and completely unreadable. Both apps are full of bare
-   buttons that have not been converted yet.
-
-   These rules give an unconverted control a legible Harvester surface. They are
-   deliberately plain — no bracket corners, no tracking — so a converted `.hv-btn`
-   is visibly the finished thing and this is visibly not.
-
-   Deleted with the aliases above when the last bare control is converted.
-   ------------------------------------------------------------------------- */
 
 button:not([class*='hv-']),
 select:not([class*='hv-']),

@@ -24,6 +24,7 @@ from __future__ import annotations
 from printorian.contexts.account import models as account_models
 from printorian.contexts.catalog import catalogue as catalog_catalogue
 from printorian.contexts.catalog import models as catalog_models
+from printorian.contexts.fleet import history as fleet_history
 from printorian.contexts.fleet import models as fleet_models
 from printorian.contexts.identity import models as identity_models
 from printorian.contexts.inventory import models as inventory_models
@@ -42,6 +43,7 @@ __all__ = [
     "account_models",
     "catalog_catalogue",
     "catalog_models",
+    "fleet_history",
     "fleet_models",
     "identity_models",
     "inventory_models",

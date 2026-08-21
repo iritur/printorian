@@ -3,8 +3,9 @@
    ----------------------------------------------------------------------------
    Every colour, metric and type decision lives here. Components below reference
    variables only, so retheming (VOID <-> PAPER) is a variable swap, never a
-   second stylesheet. Names are prefixed `--hv-` (harvester) to sit alongside
-   the existing `--pr-` tokens without collision during integration.
+   second stylesheet. Names are prefixed `--hv-` (harvester); the prefix was
+   chosen so the kit could sit alongside the app's older tokens without
+   collision during integration, and it outlived them.
    ========================================================================= */
 
 :root {
