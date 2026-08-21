@@ -182,3 +182,43 @@
 @media (max-width: 900px) {
   .hv-model__view--tall { min-height: 220px; }
 }
+
+/* ---------------------------------------------------------------- error boundary
+   The one screen that has to render when nothing else could. It therefore leans
+   on tokens and nothing else: no shell, no grid, no component that might be the
+   thing that just threw. */
+.hv-error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--hv-3);
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: var(--hv-6, 3rem) var(--hv-3);
+  color: var(--hv-text);
+  background: var(--hv-bg);
+  min-height: 100vh;
+  justify-content: center;
+}
+
+.hv-error-boundary__title {
+  margin: 0;
+  font-size: var(--hv-size-h1, 1.5rem);
+  letter-spacing: 0.02em;
+}
+
+.hv-error-boundary__body { margin: 0; color: var(--hv-text-dim); }
+
+.hv-error-boundary__action {
+  padding: var(--hv-2, 0.5rem) var(--hv-3);
+  color: var(--hv-text-invert);
+  background: var(--hv-bg-invert);
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hv-error-boundary__details { color: var(--hv-text-faint); font-size: var(--hv-size-small); }
+.hv-error-boundary__details pre { margin: var(--hv-2, 0.5rem) 0 0; white-space: pre-wrap; }

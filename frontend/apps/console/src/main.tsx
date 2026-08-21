@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client'
 import '@printorian/ui/harvester.css'
 import '@printorian/ui/tokens.css'
 import './console.css'
-import { applyRealm } from '@printorian/ui'
+import { ErrorBoundary, applyRealm } from '@printorian/ui'
 import { App, REALM } from './App'
 
 // Before the first paint, so the hazard rail is present on the sign-in door as
@@ -15,8 +15,12 @@ import { App, REALM } from './App'
 // drawn outside the shell.
 applyRealm(REALM)
 
+// Outside `App`, so a throw while the shell itself is mounting is caught too —
+// a boundary inside the tree it is meant to protect protects nothing.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 )

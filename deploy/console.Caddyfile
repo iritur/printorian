@@ -10,6 +10,10 @@
 # never leaves the LAN, and giving it a certificate for a name only the farm
 # resolves buys a warning rather than a guarantee. Revisit if the LAN stops being
 # trusted — that is a network decision, not a Caddy one.
+#
+# And that is also why there is no `Strict-Transport-Security` here: HSTS on a
+# plain-HTTP origin is either ignored or a way to make the console unreachable.
+# It belongs on the storefront's edge, where TLS actually terminates (Stage 3).
 
 :8080 {
 	encode zstd gzip
@@ -41,6 +45,31 @@
 			X-Content-Type-Options nosniff
 			Referrer-Policy same-origin
 			-Server
+
+			# A content policy, which the console had none of. The bundle is
+			# self-contained — Vite emits hashed local assets, the fonts are
+			# vendored with the design kit, and the only network the app makes is
+			# to `/api` on this same origin — so the policy can be this tight
+			# without a single exception, and an injected `<script src>` has
+			# nowhere to load from.
+			#
+			# `connect-src 'self'` covers the live WebSocket: CSP3 makes `'self'`
+			# match `ws://` on the same host as an `http://` document, which is
+			# what `/api/ws/events` is. Worth knowing rather than rediscovering,
+			# because a browser that predates that reading would silently show a
+			# console whose boards never update — the exact failure the relay was
+			# built to remove.
+			#
+			# `'unsafe-inline'` on styles only: the app sets inline `style`
+			# attributes for the things that are genuinely dynamic (a progress
+			# width, a material's colour swatch). Scripts get no such allowance,
+			# which is the half that matters for injection.
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
+
+			# The console is a tool, never something to be framed by a page a
+			# person was led to. `frame-ancestors` above says the same thing to a
+			# modern browser; this covers the rest.
+			X-Frame-Options DENY
 		}
 
 		# SPA routing: unknown paths are client-side routes, not 404s.

@@ -135,6 +135,17 @@ def settings(tmp_path: Path, _database_ready: None) -> Settings:
         database_url=test_database_url(),
         session_ttl_hours=12,
         storage_root=str(tmp_path / "storage"),
+        # Ceilings lifted for the suite at large, and *only* there. The clock is
+        # frozen in tests, so a fixed window never rolls over and a test making
+        # thirty calls would be throttled by an accident of the harness rather
+        # than by anything it is asserting. The tests that are about the ceilings
+        # build their own `Settings` with the real numbers.
+        quote_rate_per_minute=100_000,
+        upload_rate_per_minute=100_000,
+        auth_rate_per_minute=100_000,
+        # Nothing in the suite should talk to Redis. Local events still reach
+        # local WebSocket clients, which is what the socket tests assert.
+        events_relay_enabled=False,
     )
 
 
@@ -311,3 +322,44 @@ def with_plate(
         await give_job_a_plate(db_session, object_store, clock, job_id, **overrides)  # type: ignore[arg-type]
 
     return attach
+
+
+def wire_app(
+    app: object,
+    *,
+    settings: Settings,
+    clock: FixedClock,
+    bus: EventBus,
+    database: object,
+    object_store: InMemoryObjectStore,
+) -> None:
+    """Put on ``app.state`` everything `create_app`'s lifespan would.
+
+    The API tests drive the app through `ASGITransport`, which does not run the
+    lifespan, so each of them used to assign the five pieces of state it happened
+    to need — the same five lines copied into thirteen files. Every new piece of
+    state then broke all thirteen at once, which is how this helper came to exist.
+
+    Deliberately *not* a fixture: the client fixtures build their own database per
+    test and must set it here, so this is the one shape they all call.
+    """
+    from printorian.api.ws import Hub
+    from printorian.core.cpu import CpuGate
+    from printorian.core.heartbeat import Heartbeat
+    from printorian.core.ratelimit import Lockout, RateLimiter
+
+    app.state.settings = settings  # type: ignore[attr-defined]
+    app.state.clock = clock  # type: ignore[attr-defined]
+    app.state.event_bus = bus  # type: ignore[attr-defined]
+    app.state.database = database  # type: ignore[attr-defined]
+    app.state.object_store = object_store  # type: ignore[attr-defined]
+    app.state.cpu = CpuGate(settings.cpu_workers)  # type: ignore[attr-defined]
+    app.state.limiter = RateLimiter(clock)  # type: ignore[attr-defined]
+    app.state.lockout = Lockout(clock)  # type: ignore[attr-defined]
+    app.state.heartbeat = Heartbeat(settings.redis_url)  # type: ignore[attr-defined]
+    # No relay: the suite runs without Redis, and the hub still receives every
+    # event raised in this process straight off the bus.
+    app.state.relay = None  # type: ignore[attr-defined]
+    hub = Hub()
+    hub.attach(bus)
+    app.state.hub = hub  # type: ignore[attr-defined]

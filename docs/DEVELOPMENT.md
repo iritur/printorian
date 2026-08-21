@@ -15,8 +15,13 @@ docker compose up -d
 ```
 
 ```bash
-cd backend && python -m venv .venv && .venv/Scripts/python -m pip install -e ".[dev]"
+cd backend && python -m venv .venv && .venv/Scripts/python -m pip install -e ".[dev]" -c constraints.txt
 ```
+
+`-c constraints.txt` matters: `pyproject.toml` declares floors (`>=`), and the
+constraints file says which versions the image, CI and your machine all actually
+install. Without it three people can pass the same gates against three different
+dependency sets. Regenerating it is a deliberate act — see the file's own header.
 
 ```bash
 cd backend && .venv/Scripts/python -m alembic upgrade head
@@ -139,6 +144,14 @@ cd backend && .venv/Scripts/python tools/check_file_length.py
 | `check_context_isolation.py` | One context reaching into another's `models` or `service` |
 | `check_file_length.py` | The 1,096-line service. Limit is 400 lines |
 | `alembic check` | Migrations drifting from the ORM models (ADR-0008) |
+
+Two more run only in the release gate, because they are about the *deployment*
+rather than the source tree:
+
+| Gate | What it prevents |
+|---|---|
+| `python -m printorian.workers --check` | A worker container that is running and not sweeping. It reads the beat each loop records at the end of a pass, so it fails for a wedged loop — which a process check cannot see |
+| `tools/relay_probe.py` | Live events not crossing the process boundary. The API and the workers are separate containers with a bus each; the Redis URL, channel and network between them are properties of the arrangement, not of the code |
 
 ## Database
 

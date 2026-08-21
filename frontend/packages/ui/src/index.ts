@@ -51,11 +51,15 @@ export type { ShapeName } from './nav/shapes'
 
 // The window chrome both apps sit in, and the kit's Void/Paper switch.
 export { AppShell } from './shell/AppShell'
+// The last thing between a render error and a blank page. Both apps wrap their
+// root in it; there was no boundary anywhere before.
+export { ErrorBoundary } from './shell/ErrorBoundary'
 export { useChrome } from './shell/chrome'
 export type { Chrome, MetaItem } from './shell/chrome'
 export { TabRail, TabView } from './shell/TabRail'
 export type { TabRailProps } from './shell/TabRail'
 export type { AppShellProps } from './shell/AppShell'
+export type { ErrorBoundaryProps } from './shell/ErrorBoundary'
 
 // The kit's popup, with the behaviour attached once: Esc, backdrop, focus in
 // and back, a tab trap, and no scrolling behind it.

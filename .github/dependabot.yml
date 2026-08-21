@@ -1,0 +1,37 @@
+# Dependency updates, proposed as pull requests.
+#
+# Every Python dependency in `backend/pyproject.toml` is a floor (`>=`), and
+# there was no lockfile and nothing watching for updates. Two consequences:
+# a build could not be reproduced, and a security advisory against a pinned
+# transitive dependency was nobody's job to notice. `backend/constraints.txt`
+# fixes the first; this fixes the second.
+#
+# Grouped so a week of patch bumps is one pull request that either passes CI or
+# does not — a dozen separate ones get rubber-stamped, which is worse than none.
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      backend-patch:
+        update-types: [patch, minor]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      frontend-patch:
+        update-types: [patch, minor]
+
+  # The release gate signs and publishes what these actions build, so a stale
+  # pinned action is part of the supply chain the gate is meant to protect.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

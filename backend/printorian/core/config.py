@@ -63,6 +63,51 @@ class Settings(BaseSettings):
     #: blocks VACUUM and lets table bloat grow unbounded.
     db_idle_in_transaction_timeout_ms: int = Field(default=60_000, ge=1000)
 
+    # -- blocking work -----------------------------------------------------
+    #: How many mesh analyses may occupy a worker thread at once (`core.cpu`).
+    #:
+    #: Analysis is seconds of NumPy on a large model, so it runs off the event
+    #: loop or the whole process stalls. Threads are not free either — each holds
+    #: the mesh and its intermediate arrays — so the pool is bounded rather than
+    #: unbounded, and past the limit callers queue. Four is a small multiple of
+    #: the cores a farm server has to spare while it is also serving requests.
+    cpu_workers: int = Field(default=4, ge=1)
+
+    # -- rate limits -------------------------------------------------------
+    #: Quotes and previews per minute, per client address.
+    #:
+    #: `POST /pricing/quote` takes an *optional* actor, so it is reachable without
+    #: signing in, and each call costs a mesh analysis. Without a ceiling here a
+    #: laptop can saturate the farm's API from the public internet. Generous
+    #: enough that a person configuring a model never notices: the configurator
+    #: re-quotes on option changes, not on every keystroke.
+    quote_rate_per_minute: int = Field(default=30, ge=1)
+    #: Uploads per minute, per client address, on the endpoints that store bytes.
+    upload_rate_per_minute: int = Field(default=10, ge=1)
+    #: Failed sign-ins tolerated per account and per address before the pair is
+    #: locked out. `SignInFailed` has always called itself "the raw material for
+    #: lockout"; this is the lockout.
+    signin_max_attempts: int = Field(default=10, ge=1)
+    #: How long a locked-out account/address pair stays locked.
+    signin_lockout_minutes: int = Field(default=15, ge=1)
+    #: Calls per minute, per address, to the authentication endpoints. The lockout
+    #: above counts *failures* against one account; this bounds the traffic itself,
+    #: including registration — Argon2 is expensive on purpose, so an unthrottled
+    #: sign-in endpoint is a way to spend the API's CPU as well as to guess.
+    auth_rate_per_minute: int = Field(default=20, ge=1)
+
+    # -- live events -------------------------------------------------------
+    #: Redis channel the event relay fans out on (`core.relay`).
+    #:
+    #: The API and the workers are separate processes (`deploy/compose.prod.yml`),
+    #: and the event bus is in-process — so without a relay every event raised by
+    #: a sweep rather than by a request dies in the worker, and the console's
+    #: "live" boards are live only for what a person clicked. This is that relay.
+    events_channel: str = "printorian.events"
+    #: Turn the relay off for a single-process deployment or a test that wants no
+    #: Redis. Local events still reach local WebSocket clients either way.
+    events_relay_enabled: bool = True
+
     # -- farm ------------------------------------------------------------
     farm_timezone: str = "Europe/Moscow"
     farm_open_hour: int = Field(default=9, ge=0, le=23)
@@ -127,6 +172,14 @@ class Settings(BaseSettings):
     #: How far ahead telemetry partitions are created. Two months means the job can
     #: fail silently for weeks before an insert has nowhere to go.
     telemetry_partition_months_ahead: int = Field(default=2, ge=1)
+    #: How long a worker loop may go without recording a pass before it counts as
+    #: wedged (`contexts.journal` is not involved — see `core.heartbeat`).
+    #:
+    #: Compared against the *slowest* loop's own interval, not against a single
+    #: number: the maintenance sweep runs hourly and the telemetry poller every
+    #: five seconds, so one threshold that suits both does not exist. This is the
+    #: multiple of a loop's own interval it may miss before it is called stale.
+    worker_stale_intervals: int = Field(default=4, ge=2)
     #: How long raw telemetry is kept, in days. **Zero disables dropping entirely**,
     #: which is the default on purpose: partitions are dropped whole and
     #: irreversibly, and until rollups exist (Slice G) the raw samples are the only

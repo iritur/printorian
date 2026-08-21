@@ -13,7 +13,14 @@ Started with::
 Each pass gets its own session, committed by `Database.session` on success and
 rolled back on failure — the same contract request handlers get, for the same
 reason: a worker that flushed without committing would compute the right number
-and throw it away.
+and throw it away. The passes themselves live in `workers.passes`; the shared
+machinery in `workers.runtime`; what is here is the loops and their lifetimes.
+
+Everything these loops publish also goes onto the event relay
+(`workers.runtime.WorkerRuntime.open`). That is not a detail: the API is a
+different container, the bus is in-process, and without the relay every event a
+sweep raises would die here — leaving the console's boards to load once and then
+sit still while the farm worked.
 """
 
 from __future__ import annotations
@@ -21,33 +28,16 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import signal
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 
 import structlog
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 # Registers every table on `Base.metadata`. A worker that imported only the
 # context it sweeps would flush an order fine until the first foreign key to a
 # table nobody imported — `orders.customer_id` → `users` — and then fail inside
 # the unit of work, far from the missing import.
 import printorian.models  # noqa: F401
-from printorian.contexts.catalog import ModelLibrary
-from printorian.contexts.fleet import FleetService
-from printorian.contexts.fleet.models import Printer
-from printorian.contexts.identity import IdentityService
-from printorian.contexts.ordering import OrderingService
-from printorian.contexts.packaging import PackagingService
-from printorian.contexts.postproduction import PostProductionService
-from printorian.contexts.production import ProductionService
-from printorian.core.clock import SystemClock
-from printorian.core.config import Settings, get_settings
-from printorian.core.db import Database
-from printorian.core.events import EventBus
+from printorian.core.config import Settings
 from printorian.core.logging import configure_logging
-from printorian.core.secrets import SecretBox
-from printorian.core.storage import build_object_store, prepare_root
 from printorian.workers import (
     maintenance,
     packaging,
@@ -57,31 +47,17 @@ from printorian.workers import (
     telemetry,
 )
 from printorian.workers.drivers import DriverPool
+from printorian.workers.passes import (
+    MaintenancePass,
+    PackagingPass,
+    PostProductionPass,
+    SchedulerPass,
+    SlaPass,
+    TelemetryPass,
+)
+from printorian.workers.runtime import WorkerRuntime
 
 logger = structlog.get_logger(__name__)
-
-
-class WorkerRuntime:
-    """The shared machinery every worker needs: settings, database, bus, clock."""
-
-    def __init__(self, settings: Settings | None = None) -> None:
-        self.settings = settings or get_settings()
-        self.clock = SystemClock()
-        self.bus = EventBus()
-        self.database = Database(self.settings)
-        # Same store the API writes through. Proved usable here too: the worker
-        # collects models, and a collector that cannot reach the disk should say
-        # so at startup rather than silently collecting nothing.
-        self.object_store = build_object_store(prepare_root(self.settings.storage_root))
-
-    @asynccontextmanager
-    async def session(self) -> AsyncIterator[AsyncSession]:
-        """One unit of work, committed on success."""
-        async for session in self.database.session():
-            yield session
-
-    async def dispose(self) -> None:
-        await self.database.dispose()
 
 
 async def _sla_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> None:
@@ -94,8 +70,8 @@ async def _sla_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> None:
     directly, one session per iteration, which keeps the commit point obvious.
     """
 
-    async def build() -> _SessionScopedSweep:
-        return _SessionScopedSweep(runtime)
+    async def build() -> SlaPass:
+        return SlaPass(runtime)
 
     await sla.run_forever(
         build,
@@ -110,28 +86,14 @@ async def _postproduction_forever(runtime: WorkerRuntime, stop: asyncio.Event) -
     Same session-per-pass arrangement as the SLA loop, for the same reason.
     """
 
-    async def build() -> _SessionScopedPostProduction:
-        return _SessionScopedPostProduction(runtime)
+    async def build() -> PostProductionPass:
+        return PostProductionPass(runtime)
 
     await postproduction.run_forever(
         build,
         interval_seconds=runtime.settings.postproduction_sweep_seconds,
         stop=stop,
     )
-
-
-class _SessionScopedPostProduction:
-    """A post-production pass that opens, uses and commits its own session."""
-
-    def __init__(self, runtime: WorkerRuntime) -> None:
-        self._runtime = runtime
-
-    async def sweep(self) -> postproduction.SweepOutcome:
-        async with self._runtime.session() as session:
-            service = PostProductionService(session, self._runtime.clock, self._runtime.bus)
-            return await postproduction.PostProductionSweep(
-                session, service, self._runtime.clock
-            ).sweep()
 
 
 async def _packaging_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> None:
@@ -143,8 +105,8 @@ async def _packaging_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> Non
     happened to finish last.
     """
 
-    async def build() -> _SessionScopedPackaging:
-        return _SessionScopedPackaging(runtime)
+    async def build() -> PackagingPass:
+        return PackagingPass(runtime)
 
     await packaging.run_forever(
         build,
@@ -153,51 +115,20 @@ async def _packaging_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> Non
     )
 
 
-class _SessionScopedPackaging:
-    """A packing pass that opens, uses and commits its own session."""
-
-    def __init__(self, runtime: WorkerRuntime) -> None:
-        self._runtime = runtime
-
-    async def sweep(self) -> packaging.SweepOutcome:
-        async with self._runtime.session() as session:
-            service = PackagingService(session, self._runtime.clock, self._runtime.bus)
-            return await packaging.PackagingSweep(
-                session, service, self._runtime.clock, self._runtime.settings.farm_timezone
-            ).sweep()
-
-
 async def _maintenance_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> None:
     """Run housekeeping — partitions, retention, expired sessions.
 
     Same session-per-pass arrangement as the SLA loop, for the same reason.
     """
 
-    async def build() -> _SessionScopedMaintenance:
-        return _SessionScopedMaintenance(runtime)
+    async def build() -> MaintenancePass:
+        return MaintenancePass(runtime)
 
     await maintenance.run_forever(
         build,
         interval_seconds=runtime.settings.maintenance_sweep_seconds,
         stop=stop,
     )
-
-
-class _SessionScopedMaintenance:
-    """A maintenance pass that opens, uses and commits its own session."""
-
-    def __init__(self, runtime: WorkerRuntime) -> None:
-        self._runtime = runtime
-
-    async def sweep(self) -> maintenance.MaintenanceOutcome:
-        async with self._runtime.session() as session:
-            identity = IdentityService(
-                session, self._runtime.settings, self._runtime.clock, self._runtime.bus
-            )
-            models = ModelLibrary(session, self._runtime.object_store, self._runtime.clock)
-            return await maintenance.MaintenanceSweep(
-                identity, models, session, self._runtime.clock, self._runtime.settings
-            ).sweep()
 
 
 async def _scheduler_forever(runtime: WorkerRuntime, pool: DriverPool, stop: asyncio.Event) -> None:
@@ -210,8 +141,8 @@ async def _scheduler_forever(runtime: WorkerRuntime, pool: DriverPool, stop: asy
     wake = asyncio.Event()
     scheduler.attach_replanning(runtime.bus, wake)
 
-    async def build() -> _SessionScopedTick:
-        return _SessionScopedTick(runtime, pool)
+    async def build() -> SchedulerPass:
+        return SchedulerPass(runtime, pool)
 
     await scheduler.run_forever(
         build,
@@ -221,33 +152,11 @@ async def _scheduler_forever(runtime: WorkerRuntime, pool: DriverPool, stop: asy
     )
 
 
-class _SessionScopedTick:
-    """One planning-and-dispatch pass, with its own session and live drivers."""
-
-    def __init__(self, runtime: WorkerRuntime, pool: DriverPool) -> None:
-        self._runtime = runtime
-        self._pool = pool
-
-    async def tick(self) -> scheduler.TickOutcome:
-        async with self._runtime.session() as session:
-            fleet = _fleet_service(self._runtime, session)
-            drivers = await self._pool.refresh(fleet, await _all_printers(session))
-            # The store is what turns a dispatch into real bytes on a printer;
-            # without it `plate_to_send` refuses and every job returns to the queue.
-            production = ProductionService(
-                session,
-                self._runtime.clock,
-                self._runtime.bus,
-                store=self._runtime.object_store,
-            )
-            return await scheduler.SchedulerTick(production, fleet, drivers).tick()
-
-
 async def _telemetry_forever(runtime: WorkerRuntime, pool: DriverPool, stop: asyncio.Event) -> None:
     """Ask every reachable machine what it is doing, and record the answer."""
 
-    async def build() -> _SessionScopedPoll:
-        return _SessionScopedPoll(runtime, pool)
+    async def build() -> TelemetryPass:
+        return TelemetryPass(runtime, pool)
 
     await telemetry.run_forever(
         build,
@@ -256,62 +165,11 @@ async def _telemetry_forever(runtime: WorkerRuntime, pool: DriverPool, stop: asy
     )
 
 
-class _SessionScopedPoll:
-    """One telemetry sweep, with its own session and the shared connections."""
-
-    def __init__(self, runtime: WorkerRuntime, pool: DriverPool) -> None:
-        self._runtime = runtime
-        self._pool = pool
-
-    async def sweep(self) -> telemetry.PollOutcome:
-        async with self._runtime.session() as session:
-            fleet = _fleet_service(self._runtime, session)
-            printers = await _all_printers(session)
-            drivers = await self._pool.refresh(fleet, printers)
-            return await telemetry.TelemetryPoller(fleet, drivers).sweep(printers)
-
-
-def _fleet_service(runtime: WorkerRuntime, session: AsyncSession) -> FleetService:
-    return FleetService(
-        session,
-        runtime.clock,
-        runtime.bus,
-        SecretBox(runtime.settings.secret_key.get_secret_value()),
-    )
-
-
-async def _all_printers(session: AsyncSession) -> list[Printer]:
-    """Every registered machine, active or not.
-
-    Inactive ones are included deliberately: the pool needs to see them to close
-    connections it is still holding to a printer somebody just retired.
-    """
-    return list(await session.scalars(select(Printer)))
-
-
-class _SessionScopedSweep:
-    """A sweep that opens, uses and commits its own session.
-
-    `sla.run_forever` asks for something with `sweep()`; this satisfies that while
-    keeping the session's lifetime exactly one pass long. Without it the worker
-    would either share one session across every sweep — a transaction open for
-    the process's lifetime, reading a snapshot older than the orders it is meant
-    to notice — or never commit at all.
-    """
-
-    def __init__(self, runtime: WorkerRuntime) -> None:
-        self._runtime = runtime
-
-    async def sweep(self) -> sla.SweepOutcome:
-        async with self._runtime.session() as session:
-            ordering = OrderingService(session, self._runtime.clock, self._runtime.bus)
-            return await sla.SlaSweep(ordering).sweep()
-
-
 async def main(settings: Settings | None = None) -> None:
     """Start every worker and run until the process is asked to stop."""
     runtime = WorkerRuntime(settings)
     configure_logging(runtime.settings)
+    await runtime.open()
 
     stop = asyncio.Event()
     _install_signal_handlers(stop)

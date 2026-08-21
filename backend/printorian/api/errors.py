@@ -19,17 +19,22 @@ from printorian.core.errors import (
     DomainRuleViolationError,
     IntegrationError,
     NotFoundError,
+    PayloadTooLargeError,
     PermissionDeniedError,
     PrintorianError,
+    RateLimitedError,
     UnauthenticatedError,
     ValidationError,
 )
 
 logger = structlog.get_logger(__name__)
 
-# 422 is spelled as a literal: Starlette renamed the constant
-# (UNPROCESSABLE_ENTITY -> UNPROCESSABLE_CONTENT) and the deprecation shim warns.
+# 422 and 413 are spelled as literals: Starlette renamed both constants
+# (UNPROCESSABLE_ENTITY -> UNPROCESSABLE_CONTENT, REQUEST_ENTITY_TOO_LARGE ->
+# CONTENT_TOO_LARGE) and the deprecation shim warns on the old names — which the
+# test suite turns into an error at import time.
 _UNPROCESSABLE = 422
+_TOO_LARGE = 413
 
 _STATUS_BY_TYPE: list[tuple[type[PrintorianError], int]] = [
     (ValidationError, _UNPROCESSABLE),
@@ -37,6 +42,8 @@ _STATUS_BY_TYPE: list[tuple[type[PrintorianError], int]] = [
     (PermissionDeniedError, status.HTTP_403_FORBIDDEN),
     (NotFoundError, status.HTTP_404_NOT_FOUND),
     (ConflictError, status.HTTP_409_CONFLICT),
+    (PayloadTooLargeError, _TOO_LARGE),
+    (RateLimitedError, status.HTTP_429_TOO_MANY_REQUESTS),
     (DomainRuleViolationError, _UNPROCESSABLE),
     (IntegrationError, status.HTTP_502_BAD_GATEWAY),
     (ConfigurationError, status.HTTP_500_INTERNAL_SERVER_ERROR),
@@ -118,7 +125,15 @@ def install_error_handlers(app: FastAPI) -> None:
                 path=request.url.path,
                 exc_info=exc,
             )
-        return JSONResponse(status_code=http_status, content=error_body(exc))
+        headers: dict[str, str] | None = None
+        if isinstance(exc, RateLimitedError):
+            # A client that is told to back off and not told for how long guesses,
+            # and a guessing client retries immediately. The wait is already in
+            # `details`; this is the same number where an HTTP client looks for it.
+            retry_after = exc.details.get("retry_after_seconds")
+            if isinstance(retry_after, int):
+                headers = {"Retry-After": str(retry_after)}
+        return JSONResponse(status_code=http_status, content=error_body(exc), headers=headers)
 
     @app.exception_handler(RequestValidationError)
     async def _handle_validation(request: Request, exc: RequestValidationError) -> JSONResponse:

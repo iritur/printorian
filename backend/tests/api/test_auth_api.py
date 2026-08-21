@@ -21,6 +21,7 @@ from printorian.core.config import Settings
 from printorian.core.db import Base
 from printorian.core.events import EventBus
 from printorian.core.storage import InMemoryObjectStore
+from tests.conftest import wire_app
 
 PASSWORD = "correct-horse-battery"
 
@@ -59,11 +60,14 @@ async def client(
     async with database.engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
 
-    app.state.settings = settings
-    app.state.clock = clock
-    app.state.event_bus = bus
-    app.state.database = database
-    app.state.object_store = object_store
+    wire_app(
+        app,
+        settings=settings,
+        clock=clock,
+        bus=bus,
+        database=database,
+        object_store=object_store,
+    )
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as http:

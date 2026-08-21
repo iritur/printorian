@@ -63,6 +63,29 @@ class UnauthenticatedError(PrintorianError):
     code = "error.unauthenticated"
 
 
+class PayloadTooLargeError(PrintorianError):
+    """The request body is bigger than this endpoint will accept.
+
+    Raised while the body is still arriving, not after it has been buffered — the
+    distinction is the whole point. A limit checked after ``await file.read()`` has
+    already paid the memory it was meant to protect.
+    """
+
+    code = "error.payload_too_large"
+
+
+class RateLimitedError(PrintorianError):
+    """The caller has asked for this too often and must wait.
+
+    Distinct from `PermissionDeniedError`: nothing is wrong with who they are, only
+    with how fast they are asking. `details["retry_after_seconds"]` is what the
+    handler turns into a ``Retry-After`` header, so a well-behaved client backs off
+    by the right amount instead of guessing.
+    """
+
+    code = "error.rate_limited"
+
+
 class DomainRuleViolationError(PrintorianError):
     """A business invariant would be broken by this operation."""
 

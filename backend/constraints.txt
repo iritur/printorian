@@ -1,0 +1,90 @@
+# Pinned versions for a reproducible build.
+#
+# Every dependency in `pyproject.toml` is a floor (`>=`), which is the right way
+# to declare what the code needs and the wrong way to build the same image twice:
+# two builds of one commit could resolve different versions, and a bad upstream
+# release reached the farm without anything changing in this repository.
+#
+# So `pyproject.toml` keeps saying what is *required* and this says what is
+# *installed*. Applied by the Dockerfile, by CI, and by DEVELOPMENT.md's setup —
+# a constraints file that only some of those honour pins nothing.
+#
+# Regenerate deliberately, never by hand:
+#
+#     pip install -e ".[dev]" --upgrade
+#     pip list --format=freeze | grep -viE '^(printorian|pip|setuptools|wheel)==' | sort > constraints.txt
+#
+# then let CI prove the new set before it is merged — which is the whole point of
+# having it, and what makes Dependabot's grouped pull requests meaningful.
+#
+# **A constraint applies only if the package is installed at all**, so this file
+# does not have to know about platforms: `uvloop` is pulled by `uvicorn[standard]`
+# on Linux and not on Windows, and is simply absent here rather than wrong. The
+# set below was resolved on Windows; anything Linux-only resolves freely until it
+# is added, which is a gap this file narrows rather than closes.
+Mako==1.4.1
+MarkupSafe==3.0.3
+PyYAML==6.0.3
+Pygments==2.21.0
+SQLAlchemy==2.0.52
+aiosqlite==0.22.1
+alembic==1.19.1
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.14.2
+argon2-cffi-bindings==26.1.0
+argon2-cffi==25.1.0
+ast_serialize==0.8.0
+asyncpg==0.31.0
+certifi==2026.7.22
+cffi==2.1.1
+click==8.4.2
+colorama==0.4.6
+coverage==7.15.4
+cryptography==50.0.0
+dnspython==2.8.0
+email-validator==2.3.0
+fastapi==0.141.1
+greenlet==3.5.5
+grimp==3.15
+h11==0.16.0
+httpcore2==2.12.0
+httpcore==1.0.9
+httptools==0.8.0
+httpx2==2.12.0
+httpx==0.28.1
+idna==3.19
+import-linter==2.13
+iniconfig==2.3.0
+librt==0.15.0
+markdown-it-py==4.2.0
+mdurl==0.1.2
+mypy==2.3.1
+mypy_extensions==1.1.0
+numpy==2.5.2
+packaging==26.3
+paho-mqtt==2.1.0
+pathspec==1.1.1
+pluggy==1.6.0
+psycopg2-binary==2.9.12
+pycparser==3.0
+pydantic-settings==2.15.0
+pydantic==2.13.4
+pydantic_core==2.46.4
+pytest-asyncio==1.4.0
+pytest-cov==7.1.0
+pytest==9.1.1
+python-dotenv==1.2.3
+python-multipart==0.0.32
+redis==8.1.0
+rich==15.0.0
+ruff==0.16.4
+starlette==1.6.0
+structlog==26.1.0
+truststore==0.10.4
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+tzdata==2026.3
+uvicorn==0.52.4
+watchfiles==1.2.0
+websockets==17.0.1

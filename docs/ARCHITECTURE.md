@@ -283,6 +283,14 @@ class PrinterDriver(Protocol):
 
 An in-process async event bus inside the backend; Redis pub/sub fans out to WebSocket clients. **One event schema** shared by both web apps, generated into TypeScript alongside the API client.
 
+**The Redis half is not optional, and for a while it did not exist.** The API and the workers run as separate containers (`deploy/compose.prod.yml`), each with its own in-process bus, so every event raised by a *sweep* rather than by a request was published into the worker process and stopped there — telemetry state changes, the SLA clock's credits, the post-production and packaging boards. The console's boards refetch on an event and on connect, never on a timer, so in production they loaded once and then sat still while the farm worked. Nothing failed; the screens were simply wrong, which is why it went unnoticed.
+
+`core/relay.py` is that fan-out. Every process publishes the live patterns onto one channel tagged with its own origin; the API subscribes and pushes what arrives to its WebSocket clients, skipping its own origin because those events already reached the hub off the local bus. That origin filter is what makes the design work unchanged with Redis absent — local events still reach local clients, and only the cross-process hop is missing — and it is what will let the API run more than one replica when ADR-0003 stops being true.
+
+Redis stays a transport and not a source of truth: nothing is persisted, nothing is replayed, and a dropped frame is covered by the client's resync-on-connect. A relay that cannot reach Redis logs and keeps serving rather than failing the operation that emitted the event. The release gate proves the hop in the arrangement that ships (`backend/tools/relay_probe.py`).
+
+**One redaction.** `payment.settled` carries an amount, and every holder of `VIEW_PRODUCTION` is entitled to this socket — while the REST API keeps `VIEW_FINANCIALS` deliberately separate from every production permission. The two disagreed about who may see money. The socket has no per-actor filtering, so the amount is stripped on the one path both sources share (`core.relay.REDACTED_FIELDS`); a screen that should show money asks the API, which checks the permission.
+
 ```
 printer.state_changed   job.progress        job.finished       job.failed
 order.stage_changed     material.low        material.mounted   attention.raised
@@ -368,7 +376,10 @@ security boundary.
 | **Files** | Model assets and plates on the filesystem/NAS behind an `ObjectStore` interface (local now, S3-compatible later); DB stores references + hashes only |
 | **Time** | UTC everywhere internally; farm timezone applied only at presentation and in open-hours rules |
 | **Migrations** | Alembic only. One head. Migration tests run on every CI build against a fresh and a seeded database |
-| **Observability** | Structured JSON logs with correlation IDs, Prometheus metrics, and a `/health` covering DB, Redis, and each driver's connection state |
+| **Observability** | Structured JSON logs with correlation IDs (bound per request by `api.middleware`, and echoed on `X-Request-ID` so a trace begun at the proxy continues), one access line per request with its duration, `/health` and `/health/ready`, and `/health/workers` for whether each sweep is still sweeping. Prometheus metrics remain Stage 5 |
+| **Blocking work** | Nothing that computes for a second runs on the event loop. The API is one process, so a second spent parsing a mesh is a second in which it serves nothing — `core.cpu` runs that work in a bounded pool of threads, and the limit is injected rather than assumed |
+| **Rate limits** | Ceilings on the endpoints whose *cost* is the problem, and a lockout in front of password guessing (`core.ratelimit`). `POST /pricing/quote` takes an optional actor, so it is reachable without signing in and every call parses a mesh. In-process, which is correct while ADR-0003 holds and is recorded in DATABASE-REVIEW §9 as a trade-off rather than a fact |
+| **Request bodies** | Refused by size at the ASGI layer, before anything buffers them (`api.middleware.BodySizeLimitMiddleware`). A check inside a handler runs after `python-multipart` has already parsed the whole body, so it cannot decline to spend the memory |
 | **Backup** | `pg_dump` + object-store snapshot on a schedule, with a **tested restore procedure** — untested backups are not backups |
 
 ---

@@ -48,10 +48,13 @@ jobs:
           cache: pip
           cache-dependency-path: backend/pyproject.toml
 
+      # `-c constraints.txt`: the same pinned set the image is built from, so a
+      # green CI run is evidence about the versions that actually ship rather
+      # than about whatever pip resolved this morning (`backend/constraints.txt`).
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev]" -c constraints.txt
 
       # --- governance gates (ARCHITECTURE §11) -------------------------
       # Each of these encodes a specific way V1 rotted. They run before the
@@ -244,6 +247,10 @@ jobs:
           test "$(docker inspect -f '{{.State.ExitCode}}' printorian-migrate-1)" = 0
           await printorian-api-1     '{{.State.Health.Status}}' healthy
           await printorian-console-1 '{{.State.Health.Status}}' healthy
+          # The workers have a real healthcheck now — it reads the beat each loop
+          # records at the end of a pass, so this asserts they are *sweeping*
+          # rather than merely running (printorian/core/heartbeat.py).
+          await printorian-workers-1 '{{.State.Health.Status}}' healthy
 
       - name: Migrations apply, reverse and re-apply in the image
         run: |
@@ -265,13 +272,25 @@ jobs:
           curl -fsS -o /dev/null http://127.0.0.1:8080/
           curl -fsS http://127.0.0.1:8080/api/health | grep -q '"status":"ok"'
 
-      # The workers container has no HTTP surface, so the only honest check is
-      # that it is still running rather than crash-looping. Stage 5's /metrics
-      # makes a real liveness signal possible.
-      - name: Workers stayed up
+      # Every loop, by name. `--check` exits non-zero if any of them has not swept
+      # within its own window, so this is the gate noticing a wedged sweep — the
+      # thing the container's disabled healthcheck could never do.
+      - name: Every worker loop is sweeping
         run: |
-          test "$(docker inspect -f '{{.State.Running}}' printorian-workers-1)" = true
-          docker compose -f deploy/compose.prod.yml --env-file deploy/.env logs workers | tail -20
+          compose() { docker compose -f deploy/compose.prod.yml --env-file deploy/.env "$@"; }
+          compose exec -T workers python -m printorian.workers --check
+          compose logs workers | tail -20
+
+      # Live events cross the process boundary. The API and the workers are
+      # separate containers with an in-process bus each, so without the relay
+      # every event a sweep raises dies in the worker and the console's boards
+      # are live only for what somebody clicked. Redis URL, channel and the
+      # network between the containers are properties of *this* arrangement, so
+      # they are proved here rather than in a unit test.
+      - name: The event relay carries events between processes
+        run: |
+          compose() { docker compose -f deploy/compose.prod.yml --env-file deploy/.env "$@"; }
+          compose exec -T api python tools/relay_probe.py
 
       - name: Tear down
         if: always()

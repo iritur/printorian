@@ -28,6 +28,20 @@ dependencies = [
     "cryptography>=44",
     # Bambu LAN control: MQTT over TLS.
     "paho-mqtt>=2.1",
+    # The IANA time zone database, for `farm_timezone`.
+    #
+    # `zoneinfo` reads the operating system's copy where there is one, so a Linux
+    # container has never needed this — and Windows has no copy at all, which made
+    # `ZoneInfo("Europe/Moscow")` raise on every developer machine. The packaging
+    # sweep is the one that wanted it, so the symptom was that pass dying every
+    # sixty seconds while the rest of the worker carried on, and nothing said so
+    # until the loop heartbeats made a wedged sweep visible (`core.heartbeat`).
+    #
+    # Declared unconditionally rather than behind a `sys_platform` marker: pinning
+    # the tz database is the more reproducible answer on any platform, and a farm
+    # whose timezone rules come from whatever the base image happens to ship is a
+    # farm whose open-hours arithmetic moves when the image is rebuilt.
+    "tzdata>=2025.1",
 ]
 
 [project.optional-dependencies]

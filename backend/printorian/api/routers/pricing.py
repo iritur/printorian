@@ -14,9 +14,16 @@ from collections import OrderedDict
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
-from printorian.api.deps import AppSettings, DbSession, Models, OptionalActor
+from printorian.api.deps import (
+    AppSettings,
+    Cpu,
+    DbSession,
+    Models,
+    OptionalActor,
+    rate_limited,
+)
 from printorian.api.routers._loyalty import tier_for
 from printorian.api.routers._pricing_render import _render, _render_delta
 from printorian.contexts.catalog import (
@@ -37,7 +44,8 @@ from printorian.contexts.pricing import (
     diff,
     price,
 )
-from printorian.core.errors import ValidationError
+from printorian.core.cpu import CpuGate
+from printorian.core.errors import PayloadTooLargeError, ValidationError
 from printorian.core.ids import EntityId
 from printorian.core.storage import digest_of
 
@@ -122,6 +130,7 @@ async def _material_price(db: DbSession, codes: list[str]) -> MaterialPrice:
 async def _build_spec(
     db: DbSession,
     *,
+    cpu: CpuGate,
     model: UploadFile,
     material_code: str,
     material_codes: list[str] | None = None,
@@ -145,9 +154,19 @@ async def _build_spec(
     """
     data = await model.read()
     if len(data) > max_bytes:
-        raise ValidationError("error.catalog.upload_too_large", size=len(data))
+        # A second ceiling, below the one `BodySizeLimitMiddleware` already refused
+        # the body at: this one is the *decoded part's* size and can be tighter
+        # than the global upload limit. Reaching it means the multipart framing was
+        # smaller than the file inside it, not that nothing checked earlier.
+        raise PayloadTooLargeError(
+            "error.catalog.upload_too_large", size=len(data), limit=max_bytes
+        )
 
-    analysis = _analyse_cached(data)
+    # Off the event loop. Analysis is seconds of NumPy on a large mesh, and this
+    # process is the only one serving the storefront, the console and the health
+    # check — see `core.cpu` for the measurements that make that a bug rather than
+    # a preference.
+    analysis = await cpu.run(_analyse_cached, data)
     if not analysis.is_priceable:
         # An unclosed mesh has no defined volume. Quoting one anyway would be
         # presenting a guess as a fact.
@@ -233,12 +252,16 @@ async def _build_spec(
     return price_spec, context
 
 
-@router.post("/quote")
+@router.post(
+    "/quote",
+    dependencies=[Depends(rate_limited("quote", lambda s: s.quote_rate_per_minute))],
+)
 async def quote(
     db: DbSession,
     models: Models,
     settings: AppSettings,
     actor: OptionalActor,
+    cpu: Cpu,
     model: Annotated[UploadFile, File()],
     material_code: Annotated[str, Form()],
     #: Every product on the plate, one per colour. `material_code` alone still
@@ -254,6 +277,7 @@ async def quote(
     """Price an uploaded STL and return the full itemized structure."""
     spec, context = await _build_spec(
         db,
+        cpu=cpu,
         model=model,
         material_code=material_code,
         material_codes=material_codes,
@@ -293,10 +317,14 @@ async def quote(
     }
 
 
-@router.post("/preview")
+@router.post(
+    "/preview",
+    dependencies=[Depends(rate_limited("quote", lambda s: s.quote_rate_per_minute))],
+)
 async def preview_option(
     db: DbSession,
     actor: OptionalActor,
+    cpu: Cpu,
     model: Annotated[UploadFile, File()],
     material_code: Annotated[str, Form()],
     #: Every product on the plate, one per colour. `material_code` alone still
@@ -323,6 +351,7 @@ async def preview_option(
     """
     spec, context = await _build_spec(
         db,
+        cpu=cpu,
         model=model,
         material_code=material_code,
         material_codes=material_codes,

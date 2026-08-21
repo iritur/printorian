@@ -27,6 +27,7 @@ from printorian.core.db import Base
 from printorian.core.events import EventBus
 from printorian.core.ids import new_id
 from printorian.core.storage import InMemoryObjectStore
+from tests.conftest import wire_app
 
 PASSWORD = "correct-horse-battery"
 
@@ -89,11 +90,14 @@ def app_client(
 
     asyncio.run(prepare())
 
-    app.state.settings = settings
-    app.state.clock = clock
-    app.state.event_bus = bus
-    app.state.database = database
-    app.state.object_store = object_store
+    wire_app(
+        app,
+        settings=settings,
+        clock=clock,
+        bus=bus,
+        database=database,
+        object_store=object_store,
+    )
     app.state.hub = Hub()
     app.state.hub.attach(bus)
 
@@ -306,3 +310,62 @@ def test_a_customer_is_refused_over_a_subprotocol_too(app_client: TestClient) ->
         ),
     ):
         pass
+
+
+def test_an_event_raised_in_another_process_reaches_a_client(app_client: TestClient) -> None:
+    """The defect this socket had in production, and the fix for it.
+
+    The API and the workers are separate containers with an in-process bus each,
+    so a `fleet.printer_state_changed` raised by the telemetry poller never
+    reached anybody watching: it was published onto the *worker's* bus and stopped
+    there. The relay delivers those as payloads rather than as `Event` objects,
+    because in this process they only ever existed as JSON — which is why the hub
+    has `broadcast_payload` at all.
+    """
+    token = sign_in(app_client, "op@example.com")
+
+    with app_client.websocket_connect(
+        "/ws/events", headers={"Authorization": f"Bearer {token}"}
+    ) as socket:
+        hub: Hub = app_client.app.state.hub
+        asyncio.run(
+            hub.broadcast_payload(
+                {
+                    "name": "postproduction.task_raised",
+                    "task_id": "t-1",
+                    "order_number": "P-1042",
+                }
+            )
+        )
+        message = socket.receive_json()
+
+    assert message["name"] == "postproduction.task_raised"
+    assert message["order_number"] == "P-1042"
+
+
+def test_the_amount_never_reaches_the_floor(app_client: TestClient) -> None:
+    """The socket and the REST API disagreed about who may see money.
+
+    Every holder of `VIEW_PRODUCTION` is entitled to this stream, while the API
+    keeps `VIEW_FINANCIALS` deliberately separate from every production
+    permission — so a settled payment was showing its amount to an operator the
+    REST API would refuse. Redacted on the one path both sources share, so it
+    holds for a locally raised event and a relayed one alike.
+    """
+    token = sign_in(app_client, "op@example.com")
+
+    with app_client.websocket_connect(
+        "/ws/events", headers={"Authorization": f"Bearer {token}"}
+    ) as socket:
+        hub: Hub = app_client.app.state.hub
+        asyncio.run(
+            hub.broadcast_payload(
+                {"name": "payment.settled", "order_id": "o-1", "amount": "12400.00"}
+            )
+        )
+        message = socket.receive_json()
+
+    assert message["name"] == "payment.settled"
+    assert "amount" not in message
+    # Still useful: the floor learns the order is paid, which is what it needs.
+    assert message["order_id"] == "o-1"

@@ -37,6 +37,7 @@ from printorian.contexts.pricing import (
 )
 from printorian.contexts.production import JobStatus
 from printorian.contexts.production.models import PrintJob
+from printorian.core.cpu import CpuGate
 
 
 async def _suitable_materials(db: DbSession, model: CatalogModel) -> list[SuitableMaterial]:
@@ -112,7 +113,7 @@ LADDER = (1, 5, 10, 25, 50)
 
 
 async def _price_ladder(
-    db: DbSession, models: Models, model: CatalogModel
+    db: DbSession, models: Models, model: CatalogModel, cpu: CpuGate
 ) -> tuple[list[PriceRung], str]:
     """«Цена по количеству» — five real quotes, not one quote extrapolated.
 
@@ -140,7 +141,9 @@ async def _price_ladder(
 
     try:
         data, _ = await models.content(model.model_asset_id)
-        analysis = analyse_stl(data)
+        # Off the loop: this runs while a customer opens a catalogue popup, and a
+        # large stored model would otherwise stall every other request (`core.cpu`).
+        analysis = await cpu.run(analyse_stl, data)
         if not analysis.is_priceable:
             return [], ""
         prediction = estimate(

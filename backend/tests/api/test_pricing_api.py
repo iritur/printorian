@@ -26,6 +26,7 @@ from printorian.core.config import Settings
 from printorian.core.db import Base
 from printorian.core.events import EventBus
 from printorian.core.storage import InMemoryObjectStore
+from tests.conftest import wire_app
 from tests.unit.test_mesh_analysis import cube_triangles, to_binary_stl
 
 CUBE = to_binary_stl(cube_triangles(40.0))  # a 40mm cube: substantial but quick
@@ -91,11 +92,14 @@ async def client(
         await inventory.add_lot(CreateMaterialLot(spec_code="pla-black", shelf="B3"))
         await session.commit()
 
-    app.state.settings = settings
-    app.state.clock = clock
-    app.state.event_bus = bus
-    app.state.database = database
-    app.state.object_store = object_store
+    wire_app(
+        app,
+        settings=settings,
+        clock=clock,
+        bus=bus,
+        database=database,
+        object_store=object_store,
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as http:
         yield http

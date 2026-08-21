@@ -12,7 +12,16 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 
-from printorian.api.deps import AppClock, DbSession, Models, OptionalActor, requires
+from printorian.api.deps import (
+    AppClock,
+    AppSettings,
+    Cpu,
+    DbSession,
+    Models,
+    OptionalActor,
+    rate_limited,
+    requires,
+)
 from printorian.api.routers._catalog_panels import (
     _history,
     _price_ladder,
@@ -40,6 +49,7 @@ from printorian.contexts.catalog.catalogue_schemas import (
 )
 from printorian.contexts.catalog.curation import CatalogCuration
 from printorian.contexts.identity import Actor, Permission
+from printorian.core.errors import PayloadTooLargeError
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
@@ -115,6 +125,7 @@ async def model_detail(
     slug: str,
     db: DbSession,
     models: Models,
+    cpu: Cpu,
     actor: OptionalActor = None,
 ) -> CatalogCard:
     """One model, by the slug that appears in its URL.
@@ -125,7 +136,7 @@ async def model_detail(
     model = await ModelCatalogue(db).get(slug, include_unpublished=_may_see_drafts(actor))
     card = card_of(model)
     card.suitable_materials = await _suitable_materials(db, model)
-    card.price_ladder, card.price_basis = await _price_ladder(db, models, model)
+    card.price_ladder, card.price_basis = await _price_ladder(db, models, model, cpu)
     card.history = await _history(db, model)
     return card
 
@@ -183,9 +194,14 @@ async def model_geometry(
 # shop window nobody can look into is not a shop window.
 
 
-@router.post("/geometry", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/geometry",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limited("upload", lambda s: s.upload_rate_per_minute))],
+)
 async def upload_geometry(
     models: Models,
+    settings: AppSettings,
     actor: Annotated[Actor, Depends(requires(Permission.MANAGE_LIBRARY))],
     file: Annotated[UploadFile, File()],
 ) -> UploadedGeometry:
@@ -201,6 +217,19 @@ async def upload_geometry(
     rather than after it is published.
     """
     data = await file.read()
+    if len(data) > settings.max_upload_bytes:
+        # This endpoint had no size check at all. It is staff-only, which lowered
+        # the odds rather than the cost: a mesh nobody meant to send is still a
+        # mesh the process parses and the disk keeps.
+        raise PayloadTooLargeError(
+            "error.catalog.upload_too_large",
+            size=len(data),
+            limit=settings.max_upload_bytes,
+        )
+
+    # `ingest` measures off the event loop through the same gate (`core.cpu`), and
+    # decides for itself whether the format can be measured at all — a 3MF is
+    # stored and served but never parsed, and that rule has one home.
     asset = await models.ingest(
         data, filename=file.filename or "model.stl", uploaded_by=actor.user_id
     )

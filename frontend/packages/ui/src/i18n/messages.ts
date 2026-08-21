@@ -51,6 +51,8 @@ export const ru = {
   'error.integration': 'Внешняя система недоступна',
   'error.configuration': 'Ошибка конфигурации',
   'error.internal': 'Внутренняя ошибка',
+  'error.rate_limited': 'Слишком много запросов. Повторите через {retry_after_seconds} с',
+  'error.payload_too_large': 'Файл слишком большой',
 
   // Prefix entries: `translateError` falls back to these when a more specific
   // code has no catalogue entry, so a newly added backend code still renders.
@@ -62,6 +64,8 @@ export const ru = {
   'error.identity.session_expired': 'Сессия истекла, войдите заново',
   'error.identity.account_disabled': 'Учётная запись отключена',
   'error.identity.password_too_short': 'Пароль слишком короткий',
+  'error.identity.locked_out':
+    'Слишком много неудачных попыток. Повторите через {retry_after_seconds} с',
 
   'error.driver.unavailable': 'Принтер недоступен',
   'error.driver.auth': 'Принтер отклонил учётные данные',
@@ -871,6 +875,8 @@ export const en: Messages = {
   'error.integration': 'An external system is unavailable',
   'error.configuration': 'Configuration error',
   'error.internal': 'Internal error',
+  'error.rate_limited': 'Too many requests. Try again in {retry_after_seconds} s',
+  'error.payload_too_large': 'That file is too large',
 
   'error.identity': 'Account error',
   'error.driver': 'Printer communication error',
@@ -880,6 +886,8 @@ export const en: Messages = {
   'error.identity.session_expired': 'Your session expired — sign in again',
   'error.identity.account_disabled': 'This account is disabled',
   'error.identity.password_too_short': 'That password is too short',
+  'error.identity.locked_out':
+    'Too many failed attempts. Try again in {retry_after_seconds} s',
 
   'error.driver.unavailable': 'Printer unreachable',
   'error.driver.auth': 'Printer rejected the credentials',

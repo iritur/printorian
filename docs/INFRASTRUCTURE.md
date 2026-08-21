@@ -429,7 +429,10 @@ reconstructed on another machine from `git clone` alone.
 **Exit criterion met.** The stack comes up from built images with `--wait`
 returning 0 and every service healthy; `alembic downgrade base` → `upgrade head`
 → `check` round-trips inside the image; `/health/ready` reports `database: ok`;
-the console serves its bundle and proxies `/api/health` on one origin.
+the console serves its bundle and proxies `/api/health` on one origin; every
+worker loop reports itself sweeping; and a live event published in one container
+arrives in the other (`backend/tools/relay_probe.py`) — the hop the console's
+boards depend on, and one that only this arrangement can prove.
 
 Two things this stage found, which is the point of it:
 
@@ -438,7 +441,18 @@ Two things this stage found, which is the point of it:
   place, Stage 4's deploy gate would have rolled back good releases. Disabled
   rather than replaced with a process check — a signal that cannot tell working
   from wedged is the objection ADR-0007 raises against a driver returning
-  plausible data. Stage 5's `/metrics` makes an honest check possible.
+  plausible data.
+
+  **Now replaced rather than disabled.** Each loop records a beat in Redis at the
+  *end* of every pass (`backend/printorian/core/heartbeat.py`), with an expiry
+  derived from that loop's own interval, and
+  `python -m printorian.workers --check` fails when any of them has stopped
+  beating. That is the distinction the process check could not make: a loop
+  blocked on a lock or throwing every iteration stops beating while its process
+  stays alive. The release gate asserts it by name, so a wedged sweep fails the
+  gate rather than shipping. Worth knowing: it reports unhealthy when *Redis* is
+  unreachable, because a worker that cannot report is not a worker known to be
+  working — two conditions, one signal, and the honest reading of both.
 * The suite passed locally for a reason unrelated to the code: `python -m pytest`
   puts `backend/` on `sys.path`, the bare `pytest` console script CI runs does
   not. Fixed as `pythonpath` in `pyproject.toml`.

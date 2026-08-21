@@ -12,6 +12,7 @@ S3-compatible later without touching anything here.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 
 from sqlalchemy import select
@@ -22,6 +23,7 @@ from printorian.contexts.catalog.mesh import MeshAnalysis, analyse_stl
 from printorian.contexts.catalog.models import ModelAsset, ModelFormat
 from printorian.contexts.catalog.schemas import ModelAssetView
 from printorian.core.clock import Clock
+from printorian.core.cpu import CpuGate
 from printorian.core.errors import NotFoundError, ValidationError
 from printorian.core.ids import EntityId
 from printorian.core.storage import ObjectStore, digest_of
@@ -42,10 +44,20 @@ def format_of(filename: str) -> ModelFormat:
 class ModelLibrary:
     """Uploaded geometry: stored once, measured once, found by content."""
 
-    def __init__(self, session: AsyncSession, store: ObjectStore, clock: Clock) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        store: ObjectStore,
+        clock: Clock,
+        cpu: CpuGate | None = None,
+    ) -> None:
         self._db = session
         self._store = store
         self._clock = clock
+        #: Where mesh measurement runs. Optional so a test or a script can build a
+        #: library without one; when it is absent the work still leaves the event
+        #: loop, it is simply unbounded (`core.cpu`).
+        self._cpu = cpu
 
     # -- writing ---------------------------------------------------------
 
@@ -79,7 +91,11 @@ class ModelLibrary:
             return ModelAssetView.model_validate(existing)
 
         model_format = format_of(filename)
-        measured = analysis if analysis is not None else _measure(data, model_format)
+        # Never on the event loop: measuring a large mesh is seconds of NumPy, and
+        # in the API that is seconds in which nothing else is served (`core.cpu`).
+        measured = (
+            analysis if analysis is not None else await self._measure_off_loop(data, model_format)
+        )
 
         # Bytes first, row second — deliberately, and it is the ordering the backup
         # guarantee depends on (RUNBOOK §7). A row naming an object that was never
@@ -100,6 +116,13 @@ class ModelLibrary:
         self._db.add(asset)
         await self._db.flush()
         return ModelAssetView.model_validate(asset)
+
+    async def _measure_off_loop(
+        self, data: bytes, model_format: ModelFormat
+    ) -> MeshAnalysis | None:
+        if self._cpu is not None:
+            return await self._cpu.run(_measure, data, model_format)
+        return await asyncio.to_thread(_measure, data, model_format)
 
     async def touch(self, asset_id: EntityId) -> None:
         """Record that something used this asset, for retention's sake."""

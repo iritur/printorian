@@ -40,9 +40,12 @@ WORKDIR /build
 # Dependencies resolve from pyproject.toml alone, so this layer is cached across
 # every commit that does not change the dependency set — which is nearly all of
 # them. Copying the source first would invalidate it on every edit.
-COPY pyproject.toml ./
+# `constraints.txt` beside it: the floors in pyproject say what the code needs,
+# the constraints say which versions this image is built from. Without it two
+# builds of one commit can ship different dependency sets (`constraints.txt`).
+COPY pyproject.toml constraints.txt ./
 RUN mkdir -p printorian && touch printorian/__init__.py \
- && pip install --no-cache-dir .
+ && pip install --no-cache-dir -c constraints.txt .
 
 # Now the real source, installed over the placeholder.
 COPY printorian/ ./printorian/

@@ -416,6 +416,22 @@ bury both.
 **Off-site backup sync has a recipe but no committed job** — the destination and its
 credentials are farm-specific.
 
+**Rate limits and the sign-in lockout are in-process** (`core/ratelimit.py`). The
+deployment is one API process (ADR-0003), so a Redis-backed counter would buy
+correctness across replicas that do not exist and put a dependency in the path that
+has to work when Redis is down. Two consequences follow and are worth knowing
+rather than discovering: the counters reset on restart, and a second API replica
+would get its own allowance rather than sharing one. The fix, when that is real, is
+the Redis this process already talks to for the event relay.
+
+**`customer_storage_quota_bytes` is displayed and not enforced.** The account screen
+measures against it; no upload is refused by it. That is the deliberate choice
+recorded beside the setting — a customer who has hit the ceiling should be told
+which of their files to remove, not have a quote refused mid-configuration — and it
+means uploaded geometry is bounded by `model_retention_days` collecting what nothing
+has used, not by the quota. Making it a rule is a change to the configurator's
+flow, which is a product decision rather than a missing check.
+
 ---
 
 ## 10. Work forward

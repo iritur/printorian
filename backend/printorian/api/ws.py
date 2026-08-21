@@ -10,10 +10,12 @@ WebSocket, so the session cookie is the credential here; the handshake is reject
 before the socket is accepted if the caller is not entitled to watch. Live telemetry
 is production data, not a public feed.
 
-**Single-process today.** The bus is in-process, so this fans out to clients of
-*this* worker. Running more than one API process needs the Redis relay described in
-ARCHITECTURE §8; until then the deployment is one process (ADR-0003), and this
-comment is the reminder rather than a surprise in production.
+**Two sources, one hub.** Events raised in *this* process arrive straight off the
+bus. Events raised in the workers — the telemetry poller, the SLA clock, the
+post-production and packaging sweeps, which is most of what the farm does on its
+own — arrive over the Redis relay (`core.relay`), which is what makes these boards
+live in the containerised deployment rather than only for what somebody clicked.
+The relay skips its own origin, so an event never arrives twice.
 """
 
 from __future__ import annotations
@@ -31,26 +33,13 @@ from printorian.api.deps import SESSION_COOKIE
 from printorian.contexts.identity import IdentityService, Permission
 from printorian.core.errors import PrintorianError
 from printorian.core.events import Event, EventBus
+from printorian.core.relay import LIVE_PATTERNS, redacted
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(tags=["events"])
 
-#: What a watching client is subscribed to. Deliberately explicit rather than "all":
-#: identity events carry account activity and have no business on a floor display.
-#:
-#: The two shop-floor posts are here because their boards claim to be live and
-#: were not: each subscribes to its own prefix and neither prefix was forwarded,
-#: so both were quietly refetch-on-mount. What they publish is a task number, an
-#: order id and a status — floor-display material by definition.
-LIVE_PATTERNS = (
-    "fleet.*",
-    "order.*",
-    "payment.settled",
-    "attention.*",
-    "postproduction.*",
-    "packaging.*",
-)
+__all__ = ["LIVE_PATTERNS", "SUBPROTOCOL", "Hub", "router"]
 
 #: Drop a client that cannot keep up rather than buffering without limit. A stalled
 #: browser tab must not become an unbounded queue in the server.
@@ -89,15 +78,25 @@ class Hub:
         self._clients.discard(queue)
 
     async def broadcast(self, event: Event) -> None:
-        """Hand an event to every client, skipping any that has fallen behind."""
-        payload = event.payload()
+        """Hand an event raised in this process to every client."""
+        await self.broadcast_payload(event.payload())
+
+    async def broadcast_payload(self, payload: dict[str, Any]) -> None:
+        """Hand a wire payload to every client, skipping any that has fallen behind.
+
+        Takes a payload rather than an `Event` because the relay delivers events
+        raised in *another* process, which exist here only as the dict they were
+        serialized to. Redaction happens on this one path so it applies equally to
+        both sources (`core.relay.REDACTED_FIELDS`).
+        """
+        payload = redacted(payload)
         for queue in list(self._clients):
             try:
                 queue.put_nowait(payload)
             except asyncio.QueueFull:
                 # `event` is structlog's own key for the message; naming a field that
                 # would collide with it and raise instead of logging.
-                logger.warning("ws_client_slow_dropped_event", event_name=event.name)
+                logger.warning("ws_client_slow_dropped_event", event_name=payload.get("name"))
 
     def attach(self, bus: EventBus) -> None:
         """Route the live patterns from the bus into this hub."""

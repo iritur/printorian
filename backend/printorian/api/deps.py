@@ -7,6 +7,7 @@ by the client hiding a button (ARCHITECTURE §10).
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -24,8 +25,10 @@ from printorian.contexts.postproduction import PostProductionService
 from printorian.contexts.production import ProductionService
 from printorian.core.clock import Clock
 from printorian.core.config import Settings
+from printorian.core.cpu import CpuGate
 from printorian.core.errors import PermissionDeniedError, UnauthenticatedError
 from printorian.core.events import EventBus
+from printorian.core.ratelimit import Lockout, RateLimiter
 from printorian.core.secrets import SecretBox
 from printorian.core.storage import ObjectStore
 
@@ -61,6 +64,83 @@ AppClock = Annotated[Clock, Depends(get_clock)]
 AppEventBus = Annotated[EventBus, Depends(get_event_bus)]
 
 
+def get_cpu(request: Request) -> CpuGate:
+    """The bounded thread pool blocking work runs in (`core.cpu`)."""
+    gate: CpuGate = request.app.state.cpu
+    return gate
+
+
+Cpu = Annotated[CpuGate, Depends(get_cpu)]
+
+
+def get_lockout(request: Request) -> Lockout:
+    lockout: Lockout = request.app.state.lockout
+    return lockout
+
+
+SignInLockout = Annotated[Lockout, Depends(get_lockout)]
+
+#: Every rate ceiling is expressed per minute, so the window is stated once.
+RATE_WINDOW = timedelta(minutes=1)
+
+
+def rate_limited(bucket: str, allowance: Callable[[Settings], int]) -> Callable[..., None]:
+    """Build a dependency that caps how often one address may hit these routes.
+
+    ``bucket`` groups the routes sharing an allowance, so a caller cannot spend a
+    quote budget on previews and then start again. Keyed on `client_ip`, which is
+    client-controlled behind a proxy and is not evidence of identity — deliberately
+    so: this bounds *cost*, and the endpoint it most needs to bound takes an
+    optional actor, meaning there is frequently no identity to key on at all. An
+    attacker who can vary their source address can buy more allowance; one who
+    cannot is capped, and the CPU gate behind it (`core.cpu`) bounds what even an
+    uncapped flood can occupy.
+
+    Usage::
+
+        dependencies=[Depends(rate_limited("quote", lambda s: s.quote_rate_per_minute))]
+    """
+
+    def guard(request: Request, settings: AppSettings) -> None:
+        limiter: RateLimiter = request.app.state.limiter
+        limiter.check(
+            f"{bucket}:{throttle_key(request)}",
+            limit=allowance(settings),
+            window=RATE_WINDOW,
+        )
+
+    return guard
+
+
+def throttle_key(request: Request) -> str:
+    """The address a ceiling is counted against — the *last* forwarded hop.
+
+    Deliberately **not** `client_ip`, and the difference is the whole point of
+    having two functions.
+
+    `X-Forwarded-For` is a list that each proxy appends to, so the *first* entry is
+    whatever the caller sent and the *last* is the peer the nearest proxy actually
+    saw. `client_ip` shows the first, because a security screen is telling a person
+    "this is where the request said it came from" and a wrong answer there costs
+    nothing. A rate limit keyed on the first entry costs everything: one forged
+    header per request and the ceiling is a free-for-all, which is worse than no
+    ceiling because it looks like one.
+
+    So this reads the last hop, and falls back to the socket peer when nothing is
+    forwarded at all — the dev server, and the console on the LAN.
+
+    **This is exactly as trustworthy as the proxy in front of it.** It assumes one
+    trusted hop that appends rather than replaces, which is what
+    `deploy/console.Caddyfile` does and what the storefront's edge must also do
+    (INFRASTRUCTURE Stage 3). Two proxies would need a hop count rather than "the
+    last one"; when that day comes, this is the single line to change.
+    """
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.rsplit(",", 1)[-1].strip()[:45]
+    return (request.client.host if request.client else "")[:45]
+
+
 def get_object_store(request: Request) -> ObjectStore:
     store: ObjectStore = request.app.state.object_store
     return store
@@ -69,8 +149,8 @@ def get_object_store(request: Request) -> ObjectStore:
 Storage = Annotated[ObjectStore, Depends(get_object_store)]
 
 
-def get_model_library(db: DbSession, store: Storage, clock: AppClock) -> ModelLibrary:
-    return ModelLibrary(db, store, clock)
+def get_model_library(db: DbSession, store: Storage, clock: AppClock, cpu: Cpu) -> ModelLibrary:
+    return ModelLibrary(db, store, clock, cpu)
 
 
 Models = Annotated[ModelLibrary, Depends(get_model_library)]

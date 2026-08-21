@@ -162,17 +162,30 @@ services:
     environment: *backend_env
     # The image's healthcheck curls the API's /health, because the image is built
     # for three commands and only one of them serves HTTP. Inherited here it
-    # reports a worker that is sweeping correctly as unhealthy, which in Stage 4
-    # would make the deploy gate roll back good releases.
+    # reports a worker that is sweeping correctly as unhealthy.
     #
-    # Disabled rather than replaced with something like `pgrep`: a process check
-    # passes for a worker deadlocked mid-sweep, and a liveness signal that cannot
-    # distinguish working from wedged is worse than none — it is the same
-    # objection ADR-0007 raises against a driver that returns plausible data.
-    # Stage 5 adds /metrics with a last-sweep timestamp, which can be checked
-    # honestly.
+    # Replaced rather than disabled, now that there is something honest to check.
+    # `--check` reads the beat each loop records at the *end* of every pass
+    # (`printorian.core.heartbeat`), so it fails for a worker that is running and
+    # not working — the case a `pgrep` cannot see, and the reason this was left
+    # unchecked until the signal existed.
+    #
+    # Each loop sweeps once before it first waits, so every beat lands within
+    # seconds of startup; `start_period` is slack for the slowest of them to
+    # finish its first pass — the scheduler's, which connects to the database and
+    # refreshes every driver — not for an interval to elapse.
+    #
+    # Worth knowing: this reports unhealthy when *Redis* is unreachable, because
+    # the beats live there and a worker that cannot report is not a worker known
+    # to be working. Compose does not restart on unhealthy, so the effect is a
+    # true signal rather than a restart loop — but it is a signal about two
+    # things, and that is the price of not inventing an answer (ADR-0007).
     healthcheck:
-      disable: true
+      test: ["CMD", "python", "-m", "printorian.workers", "--check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     volumes:
       - storage:/srv/printorian/storage
     depends_on:

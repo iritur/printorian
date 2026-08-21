@@ -33,6 +33,7 @@ from tests.api._catalog_support import (
     sign_in,
     upload,
 )
+from tests.conftest import wire_app
 
 
 @pytest.fixture
@@ -46,11 +47,14 @@ async def client(
     app = create_app(settings)
     database = _TestDatabase(settings.database_url)
 
-    app.state.settings = settings
-    app.state.clock = clock
-    app.state.event_bus = bus
-    app.state.database = database
-    app.state.object_store = object_store
+    wire_app(
+        app,
+        settings=settings,
+        clock=clock,
+        bus=bus,
+        database=database,
+        object_store=object_store,
+    )
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as http:

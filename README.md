@@ -51,6 +51,8 @@ each one is worth that.
 ```
 backend/
   printorian/core/        config, Money, units, ids, clock, errors, events, db
+                          cpu (blocking work, off the loop) · relay (events across
+                          processes) · ratelimit · heartbeat
   printorian/contexts/    catalog · fleet · identity · inventory · journal
                           ordering · payments · pricing · production · scheduling
   printorian/drivers/     printer adapters — bambu, manual, mock
@@ -69,10 +71,11 @@ design/                   the static design kit the UI is built against
 
 ## Status
 
-**1 042 tests green** — 897 backend, 145 frontend. CI runs three jobs: six governance gates
-plus tests and migrations on the backend, typecheck/lint/test/build on the frontend, and a
-release gate that builds both images, brings the production compose up and proves
-migrations, readiness and same-origin proxying before scanning and signing.
+CI runs three jobs: six governance gates plus tests and migrations on the backend,
+typecheck/lint/test/build on the frontend, and a release gate that builds both images,
+brings the production compose up and proves migrations, readiness, same-origin proxying,
+that every worker loop is sweeping, and that a live event raised in one container reaches
+the other — before scanning and signing.
 
 Built and working end to end: pricing engine and quote/preview API · STL analysis and the
 model catalogue with staff curation · inventory with AMS-slot locations · the storefront
@@ -81,6 +84,22 @@ pipeline and queue position, and the customer
 account — profile, loyalty ladder, addresses, uploads, receipts and sessions · the farm
 console · the journal with an RSS feed · fleet, production, scheduling and the virtual
 farm harness · one-image containers with a release gate (INFRASTRUCTURE Stage 1).
+
+### Load-bearing behaviour worth knowing about
+
+- **Blocking work never runs on the event loop.** The API is one process, so a second
+  spent parsing a mesh is a second in which it serves nothing — not the storefront, not
+  the console, not the health check. `core/cpu.py` runs that work in a bounded thread
+  pool, and carries the measurements that make it a bug rather than a preference.
+- **Live events cross the process boundary.** The API and the workers are separate
+  containers with an in-process bus each, so everything a *sweep* raises reaches a
+  watching console through the Redis relay in `core/relay.py` — without it those events
+  die in the worker and the boards go quiet.
+- **The endpoints that cost something have ceilings.** `POST /pricing/quote` takes an
+  optional actor and parses a mesh, so it is rate-limited; sign-in has a lockout; request
+  bodies are refused by size before anything buffers them.
+- **A worker that is running but not working is visible.** Each loop beats at the end of
+  every pass, and `python -m printorian.workers --check` is the container's healthcheck.
 
 Two things are **not** proven, and both need hardware or an account this repository
 cannot supply:
