@@ -10,6 +10,28 @@ Two rules define this context:
   ``OFFLINE``, never assumed idle (ADR-0007).
 """
 
+from printorian.contexts.fleet.measures import (
+    MAX_BUCKETS,
+    MAX_WINDOW_HOURS,
+    FleetBucket,
+    FleetMetrics,
+    Grain,
+    MetricWindow,
+    PrinterBucket,
+    PrinterMetrics,
+    fleet_metrics,
+    printer_metrics,
+    resolve_window,
+)
+from printorian.contexts.fleet.occupancy import (
+    HEAT_DAYS,
+    FleetOccupancy,
+    HeatCell,
+    HeatRow,
+    Occupancy,
+    hourly_load,
+    occupancy,
+)
 from printorian.contexts.fleet.policies import (
     ConnectionMode,
     Eligibility,
@@ -34,16 +56,29 @@ from printorian.contexts.fleet.schemas import (
 from printorian.contexts.fleet.service import FleetService
 
 __all__ = [
+    "HEAT_DAYS",
+    "MAX_BUCKETS",
+    "MAX_WINDOW_HOURS",
     "AmsSlotView",
     "ConnectionMode",
     "CreatePrinter",
     "CreateServiceOperation",
     "Eligibility",
+    "FleetBucket",
+    "FleetMetrics",
+    "FleetOccupancy",
     "FleetService",
+    "Grain",
+    "HeatCell",
+    "HeatRow",
     "JobRequirements",
     "MaintenanceKind",
+    "MetricWindow",
     "MountLot",
+    "Occupancy",
+    "PrinterBucket",
     "PrinterCapability",
+    "PrinterMetrics",
     "PrinterTable",
     "PrinterView",
     "ServiceOperationView",
@@ -51,5 +86,10 @@ __all__ = [
     "StatusCount",
     "amortization_per_hour",
     "can_take",
+    "fleet_metrics",
+    "hourly_load",
     "needs_attention",
+    "occupancy",
+    "printer_metrics",
+    "resolve_window",
 ]

@@ -49,7 +49,7 @@ from printorian.contexts.production.schemas import (
     WaitListEntryView,
 )
 from printorian.contexts.production.service import ProductionService
-from printorian.contexts.production.throughput import HeatRow, Throughput, hourly_load, throughput
+from printorian.contexts.production.throughput import Throughput, throughput
 
 __all__ = [
     "TRANSITIONS",
@@ -60,7 +60,6 @@ __all__ = [
     "CreateJob",
     "EstimateSource",
     "EstimateVariance",
-    "HeatRow",
     "JobAssigned",
     "JobEvent",
     "JobEventView",
@@ -89,7 +88,6 @@ __all__ = [
     "assess_variance",
     "can_transition",
     "committed_material",
-    "hourly_load",
     "schedule",
     "throughput",
     "wait_list_size",

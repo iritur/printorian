@@ -87,9 +87,6 @@ export interface Zone {
 }
 
 export interface Throughput {
-  run_hours: string
-  capacity_hours: string
-  idle_hours: string
   succeeded: number
   failed: number
   /** `null` when nothing finished — a farm that printed nothing is not perfect. */
@@ -97,11 +94,54 @@ export interface Throughput {
   truncated: boolean
 }
 
+/**
+ * One window's machine-hours, measured from telemetry rather than booked jobs.
+ *
+ * Everything is nullable and `null` is not zero: a window nothing summarised has
+ * no occupancy figure, and zero would be a claim the farm never made. This used
+ * to be `Throughput.run_hours` / `capacity_hours` / `idle_hours`, counted from
+ * `print_jobs` — where a paused print still counted as running and idle was a
+ * residual against today's roster instead of an observation.
+ */
+export interface Occupancy {
+  /** The denominator: hours actually *observed*, never roster × window. */
+  observed_hours: string | null
+  offline_hours: string | null
+  idle_hours: string | null
+  preparing_hours: string | null
+  printing_hours: string | null
+  paused_hours: string | null
+  finished_hours: string | null
+  error_hours: string | null
+  maintenance_hours: string | null
+  /** Distinct machines with any summarised hour — the coverage behind the ratio. */
+  printers_reporting: number | null
+  /** `printing_hours / observed_hours`, 0..1. */
+  load: string | null
+}
+
+export interface FleetOccupancy {
+  current: Occupancy
+  previous: Occupancy
+}
+
+/**
+ * One cell of the load map.
+ *
+ * `load` is `null` for an hour nobody summarised, and that needs a **third**
+ * treatment on screen — not dark, which means "measured, and the farm was idle".
+ * Collapsing the two is the reading ADR-0007 exists to forbid.
+ */
+export interface HeatCell {
+  load: string | null
+  printers_reporting: number
+}
+
 export interface HeatRow {
   /** Monday is 0, matching `datetime.weekday()`. The client names it. */
   weekday: number
-  /** Twenty-four values, each 0..1 of the farm's capacity for that hour. */
-  hours: string[]
+  /** Twenty-four cells. */
+  hours: HeatCell[]
 }
 
 export interface FleetOverview {
@@ -112,6 +152,7 @@ export interface FleetOverview {
   attention: number
   utilisation_percent: string
   throughput: Throughput
+  occupancy: FleetOccupancy
   hourly_load: HeatRow[]
 }
 

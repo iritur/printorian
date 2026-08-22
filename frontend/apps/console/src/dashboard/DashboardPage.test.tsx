@@ -148,17 +148,45 @@ function aSummary(overrides: Partial<FarmSummary> = {}): FarmSummary {
       attention: 0,
       utilisation_percent: '50.0',
       throughput: {
-        run_hours: '18.0',
-        capacity_hours: '30.0',
-        idle_hours: '12.0',
         succeeded: 9,
         failed: 1,
         success_percent: '90.0',
         truncated: false,
       },
+      occupancy: {
+        current: {
+          observed_hours: '30.0',
+          offline_hours: '0.0',
+          idle_hours: '12.0',
+          preparing_hours: '0.0',
+          printing_hours: '18.0',
+          paused_hours: '0.0',
+          finished_hours: '0.0',
+          error_hours: '0.0',
+          maintenance_hours: '0.0',
+          printers_reporting: 2,
+          load: '0.60',
+        },
+        previous: {
+          observed_hours: '30.0',
+          offline_hours: '0.0',
+          idle_hours: '15.0',
+          preparing_hours: '0.0',
+          printing_hours: '15.0',
+          paused_hours: '0.0',
+          finished_hours: '0.0',
+          error_hours: '0.0',
+          maintenance_hours: '0.0',
+          printers_reporting: 2,
+          load: '0.50',
+        },
+      },
       hourly_load: Array.from({ length: 7 }, (_, day) => ({
         weekday: day,
-        hours: Array.from({ length: 24 }, (_, hour) => (hour < 6 ? '0.20' : '0.80')),
+        hours: Array.from({ length: 24 }, (_, hour) => ({
+          load: hour < 6 ? '0.20' : '0.80',
+          printers_reporting: 2,
+        })),
       })),
     },
     schedule: {
@@ -300,9 +328,7 @@ describe('the status wall', () => {
     // Asserted on the dialog rather than on a heading inside it: the machine's
     // name lives in the popup's chrome now, and "a dialog for P-01 opened" is
     // the claim worth making either way.
-    await waitFor(() =>
-      expect(screen.getByRole('dialog', { name: /P-01/ })).toBeInTheDocument(),
-    )
+    await waitFor(() => expect(screen.getByRole('dialog', { name: /P-01/ })).toBeInTheDocument())
   })
 })
 
@@ -310,9 +336,6 @@ describe('the printer KPIs', () => {
   it('refuses to claim a success rate when nothing finished', async () => {
     const summary = aSummary()
     summary.fleet.throughput = {
-      run_hours: '0.0',
-      capacity_hours: '30.0',
-      idle_hours: '30.0',
       succeeded: 0,
       failed: 0,
       success_percent: null,
@@ -381,5 +404,85 @@ describe('the period switch', () => {
     // The comparison window is the server's to cut — a client that re-sliced a
     // fetched "today" into a "month" would be inventing the previous period.
     await waitFor(() => expect(asked.some((url) => url.includes('period=month'))).toBe(true))
+  })
+})
+
+describe('measured occupancy', () => {
+  /*
+    These four cover the one thing the move from booked job time to telemetry
+    changed on screen: the farm can now say "I do not know", and the old figures
+    could not. Every case is a variation on ADR-0007 — a number the farm never
+    measured must not arrive as a zero, in a tile or in a cell.
+  */
+
+  it('shows measured run and idle hours against what was observed', async () => {
+    serve(aSummary())
+    render(<DashboardPage locale="ru" />)
+
+    // 18.0 printing out of 30.0 observed — the denominator is coverage, not the
+    // roster, so the note must not say «ВОЗМОЖНЫХ».
+    const run = (await screen.findByText('Наработка за период')).closest('.hv-kpi') as HTMLElement
+    expect(within(run).getByText(/18/)).toBeInTheDocument()
+    expect(within(run).getByText(/ИЗ 30 ИЗМЕРЕННЫХ/)).toBeInTheDocument()
+    expect(screen.queryByText(/ВОЗМОЖНЫХ/)).not.toBeInTheDocument()
+  })
+
+  it('says nothing was measured rather than showing zero hours', async () => {
+    const summary = aSummary()
+    summary.fleet.occupancy.current = {
+      observed_hours: null,
+      offline_hours: null,
+      idle_hours: null,
+      preparing_hours: null,
+      printing_hours: null,
+      paused_hours: null,
+      finished_hours: null,
+      error_hours: null,
+      maintenance_hours: null,
+      printers_reporting: null,
+      load: null,
+    }
+    serve(summary)
+    render(<DashboardPage locale="ru" />)
+
+    // A farm nobody polled did not print for zero hours; it did not report.
+    const run = (await screen.findByText('Наработка за период')).closest('.hv-kpi') as HTMLElement
+    expect(within(run).getByText(/НЕТ ИЗМЕРЕНИЙ/)).toBeInTheDocument()
+    expect(within(run).getByText('—')).toBeInTheDocument()
+
+    const idle = (screen.getByText('Простой').closest('.hv-kpi') as HTMLElement) ?? run
+    expect(within(idle).getByText('—')).toBeInTheDocument()
+  })
+
+  it('marks an unmeasured hour on the load map instead of drawing it dark', async () => {
+    const summary = aSummary()
+    summary.fleet.hourly_load = Array.from({ length: 7 }, (_, day) => ({
+      weekday: day,
+      hours: Array.from({ length: 24 }, (_, hour) =>
+        hour < 3 ? { load: null, printers_reporting: 0 } : { load: '0.50', printers_reporting: 2 },
+      ),
+    }))
+    serve(summary)
+    const { container } = render(<DashboardPage locale="ru" />)
+
+    await screen.findByText('Наработка за период')
+
+    // Three blank cells a day, and they carry no brightness at all — a dark cell
+    // would state that machines reported and were idle.
+    const blank = container.querySelectorAll('.hv-heat__c[data-blank="true"]')
+    expect(blank).toHaveLength(21)
+    expect(blank[0]?.getAttribute('style')).toBeNull()
+  })
+
+  it('names how many machines a bright cell is bright on', async () => {
+    serve(aSummary())
+    const { container } = render(<DashboardPage locale="ru" />)
+
+    await screen.findByText('Наработка за период')
+
+    // The ratio's denominator rides in the tooltip: the fewer machines report,
+    // the healthier a load looks, and that failure is silent without it.
+    const cell = container.querySelector('.hv-heat__c:not([data-blank])')
+    expect(cell?.getAttribute('title')).toMatch(/2 МАШ\. ОТЧИТАЛОСЬ/)
   })
 })

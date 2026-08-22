@@ -74,8 +74,13 @@ class RollupSweep:
         return int((self.window_end - self.window_start).total_seconds() // 3600)
 
 
-def _hour_start(moment: datetime) -> datetime:
-    """The UTC hour ``moment`` falls in. UTC, always — see the module docstring."""
+def hour_start(moment: datetime) -> datetime:
+    """The UTC hour ``moment`` falls in. UTC, always — see the module docstring.
+
+    Public because `measures.py` cuts its read windows on exactly this boundary.
+    Two definitions of "the hour" — one for the writer, one for the reader — is
+    how a bucket ends up written under one key and looked up under another.
+    """
     return moment.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
 
 
@@ -116,8 +121,8 @@ async def summarise(
     ``since`` is that deliberate entry point, and the only way to make this walk
     backwards. The sweep does not pass it.
     """
-    last_closed = _hour_start(now)
-    start = _hour_start(since) if since is not None else await _next_window_start(db)
+    last_closed = hour_start(now)
+    start = hour_start(since) if since is not None else await _next_window_start(db)
     if start is None or start >= last_closed:
         return RollupSweep()
 
@@ -352,4 +357,4 @@ ON CONFLICT (printer_id, bucket_start) DO UPDATE SET
 """
 
 
-__all__ = ["SOURCE", "TABLE", "RollupSweep", "latest_bucket", "summarise"]
+__all__ = ["SOURCE", "TABLE", "RollupSweep", "hour_start", "latest_bucket", "summarise"]

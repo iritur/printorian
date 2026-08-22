@@ -21,7 +21,16 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.fleet import FleetService, PrinterTable, PrinterView, StatusCount
+from printorian.contexts.fleet import (
+    FleetOccupancy,
+    FleetService,
+    HeatRow,
+    PrinterTable,
+    PrinterView,
+    StatusCount,
+    hourly_load,
+    occupancy,
+)
 from printorian.contexts.inventory import MaterialStock, headroom
 from printorian.contexts.ordering import (
     FinanceOverview,
@@ -35,11 +44,9 @@ from printorian.contexts.ordering import (
 )
 from printorian.contexts.production import (
     CommittedMaterial,
-    HeatRow,
     Schedule,
     Throughput,
     committed_material,
-    hourly_load,
     schedule,
     throughput,
     wait_list_size,
@@ -88,11 +95,23 @@ class FleetOverview(BaseModel):
     total: int
     printing: int
     attention: int
+    #: Machines printing **right now**, as a share of the roster. Instantaneous,
+    #: unlike `occupancy.current.load` beside it, which is the window's measured
+    #: ratio — the client must label the delta period-over-period or the tile reads
+    #: as "utilisation moved six points in the last second".
     utilisation_percent: Decimal
+    #: Outcomes only, from `print_jobs`. Occupancy moved to `occupancy` below when
+    #: it stopped being derived from booked job time.
     throughput: Throughput
-    #: Seven days × 24 hours of machine-hours over capacity, for the kit's load
-    #: map. Its point is the shape: a farm idle every night has capacity nobody
-    #: is selling, and that is invisible in a daily total.
+    #: Measured hours for the KPI window and for the window before it, from
+    #: `metric_rollups`. Replaces `Throughput.run_hours` / `capacity_hours` /
+    #: `idle_hours`, where idle was a residual against today's roster rather than
+    #: an observation.
+    occupancy: FleetOccupancy = Field(default_factory=FleetOccupancy)
+    #: Seven days × 24 hours of *measured* load, for the kit's load map. Its point
+    #: is the shape: a farm idle every night has capacity nobody is selling, and
+    #: that is invisible in a daily total. A cell whose `load` is null was never
+    #: summarised and must render as neither dark nor bright.
     hourly_load: list[HeatRow] = Field(default_factory=list)
 
 
@@ -165,10 +184,15 @@ async def farm_summary(
             printing=_printing(table.rows),
             attention=table.attention,
             utilisation_percent=_percent(_printing(table.rows), table.total),
-            throughput=await throughput(
-                db, since=window.start, until=window.end, machines=table.total
+            throughput=await throughput(db, since=window.start, until=window.end),
+            # Composed here rather than inside either context: the fleet may not
+            # know what an ordering `Window` is, and this is the layer that is
+            # allowed to know both (ARCHITECTURE §layering).
+            occupancy=FleetOccupancy(
+                current=await occupancy(db, since=window.start, until=window.end),
+                previous=await occupancy(db, since=window.previous_start, until=window.start),
             ),
-            hourly_load=await hourly_load(db, now=now, machines=table.total),
+            hourly_load=await hourly_load(db, now=now),
         ),
         schedule=await _named_schedule(db, now=now),
         filament=[_bar(stock, committed) for stock in stocks],

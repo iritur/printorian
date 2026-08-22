@@ -150,9 +150,15 @@ export function DashboardPage({
   }, [])
 
   if (ready && !entitled) return <p className="notice">{t('dashboard.forbidden')}</p>
-  if (!summary) return <p className="hv-hint">{loading ? t('common.loading') : t('common.empty')}</p>
+  if (!summary)
+    return <p className="hv-hint">{loading ? t('common.loading') : t('common.empty')}</p>
 
   const { orders, finance, fleet, schedule, filament, alerts, wait_list: waitList } = summary
+  // The KPI window's measured hours. `previous` is what the delta chips would read
+  // from; they are not wired yet, and wiring them means labelling the comparison
+  // period-over-period — «Загрузка парка» beside it is an instantaneous count, and
+  // the two must not look like the same measurement moving.
+  const occupancy = fleet.occupancy.current
   const extremes = sparkExtremes(finance.revenue_by_day, locale)
   const received = formatMoneyShort(finance.received.value, locale)
   const spend = formatMoneyShort(finance.spend.value, locale)
@@ -320,23 +326,41 @@ export function DashboardPage({
                   : t('dashboard.fleet.success', { failed: fleet.throughput.failed })
               }
             />
+            {/*
+              Run and idle both come from `occupancy` now, measured from telemetry
+              rather than derived from booked job time. Two consequences show on
+              screen and are deliberate:
+
+              the denominator is **observed** hours, not roster × window, so the
+              note stops asserting that machines nobody polled were available; and
+              an em dash appears where the old tiles showed `0.0`, because a window
+              nothing summarised has no figure and zero would be a claim the farm
+              never made (ADR-0007).
+            */}
             <Kpi
               locale={locale}
               label={t('dashboard.fleet.run_hours')}
-              value={formatNumber(fleet.throughput.run_hours, locale, 1)}
-              unit={locale === 'ru' ? 'Ч' : 'H'}
-              note={t('dashboard.fleet.of_capacity', {
-                hours: formatNumber(fleet.throughput.capacity_hours, locale),
-              })}
-              {...(fleet.throughput.truncated
-                ? { foot: [t('dashboard.fleet.truncated'), ''] as [string, string] }
-                : {})}
+              value={
+                occupancy.printing_hours === null
+                  ? '—'
+                  : formatNumber(occupancy.printing_hours, locale, 1)
+              }
+              unit={occupancy.printing_hours === null ? undefined : locale === 'ru' ? 'Ч' : 'H'}
+              note={
+                occupancy.observed_hours === null
+                  ? t('dashboard.fleet.unmeasured')
+                  : t('dashboard.fleet.of_observed', {
+                      hours: formatNumber(occupancy.observed_hours, locale),
+                    })
+              }
             />
             <Kpi
               locale={locale}
               label={t('dashboard.fleet.idle')}
-              value={formatNumber(fleet.throughput.idle_hours, locale, 1)}
-              unit={locale === 'ru' ? 'Ч' : 'H'}
+              value={
+                occupancy.idle_hours === null ? '—' : formatNumber(occupancy.idle_hours, locale, 1)
+              }
+              unit={occupancy.idle_hours === null ? undefined : locale === 'ru' ? 'Ч' : 'H'}
               tone="warn"
             />
           </div>
@@ -385,9 +409,7 @@ export function DashboardPage({
               tone="good"
               foot={[
                 t('dashboard.finance.margin'),
-                <span className="hv-hot">
-                  {formatNumber(finance.margin_percent, locale, 1)}%
-                </span>,
+                <span className="hv-hot">{formatNumber(finance.margin_percent, locale, 1)}%</span>,
               ]}
             />
           </div>
@@ -395,9 +417,7 @@ export function DashboardPage({
           <section className="hv-panel">
             <div className="hv-panel__head">
               <span>{t('dashboard.finance.where')}</span>
-              <span className="hv-panel__aside">
-                {formatMoney(finance.spend.value, locale)}
-              </span>
+              <span className="hv-panel__aside">{formatMoney(finance.spend.value, locale)}</span>
             </div>
             <div className="hv-panel__body hv-panel__body--tight">
               <Funnel rows={spendRows(finance.spend_by_category, locale)} locale={locale} />
@@ -444,8 +464,7 @@ export function DashboardPage({
               <i style={{ background: 'var(--hv-live)' }} /> {t('dashboard.schedule.printing')}
             </span>
             <span>
-              <i style={{ border: '1px dashed var(--hv-line)' }} />{' '}
-              {t('dashboard.schedule.queued')}
+              <i style={{ border: '1px dashed var(--hv-line)' }} /> {t('dashboard.schedule.queued')}
             </span>
           </div>
           <span>

@@ -297,6 +297,8 @@ export const ru = {
   'dashboard.load.foot': '00 — 23 Ч · ЯРЧЕ = ВЫШЕ ЗАГРУЗКА',
   'dashboard.load.night': 'НОЧНАЯ ЗАГРУЗКА {percent}%',
   'dashboard.load.empty': 'В парке нет машин, по которым считать загрузку',
+  'dashboard.load.unmeasured': 'НЕТ ИЗМЕРЕНИЙ',
+  'dashboard.load.reporting': '{count} МАШ. ОТЧИТАЛОСЬ',
 
   'weekday.0': 'ПН',
   'weekday.1': 'ВТ',
@@ -323,6 +325,8 @@ export const ru = {
   'dashboard.fleet.nothing_finished': 'ЗА ПЕРИОД НИЧЕГО НЕ ЗАВЕРШЕНО',
   'dashboard.fleet.run_hours': 'Наработка за период',
   'dashboard.fleet.of_capacity': 'ИЗ {hours} ВОЗМОЖНЫХ',
+  'dashboard.fleet.of_observed': 'ИЗ {hours} ИЗМЕРЕННЫХ',
+  'dashboard.fleet.unmeasured': 'ЗА ЭТОТ ПЕРИОД НЕТ ИЗМЕРЕНИЙ',
   'dashboard.fleet.idle': 'Простой',
   'dashboard.fleet.truncated': 'СЧИТАНО ПО ПОСЛЕДНИМ ЗАДАНИЯМ',
 
@@ -886,8 +890,7 @@ export const en: Messages = {
   'error.identity.session_expired': 'Your session expired — sign in again',
   'error.identity.account_disabled': 'This account is disabled',
   'error.identity.password_too_short': 'That password is too short',
-  'error.identity.locked_out':
-    'Too many failed attempts. Try again in {retry_after_seconds} s',
+  'error.identity.locked_out': 'Too many failed attempts. Try again in {retry_after_seconds} s',
 
   'error.driver.unavailable': 'Printer unreachable',
   'error.driver.auth': 'Printer rejected the credentials',
@@ -1104,6 +1107,8 @@ export const en: Messages = {
   'dashboard.load.foot': '00 — 23 H · BRIGHTER = BUSIER',
   'dashboard.load.night': 'NIGHT LOAD {percent}%',
   'dashboard.load.empty': 'No machines to measure load against',
+  'dashboard.load.unmeasured': 'NOT MEASURED',
+  'dashboard.load.reporting': '{count} MACHINES REPORTING',
 
   'weekday.0': 'MON',
   'weekday.1': 'TUE',
@@ -1130,6 +1135,8 @@ export const en: Messages = {
   'dashboard.fleet.nothing_finished': 'NOTHING FINISHED THIS PERIOD',
   'dashboard.fleet.run_hours': 'Run hours this period',
   'dashboard.fleet.of_capacity': 'OF {hours} POSSIBLE',
+  'dashboard.fleet.of_observed': 'OF {hours} MEASURED',
+  'dashboard.fleet.unmeasured': 'NOTHING MEASURED THIS PERIOD',
   'dashboard.fleet.idle': 'Idle',
   'dashboard.fleet.truncated': 'COUNTED OVER THE MOST RECENT JOBS',
 

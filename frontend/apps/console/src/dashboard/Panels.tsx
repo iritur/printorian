@@ -32,8 +32,7 @@ export function ScheduleStrip({
   names: Map<string, string>
   locale: Locale
 }) {
-  const t = (key: MessageKey, details?: Record<string, unknown>) =>
-    translate(locale, key, details)
+  const t = (key: MessageKey, details?: Record<string, unknown>) => translate(locale, key, details)
 
   const start = new Date(schedule.starts_at).getTime()
   const end = new Date(schedule.ends_at).getTime()
@@ -120,15 +119,8 @@ function clamp(value: number): number {
  * than beside it — a bar whose hatched part runs past the solid one is a farm
  * that has promised filament it does not have.
  */
-export function FilamentPanel({
-  bars,
-  locale,
-}: {
-  bars: FilamentBar[]
-  locale: Locale
-}) {
-  const t = (key: MessageKey, details?: Record<string, unknown>) =>
-    translate(locale, key, details)
+export function FilamentPanel({ bars, locale }: { bars: FilamentBar[]; locale: Locale }) {
+  const t = (key: MessageKey, details?: Record<string, unknown>) => translate(locale, key, details)
 
   if (bars.length === 0) return <p className="hv-hint">{t('dashboard.filament.empty')}</p>
 
@@ -253,11 +245,7 @@ export function stageRows(funnel: StatusSlice[], locale: Locale) {
       // The queue's own colour vocabulary: work being printed is live, work
       // waiting on a decision is a warning, everything else is neutral.
       tone:
-        slice.status === 'printing'
-          ? 'live'
-          : slice.status === 'price_review'
-            ? 'warn'
-            : undefined,
+        slice.status === 'printing' ? 'live' : slice.status === 'price_review' ? 'warn' : undefined,
     }))
 }
 
@@ -318,7 +306,6 @@ export function sparkExtremes(series: DayRevenue[], locale: Locale) {
   }
 }
 
-
 /**
  * The week's load, hour by hour: seven rows of twenty-four cells.
  *
@@ -330,6 +317,15 @@ export function sparkExtremes(series: DayRevenue[], locale: Locale) {
  * Brightness is the value, carried as `--v` so the cell's own rule owns the
  * ramp. Colour would be wrong here: it means machine state everywhere else in
  * this system, and an hour is not a machine.
+ *
+ * **An unmeasured hour gets a third treatment, not a dark cell.** The cells are
+ * measured now — from `metric_rollups` rather than from booked job time — and a
+ * dark cell therefore states a fact: machines reported, and they were idle. An
+ * hour nobody polled has no such fact behind it, and drawing it dark would put
+ * the farm's worst-covered nights on screen as its quietest ones. It is marked
+ * `data-blank`, and the coverage count rides in the tooltip because a bright cell
+ * can be bright for the wrong reason: the fewer machines reporting, the healthier
+ * a ratio looks.
  */
 export function HeatMap({ rows, locale }: { rows: HeatRow[]; locale: Locale }) {
   const t = (key: MessageKey) => translate(locale, key)
@@ -342,16 +338,31 @@ export function HeatMap({ rows, locale }: { rows: HeatRow[]; locale: Locale }) {
           <span className="hv-heat__d">
             {translate(locale, `weekday.${row.weekday}` as MessageKey)}
           </span>
-          {row.hours.map((value, hour) => (
-            <i
-              className="hv-heat__c"
-              // The hour *is* the identity here — twenty-four fixed columns, a
-              // ruler rather than a list of things.
-              key={`h${hour}`}
-              style={{ '--v': Number(value) } as CSSProperties}
-              title={`${String(hour).padStart(2, '0')}:00 · ${Math.round(Number(value) * 100)}%`}
-            />
-          ))}
+          {row.hours.map((cell, hour) => {
+            const at = `${String(hour).padStart(2, '0')}:00`
+            // `translate` directly: the local `t` takes a key alone, and this is
+            // the one line here that interpolates.
+            const reporting = translate(locale, 'dashboard.load.reporting', {
+              count: cell.printers_reporting,
+            })
+            return cell.load === null ? (
+              <i
+                className="hv-heat__c"
+                data-blank="true"
+                key={`h${hour}`}
+                title={`${at} · ${t('dashboard.load.unmeasured')}`}
+              />
+            ) : (
+              <i
+                className="hv-heat__c"
+                // The hour *is* the identity here — twenty-four fixed columns, a
+                // ruler rather than a list of things.
+                key={`h${hour}`}
+                style={{ '--v': Number(cell.load) } as CSSProperties}
+                title={`${at} · ${Math.round(Number(cell.load) * 100)}% · ${reporting}`}
+              />
+            )
+          })}
         </div>
       ))}
     </div>

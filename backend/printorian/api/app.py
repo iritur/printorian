@@ -15,6 +15,7 @@ from printorian.api.routers import (
     auth,
     catalog,
     dashboard,
+    fleet,
     health,
     jobs,
     journal,
@@ -152,5 +153,6 @@ def _install_routers(app: FastAPI) -> None:
     app.include_router(postproduction.router)
     app.include_router(packaging.router)
     app.include_router(printers.router)
+    app.include_router(fleet.router)
     app.include_router(jobs.router)
     app.include_router(ws_router)

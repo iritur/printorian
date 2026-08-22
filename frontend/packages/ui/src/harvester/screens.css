@@ -892,6 +892,20 @@
 /* Zero is drawn as an outline, not as nothing: an idle hour is a fact. */
 .hv-heat__c[style*='--v: 0;'] { border: 1px solid var(--hv-line-dim); }
 
+/* An hour nobody measured is neither of those. It is not bright, and it is not
+   the outline above — that outline is a *claim*, that machines reported and were
+   idle. A hatch reads as "no reading" at a glance and, more importantly, does not
+   read as a quiet night: the farm's worst-covered hours would otherwise appear on
+   screen as its calmest ones, and the error runs in the flattering direction. */
+.hv-heat__c[data-blank='true'] {
+  opacity: 1;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 2px,
+    var(--hv-line-dim) 2px 3px
+  );
+}
+
 /* -------------------------------------------------------------- sparkline */
 
 .hv-spark { display: block; width: 100%; height: 34px; overflow: visible; }
