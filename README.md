@@ -39,6 +39,7 @@ rather than an agent.
 | [docs/DESIGN-KIT.md](docs/DESIGN-KIT.md) | Which of the twenty-one kit screens exist, and what the five that do not would need |
 | [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | Containers, release gate, deployment stages |
 | [docs/RUNBOOK-BACKUP-RESTORE.md](docs/RUNBOOK-BACKUP-RESTORE.md) | WAL archiving, base backups, the restore drill |
+| [docs/RUNBOOK-FIRST-PRINT.md](docs/RUNBOOK-FIRST-PRINT.md) | Proving the driver against a real printer — the largest unproven assumption in the system |
 | [docs/BAMBU-LAN-PROTOCOL.md](docs/BAMBU-LAN-PROTOCOL.md) | Spike findings from a real printer — the spec the Phase 3 driver is built from |
 | [docs/TASKS.txt](docs/TASKS.txt) | Raw idea backlog, unfiltered and unsequenced — the origin of several screens, not a plan |
 

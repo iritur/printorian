@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 #: The finishes the API offers, by code. Defined in `pricing.py`, imported rather
 #: than duplicated so a new finish appears in both paths at once.
-from printorian.api.routers.pricing import FINISH_CATALOGUE
+from printorian.api.routers._pricing_spec import FINISH_CATALOGUE
 from printorian.contexts.inventory import InventoryService
 from printorian.contexts.ordering import DraftLine
 from printorian.contexts.pricing import (

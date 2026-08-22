@@ -23,13 +23,15 @@ is how all three predecessors went wrong.
 ## 1. Where the screens stand
 
 **Sixteen of twenty-one are built.** Every public screen ships; the five that do
-not exist are all control-realm.
+not are all control-realm. `settings` is the nearest of them — its backend store
+exists and serves the pricing rates, and what is missing is the screen and the
+other fourteen sections.
 
 | Screen | Realm | State |
 |---|---|---|
 | `promo` `catalog` `configurator` `checkout` `cabinet` `account` `auth` `blog` `blog-post` | public | **built** — all nine |
 | `dashboard` `orders` `fleet` `materials` `users` `postproduction` `packaging` | control | **built** |
-| `settings` | control | **not built** — §2.1 |
+| `settings` | control | **store built, screen not** — §2.1 |
 | `service` | control | **not built** — §2.2 |
 | `purchasing` | control | **not built** — §2.3 |
 | `store` | control | **not built** — §2.4 |
@@ -44,9 +46,19 @@ ends with what the backend already has.
 
 ### 2.1 `settings.html` — 15 sections, ~100 parameters
 
-The largest single gap in the product, and the one every other screen leans on:
-**all ~100 are constants in code today**, mostly in `core/config.py` and
-`contexts/pricing/rates.py`. There is no `contexts/settings`.
+The largest single gap in the product, and the one every other screen leans on.
+
+**The store exists; the screen does not.** `contexts/settings` serves the seventeen
+scalar **Ценообразование** rates through `GET/PUT/DELETE /settings`, with the audit
+the section below requires. A key with no row resolves to the code default, so an
+empty table prices exactly as the farm always did, and an order keeps the rate
+snapshot it was agreed at (ADR-0020) — changing a margin moves the next quote and
+nothing already sold.
+
+The remaining ~85 parameters are still constants, on `core.config.Settings`. They
+are read once at process start rather than per request, so moving them into the
+table changes *when* they are read as well as where they come from; that is the
+next piece of work here, and it is bigger than it looks for that reason.
 
 The kit's identifiers are the real ones:
 

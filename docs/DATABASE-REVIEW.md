@@ -435,7 +435,7 @@ Ordered by whether deferring costs anything.
 
 | # | Task |
 |---|---|
-| DB-1 | `settings` + `settings_audit`. Reads fall back to the code default so an empty table behaves exactly as today; `RateSnapshot` resolution stays at the edge so ADR-0002 purity holds. **The largest remaining gap** — see [DESIGN-KIT.md](DESIGN-KIT.md) §2.1 for the ~100 parameters. |
+| DB-1 | **Half done.** `settings` + `settings_audit` exist and serve the seventeen scalar pricing rates; reads fall back to the code default, so an empty table behaves exactly as before, and `RateSnapshot` resolution stays at the read edge so ADR-0002 purity holds. What remains is the other ~85 parameters, which live on `core.config.Settings` and are read at process start — serving those from a table changes *when* they are read as well as where they come from. [DESIGN-KIT.md](DESIGN-KIT.md) §2.1. |
 | DB-5 | Procurement, and the warehouse and logistics entities behind it: `PurchaseOrder`, `Supplier`, storage cells, a movement ledger, `Shipment`. Post-production and QC, which were part of this line, are done. |
 | DB-7 | Order → job creation, carrying `model_asset_id` and `model_hash` from the paid line onto the job. The columns and the constraints are in place; nothing yet writes them outside tests. |
 | — | **Service tickets**, with steps, assignee and consequence, plus a failure record for MTTR and reliability. `ServiceOperation` exists; the ticket does not. |

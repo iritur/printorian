@@ -29,6 +29,9 @@ from printorian.api.routers import (
     public,
     users,
 )
+from printorian.api.routers import (
+    settings as settings_router,
+)
 from printorian.api.ws import Hub
 from printorian.api.ws import router as ws_router
 from printorian.core.clock import SystemClock
@@ -153,6 +156,7 @@ def _install_routers(app: FastAPI) -> None:
     app.include_router(postproduction.router)
     app.include_router(packaging.router)
     app.include_router(printers.router)
+    app.include_router(settings_router.router)
     app.include_router(fleet.router)
     app.include_router(jobs.router)
     app.include_router(ws_router)

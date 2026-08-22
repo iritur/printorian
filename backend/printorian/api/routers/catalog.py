@@ -17,6 +17,7 @@ from printorian.api.deps import (
     AppSettings,
     Cpu,
     DbSession,
+    FarmSettings,
     Models,
     OptionalActor,
     rate_limited,
@@ -126,6 +127,7 @@ async def model_detail(
     db: DbSession,
     models: Models,
     cpu: Cpu,
+    settings: FarmSettings,
     actor: OptionalActor = None,
 ) -> CatalogCard:
     """One model, by the slug that appears in its URL.
@@ -136,7 +138,7 @@ async def model_detail(
     model = await ModelCatalogue(db).get(slug, include_unpublished=_may_see_drafts(actor))
     card = card_of(model)
     card.suitable_materials = await _suitable_materials(db, model)
-    card.price_ladder, card.price_basis = await _price_ladder(db, models, model, cpu)
+    card.price_ladder, card.price_basis = await _price_ladder(db, models, model, cpu, settings)
     card.history = await _history(db, model)
     return card
 

@@ -23,6 +23,7 @@ from printorian.contexts.packaging import PackagingService, PackingCatalogue
 from printorian.contexts.payments import PaymentsService
 from printorian.contexts.postproduction import PostProductionService
 from printorian.contexts.production import ProductionService
+from printorian.contexts.settings import SettingsService
 from printorian.core.clock import Clock
 from printorian.core.config import Settings
 from printorian.core.cpu import CpuGate
@@ -139,6 +140,20 @@ def throttle_key(request: Request) -> str:
     if forwarded:
         return forwarded.rsplit(",", 1)[-1].strip()[:45]
     return (request.client.host if request.client else "")[:45]
+
+
+def get_farm_settings(db: DbSession, clock: AppClock) -> SettingsService:
+    """The farm's own settings, as opposed to `AppSettings` — which is the process
+    configuration and is a different thing wearing a similar name.
+
+    One reads a table the owner may edit; the other reads the environment and is
+    fixed for the life of the process. Both are called "settings" in ordinary
+    speech, which is exactly why the dependency names here are not.
+    """
+    return SettingsService(db, clock)
+
+
+FarmSettings = Annotated[SettingsService, Depends(get_farm_settings)]
 
 
 def get_object_store(request: Request) -> ObjectStore:

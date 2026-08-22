@@ -7,20 +7,38 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-22 · `main` at `70536c6` · 1108 backend tests, 206 frontend,
-all six governance gates green.
+**As of:** 2026-08-22 · 1148 backend tests, 206 frontend, all six governance gates
+green.
 
-The last two commits are documentation only: `docs/` lost three overlapping
-design-kit documents and four stale statuses, and the agent rules split so a
-session loads only its own half (`backend/CLAUDE.md`, `frontend/CLAUDE.md`).
+Landed since the docs pass: the **settings store** (§1) and the **hardware
+conformance suite** (§4), which is the beginning of the one thing that has never
+been proven.
 
 ---
 
 ## 1. What landed recently, and why it matters
 
-Four changes in close succession, each of which alters something a person will
-notice. Read this section before touching the fleet, the dashboard or the
-stylesheets.
+Read this section before touching the fleet, the dashboard, pricing or the
+stylesheets — each item changes something a person will notice.
+
+**The farm can change its own pricing rates.** `contexts/settings` is a key/value
+store with an audit, serving the seventeen scalar rates through
+`GET/PUT/DELETE /settings`, gated on `MANAGE_PRICING` (owner only). Two properties
+are load-bearing and both are tested:
+
+> A key with no row resolves to the **code default**, so an empty table prices
+> exactly as the farm always did — nothing is seeded, and the migration moves no
+> prices on the day it runs. And an order keeps the rate snapshot it was agreed at
+> (ADR-0020), so raising a margin changes the next quote and nothing already sold.
+
+The catalogue is derived from `dataclasses.fields(RateSnapshot)` rather than
+hand-listed, so a rate added later appears in the screen without a second place to
+remember. The other ~85 kit parameters are still constants on `core.config.Settings`
+and are a bigger job than they look: they are read once at process start, so moving
+them changes *when* they are read as well as where from.
+
+`pricing.py` reached the 400-line gate and split — spec assembly moved to
+`_pricing_spec.py`, and with it the mesh-analysis cache.
 
 **Telemetry is summarised, and retention is on.** `metric_rollups` holds one row
 per printer per hour. `telemetry_retention_days` ships at 90 for the first time —
@@ -95,7 +113,31 @@ console reads the table and `/materials/lots`, never the per-code detail),
 and the desk's «Пересмотр цены» filter) and `RateSnapshotRecord`. `TelemetrySample`
 was on that list and no longer is.
 
-## 4. Needs a person, not an agent
+## 4. The first real print — started, and blocked on hardware
+
+`printorian.drivers.bambu` has still never talked to a printer. Phase 4's exit
+criterion was demonstrated with the `mock` driver, and `tools/bambu_spike.py`
+proved the *protocol* in standalone code importing nothing from Printorian. The
+product's own path between the two is the largest unproven assumption in the
+system, and the one that could still say the design is wrong.
+
+What exists now so that proving it is one command rather than a project:
+
+- **`tests/contract/test_bambu_hardware.py`** — the same contract the mock driver
+  is held to, run against a real machine. Credentials come from the git-ignored
+  `printers.local.toml`; without it every test **skips**, so CI is untouched and
+  nobody needs a printer to work on the rest of the system. Read-only by default —
+  connect, capabilities, telemetry, and that wrong credentials are *refused* rather
+  than answered plausibly. The half that physically prints is behind a second
+  opt-in, because a suite that can start a print by accident is one nobody runs.
+- **[docs/RUNBOOK-FIRST-PRINT.md](docs/RUNBOOK-FIRST-PRINT.md)** — the procedure,
+  in order, with what each failure *means*. Step 1 separates "the network or the
+  credentials" from "our code", which are indistinguishable from a distance and
+  have completely different fixes.
+
+**This needs you and a printer.** Nothing further can be verified without one.
+
+## 5. Needs a person, not an agent
 
 - **Dev account passwords have drifted from the docs.** `DEVELOPMENT.md` lists
   `floor@printorian.example` / `shop-floor-pass-1`; the stored hash does not match.
@@ -107,7 +149,7 @@ was on that list and no longer is.
   committed as raw alembic output. Fixed in passing; worth knowing the gate can
   drift without anyone noticing, because a red CI on `main` is easy to live with.
 
-## 5. If you are picking up mid-flight
+## 6. If you are picking up mid-flight
 
 Two things this repository will not tell you and that cost an afternoon each:
 

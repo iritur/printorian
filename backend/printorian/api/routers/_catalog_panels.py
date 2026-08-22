@@ -17,7 +17,7 @@ from decimal import Decimal
 
 from sqlalchemy import distinct, func, select
 
-from printorian.api.deps import DbSession, Models
+from printorian.api.deps import DbSession, FarmSettings, Models
 from printorian.contexts.catalog import EstimationProfile, analyse_stl, estimate
 from printorian.contexts.catalog.catalogue import CatalogModel
 from printorian.contexts.catalog.catalogue_schemas import (
@@ -32,7 +32,6 @@ from printorian.contexts.pricing import (
     MaterialPrice,
     PriceSpec,
     PrintEstimate,
-    RateSnapshot,
     price,
 )
 from printorian.contexts.production import JobStatus
@@ -113,7 +112,7 @@ LADDER = (1, 5, 10, 25, 50)
 
 
 async def _price_ladder(
-    db: DbSession, models: Models, model: CatalogModel, cpu: CpuGate
+    db: DbSession, models: Models, model: CatalogModel, cpu: CpuGate, settings: FarmSettings
 ) -> tuple[list[PriceRung], str]:
     """«Цена по количеству» — five real quotes, not one quote extrapolated.
 
@@ -157,7 +156,7 @@ async def _price_ladder(
         price_per_gram=spec_view.sell_price_per_gram,
         needs_procurement=spec_view.status is MaterialStatus.NONE,
     )
-    rates = RateSnapshot()
+    rates = await settings.resolve_rates()
 
     rungs: list[PriceRung] = []
     previous = Decimal(0)

@@ -201,7 +201,7 @@ def test_the_same_model_is_analysed_once() -> None:
     """Every hover in the configurator re-uploads the same STL. Without this the
     server re-parses the whole mesh to reach an answer it already had, which is
     the dominant cost of a price preview."""
-    from printorian.api.routers import pricing
+    from printorian.api.routers import _pricing_spec as pricing
 
     pricing._analysis_cache.clear()
     data = to_binary_stl(cube_triangles(10.0))
@@ -228,7 +228,7 @@ def test_the_same_model_is_analysed_once() -> None:
 def test_a_different_model_is_never_served_from_the_cache() -> None:
     """Keyed on a digest of the content, so one customer's model can never be
     priced with another's geometry."""
-    from printorian.api.routers import pricing
+    from printorian.api.routers import _pricing_spec as pricing
 
     pricing._analysis_cache.clear()
     small = pricing._analyse_cached(to_binary_stl(cube_triangles(10.0)))
@@ -239,7 +239,7 @@ def test_a_different_model_is_never_served_from_the_cache() -> None:
 
 def test_the_cache_does_not_grow_without_bound() -> None:
     """A busy farm must not accumulate every model ever quoted."""
-    from printorian.api.routers import pricing
+    from printorian.api.routers import _pricing_spec as pricing
 
     pricing._analysis_cache.clear()
     for size in range(1, pricing._ANALYSIS_CACHE_SIZE + 6):

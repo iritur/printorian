@@ -14,6 +14,7 @@ from fastapi import APIRouter, Body, Depends, status
 from printorian.api.deps import (
     CurrentActor,
     DbSession,
+    FarmSettings,
     Fleet,
     OptionalActor,
     Ordering,
@@ -36,7 +37,6 @@ from printorian.contexts.ordering import (
     RepriceLine,
 )
 from printorian.contexts.pricing import (
-    RateSnapshot,
     price,
 )
 from printorian.core.errors import NotFoundError, PermissionDeniedError
@@ -47,7 +47,11 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def place_order(
-    data: PlaceOrder, actor: CurrentActor, ordering: Ordering, db: DbSession
+    data: PlaceOrder,
+    actor: CurrentActor,
+    ordering: Ordering,
+    db: DbSession,
+    settings: FarmSettings,
 ) -> OrderView:
     """Place an order, priced server-side.
 
@@ -68,7 +72,12 @@ async def place_order(
     # Resolved once, here at the edge, and passed in — never fetched inside the
     # engine (ADR-0002). The order stores both the resulting breakdown and these
     # rates, so the quote can be rebuilt later rather than merely displayed.
-    rates = RateSnapshot()
+    #
+    # From the settings table now, with the code defaults underneath: an empty
+    # table resolves to exactly the numbers this line used to construct. That the
+    # snapshot is *pinned* here is what makes the farm safe to re-rate at all —
+    # tomorrow's margin does not reach into today's agreed order (ADR-0020).
+    rates = await settings.resolve_rates()
     # The loyalty discount, resolved from what this customer has already spent.
     # Resolved here rather than inside the engine, which is given its rates and
     # looks nothing up (ADR-0002) — and *before* the order is written, so the
@@ -78,7 +87,9 @@ async def place_order(
 
 
 @router.post("/reprice")
-async def reprice(data: RepriceLine, db: DbSession, actor: OptionalActor) -> dict[str, Any]:
+async def reprice(
+    data: RepriceLine, db: DbSession, actor: OptionalActor, settings: FarmSettings
+) -> dict[str, Any]:
     """What this configuration costs with *this* delivery, without ordering it.
 
     The checkout needs it because the configurator cannot ask where the parts are
@@ -96,7 +107,8 @@ async def reprice(data: RepriceLine, db: DbSession, actor: OptionalActor) -> dic
     showing them a stale number.
     """
     spec = await spec_for(db, data.lines[0], include_shipping=data.method.is_shipped)
-    return {"breakdown": _render(price(spec, RateSnapshot(), await tier_for(db, actor)))}
+    rates = await settings.resolve_rates()
+    return {"breakdown": _render(price(spec, rates, await tier_for(db, actor)))}
 
 
 @router.get("/mine")
