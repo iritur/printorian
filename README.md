@@ -19,10 +19,12 @@ npm install, migrations — is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Read in this order
 
-Working on this with an AI agent? [CLAUDE.md](CLAUDE.md) carries the rules that are
-easy to violate and the traps that have already cost time; [HANDOFF.md](HANDOFF.md)
-carries the current state — what just changed, what is deliberately unfinished, and
-what needs a person rather than an agent.
+Working on this with an AI agent? [CLAUDE.md](CLAUDE.md) carries the rules that hold
+everywhere, with the area-specific ones beside the code they govern —
+[backend/CLAUDE.md](backend/CLAUDE.md) and [frontend/CLAUDE.md](frontend/CLAUDE.md),
+so a session only loads what it needs. [HANDOFF.md](HANDOFF.md) carries the current
+state: what just changed, what is deliberately unfinished, and what needs a person
+rather than an agent.
 
 | Document | What it covers |
 |---|---|
