@@ -28,8 +28,8 @@ The application is Phase 0–4 mature. The infrastructure around it is Phase 0.
 | Host configuration | RUNBOOK §2, §3 | Prose. Nothing is executable, nothing is idempotent, nothing is reproducible |
 | The tunnel | ADR-0016 "reverse-proxies `/api` back to the farm" | Undesigned and unbuilt |
 | Secrets | ADR-0014, ADR-0019 escrow | Environment variables and a gitignored `printers.local.toml` |
-| Backups | ADR-0019, `scripts/backup.sh` | Scripts exist and are good. **Nothing schedules them.** No off-site destination |
-| Restore drill | ADR-0019 "a failing drill is an incident" | `scripts/restore_drill.py` exists. Nothing runs it; nothing would notice a failure |
+| Backups | ADR-0019, `scripts/backup.sh` | Runs, proven end to end 2026-08-22. **Nothing schedules it**, so `pg_archivecleanup` never runs and WAL grows unbounded. No off-site destination |
+| Restore drill | ADR-0019 "a failing drill is an incident" | Runs, proven 2026-08-22 against a real dump. Nothing schedules it; nothing would notice a failure |
 | Observability | ARCHITECTURE §10: "Prometheus metrics, `/health` covering DB, Redis and each driver" | Zero metrics. `/health/ready` checks the database only — not Redis, not drivers |
 | Alerting | — | None. The only monitor is a person looking at a screen |
 

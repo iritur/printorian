@@ -1,0 +1,27 @@
+# Restore last night's dump into a scratch database and check that it works.
+#
+# ADR-0019: a failing drill is an incident. That is only true if something runs
+# the drill, which is what this unit is for — `restore_drill.py` has been correct
+# and unscheduled since it was written.
+
+[Unit]
+Description=Printorian weekly restore drill
+Documentation=https://github.com/dimmus/printorian/blob/main/docs/RUNBOOK-BACKUP-RESTORE.md
+Requires=printorian.service
+After=printorian.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/printorian
+
+# Runs in the api container: it has the application's Python, alembic and the
+# models, which the schema-drift half of the drill needs. `sh -c` because the
+# dump to drill is "the newest one", and that is a glob the shell resolves.
+ExecStart=/usr/bin/docker compose -f deploy/compose.prod.yml exec -T api \
+    sh -c 'python -m scripts.restore_drill "$(ls -t /backup/dumps/*.dump | head -1)"'
+
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

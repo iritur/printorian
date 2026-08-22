@@ -239,6 +239,20 @@ has to be able to absorb that rather than treat it as an impossible transition.
 
 ## 9. What is not covered yet
 
+- **Anything that runs these scripts on a schedule.** Both work — `backup.sh` was
+  run end to end on 2026-08-22 and produced a verified dump and a base backup, and
+  `restore_drill.py` restored that dump into a scratch database with the schema at
+  head. Nothing invokes either of them, and nothing would notice if a run failed.
+  Stage 2 of `INFRASTRUCTURE.md` is where the systemd timers live.
+
+  **This is a disk-fill risk, not just a missing backup.** `pg_archivecleanup`
+  runs *inside* `backup.sh` and nowhere else, so until something schedules it,
+  archived WAL accumulates without bound. The development stack reached 847
+  segments — 13.9 GB — in four days of light use, and the comment on
+  `deploy/compose.prod.yml` records the earlier version of this failure at 23 GB.
+  A farm left unscheduled fills its backup disk and then stops archiving, which is
+  the state in which the backup guarantee silently stops holding.
+
 - **Automated off-site sync.** The recipe is in §2; the destination and its
   credentials are farm-specific and not committed here.
 - **Telemetry rollups.** `telemetry_retention_days` defaults to `0` — retention is

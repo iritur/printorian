@@ -95,8 +95,23 @@ class SettingsService:
     async def history(
         self, *, key: str | None = None, limit: int = HISTORY_LIMIT
     ) -> list[SettingChangeView]:
-        """Recent edits, newest first, optionally for one key."""
-        query = select(SettingChange).order_by(SettingChange.changed_at.desc()).limit(limit)
+        """Recent edits, newest first, optionally for one key.
+
+        Ordered by id as well as time, and the second term is not decoration: two
+        edits within the same instant tie on `changed_at`, and a tie leaves the
+        order to the planner. CI and this machine disagreed about which of two
+        edits came first — the same query, the same rows, a different answer.
+
+        `id` settles it correctly rather than merely consistently. It is a UUIDv7
+        built from `time.time_ns()` (`core.ids`), which is the *real* clock rather
+        than the injected one, so it stays chronological even where `Clock` is
+        frozen and every `changed_at` in the table is identical.
+        """
+        query = (
+            select(SettingChange)
+            .order_by(SettingChange.changed_at.desc(), SettingChange.id.desc())
+            .limit(limit)
+        )
         if key is not None:
             query = query.where(SettingChange.key == key)
         rows = await self._db.scalars(query)

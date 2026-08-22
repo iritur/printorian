@@ -33,11 +33,26 @@ cd frontend && npm install
 
 ### Seeded accounts
 
-The development database carries two accounts, created by hand rather than by a
-seed script. Nothing creates them anywhere else — but nothing refuses them either:
-`is_production` currently gates only the mock driver, the mock payment provider
-and log formatting, so a farm restored from a developer dump would keep them.
-Provisioning the farm's first owner belongs with Stage 2.
+The development database carries two accounts. Their passwords are below, in a
+public repository, and that is fine **only** because a farm can no longer be
+served with them: the API refuses to start in production while any account sits
+in a domain reserved for documentation (`contexts/identity/reserved.py`).
+Restoring a developer dump into a real farm is now a container that will not
+come up rather than a published owner password.
+
+On a database you have just created, make the owner with the same tool a real farm
+uses — it prompts for the password rather than taking it as an argument, and
+outside production it does not object to the reserved domain:
+
+```bash
+cd backend && ./.venv/Scripts/python.exe tools/provision_owner.py --email boss@printorian.example
+```
+
+The operator account is then made through the console, by the owner, like every
+other staff account.
+
+That is the whole of it for a real farm too, minus the address —
+[RUNBOOK-FIRST-BOOT.md](RUNBOOK-FIRST-BOOT.md) has the rest of first boot.
 
 | Account | Password | Role |
 |---|---|---|

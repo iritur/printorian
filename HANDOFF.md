@@ -7,12 +7,14 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-22 · 1148 backend tests, 206 frontend, all six governance gates
-green.
+**As of:** 2026-08-22 · 1174 backend tests passing (6 hardware tests skip without a
+printer), 206 frontend, all six governance gates green.
 
-Landed since the docs pass: the **settings store** (§1) and the **hardware
-conformance suite** (§4), which is the beginning of the one thing that has never
-been proven.
+Landed since the docs pass: the **settings store**, **first-boot provisioning**
+with the reserved-domain start-up guard, a **backup and restore drill that have
+now actually been run** (and two defects that fell out of running them), and the
+**systemd units** that schedule them (all §1) — plus the **hardware conformance
+suite** (§4), the beginning of the one thing that has never been proven.
 
 ---
 
@@ -75,6 +77,43 @@ Reachability was decided against the built bundle, not the source. One real bug
 fell out: `.prep__done` asked for an undefined token, so its hard-coded fallback
 always won — a light-palette green on a near-black panel at ~2.2:1.
 
+**A farm can be provisioned, and can no longer be served from a developer dump.**
+`tools/provision_owner.py` creates the first owner — the only account in the system
+made without an authenticated actor behind it. It reads the password from the
+terminal rather than an argument (a password in `argv` is in the shell history and
+in `ps`), and refuses outright if an owner already exists: provisioning is first
+boot, not a password reset, and the two want opposite behaviour.
+
+> The guard that matters is `contexts/identity/reserved.py`. `DEVELOPMENT.md`
+> publishes two account passwords, one an owner, and restoring a dump into another
+> environment is routine — so the API now **refuses to start in production** while
+> any account sits in a domain reserved for documentation (RFC 2606 / RFC 6761).
+> Not a warning: a warning about credentials is read after the incident.
+> `docs/RUNBOOK-FIRST-BOOT.md` is the procedure. `scripts/create_owner.py` was
+> deleted — it was referenced by nothing and defaulted to the published password.
+
+**Backup and the restore drill have now actually been run.** Both were correct and
+had never once been executed. `backup.sh` produced a verified dump and a base
+backup; the dump restored into a scratch database at schema head. Two real defects
+fell out and are fixed:
+
+> The drill demanded rows in `payment_notifications`, so it **failed on any farm
+> that had not yet taken a payment** — which is every farm in its first week,
+> exactly when the first drills run. It now compares restored counts against the
+> live database, which keeps the failure it was built to catch (a backup pointed
+> at the wrong database, producing a valid empty dump nightly) and drops the false
+> alarm. And `backup.sh` wrote the dump under its final name while still filling
+> it, so a drill overlapping a slow backup would pick a half-written file; the dump
+> is now renamed into place only after it verifies.
+
+**`deploy/systemd/` holds the units that run the farm** — the stack, a nightly
+backup, a weekly drill — verified with `systemd-analyze`. This is the piece of
+INFRASTRUCTURE Stage 2 that closes a measured risk rather than a theoretical one:
+`pg_archivecleanup` runs only inside `backup.sh`, so with nothing scheduling it,
+archived WAL grows without bound. The dev stack reached **847 segments / 13.9 GB in
+four days**, and `compose.prod.yml` already carries a comment recording the earlier
+version of this failure at 23 GB.
+
 ## 2. Deliberately unfinished
 
 Not oversights. Changing any of them is a decision, not a cleanup.
@@ -87,6 +126,23 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 | Off-site backup sync has a recipe, no committed job | Needs farm-specific credentials. |
 | Storefront `body` lifts the page ground | Predates Harvester; `--hv-bg` vs `--hv-void` is six values out of 255 in dark, identical in light. A visual call, not a cleanup. See `apps/web/src/app.css`. |
 | TypeScript held at 5.x | `openapi-typescript` crashes on TS 7. Reason and three failed workarounds are in `.github/dependabot.yml`. |
+| ~12 queries still sort on a timestamp alone | See below — a latent flake class, fixed only where it has actually bitten. |
+
+**The single-column time sort is a flake waiting to happen.** `SettingsService.history`
+ordered by `changed_at DESC` and nothing else. Under `FixedClock` every row in a test
+shares one timestamp, so the sort ties and the planner may return either order — CI and
+a dev machine disagreed about the same two rows. It now orders by `id` as well, which
+settles it *correctly* rather than merely consistently: `core.ids.new_id` builds a
+UUIDv7 from `time.time_ns()`, the real clock, so ids stay chronological where
+`changed_at` is frozen.
+
+The same shape is still in about a dozen queries — `grep "order_by(" printorian/` and
+look for one term. Most cannot be observed by a test today. Two are worth knowing about:
+`production/planning.py` (the scheduler: equal priority *and* equal `created_at` picks
+arbitrarily) and `production/reads.py` (assignment records, whose whole purpose is
+explaining the order things were considered in). They were left alone because fixing a
+sort nothing asserts on is churn — but when one of them goes flaky, this is the cause,
+and the fix is a second `order_by` term, not a retry.
 
 ## 3. What is actually next
 
@@ -96,7 +152,7 @@ Verified against the code, not read off a plan document.
 
 | Screen | Backend state |
 |---|---|
-| `settings.html` | Nothing. No `contexts/settings`; farm rates are code defaults in `pricing/rates.py`. ~15 sections, ~100 parameters — the largest single gap. |
+| `settings.html` | **Rates half landed** (§1): `contexts/settings` serves the 17 scalar rates with an audit. The remaining ~85 kit parameters are still `core.config.Settings` constants read once at process start, so moving them changes *when* they are read as well as where from. No screen yet either way. |
 | `purchasing.html` | Nothing. No `PurchaseOrder`, no `Supplier`. |
 | `service.html` | Backend half exists (`ServiceOperation` is a real service card); no screen, no route. |
 | `store.html` (warehouse) | Backend half exists (`MaterialLot` carries locations); no screen. |
@@ -144,6 +200,15 @@ What exists now so that proving it is one command rather than a project:
   `boss@printorian.example` was reset to the documented `owner-pass-12345` and
   works. Also: `floor@` is `engineer` in the database, `operator` in the docs —
   a role is an authorization decision, so it was left alone.
+- **Infrastructure Stages 2 and 3 need a machine, not an agent.** Their exit
+  criteria are "a wiped machine reaches a running production farm from
+  `ansible-playbook` plus one SOPS key" and "the storefront serves over HTTPS on
+  the real domain" — neither is verifiable without a Debian host, a VPS, DNS and an
+  object-storage bucket. The systemd units above are the part that could be built
+  and checked without them; the Ansible role and the OpenTofu are deliberately not
+  written yet, because unverifiable infrastructure code reads as done and is not.
+  Ansible also cannot run on a Windows control node, so whoever picks this up needs
+  WSL or a container to lint it.
 - **The storefront ground colour** (§2) — keep the lift or take Harvester's void.
 - **`ruff format --check` was failing on `main`** before this run, on a migration
   committed as raw alembic output. Fixed in passing; worth knowing the gate can

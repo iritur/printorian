@@ -1,0 +1,20 @@
+[Unit]
+Description=Printorian weekly restore drill
+Documentation=https://github.com/dimmus/printorian/blob/main/docs/RUNBOOK-BACKUP-RESTORE.md
+
+[Timer]
+# Sunday 04:00, an hour after that morning's own backup — so the drill exercises
+# a dump produced by the schedule that will be used in a real recovery, rather
+# than one somebody made by hand.
+#
+# The hour is a margin, not a guarantee: both units carry a 15-minute randomized
+# delay, and on a farm with a year of history the dump takes longer than it does
+# today. `backup.sh` renames the dump into place only once it verifies, so a
+# drill that does start early picks the *previous* good dump rather than the
+# half-written current one — which is a stale subject, not a false alarm.
+OnCalendar=Sun *-*-* 04:00:00
+Persistent=true
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

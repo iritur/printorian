@@ -14,8 +14,8 @@
 #                gateway that difference is a day of `payment_notifications` —
 #                the exact rows needed to reconstruct what the gateway said.
 #
-# Neither is a backup until it has been restored. `restore-drill.sh` does that,
-# and the runbook explains why it is a cron job rather than a promise.
+# Neither is a backup until it has been restored. `restore_drill.py` does that,
+# and the runbook explains why it is a scheduled job rather than a promise.
 #
 #   docs/RUNBOOK-BACKUP-RESTORE.md
 
@@ -46,17 +46,28 @@ log "dumping ${DATABASE}"
 # -Fc: the custom format. Compressed, and restorable selectively with pg_restore,
 # which matters when the thing being recovered is one table somebody truncated
 # rather than the whole database.
+# Written under `.partial` and renamed only once it verifies, so a `*.dump` glob
+# never matches a half-written file. The weekly restore drill picks its subject
+# with `ls -t | head -1`; without the rename it would sometimes pick the dump this
+# script is still filling and fail on it. A drill that cries wolf gets switched
+# off, and then it is not a drill.
+#
+# `mv` within one directory is a rename, which is atomic. Copying across
+# filesystems would not be.
+DUMP="${DUMP_DIR}/${DATABASE}-${STAMP}.dump"
+
 pg_dump \
   --host="${DB_HOST}" --port="${DB_PORT}" --username="${DB_USER}" \
   --format=custom --compress=9 \
-  --file="${DUMP_DIR}/${DATABASE}-${STAMP}.dump" \
+  --file="${DUMP}.partial" \
   "${DATABASE}"
 
 # Verified immediately rather than at restore time. A dump that cannot be listed
 # is a dump that cannot be restored, and finding that out now costs seconds —
 # finding it out during an incident costs the business.
-pg_restore --list "${DUMP_DIR}/${DATABASE}-${STAMP}.dump" > /dev/null
-log "dump verified: ${DUMP_DIR}/${DATABASE}-${STAMP}.dump"
+pg_restore --list "${DUMP}.partial" > /dev/null
+mv "${DUMP}.partial" "${DUMP}"
+log "dump verified: ${DUMP}"
 
 # --------------------------------------------------------------- physical
 
@@ -73,6 +84,12 @@ log "base backup written: ${BASE_DIR}"
 # never by age, because WAL older than the base backup it belongs to makes that
 # backup unrestorable, and that is precisely the copy kept for the worst case.
 find "${DUMP_DIR}" -name "${DATABASE}-*.dump" -mtime "+$((KEEP_DAILY + KEEP_WEEKLY * 7))" -delete
+
+# Partials from runs that died mid-dump. They do not match the glob above — it
+# ends in `.dump` — so without this they are the one thing here that grows
+# forever, and each one is a full-sized dump. A day's grace so a currently
+# running backup is never touched.
+find "${DUMP_DIR}" -name "${DATABASE}-*.dump.partial" -mtime +1 -delete
 
 find "${BASE_DIR%/*}" -maxdepth 1 -mindepth 1 -type d -mtime "+${KEEP_DAILY}" \
   | sort | head -n -"${KEEP_WEEKLY}" | xargs -r rm -rf

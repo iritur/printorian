@@ -1,0 +1,20 @@
+[Unit]
+Description=Printorian nightly backup
+Documentation=https://github.com/dimmus/printorian/blob/main/docs/RUNBOOK-BACKUP-RESTORE.md
+
+[Timer]
+# 03:00 local. After the shop is closed and before anybody arrives, so a backup
+# that runs long does not compete with the morning's dispatch.
+OnCalendar=*-*-* 03:00:00
+
+# The reason these are timers rather than cron entries. A farm host gets powered
+# down; without this, a backup skipped because the shop was shut on Monday is
+# simply never taken, and nothing says so.
+Persistent=true
+
+# Spread the load if several farms ever share an off-site destination, and stop
+# every farm hitting the bucket on the same second.
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,30 @@
+# One nightly backup: logical dump plus base backup, then WAL pruning.
+#
+# See `backend/scripts/backup.sh` for what it does and why there are two
+# artifacts. This unit only supplies the environment and the failure semantics.
+
+[Unit]
+Description=Printorian nightly backup
+Documentation=https://github.com/dimmus/printorian/blob/main/docs/RUNBOOK-BACKUP-RESTORE.md
+Requires=printorian.service
+After=printorian.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/printorian
+
+# The dump runs inside the postgres container, which is the only place the
+# client tools are guaranteed to match the server version. `pg_dump` refuses to
+# dump from a server newer than itself, so a host-installed client silently
+# becomes a broken backup the first time PostgreSQL is upgraded.
+ExecStart=/usr/bin/docker compose -f deploy/compose.prod.yml exec -T \
+    -e PRINTORIAN_BACKUP_ROOT=/backup \
+    postgres /srv/scripts/backup.sh
+
+# A backup that runs while the farm is printing is fine — `pg_dump` takes a
+# consistent snapshot and does not block writers. No reboot guard needed here.
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -34,6 +35,7 @@ from printorian.api.routers import (
 )
 from printorian.api.ws import Hub
 from printorian.api.ws import router as ws_router
+from printorian.contexts.identity import refusal_message, reserved_domain_accounts
 from printorian.core.clock import SystemClock
 from printorian.core.config import Settings, get_settings
 from printorian.core.cpu import CpuGate
@@ -44,6 +46,8 @@ from printorian.core.logging import configure_logging
 from printorian.core.ratelimit import Lockout, RateLimiter
 from printorian.core.relay import EventRelay
 from printorian.core.storage import build_object_store, prepare_root
+
+logger = structlog.get_logger(__name__)
 
 #: Bumped when the wire contract changes in a way clients must notice.
 API_VERSION = "0.1.0"
@@ -60,6 +64,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.clock = SystemClock()
         app.state.event_bus = EventBus()
         app.state.database = Database(resolved)
+
+        # Before anything else is allocated: a production farm holding accounts
+        # from a developer dump is a farm whose owner password is published in
+        # this repository, so it must not come up (`contexts.identity.reserved`).
+        #
+        # Placed immediately after the database and before every other resource
+        # because raising here aborts the lifespan, and the shutdown half of a
+        # lifespan that never finished starting does not run — anything started
+        # above this line would be left behind.
+        if resolved.is_production:
+            await _refuse_reserved_accounts(app)
+
         # Proved usable at startup rather than at first upload: a farm whose
         # storage directory is missing, read-only or on an unmounted disk should
         # fail to boot with a clear reason, not take an order and fail at prep.
@@ -137,6 +153,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_error_handlers(app)
     _install_routers(app)
     return app
+
+
+async def _refuse_reserved_accounts(app: FastAPI) -> None:
+    """Stop the process if the database is a test one wearing production's clothes.
+
+    A `RuntimeError` rather than a domain error: this is not a request failing, it
+    is the farm declining to exist in this configuration, and it must not be
+    catchable by anything that would then carry on serving.
+    """
+    accounts: list[str] = []
+    async for session in app.state.database.session():
+        accounts = await reserved_domain_accounts(session)
+    if accounts:
+        message = refusal_message(accounts)
+        logger.error("refusing_to_start_with_reserved_accounts", accounts=accounts)
+        raise RuntimeError(message)
 
 
 def _install_routers(app: FastAPI) -> None:
