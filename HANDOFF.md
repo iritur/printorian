@@ -7,8 +7,12 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-22 · `main` at `c6a7c50` · 1108 backend tests, 206 frontend,
+**As of:** 2026-08-22 · `main` at `70536c6` · 1108 backend tests, 206 frontend,
 all six governance gates green.
+
+The last two commits are documentation only: `docs/` lost three overlapping
+design-kit documents and four stale statuses, and the agent rules split so a
+session loads only its own half (`backend/CLAUDE.md`, `frontend/CLAUDE.md`).
 
 ---
 
