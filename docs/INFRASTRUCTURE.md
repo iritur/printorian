@@ -4,8 +4,8 @@ How the system is built, released, run and kept running — by one person, witho
 that person being the availability mechanism.
 
 Written against what the repository actually contains today, in the same spirit as
-[DESIGN-KIT-PLAN.md](DESIGN-KIT-PLAN.md): where something is promised but absent,
-that is said plainly rather than folded into a line item.
+[DESIGN-KIT.md](DESIGN-KIT.md): where something is promised but absent, that is
+said plainly rather than folded into a line item.
 
 The product architecture is not up for renegotiation here. [ADR-0001](adr/0001-one-backend-one-database.md),
 [ADR-0003](adr/0003-on-prem-backend.md) and [ADR-0016](adr/0016-two-web-apps-no-desktop.md)

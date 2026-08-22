@@ -80,11 +80,12 @@ Verified against the code, not read off a plan document.
 | `store.html` (warehouse) | Backend half exists (`MaterialLot` carries locations); no screen. |
 | `logistics.html` | Only `carrier_code` on a parcel. No shipments, no tracking. |
 
-Every public screen is built. The "endpoints with no consumer" list in
-`DESIGN-KIT-INTEGRATION.md` §1.5 is now almost entirely stale — thirteen of its
-fourteen have consumers. The exception is **`GET /materials/{code}`**: the
-console's materials screen reads the table and `/materials/lots`, never the
-per-code detail the kit's popup is drawn from.
+Every public screen is built. Detail, and what each of the five would need from
+the backend, is in [docs/DESIGN-KIT.md](docs/DESIGN-KIT.md).
+
+**Still persisted or served with no consumer:** `GET /materials/{code}` (the
+console reads the table and `/materials/lots`, never the per-code detail),
+`EstimateVariance`, and `RateSnapshotRecord`.
 
 **Still persisted with no endpoint:** `EstimateVariance` (drives `price_review`
 and the desk's «Пересмотр цены» filter) and `RateSnapshotRecord`. `TelemetrySample`

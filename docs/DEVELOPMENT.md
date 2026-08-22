@@ -204,7 +204,7 @@ Not a development concern, but the schema decisions assume it exists:
 
 | Path | Purpose |
 |---|---|
-| `tests/unit/` | Pure logic — money, permissions, identity. SQLite-backed, fast |
+| `tests/unit/` | Context logic — money, permissions, identity, rollups. Real PostgreSQL like everything else (ADR-0021) |
 | `tests/api/` | HTTP behaviour, especially the authorization boundary |
 | `tests/contract/` | The contract **every** printer driver must satisfy |
 | `tests/virtualfarm/` | End-to-end farm runs against mock printers |

@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest'
 /*
  * The design kit's exit criterion, made executable.
  *
- * It used to be a line of prose in `docs/DESIGN-KIT-INTEGRATION.md` — a `grep`
- * that, as written, did not run at all, and that counted build output when it
- * was repaired. A criterion nothing checks is a criterion that comes back, and
- * D13 says a thing is done when a test says so. So it lives here instead.
+ * It used to be a line of prose in the design-kit documents — a `grep` that, as
+ * written, did not run at all, and that counted build output when it was
+ * repaired. A criterion nothing checks is a criterion that comes back, and D13
+ * says a thing is done when a test says so. So it lives here instead.
  *
  * `import.meta.glob` rather than `node:fs` because the frontend has no
  * `@types/node` and adding one to read four hundred files would be a

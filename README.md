@@ -33,9 +33,12 @@ what needs a person rather than an agent.
 | [docs/adr/](docs/adr/README.md) | 21 locked decisions, each with the problem that motivated it |
 | [docs/GLOSSARY.md](docs/GLOSSARY.md) | One agreed name per concept, RU / EN |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Setup, daily commands, the CI gates |
+| [docs/DATABASE-REVIEW.md](docs/DATABASE-REVIEW.md) | Schema by context, indexing, partitioning, and the accepted trade-offs |
+| [docs/DESIGN-KIT.md](docs/DESIGN-KIT.md) | Which of the twenty-one kit screens exist, and what the five that do not would need |
 | [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | Containers, release gate, deployment stages |
 | [docs/RUNBOOK-BACKUP-RESTORE.md](docs/RUNBOOK-BACKUP-RESTORE.md) | WAL archiving, base backups, the restore drill |
 | [docs/BAMBU-LAN-PROTOCOL.md](docs/BAMBU-LAN-PROTOCOL.md) | Spike findings from a real printer — the spec the Phase 3 driver is built from |
+| [docs/TASKS.txt](docs/TASKS.txt) | Raw idea backlog, unfiltered and unsequenced — the origin of several screens, not a plan |
 
 ## The four rules
 

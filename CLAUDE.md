@@ -120,9 +120,10 @@ cover it, so removing a backend field leaves `tsc` green and the screen renderin
 **Do not run two backend test sessions at once.** They share `printorian_test` and
 truncate each other's tables; the result is failures that do not reproduce.
 
-**The docs go stale.** `DESIGN-KIT-PLAN.md` and `DESIGN-KIT-INTEGRATION.md` have
-both described built features as missing. Verify against the code before repeating
-a status from any document — including this one.
+**The docs go stale.** Three design-kit documents described built features as
+missing for long enough that they were merged into one (`docs/DESIGN-KIT.md`) and
+the others deleted. Verify against the code before repeating a status from any
+document — including this one.
 
 **Reachability is a question about the bundle, not the source.** Grepping the
 source for a class name cannot tell a live `className` from the same word in a

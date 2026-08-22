@@ -423,7 +423,7 @@ function Card({
  * Two panels the kit shows are deliberately **not** here: the quantity ladder and
  * the per-material Δ price. Both are real pricing questions, and the honest way to
  * answer them is a quote from the pricing engine rather than a table of numbers
- * this screen made up. They are noted in DESIGN-KIT-INTEGRATION.md §3.6.
+ * this screen made up. The catalogue's remaining gaps are in docs/DESIGN-KIT.md.
  */
 function Detail({
   card: summary,

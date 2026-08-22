@@ -4,14 +4,11 @@ Phased build plan. Each phase has **deliverables**, an **exit criterion** (a dem
 
 Sequencing principle: **build in customer-value order, but de-risk in uncertainty order.** The Bambu protocol is the highest technical unknown, so it is spiked in Phase 0 even though the driver ships in Phase 3. The mistake to avoid is discovering that the core integration does not work after everything has been built on top of it.
 
-**Current state and the work after Phase 7** live in
-[DESIGN-KIT-PLAN.md](DESIGN-KIT-PLAN.md) — a per-phase status read off the code
-rather than off this document.
+**What is built right now** is in [../HANDOFF.md](../HANDOFF.md); this document is
+the plan, not the status, and the two drifted apart once already.
 
-**The full integration plan** for the twenty-one screens in
-[`design/`](../design/README.md) — every list, table, filter and parameter,
-checked against the code — is
-[DESIGN-KIT-INTEGRATION.md](DESIGN-KIT-INTEGRATION.md).
+**The twenty-one screens** of the design kit, which of them exist, and what the
+five that do not would need, are in [DESIGN-KIT.md](DESIGN-KIT.md).
 
 ---
 
