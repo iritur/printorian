@@ -19,6 +19,11 @@ npm install, migrations — is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Read in this order
 
+Working on this with an AI agent? [CLAUDE.md](CLAUDE.md) carries the rules that are
+easy to violate and the traps that have already cost time; [HANDOFF.md](HANDOFF.md)
+carries the current state — what just changed, what is deliberately unfinished, and
+what needs a person rather than an agent.
+
 | Document | What it covers |
 |---|---|
 | [printorian_scenario.txt](docs/printorian_scenario.txt) | The product scenario — source of truth for requirements |
