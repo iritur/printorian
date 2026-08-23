@@ -120,6 +120,37 @@ remembering to.
 
 ## 4. Restoring
 
+### 4.0 The WAL archive is gzipped — your `restore_command` must know
+
+`archive_command` compresses on the way out, so point-in-time recovery needs:
+
+```
+restore_command = 'gunzip -c /backup/wal/%f.gz > %p'
+```
+
+A `restore_command` that copies `%f` finds nothing, and PostgreSQL reports the
+recovery as *complete* at the last segment it could read rather than failing —
+so this is a mistake that looks like success and loses everything after the base
+backup.
+
+Two things that make this worth the extra step. Compression measured **27×** over
+a real archive (80 MiB of segments to 2.95 MiB), and near-empty segments — most
+of them, because `archive_timeout=1min` switches on time rather than on fullness —
+go from 16 MiB to about 16 KiB. At the idle rate this farm actually produces, that
+is the difference between filling a 98 GiB backup disk in **22 days** and in over
+a year. And the command writes to `%f.tmp` and renames, so a segment interrupted
+by a full disk never appears under its final name.
+
+**Migrating an existing archive.** Turning compression on leaves a mix, and
+`pg_archivecleanup -x .gz` prunes only the compressed half — the legacy
+uncompressed segments are never cleaned and sit there for ever. After the first
+successful base backup taken under the new setting, either gzip the stragglers
+in place or delete those that precede that backup:
+
+```bash
+find /backup/wal -regextype posix-extended -regex '.*/[0-9A-F]{24}' -exec gzip {} \;
+```
+
 ### 4.1 From the logical dump — wrong data, right disk
 
 The common case: something was deleted or corrupted by the application, the disk
@@ -247,7 +278,9 @@ has to be able to absorb that rather than treat it as an impossible transition.
 
   **This is a disk-fill risk, not just a missing backup.** `pg_archivecleanup`
   runs *inside* `backup.sh` and nowhere else, so until something schedules it,
-  archived WAL accumulates without bound. The development stack reached 847
+  archived WAL accumulates without bound. Compression (§4.0) buys roughly 27x of
+  headroom, and `/health/ready` now reports `wal_archiving: degraded` when the
+  archive stops keeping up — but neither of those *prunes* anything. The development stack reached 847
   segments — 13.9 GB — in four days of light use, and the comment on
   `deploy/compose.prod.yml` records the earlier version of this failure at 23 GB.
   A farm left unscheduled fills its backup disk and then stops archiving, which is

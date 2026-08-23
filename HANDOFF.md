@@ -7,14 +7,13 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-22 · 1174 backend tests passing (6 hardware tests skip without a
-printer), 206 frontend, all six governance gates green.
+**As of:** 2026-08-23 · 1188 backend tests passing (6 hardware tests skip without
+a printer), 206 frontend, all six governance gates green.
 
-Landed since the docs pass: the **settings store**, **first-boot provisioning**
-with the reserved-domain start-up guard, a **backup and restore drill that have
-now actually been run** (and two defects that fell out of running them), and the
-**systemd units** that schedule them (all §1) — plus the **hardware conformance
-suite** (§4), the beginning of the one thing that has never been proven.
+**The system now runs on a real host.** A farm exists at `192.168.29.148`
+(Ubuntu 26.04, VMware), in production mode, and getting it there is what most of
+§1 is about — deploying it found nine defects that all six gates and 1174 tests
+had passed over, four of them in units committed hours earlier the same day.
 
 ---
 
@@ -114,6 +113,73 @@ archived WAL grows without bound. The dev stack reached **847 segments / 13.9 GB
 four days**, and `compose.prod.yml` already carries a comment recording the earlier
 version of this failure at 23 GB.
 
+**There is a farm, and it survives being mistreated.** `192.168.29.148`, Ubuntu
+26.04 under VMware, root grown to 96 GB and `/mnt/backup` on a **second physical
+disk** — the ADR-0019 separation the compose default violates. Console on
+`:8080`; the API is reachable only through its Caddy at `/api`, and postgres and
+redis are not published at all. The storefront is **not** here and will not be:
+ADR-0016 puts it on the edge VPS, and `web-dist` is a bundle rather than a server.
+
+Measured on that host, not asserted: a reboot brings back the mount, the stack,
+the timers and the data unattended; `SIGKILL` to the API is healthy again in ten
+seconds; `SIGKILL` to postgres keeps the data through WAL replay and the API
+recovers its pool without restarting. Backup and drill both run green through
+systemd.
+
+> **Do not trust `systemctl is-active printorian.service`.** `Type=oneshot` with
+> `RemainAfterExit=yes` means "ExecStart returned 0 once", not "the farm is up".
+> Observed within the hour: `systemd says: active | containers running: 0`, and
+> `systemctl start` will not fix it — only `restart` re-runs ExecStart. The honest
+> checks are `/health/ready` and the container count.
+> `printorian-ensure.timer` reconciles every five minutes and logs loudly when it
+> has to act; it reconciles toward systemd's *intent*, so a farm deliberately
+> stopped stays stopped.
+
+**Nine defects that only a real host could surface.** Four of them were in units
+committed hours earlier: the image copied `tools/` but not `scripts/`; nothing
+mounted `backup.sh` into postgres; the api container had no `/backup`; the api
+image had no `pg_restore`. Three more were worse:
+
+> **A write that was never committed.** `Database.session()` commits *after* the
+> yield, so `return` from inside `async for session in db.session()` leaves the
+> generator suspended and the commit never runs — the interpreter finalizes it
+> with `GeneratorExit`, a `BaseException`, which slips past the `except Exception`
+> that would at least have rolled back loudly. `provision_owner.py` created the
+> farm's first owner, discarded the insert, printed "Created owner" and exited 0.
+> `api/ws.py` had the same shape. `tests/unit/test_session_lifecycle.py` now walks
+> the AST and fails on the pattern anywhere.
+>
+> **The drill could never have run on a farm.** Synchronous SQLAlchemy resolved a
+> bare `postgresql://` URL to psycopg2 — declared only in the *dev* group, for one
+> migration test. Exactly the failure INFRASTRUCTURE §6 predicts. Now async.
+>
+> **One full backup disk wedged WAL archiving permanently.** `archive_command`
+> copied to the final name, so a full disk left a 786 KB fragment of a 16 MB
+> segment there; `test ! -f` then saw a file and the `&&` chain never ran again —
+> and freeing the disk did *not* help. It now writes `%f.tmp` and renames.
+
+**The farm now says when its backup guarantee stops holding.** With the disk full,
+`/health/ready` used to answer `{"status":"ok"}` while archiving failed and
+`pg_wal` grew toward filling the *data* disk; `systemctl --failed` listed nothing.
+It now reports `wal_archiving: degraded` — degraded rather than failed, because
+serving is unaffected and taking the API out of rotation would turn a broken
+backup into a broken farm. It compares the two watermarks rather than
+`failed_count`, which never resets and would leave a farm red for ever over one
+bad night in March.
+
+**Archived WAL is gzipped, which changes the disk arithmetic.** `archive_timeout`
+is 1 min, so segments are switched on *time* rather than fullness — 288 segments a
+day on an idle farm, nearly all empty, at 16 MB each. Measured: 80 MiB of segments
+compress to 2.95 MiB (**27×**), and the near-empty ones go 16 MiB → 16 KiB. That is
+a 98 GiB backup disk filling in **22 days** versus over a year. PITR therefore needs
+`restore_command = gunzip -c /backup/wal/%f.gz > %p`; a `cp`-based one finds nothing
+and PostgreSQL reports recovery *complete* rather than failing.
+
+**The console was rendering without its fonts.** Caddy's CSP said `font-src 'self'`
+while Vite inlines the interface font as a `data:` URI, so every Harvester face was
+blocked and the console fell back. Invisible in development, where the dev server
+sends no CSP at all.
+
 ## 2. Deliberately unfinished
 
 Not oversights. Changing any of them is a decision, not a cleanup.
@@ -200,15 +266,19 @@ What exists now so that proving it is one command rather than a project:
   `boss@printorian.example` was reset to the documented `owner-pass-12345` and
   works. Also: `floor@` is `engineer` in the database, `operator` in the docs —
   a role is an authorization decision, so it was left alone.
-- **Infrastructure Stages 2 and 3 need a machine, not an agent.** Their exit
-  criteria are "a wiped machine reaches a running production farm from
-  `ansible-playbook` plus one SOPS key" and "the storefront serves over HTTPS on
-  the real domain" — neither is verifiable without a Debian host, a VPS, DNS and an
-  object-storage bucket. The systemd units above are the part that could be built
-  and checked without them; the Ansible role and the OpenTofu are deliberately not
-  written yet, because unverifiable infrastructure code reads as done and is not.
-  Ansible also cannot run on a Windows control node, so whoever picks this up needs
-  WSL or a container to lint it.
+- **Stage 2 is now half done by hand, and that is the argument for Ansible.**
+  A farm host exists and works (§1), but every step of getting there was manual and
+  is recorded nowhere executable. The exit criterion is "a wiped machine reaches a
+  running production farm from `ansible-playbook` plus one SOPS key", and the
+  cheapest time to write that role is now, against a host whose correct end state
+  is known and reproducible. Ansible cannot run on a Windows control node, so it
+  needs WSL or a container.
+- **Stage 3 still needs hardware nobody has.** "The storefront serves over HTTPS on
+  the real domain" needs a VPS, DNS and an object-storage bucket. Until then there
+  is no customer-facing site anywhere — only the console, on the LAN.
+- **Off-site backup is still the largest single gap.** Every copy of the farm's
+  data is on one machine. §1's compression buys time on the local disk; it does
+  nothing about fire, theft or that VM being deleted.
 - **The storefront ground colour** (§2) — keep the lift or take Harvester's void.
 - **`ruff format --check` was failing on `main`** before this run, on a migration
   committed as raw alembic output. Fixed in passing; worth knowing the gate can

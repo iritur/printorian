@@ -101,7 +101,11 @@ if [[ -n "${OLDEST_BASE}" && -f "${OLDEST_BASE}/backup_manifest" ]]; then
   # way to end up with base backups that cannot be replayed.
   START_WAL="$(grep -oE '[0-9A-F]{24}' "${OLDEST_BASE}/backup_manifest" | head -n 1 || true)"
   if [[ -n "${START_WAL}" ]]; then
-    pg_archivecleanup "${BACKUP_ROOT}/wal" "${START_WAL}"
+    # `-x .gz` because the archive is compressed (see `archive_command` in the
+    # compose file). Without it every filename carries an extension
+    # pg_archivecleanup does not recognise, it matches nothing, and the pruning
+    # silently does no pruning at all — which is the failure that fills the disk.
+    pg_archivecleanup -x .gz "${BACKUP_ROOT}/wal" "${START_WAL}"
     log "pruned WAL before ${START_WAL}"
   fi
 fi

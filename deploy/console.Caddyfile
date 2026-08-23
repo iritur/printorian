@@ -64,7 +64,13 @@
 			# attributes for the things that are genuinely dynamic (a progress
 			# width, a material's colour swatch). Scripts get no such allowance,
 			# which is the half that matters for injection.
-			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
+			# `font-src` allows `data:` because Vite inlines the interface font
+			# into the CSS bundle. Without it the browser blocks the font and the
+			# console renders in a fallback face -- visible only when served
+			# through this Caddyfile, since the dev server sends no CSP at all.
+			# `data:` is already allowed for images; fonts cannot execute, so the
+			# same allowance carries the same (negligible) risk.
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
 
 			# The console is a tool, never something to be framed by a page a
 			# person was led to. `frame-ancestors` above says the same thing to a

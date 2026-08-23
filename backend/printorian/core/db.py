@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import DateTime, MetaData, func
+from sqlalchemy import DateTime, MetaData, func, text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import (
@@ -194,3 +194,54 @@ class Database:
 
     async def dispose(self) -> None:
         await self.engine.dispose()
+
+
+async def wal_archiving_stalled(session: AsyncSession) -> str | None:
+    """The segment WAL archiving is stuck on, or `None` if it is keeping up.
+
+    ADR-0019's whole guarantee rests on archived WAL: without it the recovery
+    point is last night's dump rather than the last minute, and `pg_wal` grows
+    without bound until it fills the data disk and the farm stops accepting work.
+
+    Both halves of that were reproduced on the first farm host. Filling the backup
+    disk broke archiving, `pg_wal` grew, and **every existing signal stayed green**
+    — `/health/ready` returned 200, `systemctl --failed` listed nothing, and the
+    only evidence was a counter nobody was reading. Worse, the failure did not
+    clear when the disk was freed: `archive_command` copies straight to the final
+    name, so a part-written segment stays there, `test ! -f` sees it, and archiving
+    is wedged until a person deletes the file.
+
+    Compares the two watermarks rather than reading `failed_count`, because that
+    counter never resets: a farm that failed once in March would look broken for
+    ever, and a check that is permanently red is one people learn to ignore. A
+    `last_failed_wal` at or beyond `last_archived_wal` means the *most recent*
+    attempt is the one that failed, which is the live condition.
+    """
+    row = (
+        await session.execute(
+            text("SELECT last_archived_wal, last_failed_wal FROM pg_stat_archiver")
+        )
+    ).one_or_none()
+    if row is None:
+        return None
+    return archiving_stalled_on(row[0], row[1])
+
+
+def archiving_stalled_on(archived: str | None, failed: str | None) -> str | None:
+    """The comparison itself, over two watermarks.
+
+    Split out because `pg_stat_archiver` is a server-wide singleton whose contents
+    a test cannot arrange: the only way to exercise "failed in March, fine since"
+    is to hand the values in. Kept as the single implementation so those tests
+    drive the real decision rather than a copy of it — a copy would go on passing
+    after this function changed, which is the failure mode that makes a test
+    worthless precisely when it is needed.
+
+    WAL segment names are fixed-width uppercase hex, so lexical order is real
+    order and `>=` is the right comparison.
+    """
+    if failed is None:
+        return None
+    if archived is None or failed >= archived:
+        return failed
+    return None

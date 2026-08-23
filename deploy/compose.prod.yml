@@ -86,7 +86,27 @@ services:
       # permission to run fails silently for ever, and PostgreSQL retries the
       # same segment until the disk is gone. Refusing to overwrite an existing
       # segment stays: a silent overwrite corrupts the archive a restore needs.
-      - archive_command=test ! -f /backup/wal/%f && cp %p /backup/wal/%f
+      # Two properties, and each was learned by losing it.
+      #
+      # **Atomic.** The old form copied straight to the final name. When the
+      # backup disk filled, `cp` left a part-written segment there (786 KB of an
+      # expected 16 MB), `test ! -f` then saw a file and the `&&` chain never
+      # ran again — archiving stayed wedged after the disk was freed, until
+      # somebody deleted that file by hand. Writing to `.tmp` and renaming means
+      # a partial segment never appears under the name the check tests for; a
+      # rename within one directory is atomic.
+      #
+      # **Compressed.** Measured on the first farm host: six archived segments,
+      # 80 MiB raw, 2.95 MiB gzipped — 27x, and the near-empty ones (which is
+      # most of them, because `archive_timeout=1min` switches segments on time
+      # rather than on fullness) went 16 MiB -> 16 KiB. At the observed idle rate
+      # that is the difference between filling a 98 GiB backup disk in 22 days
+      # and in rather more than a year.
+      #
+      # Restoring therefore needs `restore_command = gunzip -c /backup/wal/%f.gz
+      # > %p`, and `pg_archivecleanup` needs `-x .gz`. Both are in
+      # RUNBOOK-BACKUP-RESTORE.
+      - archive_command=test ! -f /backup/wal/%f.gz && gzip -c %p > /backup/wal/%f.tmp && mv /backup/wal/%f.tmp /backup/wal/%f.gz
       - -c
       - archive_timeout=60
       - -c

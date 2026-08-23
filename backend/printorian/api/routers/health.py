@@ -27,6 +27,7 @@ from fastapi import APIRouter, Request, Response, status
 from sqlalchemy import text
 
 from printorian.contexts.fleet import retention
+from printorian.core.db import wal_archiving_stalled
 from printorian.core.heartbeat import Heartbeat
 
 router = APIRouter(tags=["health"])
@@ -43,10 +44,18 @@ async def ready(request: Request, response: Response) -> dict[str, Any]:
     """Readiness: every dependency this process needs in order to serve."""
     checks: dict[str, Literal["ok", "failed", "degraded"]] = {}
     unroutable = 0
+    stalled_segment: str | None = None
 
     try:
         async for session in request.app.state.database.session():
             await session.execute(text("SELECT 1"))
+            # Whether ADR-0019's guarantee is actually holding. Reported here for
+            # the same reason as `telemetry_partitions` below: the failure is
+            # silent, unbounded, and otherwise visible only in a counter nobody
+            # reads. A full backup disk broke archiving on the first farm host
+            # while `/health/ready` answered 200 and `systemctl --failed` listed
+            # nothing (`core.db.wal_archiving_stalled`).
+            stalled_segment = await wal_archiving_stalled(session)
             # Telemetry rows that could not be routed to a month. Always zero when
             # partition provisioning is healthy, and the one condition that is
             # silently unbounded when it is not: the rows still arrive, into a
@@ -56,6 +65,13 @@ async def ready(request: Request, response: Response) -> dict[str, Any]:
             unroutable = await retention.unroutable_sample_count(session)
         checks["database"] = "ok"
         checks["telemetry_partitions"] = "ok" if unroutable == 0 else "degraded"
+        # Degraded rather than failed, deliberately, and for the opposite reason
+        # to the relay's. Serving is unaffected — so taking this process out of
+        # rotation would turn a broken *backup* into a broken *farm*, which is
+        # strictly worse. But it is a slow-motion outage: `pg_wal` grows until the
+        # data disk fills and writes stop, so it must be alerted on rather than
+        # merely displayed.
+        checks["wal_archiving"] = "ok" if stalled_segment is None else "degraded"
     except Exception:
         checks["database"] = "failed"
 
