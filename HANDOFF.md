@@ -117,8 +117,21 @@ version of this failure at 23 GB.
 26.04 under VMware, root grown to 96 GB and `/mnt/backup` on a **second physical
 disk** — the ADR-0019 separation the compose default violates. Console on
 `:8080`; the API is reachable only through its Caddy at `/api`, and postgres and
-redis are not published at all. The storefront is **not** here and will not be:
-ADR-0016 puts it on the edge VPS, and `web-dist` is a bundle rather than a server.
+redis are not published at all.
+
+The **storefront** runs on `:8081`, but only when asked for:
+
+```bash
+docker compose -f deploy/compose.prod.yml --profile storefront up -d
+```
+
+It sits behind a Compose profile because this is not where it belongs — ADR-0016
+puts it on the rented edge VPS, with TLS there and WireGuard back, and that is
+Stage 3. Without it a farm-only deployment cannot exercise ordering, quoting or
+uploading at all, which is most of what a customer does. `web-dist` stays the
+bundle the edge will receive; the new `storefront` target is the same bundle
+behind a Caddy using the identical `/api` prefix, so nothing needs rebuilding to
+move. `deploy/storefront.Caddyfile` names every difference from the edge.
 
 Measured on that host, not asserted: a reboot brings back the mount, the stack,
 the timers and the data unattended; `SIGKILL` to the API is healthy again in ten

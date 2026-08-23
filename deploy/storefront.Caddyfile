@@ -1,0 +1,80 @@
+# The storefront, served from the farm — for rehearsal, not for customers.
+#
+# **This is not where the storefront belongs.** ADR-0016 puts it on the rented
+# edge VPS: TLS terminates there, the farm dials out over WireGuard, and the
+# on-prem box is never exposed to the internet. That is INFRASTRUCTURE Stage 3
+# and it is not built.
+#
+# What this file is for is the half of the system a farm-only deployment cannot
+# otherwise exercise. The console covers staff workflows; ordering, quoting and
+# uploading are the customer's, and until Stage 3 exists there is nowhere to try
+# them. Serving the same bundle from the farm, behind the same `/api` prefix the
+# edge will use, makes that testable now — and the differences from the real
+# thing are named below rather than left to be discovered later.
+#
+# Run it deliberately, never by default:
+#
+#     docker compose -f deploy/compose.prod.yml --profile storefront up -d
+#
+# ## How this differs from the edge, and why each difference is safe here
+#
+# * **No TLS, and no HSTS.** Same reasoning as the console: a certificate for a
+#   name only the LAN resolves is a warning, not a guarantee. HSTS in particular
+#   must not be set here — a browser that sees it on this origin will refuse the
+#   plain-HTTP farm afterwards, which is a self-inflicted outage.
+# * **Same-origin `/api`.** On the edge this proxies over WireGuard to the farm;
+#   here it is a container hop. The *prefix* is identical on purpose, so the
+#   bundle needs no rebuild to move between them.
+# * **Bound to the LAN.** Publishing this to the internet would put the farm's
+#   database one Caddy misconfiguration from the outside, which is precisely the
+#   arrangement ADR-0016 exists to prevent.
+
+:8081 {
+	encode zstd gzip
+
+	# Identical to the console's, and identical to the Vite dev proxy in
+	# `frontend/apps/web/vite.config.ts`. Development, this, and the edge
+	# disagreeing about the prefix is a class of bug that only appears after a
+	# deploy, so all three are kept the same deliberately.
+	handle_path /api/* {
+		reverse_proxy api:8000 {
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle {
+		root * /srv
+
+		@immutable path /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		header /index.html Cache-Control "no-cache"
+
+		header {
+			X-Content-Type-Options nosniff
+			-Server
+
+			# `strict-origin-when-cross-origin` rather than the console's
+			# `same-origin`. The storefront is a public site people arrive at from
+			# elsewhere and link out from; `same-origin` would strip the referrer
+			# entirely and blind any future attribution, while the full URL would
+			# leak a customer's order path to whatever they clicked.
+			Referrer-Policy strict-origin-when-cross-origin
+
+			# The same tight policy the console gets. `font-src` includes `data:`
+			# because Vite inlines the interface font — omitting it blocks every
+			# face and falls back silently, which is exactly what happened to the
+			# console and was invisible until it was served through a Caddyfile.
+			#
+			# When a payment provider is wired up for real (`PRINTORIAN_PAYMENT_
+			# PROVIDER` is `mock` here), its redirect or widget will need entries
+			# of its own. Add them then, narrowly, rather than loosening this now
+			# for something that is not yet called.
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
+
+			X-Frame-Options DENY
+		}
+
+		try_files {path} /index.html
+		file_server
+	}
+}

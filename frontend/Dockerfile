@@ -83,3 +83,27 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
 
 FROM scratch AS web-dist
 COPY --from=builder /build/apps/web/dist /dist
+
+# -------------------------------------------------------------- storefront
+# The storefront bundle *served*, for a farm that has no edge yet.
+#
+# `web-dist` above stays the artifact the edge will actually receive — cargo,
+# not a service (ADR-0016). This stage is the rehearsal one: it is the same
+# bundle behind a Caddy whose `/api` prefix matches both the Vite dev proxy and
+# what the edge will use, so ordering and quoting can be exercised on the farm
+# before Stage 3 exists.
+#
+# Kept as a separate target rather than replacing `web-dist`, because the two
+# have opposite purposes and merging them would quietly make the on-prem box the
+# place the storefront runs — which is the arrangement ADR-0016 exists to avoid.
+# `deploy/compose.prod.yml` puts it behind a profile so it never starts by
+# default. `deploy/storefront.Caddyfile` lists how it differs from the edge.
+
+FROM caddy@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648 AS storefront
+
+COPY --from=builder /build/apps/web/dist /srv
+COPY deploy/storefront.Caddyfile /etc/caddy/Caddyfile
+
+EXPOSE 8081
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:8081/ >/dev/null || exit 1

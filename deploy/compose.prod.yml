@@ -236,6 +236,28 @@ services:
       api:
         condition: service_started
 
+  # The storefront, on the farm, for rehearsal only.
+  #
+  # Behind a profile so it does **not** start with the rest of the stack. ADR-0016
+  # puts the storefront on the rented edge VPS -- TLS there, WireGuard back, the
+  # on-prem box never exposed -- and that is INFRASTRUCTURE Stage 3, unbuilt. A
+  # farm-only deployment therefore has no way to exercise ordering, quoting or
+  # uploading at all, which is most of what a customer does.
+  #
+  #     docker compose -f deploy/compose.prod.yml --profile storefront up -d
+  #
+  # `deploy/storefront.Caddyfile` names every way this differs from the edge.
+  # Binds to the LAN by default for the same reason the console does.
+  storefront:
+    image: ${PRINTORIAN_STOREFRONT_IMAGE:-printorian-storefront:local}
+    profiles: ["storefront"]
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${PRINTORIAN_STOREFRONT_BIND:-0.0.0.0}:${PRINTORIAN_STOREFRONT_PORT:-8081}:8081"
+
 volumes:
   pgdata:
   pgbackup:
