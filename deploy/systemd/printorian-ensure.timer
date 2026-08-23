@@ -1,0 +1,17 @@
+[Unit]
+Description=Printorian stack reconciliation
+Documentation=https://github.com/dimmus/printorian/blob/main/deploy/systemd/README.md
+
+[Timer]
+# Five minutes: long enough that a healthy farm costs nothing, short enough that
+# a farm which is absent rather than crashed is not absent for an hour. Docker's
+# own restart policy already covers the crash case in about ten seconds.
+OnBootSec=3min
+OnUnitActiveSec=5min
+
+# No `Persistent=true`, unlike the backup and drill timers. Catching up a missed
+# reconciliation makes no sense — it repairs the present, and the run it would be
+# catching up on is one whose moment has passed.
+
+[Install]
+WantedBy=timers.target

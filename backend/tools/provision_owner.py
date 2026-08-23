@@ -112,15 +112,28 @@ async def provision_with(
 
 
 async def provision(email: str, display_name: str) -> int:
-    """Wiring only: open the farm's database, hand it to the decision, close it."""
+    """Wiring only: open the farm's database, hand it to the decision, close it.
+
+    The loop must run to exhaustion. `Database.session()` commits *after* the
+    yield, so returning from inside the loop leaves the generator suspended and
+    the commit never runs — the interpreter finalizes it later by throwing
+    `GeneratorExit`, which is a `BaseException` and so slips past the
+    `except Exception` that would have rolled back.
+
+    That is not a stylistic point. The first version of this function returned
+    from inside the loop: it created the owner, discarded the insert, printed
+    "Created owner" and exited 0, on the one path in the system that runs exactly
+    once on a farm nobody can yet sign in to.
+    """
     settings = get_settings()
     database = Database(settings)
+    code = 1
     try:
         async for session in database.session():
-            return await provision_with(session, settings, email, display_name)
+            code = await provision_with(session, settings, email, display_name)
     finally:
         await database.dispose()
-    return 1
+    return code
 
 
 def main() -> int:

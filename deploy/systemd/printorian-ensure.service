@@ -1,0 +1,22 @@
+# Reconcile the running farm with what systemd says should be running.
+#
+# See deploy/reconcile.sh for why this exists: `printorian.service` reports
+# `active` on the strength of one successful ExecStart, so systemd's view and
+# reality drift apart, and `systemctl start` will not close the gap.
+
+[Unit]
+Description=Printorian stack reconciliation
+Documentation=https://github.com/dimmus/printorian/blob/main/deploy/systemd/README.md
+Requires=docker.service
+After=docker.service
+# Deliberately NOT `Requires=printorian.service`. That would *start* the farm an
+# operator had stopped, every five minutes. The script checks whether the farm is
+# meant to be up and exits quietly if it is not.
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/printorian/repo
+ExecStart=/srv/printorian/repo/deploy/reconcile.sh
+
+[Install]
+WantedBy=multi-user.target

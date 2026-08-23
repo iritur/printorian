@@ -12,7 +12,7 @@ After=printorian.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/srv/printorian
+WorkingDirectory=/srv/printorian/repo
 
 # Runs in the api container: it has the application's Python, alembic and the
 # models, which the schema-drift half of the drill needs. `sh -c` because the

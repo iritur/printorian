@@ -32,11 +32,13 @@ Exits non-zero on any failure, so cron mails the output.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import subprocess
 import sys
 from pathlib import Path
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from printorian.core.config import Settings
@@ -61,7 +63,25 @@ NEVER_EMPTY = "users"
 
 
 def _base_url() -> str:
-    return Settings().database_url.replace("+asyncpg", "").rsplit("/", 1)[0]
+    """Everything up to the database name, keeping SQLAlchemy's driver suffix.
+
+    This used to strip `+asyncpg`, which handed SQLAlchemy a bare
+    `postgresql://` URL and so selected psycopg2 — a driver this project declares
+    only in its *dev* dependency group, for one migration test. The drill
+    therefore ran on a developer's machine and died on the farm with
+    `ModuleNotFoundError: No module named 'psycopg2'`, which is precisely the
+    "works until it is the artifact" failure INFRASTRUCTURE §6 describes.
+    """
+    return Settings().database_url.rsplit("/", 1)[0]
+
+
+def _libpq(url: str) -> str:
+    """The same URL as the postgres command-line tools want it.
+
+    `pg_restore` speaks libpq and knows nothing of SQLAlchemy's `+driver`
+    suffix; it reads one as part of the scheme and refuses the URL.
+    """
+    return url.replace("+asyncpg", "")
 
 
 def _run(command: list[str]) -> None:
@@ -70,24 +90,25 @@ def _run(command: list[str]) -> None:
         raise RuntimeError(f"{command[0]} failed:\n{result.stderr.strip()}")
 
 
-def recreate_drill_database() -> str:
-    engine = create_engine(
+async def recreate_drill_database() -> str:
+    engine = create_async_engine(
         f"{_base_url()}/postgres", isolation_level="AUTOCOMMIT", poolclass=NullPool
     )
     try:
-        with engine.connect() as connection:
-            connection.execute(text(f"DROP DATABASE IF EXISTS {DRILL_DATABASE} WITH (FORCE)"))
-            connection.execute(text(f"CREATE DATABASE {DRILL_DATABASE}"))
+        async with engine.connect() as connection:
+            await connection.execute(text(f"DROP DATABASE IF EXISTS {DRILL_DATABASE} WITH (FORCE)"))
+            await connection.execute(text(f"CREATE DATABASE {DRILL_DATABASE}"))
     finally:
-        engine.dispose()
+        await engine.dispose()
     return f"{_base_url()}/{DRILL_DATABASE}"
 
 
 def restore(dump: Path, url: str) -> None:
-    # `--no-owner` and `--no-privileges`: the drill runs as whoever cron is, which
-    # is not necessarily the role that owned the objects. A restore that fails for
-    # that reason would be a false alarm, and a drill that cries wolf gets ignored.
-    _run(["pg_restore", "--dbname", url, "--no-owner", "--no-privileges", str(dump)])
+    # `--no-owner` and `--no-privileges`: the drill runs as whoever the timer is,
+    # which is not necessarily the role that owned the objects. A restore that
+    # fails for that reason would be a false alarm, and a drill that cries wolf
+    # gets ignored.
+    _run(["pg_restore", "--dbname", _libpq(url), "--no-owner", "--no-privileges", str(dump)])
 
 
 def assert_schema_current(url: str) -> None:
@@ -103,25 +124,27 @@ def assert_schema_current(url: str) -> None:
             "-m",
             "alembic",
             "-x",
-            f"url={url.replace('postgresql://', 'postgresql+asyncpg://')}",
+            f"url={url}",
             "check",
         ]
     )
 
 
-def _counts(url: str) -> dict[str, int]:
-    engine = create_engine(url, poolclass=NullPool)
+async def _counts(url: str) -> dict[str, int]:
+    engine = create_async_engine(url, poolclass=NullPool)
     try:
-        with engine.connect() as connection:
+        async with engine.connect() as connection:
             return {
                 # Interpolated, not bound: an identifier cannot be a parameter.
                 # Safe because `COMPARED` is a literal tuple in this file and
                 # nothing outside it reaches this string.
-                table: connection.execute(text(f"SELECT count(*) FROM {table}")).scalar_one()
+                table: (
+                    await connection.execute(text(f"SELECT count(*) FROM {table}"))
+                ).scalar_one()
                 for table in COMPARED
             }
     finally:
-        engine.dispose()
+        await engine.dispose()
 
 
 def compare(restored: dict[str, int], live: dict[str, int]) -> list[str]:
@@ -164,10 +187,31 @@ def compare(restored: dict[str, int], live: dict[str, int]) -> list[str]:
     return lines
 
 
-def assert_not_empty(url: str, source_url: str) -> None:
+async def assert_not_empty(url: str, source_url: str) -> None:
     """Read both databases and hand the counts to `compare`."""
-    for line in compare(_counts(url), _counts(source_url)):
+    for line in compare(await _counts(url), await _counts(source_url)):
         print(line)
+
+
+async def _drill(args: argparse.Namespace) -> int:
+    try:
+        print(f"restoring {args.dump.name} into {DRILL_DATABASE}")
+        url = await recreate_drill_database()
+        restore(args.dump, url)
+
+        if not args.skip_schema_check:
+            print("checking the restored schema matches the models")
+            assert_schema_current(url)
+
+        print("comparing the restored data against the live database")
+        live = f"{_base_url()}/{Settings().database_url.rsplit('/', 1)[1]}"
+        await assert_not_empty(url, live)
+    except (RuntimeError, OSError) as exc:
+        print(f"RESTORE DRILL FAILED: {exc}", file=sys.stderr)
+        return 1
+
+    print("restore drill passed")
+    return 0
 
 
 def main() -> int:
@@ -184,23 +228,7 @@ def main() -> int:
         print(f"no such dump: {args.dump}", file=sys.stderr)
         return 2
 
-    try:
-        print(f"restoring {args.dump.name} into {DRILL_DATABASE}")
-        url = recreate_drill_database()
-        restore(args.dump, url)
-
-        if not args.skip_schema_check:
-            print("checking the restored schema matches the models")
-            assert_schema_current(url)
-
-        print("comparing the restored data against the live database")
-        assert_not_empty(url, f"{_base_url()}/{Settings().database_url.rsplit('/', 1)[1]}")
-    except (RuntimeError, OSError) as exc:
-        print(f"RESTORE DRILL FAILED: {exc}", file=sys.stderr)
-        return 1
-
-    print("restore drill passed")
-    return 0
+    return asyncio.run(_drill(args))
 
 
 if __name__ == "__main__":

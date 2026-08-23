@@ -185,11 +185,17 @@ async def _authenticate(websocket: WebSocket) -> object | None:
         return None
 
     state = websocket.app.state
+    resolved: object | None = None
     try:
+        # Run the loop to exhaustion rather than returning from inside it.
+        # `Database.session()` commits after the yield, so an early return leaves
+        # the generator suspended and the commit never happens — `resolve` writes
+        # `last_used_at`, and that update was being silently discarded on every
+        # WebSocket handshake.
         async for session in state.database.session():
             identity = IdentityService(session, state.settings, state.clock, state.event_bus)
             actor = await identity.resolve(token)
-            return actor if actor.can(Permission.VIEW_PRODUCTION) else None
+            resolved = actor if actor.can(Permission.VIEW_PRODUCTION) else None
     except PrintorianError:
         return None
-    return None
+    return resolved

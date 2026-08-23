@@ -53,6 +53,11 @@ services:
       # the disk holding pgdata — ADR-0019, and the reason the runbook calls a
       # backup on the same spindle decoration.
       - ${PRINTORIAN_BACKUP_ROOT:-pgbackup}:/backup
+      # `printorian-backup.service` runs backup.sh *in this container*: it is the
+      # one place pg_dump is guaranteed to match the server, and a host-installed
+      # client silently becomes a broken backup on the first major upgrade.
+      # Read-only -- the script is code, not state.
+      - ../backend/scripts:/srv/scripts:ro
     command:
       - postgres
       # Memory. Defaults here are the dev-scale numbers from the root
@@ -145,6 +150,12 @@ services:
       # The object store. A volume, never the container's writable layer — a
       # rebuild would otherwise take every uploaded model with it.
       - storage:/srv/printorian/storage
+      # Read-only, and only so the weekly drill can find last night's dump:
+      # `restore_drill.py` runs in this image because it needs the models and
+      # alembic, which the postgres image does not have. It reads a dump and
+      # never writes one, so the API has no business being able to alter the
+      # backups -- that asymmetry is the point of the `:ro`.
+      - ${PRINTORIAN_BACKUP_ROOT:-pgbackup}:/backup:ro
     depends_on:
       migrate:
         condition: service_completed_successfully

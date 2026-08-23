@@ -70,9 +70,21 @@ FROM python@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e
 # published since that image was built. Without it the image ships whatever was
 # current on the day the tag was cut — CVE-2026-53615 in util-linux arrived
 # exactly that way, as nine scanner findings from one unpatched source package.
+#
+# `postgresql-client-17` is an exception to the minimalism above, and it is here
+# because of the drill. `scripts/restore_drill.py` runs in *this* image — it needs
+# the models and alembic to check that the restored schema still matches the code,
+# and the postgres image has neither — but it shells out to `pg_restore`, which
+# this image did not carry. `printorian-drill.service` was therefore pointing at a
+# binary that was not there.
+#
+# Pinned to the server's major version on purpose: `pg_restore` refuses a dump
+# taken by a newer server, so an unversioned client turns into a silently broken
+# drill on the first major upgrade. Debian trixie ships 17 itself, so this costs
+# no third-party apt source.
 RUN apt-get update \
  && apt-get upgrade -y \
- && apt-get install -y --no-install-recommends curl \
+ && apt-get install -y --no-install-recommends curl postgresql-client-17 \
  && rm -rf /var/lib/apt/lists/* \
  && rm -rf /usr/local/lib/python3.13/site-packages/pip \
            /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
@@ -85,6 +97,10 @@ WORKDIR /app
 COPY alembic.ini ./
 COPY alembic/ ./alembic/
 COPY tools/ ./tools/
+# Operating the farm is part of running it: `scripts/restore_drill.py` runs in
+# this image, driven by `printorian-drill.service`. Copying tools/ and not
+# scripts/ left that timer pointing at a module the image did not contain.
+COPY scripts/ ./scripts/
 
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \

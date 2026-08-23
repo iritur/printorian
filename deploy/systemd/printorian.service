@@ -16,7 +16,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/srv/printorian
+WorkingDirectory=/srv/printorian/repo
 
 # `--wait` blocks until every container with a healthcheck reports healthy, so a
 # farm that comes up broken fails the unit rather than reporting active while

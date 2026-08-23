@@ -11,7 +11,7 @@ After=printorian.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/srv/printorian
+WorkingDirectory=/srv/printorian/repo
 
 # The dump runs inside the postgres container, which is the only place the
 # client tools are guaranteed to match the server version. `pg_dump` refuses to
