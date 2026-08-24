@@ -182,13 +182,20 @@ REM  in from outside: public registration always produces a customer, and staff 
 REM  created by somebody who already has an account. Without this the script
 REM  finishes by opening a sign-in screen nobody can pass.
 REM
-REM  The script refuses on a populated database, so running it here cannot mint an
-REM  owner on a farm that already has one.
-.venv\Scripts\python.exe scripts\create_owner.py || (
-    echo [!] Could not create the first owner. See the error above.
-    popd
-    pause
-    exit /b 1
+REM  `provision_owner.py` reads the password from the terminal (never from an
+REM  argument) and refuses on a populated database. The owner is checked for here
+REM  rather than trusting that refusal, so a second run skips the prompt instead
+REM  of failing on the owner it already made.
+for /f "tokens=*" %%o in ('docker compose exec -T postgres psql -U printorian -d %PGDATABASE% -tAc "SELECT 1 FROM users WHERE role = 'owner' LIMIT 1" 2^>NUL') do set "OWNEREXISTS=%%o"
+if defined OWNEREXISTS (
+    echo     owner already there
+) else (
+    .venv\Scripts\python.exe tools\provision_owner.py --email boss@printorian.example || (
+        echo [!] Could not create the first owner. See the error above.
+        popd
+        pause
+        exit /b 1
+    )
 )
 REM  The packing bench cannot open without its instruction and its tara: a parcel
 REM  raised against no published instruction has no steps and no norm, and an
