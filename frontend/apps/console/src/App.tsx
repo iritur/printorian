@@ -13,6 +13,7 @@ import { OrdersPage } from './OrdersPage'
 import { PackagingPage } from './packaging/PackagingPage'
 import { PostProductionPage } from './postproduction/PostProductionPage'
 import { PrepPage } from './PrepPage'
+import { SettingsPage } from './SettingsPage'
 import { UsersPage } from './UsersPage'
 
 type Screen =
@@ -26,6 +27,7 @@ type Screen =
   | 'fleet'
   | 'materials'
   | 'users'
+  | 'settings'
 
 /**
  * Screens are offered by permission, not by role.
@@ -40,6 +42,7 @@ const VIEW_ALL_ORDERS = 'view_all_orders'
 const MANAGE_USERS = 'manage_users'
 const MANAGE_LIBRARY = 'manage_library'
 const MANAGE_JOURNAL = 'manage_journal'
+const MANAGE_SETTINGS = 'manage_settings'
 
 /**
  * Which territory this bundle is.
@@ -236,6 +239,16 @@ function Shell() {
       text: 'Учётные записи, роли как наборы прав, активные сессии. Экраны показываются по правам, а не по роли.',
       shape: 'key',
     },
+    {
+      key: 'settings',
+      label: t('settings.title'),
+      note: 'ФЕРМА · ТАРИФЫ · SLA',
+      permission: MANAGE_SETTINGS,
+      mark: 'FARM',
+      kicker: 'C:/SYSTEM/SETTINGS/FARM.CONFIG',
+      text: 'Пятнадцать разделов настроек фермы: цены, планировщик, склад, уведомления, доступ. Каждое изменение пишется в аудит.',
+      shape: 'grid',
+    },
     ...CROSS_REALM,
   ]
   // The masthead lists only what this actor may reach *and* only this realm's
@@ -270,6 +283,7 @@ function Shell() {
     fleet: '/FLEET/PRINTERS',
     materials: '/INVENTORY/MATERIALS',
     users: '/IDENTITY/USERS.DB',
+    settings: '/SYSTEM/SETTINGS/FARM.CONFIG',
   }
 
   return (
@@ -302,6 +316,7 @@ function Shell() {
       {active === 'fleet' && <FleetPage locale={locale} />}
       {active === 'materials' && <MaterialsPage locale={locale} />}
       {active === 'users' && <UsersPage locale={locale} />}
+      {active === 'settings' && <SettingsPage locale={locale} />}
     </AppShell>
   )
 }
