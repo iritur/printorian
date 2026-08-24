@@ -26,8 +26,21 @@ from printorian.contexts.ordering import spent
 from printorian.contexts.pricing import CustomerTier, tier_for_spend
 
 
-async def tier_for(db: AsyncSession, actor: Actor | None) -> CustomerTier | None:
-    """The price book this caller has earned, or ``None`` for the standard one."""
+async def tier_for(
+    db: AsyncSession,
+    actor: Actor | None,
+    tiers: dict[str, CustomerTier] | None = None,
+) -> CustomerTier | None:
+    """The price book this caller has earned, or ``None`` for the standard one.
+
+    `tiers` is the settings-resolved price book, when the caller has one: the
+    loyalty ladder still decides *which* code the lifetime spend earns (the
+    `from_spend` thresholds), and the resolved tier overrides the discount and
+    margin that code carries.
+    """
     if actor is None:
         return None
-    return tier_for_spend(await spent(db, actor.user_id))
+    base = tier_for_spend(await spent(db, actor.user_id))
+    if tiers and base.code in tiers:
+        return tiers[base.code]
+    return base

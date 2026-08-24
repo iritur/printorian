@@ -25,10 +25,12 @@ behind, telemetry lands there instead of erroring. It is meant to stay empty, an
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from printorian.contexts.fleet.rollups import latest_bucket
 
 #: The partitioned table these functions maintain.
 TABLE = "telemetry_samples"
@@ -149,6 +151,29 @@ async def drop_partitions_before(db: AsyncSession, *, cutoff: datetime) -> tuple
             await db.execute(text(f"DROP TABLE IF EXISTS {name}"))
             dropped.append(name)
     return tuple(dropped)
+
+
+async def drop_telemetry_past_retention(
+    db: AsyncSession, *, now: datetime, retention_days: int
+) -> tuple[str, ...]:
+    """Apply retention right now, never past the hour that has actually been rolled up.
+
+    The single safe shape for a «drop now» action: the cutoff is
+    ``min(now − retention, watermark)``, where the watermark is the hour
+    :mod:`printorian.contexts.fleet.rollups` has actually reached, so a farm whose
+    summarising has stalled drops nothing, and one that has never summarised an
+    hour drops nothing at all — there is no evidence any sample has been
+    summarised, and retention is irreversible.
+
+    """
+    if retention_days <= 0:
+        return ()
+
+    watermark = await latest_bucket(db)
+    if watermark is None:
+        return ()
+    cutoff = min(now - timedelta(days=retention_days), watermark)
+    return await drop_partitions_before(db, cutoff=cutoff)
 
 
 async def unroutable_sample_count(db: AsyncSession) -> int:

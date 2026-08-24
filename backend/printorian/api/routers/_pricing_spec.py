@@ -30,7 +30,7 @@ from printorian.contexts.catalog import (
     estimate,
 )
 from printorian.contexts.inventory import InventoryService, MaterialStatus
-from printorian.contexts.ordering import RUSH_LEAD_HOURS, promised_hours
+from printorian.contexts.ordering import PromisePolicy, promised_hours
 from printorian.contexts.pricing import (
     FinishOption,
     MaterialPrice,
@@ -134,6 +134,7 @@ async def _build_spec(
     keep: ModelLibrary | None = None,
     uploaded_by: EntityId | None = None,
     max_bytes: int = _MAX_UPLOAD_BYTES,
+    promise: PromisePolicy | None = None,
 ) -> tuple[PriceSpec, dict[str, Any]]:
     """Measure an upload and turn it into a pricing input.
 
@@ -233,11 +234,12 @@ async def _build_spec(
         # kept out of the breakdown because a lead time is not money (ADR-0002).
         "promised_hours": str(
             promised_hours(
+                policy=promise,
                 print_minutes=prediction.print_time.minutes,
                 quantity=quantity,
                 rush=rush,
             )
         ),
-        "rush_hours": str(RUSH_LEAD_HOURS),
+        "rush_hours": str((promise or PromisePolicy()).rush_lead_hours),
     }
     return price_spec, context

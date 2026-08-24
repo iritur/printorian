@@ -78,11 +78,12 @@ async def place_order(
     # snapshot is *pinned* here is what makes the farm safe to re-rate at all —
     # tomorrow's margin does not reach into today's agreed order (ADR-0020).
     rates = await settings.resolve_rates()
+    tiers = await settings.resolve_tiers()
     # The loyalty discount, resolved from what this customer has already spent.
     # Resolved here rather than inside the engine, which is given its rates and
     # looks nothing up (ADR-0002) — and *before* the order is written, so the
     # order that creates a promotion is not itself priced at the new rate.
-    tier = await tier_for(db, actor)
+    tier = await tier_for(db, actor, tiers)
     return await ordering.place(data, price(spec, rates, tier), rates, customer_id=actor.user_id)
 
 
@@ -108,7 +109,8 @@ async def reprice(
     """
     spec = await spec_for(db, data.lines[0], include_shipping=data.method.is_shipped)
     rates = await settings.resolve_rates()
-    return {"breakdown": _render(price(spec, rates, await tier_for(db, actor)))}
+    tiers = await settings.resolve_tiers()
+    return {"breakdown": _render(price(spec, rates, await tier_for(db, actor, tiers)))}
 
 
 @router.get("/mine")

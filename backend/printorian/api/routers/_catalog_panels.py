@@ -157,6 +157,7 @@ async def _price_ladder(
         needs_procurement=spec_view.status is MaterialStatus.NONE,
     )
     rates = await settings.resolve_rates()
+    promise = await settings.resolve_promise()
 
     rungs: list[PriceRung] = []
     previous = Decimal(0)
@@ -184,7 +185,9 @@ async def _price_ladder(
                 unit_price=breakdown.unit_price.amount,
                 total=breakdown.total.amount,
                 lead_hours=promised_hours(
-                    print_minutes=prediction.print_time.minutes, quantity=quantity
+                    policy=promise,
+                    print_minutes=prediction.print_time.minutes,
+                    quantity=quantity,
                 ),
                 discount_percent=percent,
                 # The first rung at a new tier is the one worth ordering up to.

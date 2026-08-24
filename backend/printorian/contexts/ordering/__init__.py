@@ -46,6 +46,7 @@ from printorian.contexts.ordering.promise import (
     MIN_LEAD_HOURS,
     PROMISE_BUFFER_PERCENT,
     RUSH_LEAD_HOURS,
+    PromisePolicy,
     promised_hours,
 )
 from printorian.contexts.ordering.schemas import (
@@ -89,6 +90,7 @@ __all__ = [
     "OrdersOverview",
     "Period",
     "PlaceOrder",
+    "PromisePolicy",
     "RepriceLine",
     "StatusCount",
     "StatusSlice",

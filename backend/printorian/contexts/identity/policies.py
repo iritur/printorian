@@ -75,6 +75,11 @@ class Permission(StrEnum):
 
     # administration
     MANAGE_USERS = "manage_users"
+    #: Edit the farm's own settings — pricing rates, scheduler weights, SLA,
+    #: notifications, access, integrations, maintenance. One permission for the
+    #: whole settings screen today; the router's docstring records why finer
+    #: per-section gating is deferred rather than spread across fifteen here.
+    MANAGE_SETTINGS = "manage_settings"
     VIEW_AUDIT_LOG = "view_audit_log"
 
 

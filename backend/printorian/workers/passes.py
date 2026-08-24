@@ -27,6 +27,7 @@ from printorian.contexts.ordering import OrderingService
 from printorian.contexts.packaging import PackagingService
 from printorian.contexts.postproduction import PostProductionService
 from printorian.contexts.production import ProductionService
+from printorian.contexts.settings import SettingsService
 from printorian.core.secrets import SecretBox
 from printorian.workers import (
     maintenance,
@@ -148,7 +149,13 @@ class SchedulerPass:
                 self._runtime.bus,
                 store=self._runtime.object_store,
             )
-            outcome = await scheduler.SchedulerTick(production, fleet, drivers).tick()
+            # The scheduler weights live in the settings store and are resolved
+            # per pass, so changing them affects the *next* planning decision
+            # rather than the next restart.
+            policy = await SettingsService(session, self._runtime.clock).resolve_scheduling()
+            outcome = await scheduler.SchedulerTick(
+                production, fleet, drivers, policy=policy
+            ).tick()
         await self._runtime.record_beat("scheduler", self._runtime.settings.scheduler_tick_seconds)
         return outcome
 

@@ -142,15 +142,19 @@ def throttle_key(request: Request) -> str:
     return (request.client.host if request.client else "")[:45]
 
 
-def get_farm_settings(db: DbSession, clock: AppClock) -> SettingsService:
+def get_farm_settings(db: DbSession, clock: AppClock, settings: AppSettings) -> SettingsService:
     """The farm's own settings, as opposed to `AppSettings` — which is the process
     configuration and is a different thing wearing a similar name.
 
     One reads a table the owner may edit; the other reads the environment and is
     fixed for the life of the process. Both are called "settings" in ordinary
     speech, which is exactly why the dependency names here are not.
+
+    A `SecretBox` rides along so write-only secrets (payment keys) are encrypted at
+    rest under `PRINTORIAN_SECRET_KEY` rather than stored in the clear — the same
+    key that protects printer access codes (ADR-0014).
     """
-    return SettingsService(db, clock)
+    return SettingsService(db, clock, secret_box=SecretBox(settings.secret_key.get_secret_value()))
 
 
 FarmSettings = Annotated[SettingsService, Depends(get_farm_settings)]

@@ -61,6 +61,7 @@ async def quote(
     include_shipping: Annotated[bool, Form()] = True,
 ) -> dict[str, Any]:
     """Price an uploaded STL and return the full itemized structure."""
+    promise = await settings_store.resolve_promise()
     spec, context = await _build_spec(
         db,
         cpu=cpu,
@@ -79,15 +80,17 @@ async def quote(
         keep=models,
         uploaded_by=actor.user_id if actor else None,
         max_bytes=settings.max_upload_bytes,
+        promise=promise,
     )
     # The farm's rates, defaults underneath (`contexts.settings`).
     rates = await settings_store.resolve_rates()
+    tiers = await settings_store.resolve_tiers()
     return {
         "model": context,
         # The signed-in caller's loyalty tier, so the configurator quotes the
         # figure the checkout will charge. Anonymous browsing is priced at the
         # standard book, which can only be the higher of the two.
-        "breakdown": _render(price(spec, rates, await tier_for(db, actor))),
+        "breakdown": _render(price(spec, rates, await tier_for(db, actor, tiers))),
         # The whole ladder, not just the rung that applied.
         #
         # The kit's «03 :: Размер и количество» shows the threshold reached *and*
@@ -137,6 +140,7 @@ async def preview_option(
     Scenario step 4. The same engine prices both configurations, so the preview
     cannot disagree with the quote the customer then accepts.
     """
+    promise = await settings_store.resolve_promise()
     spec, context = await _build_spec(
         db,
         cpu=cpu,
@@ -149,6 +153,7 @@ async def preview_option(
         finishes=finishes or [],
         rush=rush,
         include_shipping=include_shipping,
+        promise=promise,
     )
 
     changes: dict[str, Any] = {}
@@ -180,8 +185,9 @@ async def preview_option(
         raise ValidationError("error.pricing.no_option_change")
 
     rates = await settings_store.resolve_rates()
+    tiers = await settings_store.resolve_tiers()
     # Both sides of the diff at the same tier, or the delta would carry the
     # customer's loyalty discount as though the option had caused it.
-    tier = await tier_for(db, actor)
+    tier = await tier_for(db, actor, tiers)
     delta = diff(price(spec, rates, tier), price(spec.with_changes(**changes), rates, tier))
     return {"model": context, "delta": _render_delta(delta)}

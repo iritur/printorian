@@ -4,45 +4,64 @@ Pure, and deliberately separate from the pricing engine: what a job *costs* and
 when it will *be ready* are different questions, and ADR-0002 keeps the engine
 free of anything that is not money.
 
-**These constants belong in the settings store.** `settings.html` lists all three
-by name — `promise_buffer_percent`, `min_lead_hours`, `rush_lead_hours` — as
-editable farm parameters, and the store that will hold them is DESIGN-KIT-
-INTEGRATION.md §3.4, still unbuilt. They live here as named policy in the
-meantime, with the kit's own defaults, rather than as numbers inlined at a call
-site where nobody would find them to move later.
+The policy arrives as an argument (:class:`PromisePolicy`), never looked up here —
+the same rule the pricing engine follows for `RateSnapshot`. `contexts.settings`
+resolves the farm's overrides into a `PromisePolicy` at the read edge, so the
+kit's three parameters (`promise_buffer_percent`, `min_lead_hours`,
+`rush_lead_hours`) change what the *next* quote promises and nothing already
+agreed — the promise is computed from the snapshot, not from a module constant.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from decimal import Decimal
 
-#: Headroom over the raw print time.
-#:
-#: The estimator answers "how long does the machine run"; a promise has to survive
-#: the queue, post-processing and a failed plate. Quoting the bare print time is
-#: how a farm ends up late on work that went exactly as planned.
-PROMISE_BUFFER_PERCENT = Decimal(40)
 
-#: Nothing is promised sooner than this, however small the part.
-#:
-#: A twenty-minute print still has to be scheduled, started, taken off the bed and
-#: packed, and the person doing it is not standing over the machine waiting.
-MIN_LEAD_HOURS = Decimal(24)
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PromisePolicy:
+    """The promise parameters, as data.
 
-#: What the rush surcharge buys.
-RUSH_LEAD_HOURS = Decimal(18)
+    Frozen for the same reason `RateSnapshot` is: a promise pinned to an order
+    cannot be edited afterwards, and a policy handed to `promised_hours` cannot
+    be mutated out from under the calculation.
+    """
+
+    #: Headroom over the raw print time. The estimator answers "how long does the
+    #: machine run"; a promise has to survive the queue, post-processing and a
+    #: failed plate.
+    promise_buffer_percent: Decimal = Decimal(40)
+    #: Nothing is promised sooner than this, however small the part.
+    min_lead_hours: Decimal = Decimal(24)
+    #: What the rush surcharge buys.
+    rush_lead_hours: Decimal = Decimal(18)
 
 
-def promised_hours(*, print_minutes: Decimal, quantity: int = 1, rush: bool = False) -> Decimal:
+#: The defaults, kept as bare names for the places that still want a number
+#: rather than a policy object. `resolve_promise` overrides them, never these.
+PROMISE_BUFFER_PERCENT = PromisePolicy().promise_buffer_percent
+MIN_LEAD_HOURS = PromisePolicy().min_lead_hours
+RUSH_LEAD_HOURS = PromisePolicy().rush_lead_hours
+
+
+def promised_hours(
+    *,
+    policy: PromisePolicy | None = None,
+    print_minutes: Decimal,
+    quantity: int = 1,
+    rush: bool = False,
+) -> Decimal:
     """Hours from now that this job can be promised for.
 
     Scales with quantity because the machine time does: ten of a part is ten
     prints, whether they share a plate or not. The buffer is then applied to the
     whole, not per unit — a batch does not need ten separate contingencies.
     """
+    resolved = policy or PromisePolicy()
+
     if rush:
-        return RUSH_LEAD_HOURS
+        return resolved.rush_lead_hours
 
     machine_hours = (print_minutes * Decimal(max(quantity, 1))) / Decimal(60)
-    with_buffer = machine_hours * (Decimal(1) + PROMISE_BUFFER_PERCENT / Decimal(100))
-    return max(with_buffer, MIN_LEAD_HOURS).quantize(Decimal("1"))
+    with_buffer = machine_hours * (Decimal(1) + resolved.promise_buffer_percent / Decimal(100))
+    return max(with_buffer, resolved.min_lead_hours).quantize(Decimal("1"))

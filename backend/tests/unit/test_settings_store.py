@@ -64,9 +64,11 @@ async def test_every_scalar_rate_is_offered(db_session: AsyncSession, clock: Fix
 
     assert MARGIN in offered
     assert LABOUR in offered
-    # ...and the structured fields are *not* flattened into it: the discount ladder
-    # is a table on the kit's screen, not a number in a box.
-    assert not any(key.endswith("discounts") for key in offered)
+    # ...and the structured fields are *not* flattened into a number in a box: the
+    # ladder is offered as a table, and currency is still absent (it lives inside
+    # the rate snapshot, not beside it).
+    rows = {row.key: row for row in await store(db_session, clock).listing()}
+    assert rows["pricing.discounts"].kind == "table"
     assert not any(key.endswith("currency") for key in offered)
 
 

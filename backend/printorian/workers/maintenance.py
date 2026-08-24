@@ -118,7 +118,7 @@ class MaintenanceSweep:
             max_buckets=self._settings.rollup_max_buckets_per_sweep,
         )
 
-        dropped = await self._drop_summarised_partitions(now, summarised)
+        dropped = await self._drop_summarised_partitions(now)
 
         purged = await self._identity.purge_expired_sessions(
             grace=timedelta(days=self._settings.session_retention_days)
@@ -146,36 +146,20 @@ class MaintenanceSweep:
             rollup=summarised,
         )
 
-    async def _drop_summarised_partitions(
-        self, now: datetime, summarised: rollups.RollupSweep
-    ) -> tuple[str, ...]:
-        """Apply retention, but never past the hour that has actually been rolled up.
+    async def _drop_summarised_partitions(self, now: datetime) -> tuple[str, ...]:
+        """Apply retention, never past the hour that has actually been rolled up.
 
-        ``min(now − retention, watermark)`` is the whole guard, and it is four
-        lines because it has to be right rather than clever. Running summarising
-        before dropping in the same pass is only a *convention*: it says nothing
-        about a pass where summarising raised, produced nothing, or fell behind by
-        a week. Clamping the cutoff to `latest_bucket` says something about all
-        three — a farm whose rollups have stopped stops dropping raw samples too,
-        which is the failure everyone would rather have.
-
-        A farm that has never summarised an hour therefore drops nothing at all.
-        That is deliberate: on an empty `metric_rollups` there is no evidence any
-        sample has been summarised, and retention is irreversible.
+        The clamp — `min(now − retention, watermark)` — lives in
+        `retention.drop_telemetry_past_retention`, shared with the settings
+        screen's «drop now» action so there is exactly one safe shape for this
+        irreversible operation. The watermark is re-read from `latest_bucket`
+        rather than trusted from the in-memory sweep, so a pass where summarising
+        raised or produced nothing still drops nothing.
         """
-        if self._settings.telemetry_retention_days <= 0:
-            return ()
-
-        watermark = summarised.window_end or await rollups.latest_bucket(
-            self._db  # type: ignore[arg-type]
-        )
-        if watermark is None:
-            return ()
-
-        cutoff = min(now - timedelta(days=self._settings.telemetry_retention_days), watermark)
-        return await retention.drop_partitions_before(
+        return await retention.drop_telemetry_past_retention(
             self._db,  # type: ignore[arg-type]
-            cutoff=cutoff,
+            now=now,
+            retention_days=self._settings.telemetry_retention_days,
         )
 
 

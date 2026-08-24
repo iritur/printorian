@@ -20,8 +20,11 @@ from printorian.core.config import Settings
 from printorian.core.events import EventBus
 from printorian.core.storage import InMemoryObjectStore
 from tests.api._checkout_support import a_shop, place, token_for
+from tests.unit.test_mesh_analysis import cube_triangles, to_binary_stl
 
 MARGIN = "pricing.margin_percent"
+CUBE = to_binary_stl(cube_triangles(40.0))  # a priceable 40mm cube
+MIN_LEAD = "sla.min_lead_hours"
 
 
 @pytest.fixture
@@ -178,3 +181,51 @@ async def test_changing_a_rate_does_not_reprice_an_order_already_placed(
 
     again = (await client.get(f"/orders/{order['id']}", headers=buyer)).json()
     assert again["total"] == agreed
+
+
+async def test_a_lead_time_setting_changes_the_next_quote(client: AsyncClient) -> None:
+    """The promise parameters reach the quote's lead time, not just the table.
+
+    The same shape as the rate test above: two identical quotes either side of a
+    `sla.min_lead_hours` change, and the second must promise later — which is the
+    whole point of moving the three constants out of `promise.py` and into the
+    settings store.
+    """
+    buyer = await token_for(client, "buyer@example.com")
+    files = {"model": ("cube.stl", CUBE, "model/stl")}
+    data = {"material_code": "pla-black", "quantity": 1}
+
+    at_default = (await client.post("/pricing/quote", files=files, data=data, headers=buyer)).json()
+    default_lead = Decimal(str(at_default["model"]["promised_hours"]))
+
+    auth = await owner(client)
+    await client.put(f"/settings/{MIN_LEAD}", json={"value": "96"}, headers=auth)
+
+    at_ninety_six = (
+        await client.post("/pricing/quote", files=files, data=data, headers=buyer)
+    ).json()
+
+    assert Decimal(str(at_ninety_six["model"]["promised_hours"])) > default_lead
+
+
+async def test_drop_telemetry_is_safe_on_an_empty_farm(client: AsyncClient) -> None:
+    """The destructive op that cannot hurt: nothing summarised → nothing dropped."""
+    auth = await owner(client)
+
+    body = (await client.post("/settings/drop-telemetry", headers=auth)).json()
+
+    assert body["dropped"] == 0
+
+
+async def test_reset_rates_returns_to_defaults(client: AsyncClient) -> None:
+    """«Сбросить тарифы» is a real endpoint, and it is safe: the next quote is at
+    the code default, and nothing already sold moves."""
+    auth = await owner(client)
+    await client.put(f"/settings/{MARGIN}", json={"value": "80"}, headers=auth)
+
+    body = (await client.post("/settings/reset-rates", headers=auth)).json()
+
+    assert body["reset"] == 1
+    rows = {row["key"]: row for row in (await client.get("/settings", headers=auth)).json()}
+    assert rows[MARGIN]["value"] == rows[MARGIN]["default"]
+    assert rows[MARGIN]["is_overridden"] is False
