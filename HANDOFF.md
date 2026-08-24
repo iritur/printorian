@@ -7,8 +7,8 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-23 · 1188 backend tests passing (6 hardware tests skip without
-a printer), 206 frontend, all six governance gates green.
+**As of:** 2026-08-24 · 1227 backend tests (6 hardware skips), 214 frontend,
+all six governance gates green.
 
 **The system now runs on a real host.** A farm exists at `192.168.29.148`
 (Ubuntu 26.04, VMware), in production mode, and getting it there is what most of
@@ -21,6 +21,36 @@ had passed over, four of them in units committed hours earlier the same day.
 
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
+
+**The settings screen is built, and the settings take effect.** `contexts/settings`
+now serves the whole kit's catalogue — about a hundred parameters across fourteen
+sections (diagnostics is read-only, so it has no fields) — through `GET /settings`,
+`GET /settings/sections` and the existing `PUT/DELETE /settings/{key}`, gated on a
+new `MANAGE_SETTINGS` permission (owner only, replacing `MANAGE_PRICING` on the
+router). The console has a `SettingsPage` (owner-only nav) that renders one control
+per `kind` — number/unit, select, switch, string, and a **write-only, encrypted
+secret** (`finance.yookassa_secret_key` is stored under `PRINTORIAN_SECRET_KEY` and
+never read back). Editing marks a row dirty, counts into a save bar, and each save
+is a separate audited «было · стало», shown in «Обслуживание системы».
+
+> Three settings now **take effect at the read edge**, the same shape
+> `resolve_rates` always had: `resolve_promise()` (lead times — a changed
+> `sla.min_lead_hours` moves the next quote) and `resolve_scheduling()` (planner
+> weights, resolved per scheduler pass). The loop intervals (`scheduler_tick_seconds`,
+> `telemetry_poll_seconds`, `sla_sweep_seconds`) are still read at worker startup,
+> so they take effect on restart — recorded rather than wired, because a per-pass
+> re-read is a worker-loop change with little payoff. Of the kit's table-valued
+> settings, the **volume ladder** and the **customer tiers** are built (both
+> stored as JSON and parsed back into `DiscountLadder` / `CustomerTier`); the
+> tiers' discount and margin override reach the engine through `resolve_tiers()`,
+> while the loyalty `from_spend` thresholds that *earn* a tier stay in
+> `loyalty.py`. The rest — maintenance intervals, zones, event matrix, API keys,
+> webhooks — and the diagnostics panel are **not built** — see §3. Two of the three
+> irreversible operations are wired: `POST /settings/reset-rates` drops every
+> `pricing.*` override (audited per row), and `POST /settings/drop-telemetry` runs
+> retention now through the **shared clamp** — `retention.drop_telemetry_past_retention`,
+> which the maintenance worker also uses, so «drop now» and the scheduled sweep
+> cannot drift apart. The third (clear waitlist) is not built.
 
 **The farm can change its own pricing rates.** `contexts/settings` is a key/value
 store with an audit, serving the seventeen scalar rates through
@@ -193,6 +223,15 @@ while Vite inlines the interface font as a `data:` URI, so every Harvester face 
 blocked and the console fell back. Invisible in development, where the dev server
 sends no CSP at all.
 
+**A host-readiness check now exists as a runnable script.** `deploy/readiness-check.sh`
+evaluates a candidate farm server — OS family, systemd, RAM/CPU/disk, the ADR-0019
+backup-disk separation, clock and timezone, Docker + the compose plugin, the `.env` and
+its required secrets, port bindings, printer reachability, and the systemd units — and
+prints a PASS/WARN/FAIL tally with the fix for each failure. It exits non-zero on any
+FAIL, so it can gate the Stage 2 Ansible role instead of deploying onto a host that is
+missing a disk or a secret. This is the first executable half of the "host configuration
+is prose" row in INFRASTRUCTURE §1 (provisioning, not checking, is still Ansible).
+
 ## 2. Deliberately unfinished
 
 Not oversights. Changing any of them is a decision, not a cleanup.
@@ -231,7 +270,7 @@ Verified against the code, not read off a plan document.
 
 | Screen | Backend state |
 |---|---|
-| `settings.html` | **Rates half landed** (§1): `contexts/settings` serves the 17 scalar rates with an audit. The remaining ~85 kit parameters are still `core.config.Settings` constants read once at process start, so moving them changes *when* they are read as well as where from. No screen yet either way. |
+| `settings.html` | **Built for the scalar parameters and the volume ladder** (§1): the store, API and console `SettingsPage` cover ~100 parameters across 14 sections, with encrypted secrets, the audit, and read-edge wiring for rates, promise and scheduler weights. Remaining: the other table-valued settings (maintenance intervals, postprocess operations, zones, event matrix, API keys, webhooks), the diagnostics panel, the one remaining irreversible operation (clear waitlist), and the loop-interval hot reload. |
 | `purchasing.html` | Nothing. No `PurchaseOrder`, no `Supplier`. |
 | `service.html` | Backend half exists (`ServiceOperation` is a real service card); no screen, no route. |
 | `store.html` (warehouse) | Backend half exists (`MaterialLot` carries locations); no screen. |
