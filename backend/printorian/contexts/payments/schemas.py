@@ -88,6 +88,11 @@ class StartPayment(BaseModel):
     #: setting.
     provider: str = ""
     return_url: str = "https://printorian.local/orders"
+    #: The payment method the customer chose, as a gateway method code (e.g.
+    #: ``tinkoff_bank`` for T-Pay). Empty means "let the gateway show whatever it
+    #: offers". A code the gateway does not know is refused by the gateway — there
+    #: is no fallback that would charge the customer a different way than they chose.
+    payment_method: str = Field(default="", max_length=40)
 
 
 class RefundRequest(BaseModel):

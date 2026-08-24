@@ -65,6 +65,11 @@ class PaymentRequest:
     customer_email: str = ""
     receipt: tuple[ReceiptLine, ...] = ()
     metadata: dict[str, str] = field(default_factory=dict)
+    #: The gateway's own method code, e.g. YooKassa ``tinkoff_bank`` for T-Pay.
+    #: ``None`` means "whatever the gateway offers" — the customer picks on the
+    #: payment page. Set it when the customer chose a specific method first, so the
+    #: gateway opens that method's flow rather than a menu.
+    payment_method_type: str | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

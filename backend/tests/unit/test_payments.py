@@ -146,6 +146,41 @@ async def test_cannot_start_a_payment_for_an_already_paid_order(
         await payments.start(StartPayment(order_id=order.id), gateway)
 
 
+async def test_the_chosen_payment_method_reaches_the_gateway(
+    payments: PaymentsService, ordering: OrderingService
+) -> None:
+    """T-Pay is a customer's choice, not a deployment secret, so it must travel.
+
+    The schema field is ``payment_method``; the provider contract field is
+    ``payment_method_type``. That mapping is exactly the kind of one-line seam that
+    silently drops a value, so it is pinned rather than left to naming luck.
+    """
+    from printorian.contexts.payments.provider import PaymentRequest, ProviderPayment
+
+    seen: list[PaymentRequest] = []
+
+    class RecordingProvider:
+        name = "recording"
+
+        async def create(self, request: PaymentRequest) -> ProviderPayment:
+            seen.append(request)
+            return ProviderPayment(
+                provider_payment_id="rp-1",
+                status=PaymentStatus.PENDING,
+                amount=request.amount,
+                currency=request.currency,
+                confirmation_url="https://gateway.example/pay",
+            )
+
+    order = await an_order(ordering)
+    await payments.start(
+        StartPayment(order_id=order.id, payment_method="tinkoff_bank"),
+        RecordingProvider(),
+    )
+
+    assert seen[0].payment_method_type == "tinkoff_bank"
+
+
 def provider_id_of(payment) -> str:
     return f"mock-{payment.confirmation_url.rsplit('/', 1)[-1]}"
 

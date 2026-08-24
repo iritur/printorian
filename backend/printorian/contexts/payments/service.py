@@ -103,6 +103,7 @@ class PaymentsService:
                 return_url=data.return_url,
                 idempotency_key=payment.idempotency_key,
                 customer_email=order.customer_email,
+                payment_method_type=data.payment_method or None,
                 receipt=(
                     ReceiptLine(
                         description=f"3D printing, order {order.number}",

@@ -4,7 +4,8 @@
 merchant account.** That is stated here rather than discovered later: V1 shipped a
 printer connector built the same way, which returned plausible data while talking to
 an endpoint that did not exist. Until someone runs this against real credentials it
-is unverified, and the contract tests below only prove it is self-consistent.
+is unverified, and the unit tests in `tests/unit/test_yookassa_provider.py` only
+prove the request it builds matches the documented API shape.
 
 Two properties of this gateway drive the design:
 
@@ -61,6 +62,14 @@ _STATUS_MAP: dict[str, PaymentStatus] = {
     "succeeded": PaymentStatus.SUCCEEDED,
     "canceled": PaymentStatus.CANCELLED,
 }
+
+#: YooKassa method codes this adapter may be asked to collect through. `tinkoff_bank`
+#: is T-Pay (T-Bank's express checkout): the customer is redirected to a page with a
+#: QR code or button that opens the T-Bank app. The full set is YooKassa's vocabulary,
+#: not ours, so an unknown code is passed through and the gateway — the only party
+#: that knows its current methods — accepts or refuses it. It is never re-mapped here:
+#: a fallback would charge the customer a different way than the one they chose.
+TINKOFF_BANK = "tinkoff_bank"
 
 
 class YooKassaProvider:
@@ -136,6 +145,11 @@ class YooKassaProvider:
             "description": request.description[:128],
             "metadata": {"order_number": request.order_number, **request.metadata},
         }
+        if request.payment_method_type:
+            # The customer chose a method (T-Pay, SBP, ...) rather than the gateway's
+            # menu. `type` is YooKassa's method code; an unknown one is refused by the
+            # gateway, never silently re-mapped to something else.
+            body["payment_method_data"] = {"type": request.payment_method_type}
         if request.receipt:
             # 54-ФЗ: the fiscal receipt travels with the payment.
             body["receipt"] = {
