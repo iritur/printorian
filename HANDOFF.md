@@ -22,6 +22,29 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**The README is now the front door rather than a summary.** Same facts, reorganised
+around two rendered diagrams — the container topology (who talks to whom, and over
+what) and the order state machine, drawn from `contexts/ordering/policies.py` rather
+than described. `docs/assets/banner.svg` and `banner-light.svg` are generated from the
+design kit's own tokens and swap on `prefers-color-scheme`. Three things it corrected
+while being rewritten: the context list was missing `account`, `packaging`,
+`postproduction` and `settings`; `printorian/workers/` was absent from the layout
+altogether; and [docs/RUNBOOK-FIRST-BOOT.md](docs/RUNBOOK-FIRST-BOOT.md) had never been
+added to the document table. Volatile counts were deliberately left out of it and
+pointed here instead — a badge reading `tests 1227` is the staleness trap in §4 of
+CLAUDE.md with a nicer font.
+
+> **`docs/DATABASE-REVIEW.md` §1 was stale in every figure it carried**, and is fixed.
+> It said "**22 tables** across seven contexts, built by nine Alembic migrations"; the
+> ORM has 42 across twelve, and `backend/alembic/versions/` holds twenty. Its table was
+> missing `account`, `journal`, `packaging`, `postproduction` and `settings` entirely,
+> plus `catalog_models`, `catalog_model_materials` and `metric_rollups`. The list is now
+> diffed against every `__tablename__` under `contexts/` and matches exactly. "Single
+> linear head" was the one true part — one root, one head, no branch points. The rest of
+> the document already discussed the newer tables; only the summary had drifted, which is
+> the failure mode §4 of CLAUDE.md warns about: the part everyone reads first is the part
+> nobody re-derives.
+
 **The settings screen is built, and the settings take effect.** `contexts/settings`
 now serves the whole kit's catalogue — about a hundred parameters across fourteen
 sections (diagnostics is read-only, so it has no fields) — through `GET /settings`,
