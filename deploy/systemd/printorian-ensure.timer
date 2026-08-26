@@ -1,6 +1,6 @@
 [Unit]
 Description=Printorian stack reconciliation
-Documentation=https://github.com/dimmus/printorian/blob/main/deploy/systemd/README.md
+Documentation=https://github.com/iritur/printorian/blob/main/deploy/systemd/README.md
 
 [Timer]
 # Five minutes: long enough that a healthy farm costs nothing, short enough that
