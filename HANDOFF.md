@@ -323,34 +323,7 @@ and the fix is a second `order_by` term, not a retry.
 
 ## 3. What is actually next
 
-**This lives in [issues](https://github.com/iritur/printorian/issues) now** — take
-one from a milestone rather than from this section. What follows is kept as the
-*shape* of the remaining product work, because a tracker is bad at showing five
-screens and their dependencies on one page; it is not the list of what to do next,
-and it is not maintained as one. Where it and an issue disagree, the issue is right.
-
-Verified against the code, not read off a plan document.
-
-**Five design-kit screens have no implementation at all** — all control-realm:
-
-| Screen | Backend state |
-|---|---|
-| `settings.html` | **Built for the scalar parameters and the volume ladder** (§1): the store, API and console `SettingsPage` cover ~100 parameters across 14 sections, with encrypted secrets, the audit, and read-edge wiring for rates, promise and scheduler weights. Remaining: the other table-valued settings (maintenance intervals, postprocess operations, zones, event matrix, API keys, webhooks), the diagnostics panel, the one remaining irreversible operation (clear waitlist), and the loop-interval hot reload. |
-| `purchasing.html` | Nothing. No `PurchaseOrder`, no `Supplier`. |
-| `service.html` | Backend half exists (`ServiceOperation` is a real service card); no screen, no route. |
-| `store.html` (warehouse) | Backend half exists (`MaterialLot` carries locations); no screen. |
-| `logistics.html` | Only `carrier_code` on a parcel. No shipments, no tracking. |
-
-Every public screen is built. Detail, and what each of the five would need from
-the backend, is in [docs/DESIGN-KIT.md](docs/DESIGN-KIT.md).
-
-**Still persisted or served with no consumer:** `GET /materials/{code}` (the
-console reads the table and `/materials/lots`, never the per-code detail),
-`EstimateVariance`, and `RateSnapshotRecord`.
-
-**Still persisted with no endpoint:** `EstimateVariance` (drives `price_review`
-and the desk's «Пересмотр цены» filter) and `RateSnapshotRecord`. `TelemetrySample`
-was on that list and no longer is.
+**Open work lives in [GitHub issues](https://github.com/iritur/printorian/issues),** grouped by [milestone](https://github.com/iritur/printorian/issues?q=is%3Aopen) and described in [docs/WORKFLOW.md](docs/WORKFLOW.md). Take one from a milestone rather than from this section. Where an issue and a document disagree, the issue is right.
 
 ## 4. The first real print — started, and blocked on hardware
 

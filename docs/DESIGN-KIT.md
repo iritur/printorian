@@ -91,6 +91,8 @@ exactly this reason, and the settings store has to respect it. And the audit log
 is part of the feature, not an extra: «Было · Стало» is what makes a farm able to
 answer why a price changed last Tuesday.
 
+**What the backend still owes:** [#29](https://github.com/iritur/printorian/issues/29) [#30](https://github.com/iritur/printorian/issues/30) [#31](https://github.com/iritur/printorian/issues/31)
+
 ### 2.2 `service.html`
 
 Five ticket kinds: **установка · ремонт · ТО · загрузка материала · перемещение**.
@@ -104,13 +106,9 @@ Five ticket kinds: **установка · ремонт · ТО · загруз�
 - **Запчасти на посту** — Позиция · Остаток · Расход/мес · Статус
 - Crew badges and marks; MTTR, fleet readiness
 
-| Element | Backing |
-|---|---|
-| `ServiceOperation` with kind/interval/hours | ✅ |
-| Наработка, Ближайшее ТО | ✅ |
-| **Tickets** as an entity, with steps, assignee, elapsed, consequence | ❌ |
-| Failure causes, MTTR, отказов/год, надёжность | ❌ no failure record |
-| Spare parts stock | ❌ inventory only knows filament |
+What backend exists: `ServiceOperation` with kind/interval/hours, наработка, ближайшее ТО.
+
+**What the backend still owes:** [#33](https://github.com/iritur/printorian/issues/33) — tickets as an entity with steps, assignee, elapsed, consequence; failure causes, MTTR, отказов/год, надёжность; spare parts stock.
 
 ### 2.3 `purchasing.html`
 
@@ -123,8 +121,7 @@ Five ticket kinds: **установка · ремонт · ТО · загруз�
 - PO detail: 6-stage path, line items, **Зачем этот заказ**, **Приёмка** (receiving
   into lots)
 
-**❌ Nothing.** No `PurchaseOrder`, no `Supplier`. Four purchasable classes:
-materials, spare parts, packaging, printers.
+**What the backend still owes:** [#34](https://github.com/iritur/printorian/issues/34) — nothing exists; `PurchaseOrder`, `Supplier`, four purchasable classes.
 
 ### 2.4 `store.html`
 
@@ -135,12 +132,9 @@ materials, spare parts, packaging, printers.
 - **Turnover** — days on shelf per class; **dead stock** with the money in it
 - **Stocktake** — Позиция · Ячейка · Лежит · Стоимость
 
-| Element | Backing |
-|---|---|
-| `MaterialLot` with location | ◐ location exists; **cells and zones are not a model** |
-| Drying state, `require_drying`, `drying_valid_hours` | ❌ |
-| Movement ledger with reason | ❌ |
-| Turnover, dead stock, stocktake | ❌ |
+What backend exists: `MaterialLot` with location.
+
+**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — cells, zones, drying state, movement ledger with reason, turnover, dead stock, stocktake.
 
 ### 2.5 `logistics.html`
 
@@ -151,8 +145,7 @@ materials, spare parts, packaging, printers.
 - **Сроки доставки** — Зона · Обещано · Факт · Точность
 - Shipment detail: 6-stage path, address from the cabinet, tracking history
 
-**❌ Nothing** beyond `carrier_code` on a parcel. No `Shipment`, no carrier, no
-zone, no tracking.
+**What the backend still owes:** [#36](https://github.com/iritur/printorian/issues/36) — nothing beyond `carrier_code` on a parcel; no `Shipment`, no carrier, no zone, no tracking.
 
 ## 3. Conventions every screen honours
 
@@ -177,18 +170,13 @@ Re-checked against the code; five of these were recorded as missing and are not.
 
 ## 4. Backend capability nothing consumes
 
-The long list this section used to carry is spent — thirteen of its fourteen
-endpoints now have consumers. What is left:
+**This list has moved to the issue tracker.** Thirteen of the fourteen endpoints this section once carried now have consumers. The three that remain are tracked as:
 
-- **`GET /materials/{code}`** — the materials detail popup. The console reads
-  `/materials` and `/materials/lots` and never the per-code detail.
-- **`EstimateVariance`** — drives `price_review` and the desk's «Пересмотр цены»
-  filter. Persisted, no endpoint.
-- **`RateSnapshotRecord`** — persisted per ADR-0020; the menu advertises
-  «Снимок тарифов». Nothing serves it.
+- [#38](https://github.com/iritur/printorian/issues/38) — **`GET /materials/{code}`**, the materials detail popup
+- [#39](https://github.com/iritur/printorian/issues/39) — **`EstimateVariance`**, persisted and not served
+- [#40](https://github.com/iritur/printorian/issues/40) — **`RateSnapshotRecord`**, persisted per ADR-0020
 
-`TelemetrySample` was the headline entry here and no longer is: `metric_rollups`
-summarises it and `/fleet/metrics` serves it.
+`TelemetrySample` was the headline entry here and no longer is: `metric_rollups` summarises it and `/fleet/metrics` serves it.
 
 ## 5. Order to build the rest in
 
