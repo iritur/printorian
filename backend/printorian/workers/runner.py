@@ -39,6 +39,7 @@ import printorian.models  # noqa: F401
 from printorian.core.config import Settings
 from printorian.core.logging import configure_logging
 from printorian.workers import (
+    intake,
     maintenance,
     packaging,
     postproduction,
@@ -48,6 +49,7 @@ from printorian.workers import (
 )
 from printorian.workers.drivers import DriverPool
 from printorian.workers.passes import (
+    IntakePass,
     MaintenancePass,
     PackagingPass,
     PostProductionPass,
@@ -58,6 +60,25 @@ from printorian.workers.passes import (
 from printorian.workers.runtime import WorkerRuntime
 
 logger = structlog.get_logger(__name__)
+
+
+async def _intake_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> None:
+    """Turn paid orders into the jobs that will print them.
+
+    First in the list below, and deliberately: every other loop here acts on work
+    that already exists, and this is the one that brings it into being. A farm
+    where this loop is down takes money and produces nothing, which is the failure
+    a person notices last and minds most.
+    """
+
+    async def build() -> IntakePass:
+        return IntakePass(runtime)
+
+    await intake.run_forever(
+        build,
+        interval_seconds=runtime.settings.intake_sweep_seconds,
+        stop=stop,
+    )
 
 
 async def _sla_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> None:
@@ -176,6 +197,7 @@ async def main(settings: Settings | None = None) -> None:
 
     logger.info(
         "workers_starting",
+        intake_sweep_seconds=runtime.settings.intake_sweep_seconds,
         scheduler_tick_seconds=runtime.settings.scheduler_tick_seconds,
         telemetry_poll_seconds=runtime.settings.telemetry_poll_seconds,
         sla_sweep_seconds=runtime.settings.sla_sweep_seconds,
@@ -186,6 +208,7 @@ async def main(settings: Settings | None = None) -> None:
     # mean two MQTT sessions per machine, each unaware of the other's reconnects.
     pool = DriverPool(runtime.clock, runtime.settings)
     tasks = [
+        asyncio.create_task(_intake_forever(runtime, stop), name="intake"),
         asyncio.create_task(_scheduler_forever(runtime, pool, stop), name="scheduler"),
         asyncio.create_task(_telemetry_forever(runtime, pool, stop), name="telemetry"),
         asyncio.create_task(_sla_forever(runtime, stop), name="sla"),

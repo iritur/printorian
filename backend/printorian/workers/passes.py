@@ -30,6 +30,7 @@ from printorian.contexts.production import ProductionService
 from printorian.contexts.settings import SettingsService
 from printorian.core.secrets import SecretBox
 from printorian.workers import (
+    intake,
     maintenance,
     packaging,
     postproduction,
@@ -57,6 +58,26 @@ async def all_printers(session: AsyncSession) -> list[Printer]:
     connections it is still holding to a printer somebody just retired.
     """
     return list(await session.scalars(select(Printer)))
+
+
+class IntakePass:
+    """A sweep that turns paid orders into jobs, in its own committed session.
+
+    Composes `ordering` and `production` here rather than in either of them: the
+    order is one context's and the job is the other's, and a service reaching
+    across that boundary is how the boundary stops meaning anything.
+    """
+
+    def __init__(self, runtime: WorkerRuntime) -> None:
+        self._runtime = runtime
+
+    async def sweep(self) -> intake.SweepOutcome:
+        async with self._runtime.session() as session:
+            production = ProductionService(session, self._runtime.clock, self._runtime.bus)
+            ordering = OrderingService(session, self._runtime.clock, self._runtime.bus)
+            outcome = await intake.IntakeSweep(session, production, ordering).sweep()
+        await self._runtime.record_beat("intake", self._runtime.settings.intake_sweep_seconds)
+        return outcome
 
 
 class SlaPass:
@@ -178,6 +199,7 @@ class TelemetryPass:
 
 
 __all__ = [
+    "IntakePass",
     "MaintenancePass",
     "PackagingPass",
     "PostProductionPass",
