@@ -56,6 +56,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]" -c constraints.txt
 
+      - name: Dependency audit (pip-audit)
+        run: |
+          # Ensure pip-audit is available; installing separately avoids coupling it to dev extras
+          python -m pip install --upgrade pip
+          python -m pip install pip-audit
+          # Exit non-zero if any vulnerability is found
+          pip-audit
+
       # --- governance gates (ARCHITECTURE §11) -------------------------
       # Each of these encodes a specific way V1 rotted. They run before the
       # tests so a structural regression fails fast and unambiguously.
@@ -123,6 +131,11 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      - name: Dependency audit (npm)
+        run: |
+          # Fail the job for HIGH or CRITICAL vulnerabilities
+          npm audit --audit-level=high
 
       # ADR-0005: the client is generated, never committed. Regenerating here and
       # then typechecking is what makes a breaking backend change fail the build
