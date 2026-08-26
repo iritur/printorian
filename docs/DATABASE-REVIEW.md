@@ -12,18 +12,23 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **22 tables** across seven contexts, built
-by nine Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **42 tables** across twelve contexts, built
+by twenty Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
 | `identity` | `users`, `sessions` |
+| `account` | `addresses`, `notification_prefs` |
 | `inventory` | `material_specs`, `material_lots` |
 | `ordering` | `orders`, `order_lines`, `order_events`, `rate_snapshots` |
 | `payments` | `payments`, `refunds`, `payment_notifications` |
-| `catalog` | `model_assets`, `prepared_plates` |
-| `fleet` | `printers`, `ams_slots`, `service_operations`, `telemetry_samples` |
+| `catalog` | `model_assets`, `prepared_plates`, `catalog_models`, `catalog_model_materials` |
+| `fleet` | `printers`, `ams_slots`, `service_operations`, `telemetry_samples`, `metric_rollups` |
 | `production` | `print_jobs`, `job_events`, `assignment_records`, `wait_list_entries`, `estimate_variances` |
+| `postproduction` | `postproduction_operations`, `postproduction_instruction_steps`, `postproduction_tasks`, `postproduction_task_steps`, `postproduction_consumables` |
+| `packaging` | `packaging_tara`, `packaging_instructions`, `packaging_instruction_steps`, `packaging_tasks`, `packaging_task_steps`, `packaging_task_tara` |
+| `journal` | `journal_posts`, `journal_subscribers` |
+| `settings` | `settings`, `settings_audit` |
 
 `pricing` and `scheduling` own no tables at all. Both are pure functions
 (ADR-0002, ARCHITECTURE §6), and import-linter enforces that `pricing` cannot even
