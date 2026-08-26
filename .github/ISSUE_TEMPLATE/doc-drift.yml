@@ -1,0 +1,50 @@
+# A document says something about the system that is no longer true.
+#
+# This has its own template because it is this repository's most frequent defect
+# class and its most expensive one: CLAUDE.md §4 records three design-kit
+# documents that described built features as missing, and a database review that
+# listed four completed tasks as outstanding. A stale status line is read as
+# current, and the part everyone reads first is the part nobody re-derives.
+name: Documentation drift
+description: A document describes the system as it no longer is.
+labels: ["type:docs", "drift"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Document and section
+      placeholder: "docs/INFRASTRUCTURE.md §1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: claim
+    attributes:
+      label: What it currently says
+      description: Quote it, so the diff is unambiguous.
+    validations:
+      required: true
+
+  - type: textarea
+    id: truth
+    attributes:
+      label: What is actually true, and how that was verified
+      description: >
+        Name the file, the command or the run that settles it. A status corrected from another
+        document rather than from the code just moves the drift somewhere else.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Which way does it mislead?
+      description: >
+        Understating is the more dangerous direction — it gets built twice. Overstating gets
+        relied upon and fails in production, which is how the observability row was found.
+      options:
+        - "Understates — describes built work as missing"
+        - "Overstates — describes missing work as built"
+        - "Wrong figures — counts, tables or names that no longer match"
+    validations:
+      required: true

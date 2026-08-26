@@ -1,0 +1,11 @@
+# Issues are the only backlog. HANDOFF.md keeps the narrative — what landed and
+# why it matters — and the tracker keeps the open work, so the two cannot drift
+# into disagreeing about status the way three design-kit documents once did.
+blank_issues_enabled: false
+contact_links:
+  - name: Current state of the system
+    url: https://github.com/iritur/printorian/blob/main/HANDOFF.md
+    about: What landed recently, what is deliberately unfinished, what needs a person. Read this before filing.
+  - name: How this tracker is used
+    url: https://github.com/iritur/printorian/blob/main/docs/WORKFLOW.md
+    about: Labels, milestones, what closes an issue, and why a deferred decision gets an issue too.

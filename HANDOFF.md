@@ -22,6 +22,28 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**Open work has moved into GitHub issues, and this changes where to look first.**
+Forty-seven issues across twelve milestones, with the labels and the process in
+[docs/WORKFLOW.md](docs/WORKFLOW.md). Nothing in the code changed; what changed is
+that §3 of this file is no longer the place a session finds its next task.
+
+> The reason is the one in §4 of CLAUDE.md. Four documents each carried a list of
+> outstanding work — §3 here, `ROADMAP.md`, `DESIGN-KIT.md` §2 and §4, and
+> `DATABASE-REVIEW.md` §10 — and building the backlog found them disagreeing with
+> each other and, twice, with the code. **`INFRASTRUCTURE.md` §1 is stale in seven
+> of its rows** (it still says zero commits, CI never executed, no container
+> images, nothing scheduling backups), and **`DESIGN-KIT.md` §1 and §2.1 still say
+> the settings screen is not built** while `SettingsPage.tsx` and its tests sit in
+> the console. Both now have issues; neither was corrected in this change, because
+> correcting a status table is the kind of edit that should be verified against the
+> code by whoever makes it.
+>
+> Two findings were new rather than transcribed. **`main` has no branch protection
+> at all** — `gh api .../branches/main/protection` returns 404, so Stage 0's fourth
+> exit item was never done and nothing stops a push that has never seen a gate.
+> And the timestamp-sort flake class §2 estimates at "about a dozen" is **fifteen**,
+> measured, with the file and line of each in the issue.
+
 **The README is now the front door rather than a summary.** Same facts, reorganised
 around two rendered diagrams — the container topology (who talks to whom, and over
 what) and the order state machine, drawn from `contexts/ordering/policies.py` rather
@@ -300,6 +322,12 @@ sort nothing asserts on is churn — but when one of them goes flaky, this is th
 and the fix is a second `order_by` term, not a retry.
 
 ## 3. What is actually next
+
+**This lives in [issues](https://github.com/iritur/printorian/issues) now** — take
+one from a milestone rather than from this section. What follows is kept as the
+*shape* of the remaining product work, because a tracker is bad at showing five
+screens and their dependencies on one page; it is not the list of what to do next,
+and it is not maintained as one. Where it and an issue disagree, the issue is right.
 
 Verified against the code, not read off a plan document.
 

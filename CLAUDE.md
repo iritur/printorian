@@ -8,6 +8,12 @@ the setup — neither is repeated here.
 deliberately unfinished, and what needs a person rather than an agent. Update it
 before finishing.
 
+**Open work lives in [issues](https://github.com/iritur/printorian/issues), not in a
+document.** [docs/WORKFLOW.md](docs/WORKFLOW.md) is how the tracker is used — the
+labels, the milestones, and what closes an issue. The rule it exists to enforce is
+that a document says what the system *is* and the tracker says what is *missing*,
+because four documents each carrying a to-do list is how §4 below keeps happening.
+
 **Area rules live with the area:**
 
 | Working in | Read |
