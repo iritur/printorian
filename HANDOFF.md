@@ -30,19 +30,25 @@ that §3 of this file is no longer the place a session finds its next task.
 > The reason is the one in §4 of CLAUDE.md. Four documents each carried a list of
 > outstanding work — §3 here, `ROADMAP.md`, `DESIGN-KIT.md` §2 and §4, and
 > `DATABASE-REVIEW.md` §10 — and building the backlog found them disagreeing with
-> each other and, twice, with the code. **`INFRASTRUCTURE.md` §1 is stale in seven
-> of its rows** (it still says zero commits, CI never executed, no container
-> images, nothing scheduling backups), and **`DESIGN-KIT.md` §1 and §2.1 still say
-> the settings screen is not built** while `SettingsPage.tsx` and its tests sit in
-> the console. Both now have issues; neither was corrected in this change, because
-> correcting a status table is the kind of edit that should be verified against the
-> code by whoever makes it.
+> each other and, twice, with the code.
 >
-> Two findings were new rather than transcribed. **`main` has no branch protection
-> at all** — `gh api .../branches/main/protection` returns 404, so Stage 0's fourth
-> exit item was never done and nothing stops a push that has never seen a gate.
-> And the timestamp-sort flake class §2 estimates at "about a dozen" is **fifteen**,
-> measured, with the file and line of each in the issue.
+> **Both status tables named there have now been corrected**, each verified against
+> the code rather than against the document that reported it
+> ([#8](https://github.com/iritur/printorian/issues/8),
+> [#9](https://github.com/iritur/printorian/issues/9)).
+> `INFRASTRUCTURE.md` §1 was stale in seven rows and is re-derived, dated, and split
+> so that what is *built* and what is *scheduled* are different claims; Stage 0 is
+> marked done. `DESIGN-KIT.md` §1 and §2.1 said the settings screen was unbuilt while
+> `SettingsPage.tsx` served 102 parameters across fourteen sections — §2.1 now
+> records only what is still owed and links it, because a second description of a
+> finished screen is a second thing to keep in step.
+>
+> One finding recorded there has since been closed rather than corrected:
+> **`main` now has branch protection** — `backend`, `frontend` and `image` required,
+> linear history, no force-push, no deletion
+> ([#4](https://github.com/iritur/printorian/issues/4)). The other was new rather
+> than transcribed: the timestamp-sort flake class §2 estimates at "about a dozen"
+> is **fifteen**, measured, with the file and line of each in the issue.
 
 **The README is now the front door rather than a summary.** Same facts, reorganised
 around two rendered diagrams — the container topology (who talks to whom, and over

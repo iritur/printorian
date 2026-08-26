@@ -5,7 +5,7 @@ The kit is twenty-one screens of static HTML in [`design/`](../design/README.md)
 is not a transcription of them, and deliberately no longer tries to be.
 
 What it carries instead is the part the HTML cannot: which screens exist in the
-app, what the five that do not would need from the backend, and the conventions
+app, what the four that do not would need from the backend, and the conventions
 that hold across all of them.
 
 > Replaces `DESIGN-KIT-PLAN.md`, `DESIGN-KIT-INTEGRATION.md` and
@@ -18,20 +18,28 @@ Statuses below were read off the code — routes in each app's `App.tsx`, models
 `backend/printorian/contexts/` — not off a plan. Re-verify before trusting; that
 is how all three predecessors went wrong.
 
+*Last verified 2026-08-26.* The settings counts in §1 and §2.1 come from
+`len(SECTIONS)` and `len(FIELDS)` in
+[`contexts/settings/sections.py`](../backend/printorian/contexts/settings/sections.py)
+and from the `kind` counts over `FIELDS`, evaluated rather than transcribed; the
+screen's state comes from `App.tsx` rendering `SettingsPage` and from
+`SettingsPage.test.tsx`. Deliberately **not** from `HANDOFF.md` — a status copied
+from another document has only moved the drift.
+
 ---
 
 ## 1. Where the screens stand
 
-**Sixteen of twenty-one are built.** Every public screen ships; the five that do
-not are all control-realm. `settings` is the nearest of them — its backend store
-exists and serves the pricing rates, and what is missing is the screen and the
-other fourteen sections.
+**Seventeen of twenty-one are built.** Every public screen ships; the four that do
+not are all control-realm. `settings` was the nearest of them and is now built —
+102 parameters across fourteen sections, served and audited. What is left of it is
+the table-valued settings and the diagnostics panel, not the screen (§2.1).
 
 | Screen | Realm | State |
 |---|---|---|
 | `promo` `catalog` `configurator` `checkout` `cabinet` `account` `auth` `blog` `blog-post` | public | **built** — all nine |
 | `dashboard` `orders` `fleet` `materials` `users` `postproduction` `packaging` | control | **built** |
-| `settings` | control | **store built, screen not** — §2.1 |
+| `settings` | control | **built** — scalars; the tables and Диагностика remain, §2.1 |
 | `service` | control | **not built** — §2.2 |
 | `purchasing` | control | **not built** — §2.3 |
 | `store` | control | **not built** — §2.4 |
@@ -39,59 +47,63 @@ other fourteen sections.
 
 `index.html` is the kit's own contents page, not a screen.
 
-## 2. The five that are not built
+## 2. Settings, and the four that are not built
 
-Kit inventories preserved verbatim, because for these the kit *is* the spec. Each
-ends with what the backend already has.
+For §2.2–§2.5 the kit inventories are preserved verbatim, because for those the kit
+*is* the spec, and each ends with what the backend already has. §2.1 is no longer
+one of them — settings is built, so the code is the truth for it and this document
+records only what is still owed. The numbering is kept as it was so that the
+references to it from the tracker and from §2.5 keep pointing at the same place.
 
-### 2.1 `settings.html` — 15 sections, ~100 parameters
+### 2.1 `settings.html` — built, minus the tables
 
-The largest single gap in the product, and the one every other screen leans on.
+**The screen exists.** [`SettingsPage.tsx`](../frontend/apps/console/src/SettingsPage.tsx)
+renders it and [`contexts/settings`](../backend/printorian/contexts/settings/) serves
+it: **102 parameters across fourteen sections**, over `GET /settings`,
+`GET /settings/sections`, `GET /settings/history` and `PUT`/`DELETE /settings/{key}`,
+gated on `MANAGE_SETTINGS`.
 
-**The store exists; the screen does not.** `contexts/settings` serves the seventeen
-scalar **Ценообразование** rates through `GET/PUT/DELETE /settings`, with the audit
-the section below requires. A key with no row resolves to the code default, so an
-empty table prices exactly as the farm always did, and an order keeps the rate
-snapshot it was agreed at (ADR-0020) — changing a margin moves the next quote and
-nothing already sold.
+The catalogue is *derived*, not hand-listed — the pricing rates are read off
+`dataclasses.fields(RateSnapshot)` and the scheduler weights off
+`SchedulingPolicy`. That is the same argument ADR-0020 makes for `rates_to_dict`:
+a hand-listed set of keys silently omits the next rate somebody adds, and a
+settings screen missing a rate is worse than one that never had it, because it
+looks complete.
 
-The remaining ~85 parameters are still constants, on `core.config.Settings`. They
-are read once at process start rather than per request, so moving them into the
-table changes *when* they are read as well as where they come from; that is the
-next piece of work here, and it is bigger than it looks for that reason.
+One control per `kind`, all built — `integer` 31 · `decimal` 30 · `boolean` 15 ·
+`enum` 15 · `string` 8 · `table` 2 · `secret` 1. The single secret,
+`finance.yookassa_secret_key`, is write-only: stored encrypted and never read
+back. Editing a row marks it dirty, reveals the previous value, offers a per-row
+revert and counts into a save bar; each save writes an audited «было · стало»
+that `GET /settings/history` serves back under **Обслуживание системы**. Two of
+the kit's irreversible operations are built and guarded by typing the farm name
+first — reset rates and drop telemetry.
 
-The kit's identifiers are the real ones:
+**The store is read at the edge, not only stored.** Five resolutions run per
+request or per worker pass rather than once at process start: `resolve_rates` and
+`resolve_tiers` (pricing and orders), `resolve_promise` (SLA), `resolve_int` for
+telemetry retention, and `resolve_scheduling` in the scheduler pass. A key with no
+row resolves to the code default, so an empty table prices exactly as the farm
+always did, and an order keeps the rate snapshot it was agreed at (ADR-0020) —
+changing a margin moves the next quote and nothing already sold.
 
-| Section | Parameters |
-|---|---|
-| **Общие** | `farm_name` `farm_timezone` `farm_open_hour` `farm_close_hour` `unattended_printing` `currency` `default_locale` `units` |
-| **Ценообразование** | `labor_rate_per_hour` `labor_hours_per_print_hour` `labor_hours_per_job` `engineering_hours_per_resize` `postprocess_rate_per_hour` `electricity_rate_per_kwh` `printer_power_kw` `depreciation_per_printer_hour` `material_procurement_flat` `multicolor_purge_grams_per_extra_color` `overhead_per_print_hour` `failure_buffer_percent` `rush_surcharge_percent` `margin_percent` |
-| **Скидки и тарифы** | `guard_tier_cliffs`; volume ladder table (Ступень · От количества · Скидка · Цена за шт); customer tiers table (Код · Название · Скидка · Прибыль·переопределение · Клиентов) |
-| **Планировщик** | `weight_capability_waste` `weight_material_headroom` `weight_amortization` `weight_load_balance` `due_soon_hours` `load_horizon_minutes` `expensive_per_hour` `comfortable_headroom` `scheduler_tick_seconds` `waitlist.no_capable_printer` `waitlist.awaiting_capacity` `waitlist.material_not_loaded` |
-| **Сроки и SLA** | `promise_buffer_percent` `min_lead_hours` `rush_lead_hours` `percent_per_day` `max_percent` `sla_sweep_seconds` `sla_auto_refund` `price_variance_tolerance` `price_review_role` |
-| **Склад и материалы** | `low_stock_grams` `critical_stock_grams` `auto_reorder` `default_lead_days` `require_drying` `drying_valid_hours` `writeoff_below_grams` `track_lots` |
-| **Оборудование и сервис** | `telemetry_poll_seconds` `driver_timeout_seconds` `driver_send_retries` `pause_on_hms_error` `allow_mock_driver`; maintenance-interval table (Операция · Код · Периодичность · Простой · Расход) |
-| **Постобработка** | `require_quality_check` `photo_before_packing`; operations catalogue (Операция · Код · Нормо-часы·база · На см² поверхности · Доступна) |
-| **Логистика** | `packaging_per_unit` `shipping_flat` `volumetric_divisor` `free_shipping_threshold`; zones table (Зона · Перевозчик · Базовая · За кг · Срок · Активна) |
-| **Финансы** | `tax_regime` `vat_percent` `prices_include_tax` `rounding_step` `payment_provider` `yookassa_shop_id` `yookassa_secret_key` `prepayment_percent` `invoice_payment` `invoice_due_days` `refund_before_print_percent` `refund_after_print_percent` `refund_approval_threshold` |
-| **Уведомления** | `mail_from` `smtp_host` `telegram_chat_id` `quiet_hours`; event matrix (Событие · Код · Почта · Экран цеха · Telegram) × 9 events |
-| **Доступ и безопасность** | `session_ttl_hours` `password_min_length` `password_hasher` `require_2fa_for_management` `lockout_attempts` `audit_retention_days`; permission matrix; API keys table |
-| **Интеграции** | `slicer_engine` `slicer_path` `slicer_profile` `slicer_timeout_seconds` `bambu_connection` `bambu_cloud_account` `bambu_transport`; webhooks table |
-| **Диагностика** | Read-only: 12 `.hv-health` subsystem checks with latency, versions, last log lines. **Nothing here is a setting** |
-| **Обслуживание системы** | `backup_enabled` `backup_hour` `backup_retention` `backup_path` `model_retention_days` `telemetry_retention_days` `maintenance_mode`; **change audit log** (Время · Кто · Параметр · Было · Стало) |
+**What is still owed.** The kit's fifteenth section and the settings that are
+*tables* rather than scalars:
 
-Interaction the screen requires: editing a row **marks it dirty**, reveals the
-previous value (`.hv-set__was`, «БЫЛО 9»), offers a per-row revert, and counts into
-a save bar (`data-dirty`). Secrets are write-only — `yookassa_secret_key` shows
-«КЛЮЧ СОХРАНЁН · Заменить» and can never be read back.
+- [#29](https://github.com/iritur/printorian/issues/29) — the six table-valued
+  sections. The volume ladder and the customer tiers are built and are the
+  pattern to copy, not to reinvent.
+- [#30](https://github.com/iritur/printorian/issues/30) — **Диагностика**, the
+  fifteenth section. Read-only, nothing in it is a setting, and it is the only
+  place the health checks would be seen.
+- [#31](https://github.com/iritur/printorian/issues/31) —
+  «Очистить лист ожидания», the last unbuilt irreversible operation.
+- [#32](https://github.com/iritur/printorian/issues/32) — worker loop intervals
+  still take effect only on restart.
 
-Two things make this bigger than a CRUD screen. Changing a rate must not silently
-reprice work already quoted — ADR-0020 persists a rate snapshot per order for
-exactly this reason, and the settings store has to respect it. And the audit log
-is part of the feature, not an extra: «Было · Стало» is what makes a farm able to
-answer why a price changed last Tuesday.
-
-**What the backend still owes:** [#29](https://github.com/iritur/printorian/issues/29) [#30](https://github.com/iritur/printorian/issues/30) [#31](https://github.com/iritur/printorian/issues/31)
+`design/settings.html` stays the reference for anything not yet built. For what is
+built, the code is the truth — and per this document's own opening rule, a second
+description of a finished screen is a second thing to keep in step.
 
 ### 2.2 `service.html`
 
@@ -182,16 +194,19 @@ Re-checked against the code; five of these were recorded as missing and are not.
 
 ```
 settings ──┬──► logistics   (zones and tariffs are one table, defined in settings)
-           └──► purchasing  (reorder thresholds and lead days are settings)
+  (built)  └──► purchasing  (reorder thresholds and lead days are settings)
+                            — both now wait on the #29 tables, not on the screen
 
 purchasing ──► store        (receiving a PO is what puts a batch in a cell)
 
 service      independent of all three — ServiceOperation already exists
 ```
 
-**`settings` first**, and not only because it is largest: four of the five screens
-read parameters it owns, and building them against constants means building them
-twice. **`service` any time** — it needs nothing the others produce.
+**`settings` was first, and it is done.** That was not only because it was largest:
+the other screens read parameters it owns, and building them against constants
+would have meant building them twice. The edge that survives it is narrower — what
+`logistics` waits on is the zones table specifically ([#29](https://github.com/iritur/printorian/issues/29)),
+not the screen. **`service` any time** — it needs nothing the others produce.
 
 `store` after `purchasing` is a preference rather than a hard edge: a cell map can
 be built over lots that already exist, but receiving is where batches come from,
