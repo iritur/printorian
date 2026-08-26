@@ -17,34 +17,47 @@ rather than arguing with it.
 
 ## 1. Where infrastructure actually stands
 
-The application is Phase 0–4 mature. The infrastructure around it is Phase 0.
+*Re-derived from the repository and the running farm on 2026-08-26. Every row below
+was checked against a command, not against a plan; where the check was "this file
+exists" rather than "this ran on the farm", the row says so.*
+
+The application is Phase 0–4 mature. The infrastructure is no longer Phase 0 — the
+artifact, the host units and the backup schedule exist and have run. What is still
+missing is concentrated in three places: **the host is not reproducible, the edge
+does not exist, and nothing watches any of it.**
 
 | Concern | Promised where | Reality |
 |---|---|---|
-| Version control | implicitly everywhere | **Zero commits.** 196 files staged, no `HEAD`, no remote, no branch |
-| CI | `.github/workflows/ci.yml`, 6 gates | Well-designed and **has never executed** — there is nothing to push |
-| Container images | — | None. `docker-compose.yml` runs *dependencies* only; the app runs from a `.venv` |
-| Deployment | ADR-0003 "one on-prem server" | Two Windows `.bat` files that start a dev stack on a laptop |
-| Host configuration | RUNBOOK §2, §3 | Prose. Nothing is executable, nothing is idempotent, nothing is reproducible |
-| The tunnel | ADR-0016 "reverse-proxies `/api` back to the farm" | Undesigned and unbuilt |
-| Secrets | ADR-0014, ADR-0019 escrow | Environment variables and a gitignored `printers.local.toml` |
-| Backups | ADR-0019, `scripts/backup.sh` | Runs, proven end to end 2026-08-22. **Nothing schedules it**, so `pg_archivecleanup` never runs and WAL grows unbounded. No off-site destination |
-| Restore drill | ADR-0019 "a failing drill is an incident" | Runs, proven 2026-08-22 against a real dump. Nothing schedules it; nothing would notice a failure |
-| Observability | ARCHITECTURE §10: "Prometheus metrics, `/health` covering DB, Redis and each driver" | Zero metrics. `/health/ready` checks the database only — not Redis, not drivers |
-| Alerting | — | None. The only monitor is a person looking at a screen |
+| Version control | implicitly everywhere | **Done.** 105 commits, two remotes, `main` protected — `backend`, `frontend` and `image` required, linear history, no force-push, no deletion |
+| CI | `.github/workflows/ci.yml` | **Runs.** 19 runs of the workflow, 8 on `main`; most recent green on `main` 2026-08-26T11:21Z. Three jobs: `backend`, `frontend`, `image` |
+| Container images | — | **Built.** [`backend/Dockerfile`](../backend/Dockerfile) and [`frontend/Dockerfile`](../frontend/Dockerfile); the CI `image` job builds, scans, SBOMs, signs and pushes to GHCR from `main` |
+| Deployment | ADR-0003 "one on-prem server" | [`deploy/compose.prod.yml`](../deploy/compose.prod.yml) under `printorian.service`, running on a real host (HANDOFF §1). Deployment is still **manual** — Stage 4 is unbuilt, [#19](https://github.com/iritur/printorian/issues/19) |
+| Host configuration | RUNBOOK §2, §3 | **Still prose.** The systemd units are files in `deploy/systemd/`, and their own README says they are installed by an Ansible role that does not exist. There is no `ansible/` — [#15](https://github.com/iritur/printorian/issues/15) |
+| The tunnel | ADR-0016 "reverse-proxies `/api` back to the farm" | **Unbuilt.** [`deploy/storefront.Caddyfile`](../deploy/storefront.Caddyfile) is written against it and `readiness-check.sh` calls the storefront "rehearsal-only until then". No customer can reach the system — [#18](https://github.com/iritur/printorian/issues/18) |
+| Secrets | ADR-0014, ADR-0019 escrow | Environment variables and a gitignored `backend/printers.local.toml`. **SOPS + age (§4.4) is not adopted** — there is no `.sops.yaml` |
+| Backups | ADR-0019, `backend/scripts/backup.sh` | **Scheduled.** `printorian-backup.timer`, 03:00 daily, `Persistent=true`, and the dump runs inside the postgres container so client and server versions cannot drift. `pg_archivecleanup` runs with it, so WAL no longer grows unbounded |
+| Off-site copy | ADR-0019 | **Still nothing.** `backup.sh` names this as a deliberate gap and stops at the local disk; every copy of the farm's data is on one machine — [#16](https://github.com/iritur/printorian/issues/16) |
+| Restore drill | ADR-0019 "a failing drill is an incident" | **Scheduled.** `printorian-drill.timer`, Sundays 04:00, running `restore_drill.py` in the api container. A *failing* drill still reaches nobody — that is the alerting row |
+| Observability | ARCHITECTURE §10: "Prometheus metrics, `/health` covering DB, Redis and each driver" | **Partly.** `/health/ready` reports `database`, `telemetry_partitions`, `wal_archiving` and `event_relay` (the Redis check). **Drivers are still not covered** — [#21](https://github.com/iritur/printorian/issues/21). Prometheus metrics: still zero — [#20](https://github.com/iritur/printorian/issues/20) |
+| Alerting | — | **None.** The only monitor is a person looking at a screen — [#22](https://github.com/iritur/printorian/issues/22) |
 
 Two of these deserve to be named as more than gaps.
 
-**Nothing is committed.** Every gate in `docs/DEVELOPMENT.md`, every contract in
-`.importlinter`, the entire six-gate CI pipeline — all of it is theory until a
-commit exists and a remote receives it. A hard-drive failure this afternoon
-destroys the whole system, and there is no evidence that CI passes at all. This is
-the only item in this document with no acceptable delay.
+**The host is the single point of failure, and it is not written down.** The farm
+runs, but it was brought up by an afternoon nobody recorded. `deploy/systemd/README.md`
+describes the layout an Ansible role "creates"; that role does not exist, so the
+recovery path today is a person remembering. Combined with the off-site row above —
+every copy of the data on one box — this is the item with the least acceptable
+delay now that version control has one. [#15](https://github.com/iritur/printorian/issues/15)
+and [#16](https://github.com/iritur/printorian/issues/16); [#25](https://github.com/iritur/printorian/issues/25)
+is the drill that would prove either.
 
-**ARCHITECTURE §10 overstates what runs.** By the repository's own rule — *status
-docs say works / scaffolded / stubbed* — the observability row is **stubbed**: the
-structured logging is real and good, the metrics and the dependency-aware health
-check are not. That table should be corrected in the same change that fixes it.
+**ARCHITECTURE §10 still overstates what runs.** By the repository's own rule —
+*status docs say works / scaffolded / stubbed* — the observability row is
+**scaffolded**: the structured logging and four of the health checks are real, the
+metrics and the driver-aware check are not. Tracked as
+[#10](https://github.com/iritur/printorian/issues/10), because a second document
+saying a different thing is the drift this section was rewritten to end.
 
 ---
 
@@ -390,22 +403,22 @@ Staged so each stage is independently valuable and independently abandonable.
 Estimates are for one person working part-time; Stages 0–2 deliver roughly
 four-fifths of the value.
 
-### Stage 0 — Version control · **today, 1 hour**
+### Stage 0 — Version control · **done**
 
-Nothing else in this document is meaningful until this is done.
+Nothing else in this document was meaningful until this was done. All four items
+are, as of 2026-08-26:
 
-1. `git commit` the staged tree. Review `git status` first — `.claude/`, the
-   `backend/var/storage` contents and `backend/printers.local.toml` must be
-   excluded, and eleven untracked migrations plus a dozen untracked routers are
-   currently *outside* the index and would be lost.
-2. Extend `.gitignore`: `.claude/`, `backend/var/`, `backend/.import_linter_cache/`,
-   `data/qr.png` if generated.
-3. Private GitHub repository, push, watch CI run for the first time. Expect it to
-   fail; the gates have never been executed.
-4. Branch protection on `main`: all six gates required, linear history.
+1. The tree is committed — 105 commits, with `.claude/`, `backend/var/` and
+   `backend/printers.local.toml` excluded.
+2. `.gitignore` covers them.
+3. Two GitHub remotes, and CI has run 19 times; the gates did fail on first
+   contact, which is what pushing them was for.
+4. Branch protection on `main`: `backend`, `frontend` and `image` required,
+   linear history required, force-pushes and deletion blocked. Verify with
+   `gh api repos/iritur/printorian/branches/main/protection`.
 
-**Exit criterion:** a green CI run exists on a remote, and the working tree can be
-reconstructed on another machine from `git clone` alone.
+**Exit criterion met.** A green CI run exists on `main`, and the working tree can
+be reconstructed on another machine from `git clone` alone.
 
 ### Stage 1 — The artifact · **done**
 
