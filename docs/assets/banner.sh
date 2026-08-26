@@ -35,6 +35,14 @@ emit() {
   <rect width="1280" height="280" fill="$VOID"/>
   <rect width="1280" height="280" fill="url(#grid)"/>
 
+  <!-- Outer frame. The PAPER ground (#f4f3ef) is within a few percent of GitHub's
+       white page, so without this the light banner reads as an empty gap until you
+       zoom in. It also covers the case prefers-color-scheme gets it wrong: GitHub's
+       own light/dark setting does not drive that media query, so a reader on a dark
+       GitHub with a light OS is served the PAPER variant regardless. A defined edge
+       makes either variant read as a deliberate panel rather than a rendering fault. -->
+  <rect x="0.5" y="0.5" width="1279" height="279" fill="none" stroke="$LINE" stroke-width="1"/>
+
   <!-- Corner brackets: the frame every panel in the kit is drawn inside. -->
   <g class="hair">
     <path d="M24 52V24h28"/><path d="M1256 52V24h-28"/>
