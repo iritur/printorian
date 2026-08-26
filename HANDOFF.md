@@ -361,3 +361,12 @@ Two things this repository will not tell you and that cost an afternoon each:
 2. **Do not trust an agent's report of its own verification.** Reproduce it. Two
    separate reports of "all gates green" were produced by runs where the gate had
    not been executed at all.
+3. **The repository moved.** `origin` is now
+   `git@github.com:iritur/printorian.git`; the former home,
+   `dimmus/printorian`, is still reachable as the remote `dimmus` and still
+   holds the old Dependabot branches. Nothing was deleted there — if a clone
+   or a CI job on some machine still fetches `dimmus`, it will keep working
+   and will quietly fall behind, which is the failure mode to watch for.
+   Push over SSH: the HTTPS credential helper has nothing cached for GitHub,
+   and `core.sshCommand` points the key at `C:/gitssh/` because a Cyrillic
+   home directory defeats Git's bundled ssh.

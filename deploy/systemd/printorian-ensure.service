@@ -6,7 +6,7 @@
 
 [Unit]
 Description=Printorian stack reconciliation
-Documentation=https://github.com/dimmus/printorian/blob/main/deploy/systemd/README.md
+Documentation=https://github.com/iritur/printorian/blob/main/deploy/systemd/README.md
 Requires=docker.service
 After=docker.service
 # Deliberately NOT `Requires=printorian.service`. That would *start* the farm an

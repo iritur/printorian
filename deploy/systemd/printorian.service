@@ -8,7 +8,7 @@
 
 [Unit]
 Description=Printorian farm stack
-Documentation=https://github.com/dimmus/printorian/blob/main/docs/INFRASTRUCTURE.md
+Documentation=https://github.com/iritur/printorian/blob/main/docs/INFRASTRUCTURE.md
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target

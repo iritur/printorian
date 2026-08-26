@@ -6,7 +6,7 @@
 
 [Unit]
 Description=Printorian weekly restore drill
-Documentation=https://github.com/dimmus/printorian/blob/main/docs/RUNBOOK-BACKUP-RESTORE.md
+Documentation=https://github.com/iritur/printorian/blob/main/docs/RUNBOOK-BACKUP-RESTORE.md
 Requires=printorian.service
 After=printorian.service
 
