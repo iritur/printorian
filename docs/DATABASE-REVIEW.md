@@ -434,31 +434,23 @@ flow, which is a product decision rather than a missing check.
 
 ## 10. Work forward
 
-Ordered by whether deferring costs anything.
+**This list has moved to the issue tracker.** Open work is grouped by [milestone](https://github.com/iritur/printorian/issues?q=is%3Aopen) and described in [docs/WORKFLOW.md](WORKFLOW.md). This section once listed it and kept drifting; where this document and an issue disagree, the issue is right.
 
-### With the slice that needs it
+The remainder of the schema to build, by phase:
 
-| # | Task |
-|---|---|
-| DB-1 | **Half done.** `settings` + `settings_audit` exist and serve the seventeen scalar pricing rates; reads fall back to the code default, so an empty table behaves exactly as before, and `RateSnapshot` resolution stays at the read edge so ADR-0002 purity holds. What remains is the other ~85 parameters, which live on `core.config.Settings` and are read at process start — serving those from a table changes *when* they are read as well as where they come from. [DESIGN-KIT.md](DESIGN-KIT.md) §2.1. |
-| DB-5 | Procurement, and the warehouse and logistics entities behind it: `PurchaseOrder`, `Supplier`, storage cells, a movement ledger, `Shipment`. Post-production and QC, which were part of this line, are done. |
-| DB-7 | Order → job creation, carrying `model_asset_id` and `model_hash` from the paid line onto the job. The columns and the constraints are in place; nothing yet writes them outside tests. |
-| — | **Service tickets**, with steps, assignee and consequence, plus a failure record for MTTR and reliability. `ServiceOperation` exists; the ticket does not. |
-
-Done since this review was written: **DB-2** (`metric_rollups`, and retention
-enabled behind the clamp above), **DB-3** (`addresses`, `notification_prefs`),
-**DB-4** (`catalog_models` and its material rows), **DB-6** (`journal_posts`,
-`journal_subscribers`).
-
-### When the numbers say so
-
-| # | Task | Trigger |
+| Phase | Work | Issues |
 |---|---|---|
-| DB-8 | Partition `assignment_records` | table exceeds ~10M rows or 20 GB |
-| DB-9 | Paginate the fleet and materials listings | either exceeds a few hundred rows |
-| DB-10 | Evaluate TimescaleDB, or telemetry on its own instance | partitioned telemetry stops being enough |
-| DB-11 | Commit the off-site sync job | a destination is chosen |
-| DB-12 | Enforce foreign keys across the whole fast suite | the 66 tests that build against a fabricated parent id are tidied |
+| **4** | Complete the settings store (pricing rates exist; the other ~85 parameters are still on `core.config.Settings` read at startup) | [#29](https://github.com/iritur/printorian/issues/29) [#30](https://github.com/iritur/printorian/issues/30) [#31](https://github.com/iritur/printorian/issues/31) |
+| **4** | Order → job creation, carrying `model_asset_id` and `model_hash` onto the job | [#41](https://github.com/iritur/printorian/issues/41) |
+| **5** | Procurement and the warehouse (PurchaseOrder, Supplier, storage cells, movement ledger, Shipment); logistics (Shipment, carrier, tracking) | [#34](https://github.com/iritur/printorian/issues/34) [#35](https://github.com/iritur/printorian/issues/35) [#36](https://github.com/iritur/printorian/issues/36) |
+| **5** | Service tickets (steps, assignee, consequence, MTTR record) | [#33](https://github.com/iritur/printorian/issues/33) |
+| _trigger_ | Partition `assignment_records` | [#44](https://github.com/iritur/printorian/issues/44) |
+| _trigger_ | Paginate the fleet and materials listings | [#45](https://github.com/iritur/printorian/issues/45) |
+| _trigger_ | Evaluate TimescaleDB or telemetry on its own instance | [#46](https://github.com/iritur/printorian/issues/46) |
+| _trigger_ | Commit the off-site sync job | [#16](https://github.com/iritur/printorian/issues/16) |
+| _trigger_ | Enforce foreign keys across the fast suite | [#47](https://github.com/iritur/printorian/issues/47) |
+
+Done since the original review: `metric_rollups` with retention enabled, `addresses` and `notification_prefs`, `catalog_models`, `journal_posts`.
 
 ---
 
