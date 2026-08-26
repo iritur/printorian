@@ -13,6 +13,7 @@ natural seam to split on.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Final
 
 GROUPS: Final[dict[str, str]] = {
@@ -131,4 +132,31 @@ GROUPS: Final[dict[str, str]] = {
 }
 
 
-__all__ = ["GROUPS"]
+def in_group_order(keys: Iterable[str]) -> tuple[str, ...]:
+    """One section's keys, reordered so each panel's fields sit together.
+
+    The screen draws a panel per run of consecutive fields sharing a group, so a
+    group that gets interrupted draws its heading *twice*. Two sections did:
+    `pricing.multicolor_purge_grams_per_extra_color` is «Материал» but sits last
+    in the pricing order, and `scheduling.due_soon_hours` is «Нормализация» but
+    sits before the weights — each produced a second, one-field panel under a
+    heading the section had already used, and two panels keyed by the same group
+    name are also two React children with the same key.
+
+    Fixing it here rather than by hand-sorting `sections.py` is the point: the
+    pricing fields are derived from `RateSnapshot`'s declaration order and the
+    weights from `SchedulingPolicy`'s, so a field added to either arrives in
+    whatever position that dataclass gives it. Grouping structurally means a new
+    field joins its panel wherever it lands, instead of quietly splitting one.
+
+    Both the groups and the fields within them keep first-appearance order, so
+    the rail sequence the kit specifies is unchanged where it was already
+    contiguous — which is twelve of the fourteen sections.
+    """
+    buckets: dict[str | None, list[str]] = {}
+    for key in keys:
+        buckets.setdefault(GROUPS.get(key), []).append(key)
+    return tuple(key for group in buckets.values() for key in group)
+
+
+__all__ = ["GROUPS", "in_group_order"]

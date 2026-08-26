@@ -42,11 +42,15 @@ async def listing(settings: FarmSettings) -> list[SettingView]:
 
 @router.get("/sections")
 async def sections(settings: FarmSettings) -> list[SectionView]:
-    """The screen's fifteen headings, each with its fields in rail order.
+    """The screen's fourteen headings, each with its fields in rail order.
+
+    Fourteen and not the kit's fifteen: diagnostics is a read-only health page
+    with no fields to edit, so it is deliberately absent from `SECTION_ORDER`.
 
     Distinct from the flat listing so the client does not re-derive the grouping:
     the rail order and the field order within a section are the screen's layout,
-    and the server owns them for the same reason it owns the catalogue.
+    and the server owns them for the same reason it owns the catalogue. That
+    includes keeping each panel's fields contiguous — `groups.in_group_order`.
     """
     return await settings.sections()
 

@@ -1,4 +1,4 @@
-"""The extended catalogue: fifteen sections, typed fields, and write-only secrets.
+"""The extended catalogue: fourteen editable sections, typed fields, and write-only secrets.
 
 The pricing-only behaviour is covered by `test_settings_store.py`; this file is
 the new surface — that every kit section is represented, that each field knows its
@@ -58,6 +58,46 @@ async def test_the_rail_has_every_editable_section_in_kit_order(
         "integrations",
         "maintenance",
     ]
+
+
+async def test_no_section_repeats_a_group_heading(
+    db_session: AsyncSession, clock: FixedClock
+) -> None:
+    """Each panel heading appears once per section, because the screen draws a
+    panel per *run* of consecutive fields sharing a group.
+
+    A split group therefore drew its heading twice, one panel a single field
+    wide, and gave two React siblings the same key. It happened to two sections:
+    the pricing fields come off `RateSnapshot`'s declaration order and the
+    weights off `SchedulingPolicy`'s, so neither list is arranged by panel.
+    `groups.in_group_order` is what keeps the runs whole.
+    """
+    for section in SECTIONS:
+        runs: list[str | None] = []
+        for key in section.fields:
+            group = FIELDS[key].group
+            if not runs or runs[-1] != group:
+                runs.append(group)
+
+        assert len(runs) == len(set(runs)), f"section {section.id!r} draws a heading twice: {runs}"
+
+
+async def test_grouping_keeps_the_kits_field_order_within_a_panel(
+    db_session: AsyncSession, clock: FixedClock
+) -> None:
+    """Grouping reorders panels, never the fields inside one — «Труд» still
+    reads rate, hours-per-print-hour, hours-per-job, as the kit lists it."""
+    pricing = {section.id: section for section in SECTIONS}["pricing"]
+    labor = [key for key in pricing.fields if FIELDS[key].group == "pricing.labor"]
+
+    assert labor[:3] == [
+        "pricing.labor_rate_per_hour",
+        "pricing.labor_hours_per_print_hour",
+        "pricing.labor_hours_per_job",
+    ]
+    # The field that was stranded at the end of the section, now beside its own.
+    material = [key for key in pricing.fields if FIELDS[key].group == "pricing.material"]
+    assert "pricing.multicolor_purge_grams_per_extra_color" in material
 
 
 async def test_sections_group_by_the_kits_headings_not_the_key_prefix(

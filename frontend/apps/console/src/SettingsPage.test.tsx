@@ -297,3 +297,119 @@ describe('editing', () => {
     expect(reverted.value).toBe('KN-SOL.21')
   })
 })
+
+describe('the save bar', () => {
+  it('cancel discards every pending edit at once', async () => {
+    render(<SettingsPage locale="ru" />)
+
+    const name = (await screen.findByLabelText('Название фермы')) as HTMLInputElement
+    await userEvent.clear(name)
+    await userEvent.type(name, 'KN-SOL.42')
+
+    // A second edit in another section: the bar counts the whole screen, so
+    // cancel has to forget both and not merely the tab in front of you.
+    await userEvent.click(screen.getByRole('tab', { name: 'Скидки и тарифы' }))
+    const discount = (await screen.findByLabelText('Скидка 1')) as HTMLInputElement
+    await userEvent.clear(discount)
+    await userEvent.type(discount, '9')
+
+    expect(screen.getByText('ИЗМЕНЕНИЙ :: 2')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Отмена' }))
+
+    expect(screen.getByText('ИЗМЕНЕНИЙ НЕТ — ВСЁ СОХРАНЕНО')).toBeInTheDocument()
+    expect((screen.getByLabelText('Скидка 1') as HTMLInputElement).value).toBe('5')
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Общие' }))
+    expect(((await screen.findByLabelText('Название фермы')) as HTMLInputElement).value).toBe(
+      'KN-SOL.21',
+    )
+  })
+
+  it('refuses an emptied number box rather than saving it as zero', async () => {
+    // `Number('')` is 0, so a cleared rate used to save as free.
+    const put: Array<[string, unknown]> = []
+    serve((url, body) => {
+      put.push([url, body])
+      return {}
+    })
+
+    render(<SettingsPage locale="ru" />)
+    await screen.findByLabelText('Название фермы')
+    await userEvent.click(screen.getByRole('tab', { name: 'Обслуживание системы' }))
+
+    const hour = (await screen.findByLabelText('Время запуска')) as HTMLInputElement
+    await userEvent.clear(hour)
+    await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Время запуска.*пустое/)
+    expect(put).toEqual([])
+  })
+})
+
+describe('the irreversible operations', () => {
+  it('cannot be confirmed while the farm has no name', async () => {
+    // The gate is "type the farm name". An empty name made an empty box match it,
+    // so the confirm armed itself the moment the panel opened.
+    const blank = aSections()
+    blank[0]!.fields[0]!.value = ''
+    net.handler = (url: string) => {
+      if (url.endsWith('/settings/sections')) return Promise.resolve(jsonOk(blank))
+      if (url.endsWith('/settings/history')) return Promise.resolve(jsonOk([]))
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+    await screen.findByLabelText('Название фермы')
+    await userEvent.click(screen.getByRole('tab', { name: 'Обслуживание системы' }))
+
+    await screen.findByText('Необратимые операции')
+    await userEvent.click(screen.getAllByRole('button', { name: 'Сбросить' })[0]!)
+
+    expect(screen.queryByRole('button', { name: 'Подтвердить' })).not.toBeInTheDocument()
+    expect(
+      screen.getByText('Сначала задайте название фермы — им подтверждается операция'),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('the panels', () => {
+  it('draws one panel per run of fields sharing a group', async () => {
+    // What the screen guarantees on its own. That a group is never *split* in
+    // the first place is the server's guarantee, and is tested there —
+    // `test_settings_catalogue.py::test_no_section_repeats_a_group_heading`.
+    // React tolerates the duplicate sibling keys the split used to produce, so
+    // there is no assertion here that would have caught them; the positional
+    // key in the component is a guard, not something this test proves.
+    const repeated = [
+      {
+        id: 'general',
+        fields: (['a', 'b', 'a'] as const).map((suffix, index) => ({
+          key: `general.farm_name_${index}`,
+          section: 'general',
+          kind: 'string',
+          value: `v${index}`,
+          default: '',
+          is_overridden: false,
+          is_set: false,
+          options: [],
+          group: suffix === 'a' ? 'general.farm' : 'general.display',
+        })),
+      },
+    ]
+    net.handler = (url: string) => {
+      if (url.endsWith('/settings/sections')) return Promise.resolve(jsonOk(repeated))
+      if (url.endsWith('/settings/history')) return Promise.resolve(jsonOk([]))
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+
+    // Three fields in three runs — each keeps its own value rather than two of
+    // them being reconciled into one another's DOM.
+    for (const index of [0, 1, 2]) {
+      expect(await screen.findByText(`general.farm_name_${index}`)).toBeInTheDocument()
+    }
+    expect(screen.getAllByText('Ферма')).toHaveLength(2)
+  })
+})

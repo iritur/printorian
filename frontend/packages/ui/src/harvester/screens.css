@@ -297,6 +297,14 @@
 }
 .hv-set[data-changed='true']::before { opacity: 1; }
 
+/* The same marker for a whole panel. The volume ladder and the customer tiers
+   are edited as tables rather than as `.hv-set` rows, so they carried
+   `data-changed` with no rule behind it and a dirty table looked untouched —
+   the one place the screen most needs to say "this is not saved yet", because
+   a table's edit is several boxes rather than one. */
+.hv-panel[data-changed='true'] { border-color: var(--hv-warn); }
+.hv-panel[data-changed='true'] > .hv-panel__head { color: var(--hv-warn); }
+
 .hv-set__name {
   display: block;
   font-size: var(--hv-size-base);

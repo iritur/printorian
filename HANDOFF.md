@@ -52,6 +52,20 @@ is a separate audited «было · стало», shown in «Обслужива�
 > which the maintenance worker also uses, so «drop now» and the scheduled sweep
 > cannot drift apart. The third (clear waitlist) is not built.
 
+> **A review pass fixed four defects in that screen**, each now covered by a test
+> that fails without the fix. The save bar's «Отмена» was markup copied from the
+> kit with no handler — it discards every draft now. `ConfirmAction` compared the
+> typed farm name against the stored one, so a farm with a *blank* name matched an
+> empty box and armed the irreversible operations on one click; the confirm is
+> withheld and explains why. Clearing a number box saved `0` rather than being
+> refused, because `Number('')` is `0` and the guard tested for `NaN` — an emptied
+> numeric field now blocks the whole save and names itself. And `groups.in_group_order`
+> keeps a panel's fields contiguous: `pricing.material` and `scheduling.normalization`
+> were each split across their section, so the screen drew the same heading twice
+> and gave two React siblings one key. That last one is structural on purpose —
+> the pricing fields come off `RateSnapshot`'s declaration order, so hand-sorting
+> would only hold until the next field was added there.
+
 **The farm can change its own pricing rates.** `contexts/settings` is a key/value
 store with an audit, serving the seventeen scalar rates through
 `GET/PUT/DELETE /settings`, gated on `MANAGE_PRICING` (owner only). Two properties

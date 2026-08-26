@@ -115,6 +115,11 @@ const UNITS: Record<string, string> = {
   'service.telemetry_poll_seconds': 'seconds',
   'service.driver_timeout_seconds': 'seconds',
   'service.driver_send_retries': 'times',
+  //: The kit draws these two as one row with «с»/«до» between the boxes; the
+  //: catalogue has them as two keys, so they are two rows and each carries the
+  //: hour unit — the only numeric fields that were drawing bare.
+  'notify.quiet_hours_from': 'clock_hour',
+  'notify.quiet_hours_to': 'clock_hour',
   'logistics.volumetric_divisor': 'cm3_per_kg',
   'logistics.free_shipping_threshold': 'rub',
   'finance.vat_percent': 'percent',
@@ -187,7 +192,11 @@ export function SettingsPage({ locale }: { locale: Locale }) {
 
   useEffect(() => {
     if (!entitled) return
-    void load()
+    // The await is what makes the state update provably asynchronous — see
+    // `packages/ui/src/effects.ts` for why every fetch-on-mount is shaped so.
+    void (async () => {
+      await load()
+    })()
   }, [entitled, load])
 
   // A field is dirty when a draft exists and differs from the committed value.
@@ -209,8 +218,33 @@ export function SettingsPage({ locale }: { locale: Locale }) {
       return next
     })
 
+  //: The save bar's «Отмена» — every pending edit at once, where `revert` drops
+  //: one row. Nothing has been written yet, so this only forgets the drafts; the
+  //: committed values are already what the screen falls back to.
+  const discard = () => setDrafts({})
+
   const save = useCallback(async () => {
     if (dirtyKeys.length === 0) return
+
+    // Refuse an empty number box rather than coerce it. `Number('')` is `0`, not
+    // `NaN`, so a guard on NaN never fired for the case it was written for and a
+    // cleared rate saved as free — the farm quoting at cost until someone
+    // noticed. Nothing is written when one field is unusable: a partial save
+    // would leave the owner reading a screen that is half their edit.
+    const unusable = dirtyKeys.find((field) => {
+      if (field.kind !== 'integer' && field.kind !== 'decimal') return false
+      const raw = String(drafts[field.key] ?? '').trim()
+      return raw === '' || !Number.isFinite(Number(raw))
+    })
+    if (unusable) {
+      // The catalogue is read here rather than through `fieldName` so that
+      // `locale` stays this callback's only dependency on the render scope.
+      const labels = (catalogues[locale] ?? catalogues[DEFAULT_LOCALE]) as Record<string, string>
+      const field = labels[`settings.field.${unusable.key}`] ?? unusable.key
+      setError(translate(locale, 'settings.error.blank', { field }))
+      return
+    }
+
     setSaving(true)
     setError(null)
     try {
@@ -219,11 +253,7 @@ export function SettingsPage({ locale }: { locale: Locale }) {
       for (const field of dirtyKeys) {
         const raw = drafts[field.key]
         let value: unknown = raw
-        if (field.kind === 'integer') {
-          const parsed = Number(raw)
-          if (Number.isNaN(parsed)) continue
-          value = parsed
-        }
+        if (field.kind === 'integer') value = Number(raw)
         if (field.kind === 'secret' && !String(raw).trim()) continue
         await api.put(`/settings/${field.key}`, { value })
       }
@@ -378,13 +408,18 @@ export function SettingsPage({ locale }: { locale: Locale }) {
                 </p>
               </div>
 
-              {buckets.map((bucket) => {
+              {/* Keyed by position, not by group name. The server keeps a
+                  group's fields contiguous so a heading appears once, but a key
+                  that assumes it turns a server-side slip into duplicate React
+                  keys — siblings sharing a key have their DOM reused across
+                  each other, which is a worse failure than a repeated title. */}
+              {buckets.map((bucket, index) => {
                 const body = bucket.fields.map((field) => renderField(field))
                 if (bucket.group === null) {
-                  return <div key="ungrouped">{body}</div>
+                  return <div key={index}>{body}</div>
                 }
                 return (
-                  <section className="hv-panel" key={bucket.group}>
+                  <section className="hv-panel" key={index}>
                     <div className="hv-panel__head">
                       <span>{text(`settings.group.${bucket.group}`)}</span>
                     </div>
@@ -409,6 +444,7 @@ export function SettingsPage({ locale }: { locale: Locale }) {
           <SaveBar
             count={dirtyKeys.length}
             onSave={() => void save()}
+            onCancel={discard}
             saving={saving}
             noChanges={t('settings.save_bar.no_changes')}
             changes={t('settings.save_bar.changes', { count: dirtyKeys.length })}
@@ -777,6 +813,7 @@ function SecretControl(props: {
 function SaveBar(props: {
   count: number
   onSave: () => void
+  onCancel: () => void
   saving: boolean
   noChanges: string
   changes: string
@@ -787,18 +824,22 @@ function SaveBar(props: {
   const dirty = props.count > 0
   return (
     <div className="hv-savebar" data-dirty={dirty}>
-      <span className="hv-savebar__n" data-dirty-count>
+      <span className="hv-savebar__n">
         {dirty ? props.changes : props.noChanges}
       </span>
       <span className="hv-spacer" />
       <span className="hv-micro">{props.hint}</span>
-      <button className="hv-btn" type="button" data-needs-dirty disabled={!dirty || props.saving}>
+      <button
+        className="hv-btn"
+        type="button"
+        disabled={!dirty || props.saving}
+        onClick={props.onCancel}
+      >
         {props.cancelLabel}
       </button>
       <button
         className="hv-btn hv-btn--primary"
         type="button"
-        data-needs-dirty
         disabled={!dirty || props.saving}
         onClick={props.onSave}
       >
@@ -933,7 +974,11 @@ function ConfirmAction(props: {
     }
   }
 
-  const confirmed = typed.trim() === props.farmName.trim()
+  // A farm with no name cannot confirm anything. Comparing two empty strings
+  // armed «Подтвердить» before the owner typed a character, which turned a
+  // deliberate two-step into one click on an operation that does not come back.
+  const expected = props.farmName.trim()
+  const confirmed = expected.length > 0 && typed.trim() === expected
 
   return (
     <>
@@ -943,23 +988,29 @@ function ConfirmAction(props: {
           <span className="hv-set__hint">{props.hint}</span>
         </span>
         {confirming ? (
-          <span className="hv-row">
-            <input
-              className="hv-input"
-              aria-label={t('settings.irreversible.prompt')}
-              placeholder={t('settings.irreversible.prompt')}
-              value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-            />
-            <button
-              className="hv-btn hv-btn--sm hv-btn--danger"
-              type="button"
-              disabled={!confirmed || busy}
-              onClick={() => void run()}
-            >
-              {t('settings.irreversible.confirm')}
-            </button>
-          </span>
+          expected.length === 0 ? (
+            // Not a disabled button with no explanation: typing can never match,
+            // so say why rather than leave the owner guessing at a dead control.
+            <span className="hv-hint hv-bad">{t('settings.irreversible.needs_name')}</span>
+          ) : (
+            <span className="hv-row">
+              <input
+                className="hv-input"
+                aria-label={t('settings.irreversible.prompt')}
+                placeholder={t('settings.irreversible.prompt')}
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+              />
+              <button
+                className="hv-btn hv-btn--sm hv-btn--danger"
+                type="button"
+                disabled={!confirmed || busy}
+                onClick={() => void run()}
+              >
+                {t('settings.irreversible.confirm')}
+              </button>
+            </span>
+          )
         ) : (
           <button
             className="hv-btn hv-btn--danger"

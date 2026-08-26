@@ -187,7 +187,11 @@ class SettingsService:
         return views
 
     async def sections(self) -> list[SectionView]:
-        """The screen's fifteen headings, each with its fields in order."""
+        """The screen's fourteen headings, each with its fields in order.
+
+        Fourteen and not the kit's fifteen: diagnostics is a read-only health
+        page with nothing to edit, so `SECTION_ORDER` leaves it out.
+        """
         by_key = {view.key: view for view in await self.listing()}
         return [
             SectionView(id=section.id, fields=[by_key[key] for key in section.fields])

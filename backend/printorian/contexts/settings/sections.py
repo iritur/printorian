@@ -1,4 +1,7 @@
-"""The settings screen's fifteen sections, and every field they show.
+"""The settings screen's fourteen editable sections, and every field they show.
+
+Fourteen, not the kit's fifteen: diagnostics is a read-only health page with
+nothing to edit, so `SECTION_ORDER` leaves it out.
 
 Two sources of truth feed this, and neither is re-listed by hand where it is not
 already hand-listed:
@@ -31,7 +34,7 @@ from typing import Any, Final
 
 from printorian.contexts.pricing import LOYALTY_LADDER, CustomerTier, RateSnapshot
 from printorian.contexts.scheduling import SchedulingPolicy
-from printorian.contexts.settings.groups import GROUPS
+from printorian.contexts.settings.groups import GROUPS, in_group_order
 from printorian.core.config import Settings as CoreSettings
 
 
@@ -382,10 +385,12 @@ SECTION_ORDER: Final = (
     "maintenance",
 )
 
+#: Grouped rather than taken straight off `FIELDS`: a group split across the
+#: section draws its panel heading twice — see `groups.in_group_order`.
 SECTIONS: Final[tuple[Section, ...]] = tuple(
     Section(
         id=section_id,
-        fields=tuple(spec.key for spec in FIELDS.values() if spec.section == section_id),
+        fields=in_group_order(spec.key for spec in FIELDS.values() if spec.section == section_id),
     )
     for section_id in SECTION_ORDER
 )
