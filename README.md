@@ -42,7 +42,6 @@ rather than an agent.
 | [docs/RUNBOOK-PAYMENTS.md](docs/RUNBOOK-PAYMENTS.md) | YooKassa and T-Pay: method selection, demo-store vs live-store testing, test cards |
 | [docs/RUNBOOK-FIRST-PRINT.md](docs/RUNBOOK-FIRST-PRINT.md) | Proving the driver against a real printer — the largest unproven assumption in the system |
 | [docs/BAMBU-LAN-PROTOCOL.md](docs/BAMBU-LAN-PROTOCOL.md) | Spike findings from a real printer — the spec the Phase 3 driver is built from |
-| [docs/TASKS.txt](docs/TASKS.txt) | Raw idea backlog, unfiltered and unsequenced — the origin of several screens, not a plan |
 
 ## The four rules
 
