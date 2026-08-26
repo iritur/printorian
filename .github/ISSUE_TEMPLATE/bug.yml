@@ -1,0 +1,65 @@
+# A defect: the system does something other than what it says it does.
+#
+# The fields are ordered the way a fix is actually reconstructed six months
+# later — what was observed, then what was expected, then how to reproduce it.
+# "Evidence" is mandatory and separate on purpose: CLAUDE.md §6 says a report of
+# success is not evidence, and the same holds for a report of failure.
+name: Bug
+description: The system behaves differently from what it claims.
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, check [HANDOFF.md](https://github.com/iritur/printorian/blob/main/HANDOFF.md) §2 —
+        some surprising behaviour is a recorded decision rather than a defect.
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened
+      description: The behaviour as observed, not as interpreted.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+      description: And where that expectation comes from — an ADR, a doc section, a test, a screen in the kit.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: >
+        Command output, a log line, a failing assertion, a screenshot. Paste it rather than
+        describing it — the repository has twice been told a gate was green by a run that
+        never executed the gate.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The shortest path from a clean checkout to seeing it.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: irreversible
+    attributes:
+      label: Does this touch an irreversible path?
+      description: >
+        Retention drops, backup and WAL archiving, migrations, refunds, provisioning. These are
+        the paths where a defect cannot be walked back, so they are triaged first regardless of
+        how rarely they fire.
+      options:
+        - "No"
+        - "Yes — data can be lost or a guarantee silently stops holding"
+    validations:
+      required: true

@@ -1,0 +1,49 @@
+# Something deliberately not built, recorded so that the decision is visible and
+# so that the condition which would reopen it is written down while it is still
+# understood.
+#
+# These issues stay open on purpose. An open issue with a stated trigger is the
+# cheapest form of a tripwire: closing it as "wontfix" throws away the trigger,
+# and leaving it out of the tracker entirely is how an accepted trade-off becomes
+# a forgotten one.
+name: Deferred decision
+description: Deliberately not built — with the condition that would change that.
+labels: ["type:task", "deferred"]
+body:
+  - type: textarea
+    id: decision
+    attributes:
+      label: What is not being built, and what happens instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why deferring is correct today
+      description: >
+        The cost avoided, and what would be paid to build it now. "Not got to it yet" is a task,
+        not a deferred decision — use the Task template for that.
+    validations:
+      required: true
+
+  - type: textarea
+    id: trigger
+    attributes:
+      label: The trigger
+      description: >
+        The measurable condition that reopens this — a row count, a second replica, an upstream
+        release, a chosen destination. Written so that someone can check it without re-deriving
+        the argument.
+    validations:
+      required: true
+
+  - type: textarea
+    id: consequences
+    attributes:
+      label: What is true meanwhile, and worth knowing rather than discovering
+      description: >
+        The in-process rate limiter's counters reset on restart. The displayed quota refuses
+        nothing. These are the sentences that save an afternoon.
+    validations:
+      required: false

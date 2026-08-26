@@ -1,0 +1,52 @@
+# Work to be done: a feature, a slice of infrastructure, a piece of tech debt.
+#
+# The one field that carries its weight is "Done when". CLAUDE.md §2 — a feature
+# is done when a test proves it — means an issue that cannot state its own exit
+# criterion is not yet understood well enough to be worked on.
+name: Task
+description: Work to be built — a feature, an infrastructure slice, or tech debt to repay.
+labels: ["type:task"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: The change, in one or two sentences.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why now
+      description: >
+        What is worse for not having it, or what it unblocks. If deferring costs nothing today,
+        say so and give the trigger instead — see the "Deferred decision" template.
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: >
+        A demonstrable capability, not a checkbox, and named so someone else could verify it —
+        the test that has to pass, the command that has to return 0, the screen that has to render.
+    validations:
+      required: true
+
+  - type: textarea
+    id: where
+    attributes:
+      label: Where it lands
+      description: Paths, contexts, docs and ADRs this touches. Helps the next person size it honestly.
+    validations:
+      required: false
+
+  - type: textarea
+    id: blocked
+    attributes:
+      label: Blocked on
+      description: Hardware, a credential, a domain, an upstream release, or a decision only a person can make.
+    validations:
+      required: false

@@ -149,8 +149,14 @@ so a session only loads what it needs. [HANDOFF.md](HANDOFF.md) carries the curr
 state: what just changed, what is deliberately unfinished, and what needs a person
 rather than an agent.
 
+**Open work is in [issues](https://github.com/iritur/printorian/issues)**, grouped by
+milestone and described in [docs/WORKFLOW.md](docs/WORKFLOW.md). The documents below
+say what the system *is*; the tracker says what is *missing*, and only the tracker
+says it.
+
 | Document | What it covers |
 |---|---|
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | How the issue tracker is used — labels, milestones, and what closes an issue |
 | [printorian_scenario.txt](docs/printorian_scenario.txt) | The product scenario — source of truth for requirements |
 | [docs/ANALYSIS.md](docs/ANALYSIS.md) | What the scenario requires, decomposed into capabilities with the difficulty named |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Locked decisions, module map, pricing engine, scheduler, drivers, governance |
