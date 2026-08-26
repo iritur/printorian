@@ -7,7 +7,7 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-26 · 1227 backend tests (6 hardware skips), 214 frontend,
+**As of:** 2026-08-26 · 1227 backend tests (6 hardware skips), 218 frontend,
 all governance gates green (added pip-audit and npm audit gates for dependencies).
 
 **The system now runs on a real host.** A farm exists at `192.168.29.148`
