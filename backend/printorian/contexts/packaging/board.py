@@ -60,7 +60,16 @@ async def board_columns(db: AsyncSession, *, now: datetime) -> list[PackColumn]:
             # Nulls last: a parcel with no van booked is not thereby the most
             # urgent thing on the bench, which an unqualified ascending sort
             # would claim.
-            .order_by(PackTask.cutoff_at.is_(None), PackTask.cutoff_at, PackTask.created_at)
+            # `id` last: three terms and it still tied. A day's parcels are
+            # raised together, so they share both the cutoff and the
+            # transaction's `now()`, and `BOARD_LIMIT` then cuts the bench in a
+            # different place each time it is read (`core.pagination`).
+            .order_by(
+                PackTask.cutoff_at.is_(None),
+                PackTask.cutoff_at,
+                PackTask.created_at,
+                PackTask.id,
+            )
             .limit(BOARD_LIMIT)
         )
     )
@@ -106,7 +115,10 @@ async def pickups(db: AsyncSession, *, now: datetime) -> list[PickupView]:
                 PackTask.cutoff_at < _midnight(now) + timedelta(days=1),
             )
             .group_by(PackTask.delivery_method, PackTask.carrier_code, PackTask.cutoff_at)
-            .order_by(PackTask.cutoff_at)
+            # The whole group key, not just the time: carriers collecting at the
+            # same cutoff are the normal case here, and there is no `id` to fall
+            # back on in a grouped result (`core.pagination`).
+            .order_by(PackTask.cutoff_at, PackTask.delivery_method, PackTask.carrier_code)
         )
     ).all()
     return [

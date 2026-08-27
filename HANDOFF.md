@@ -7,7 +7,7 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-27 · 1236 backend tests (1230 passed, 6 hardware skips),
+**As of:** 2026-08-27 · 1244 backend tests (1238 passed, 6 hardware skips),
 218 frontend, all governance gates green (pip-audit and npm audit among them).
 
 **The system now runs on a real host.** A farm exists at `192.168.29.148`
@@ -336,23 +336,43 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 | Off-site backup sync has a recipe, no committed job | Needs farm-specific credentials. |
 | Storefront `body` lifts the page ground | Predates Harvester; `--hv-bg` vs `--hv-void` is six values out of 255 in dark, identical in light. A visual call, not a cleanup. See `apps/web/src/app.css`. |
 | TypeScript held at 5.x | `openapi-typescript` crashes on TS 7. Reason and three failed workarounds are in `.github/dependabot.yml`. |
-| ~12 queries still sort on a timestamp alone | See below — a latent flake class, fixed only where it has actually bitten. |
+| Six queries still sort on a timestamp alone | Read in one pass and left that way on purpose. See below. |
 
-**The single-column time sort is a flake waiting to happen.** `SettingsService.history`
-ordered by `changed_at DESC` and nothing else. Under `FixedClock` every row in a test
-shares one timestamp, so the sort ties and the planner may return either order — CI and
-a dev machine disagreed about the same two rows. It now orders by `id` as well, which
-settles it *correctly* rather than merely consistently: `core.ids.new_id` builds a
-UUIDv7 from `time.time_ns()`, the real clock, so ids stay chronological where
-`changed_at` is frozen.
+**The single-column time sort has been triaged, once, across the whole tree**
+([#42](https://github.com/iritur/printorian/issues/42)). It started with
+`SettingsService.history`, which ordered by `changed_at DESC` and nothing else: every
+row a test writes shares one timestamp, so the sort tied and CI and a dev machine
+disagreed about the same two rows. Ordering by `id` as well settles it *correctly*
+rather than merely consistently — `core.ids.new_id` builds a UUIDv7 from
+`time.time_ns()`, the real clock, so ids stay chronological where `changed_at` is
+frozen.
 
-The same shape is still in about a dozen queries — `grep "order_by(" printorian/` and
-look for one term. Most cannot be observed by a test today. Two are worth knowing about:
-`production/planning.py` (the scheduler: equal priority *and* equal `created_at` picks
-arbitrarily) and `production/reads.py` (assignment records, whose whole purpose is
-explaining the order things were considered in). They were left alone because fixing a
-sort nothing asserts on is churn — but when one of them goes flaky, this is the cause,
-and the fix is a second `order_by` term, not a retry.
+**The idiom now lives in `core/pagination.py`**, next to the argument about sort keys
+that was already there, along with the two things that make it a rule rather than a
+habit. The tie is not a test artifact: `Entity.created_at` is a `server_default` of
+`now()`, and PostgreSQL's `now()` is the *transaction's* start, so every row one pass
+writes carries the same timestamp in production too. And the rule has an exception —
+`JobEvent` and `OrderEvent` carry an explicit `sequence`, because UUIDv7 orders only to
+the millisecond and a job passes three statuses inside one.
+
+**Where the second term is worth having, and where it is churn.** A sort under a
+`LIMIT` decides *membership*: a tie at the boundary moves rows in and out of the answer,
+so unchanged data reads differently twice. Fourteen queries were fixed: nine of the
+measured fifteen, plus five of the same shape that a *second* term had hidden — the
+scheduler among them, which sorted by priority and `created_at` and still tied. A sort
+that returns a whole set for a screen to render decides only *presentation*, and a term
+there is churn; the remaining six were read and left, each saying so at the line.
+`production/prep.py` is that same call and unbounded, so it stands as it was.
+
+| Fixed | Left single-term |
+|---|---|
+| `production/planning.py` (the ready batch), `production/reads.py` (both), `production/queue.py` (both), `production/throughput.py`, `packaging/board.py` (both), `packaging/catalogue.py`, `packaging/service.py`, `postproduction/board.py`, `account/service.py` (both), `workers/postproduction.py` | `catalog/assets.py`, `identity/service.py`, `identity/sessions.py`, `ordering/history.py` (both), `payments/service.py` |
+
+`production/queue.py`'s `_first_entered` was the one that wanted `sequence` rather than
+`id`, and `packaging/board.py`'s pickup roll-up wanted the rest of its group key —
+there is no `id` in a grouped result. `tests/unit/test_production_ordering.py` covers
+the planner and the assignment record under `FixedClock`; six of its eight tests fail
+on every run against the code as it was, which is the part worth knowing.
 
 ## 3. What is actually next
 

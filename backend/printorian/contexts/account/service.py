@@ -42,7 +42,10 @@ class AccountService:
         rows = await self._db.scalars(
             select(Address)
             .where(Address.user_id == user_id)
-            .order_by(Address.is_default.desc(), Address.created_at)
+            # `id` last so this list and `delete_address` agree about which
+            # address is «the oldest» — a screen that disagreed with the rule
+            # picking the heir would be worse than either order alone.
+            .order_by(Address.is_default.desc(), Address.created_at, Address.id)
         )
         return [AddressView.model_validate(row) for row in rows]
 
@@ -106,7 +109,13 @@ class AccountService:
         if not was_default:
             return
         heir = await self._db.scalar(
-            select(Address).where(Address.user_id == user_id).order_by(Address.created_at).limit(1)
+            # `id` as well as time: addresses added in one checkout share the
+            # transaction's `now()`, so «the oldest» has to mean something when
+            # they tie (`core.pagination`).
+            select(Address)
+            .where(Address.user_id == user_id)
+            .order_by(Address.created_at, Address.id)
+            .limit(1)
         )
         if heir is not None:
             heir.is_default = True

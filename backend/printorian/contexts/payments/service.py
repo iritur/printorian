@@ -300,6 +300,8 @@ class PaymentsService:
 
     async def for_order(self, order_id: EntityId) -> list[PaymentView]:
         payments = await self._db.scalars(
+            # Single-term on purpose (`core.pagination`): every payment for the
+            # order comes back and a tie swaps two rows without moving a total.
             select(Payment).where(Payment.order_id == order_id).order_by(Payment.created_at)
         )
         return [await self._view(payment.id) for payment in payments]

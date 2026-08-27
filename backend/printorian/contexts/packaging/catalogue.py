@@ -65,11 +65,17 @@ class PackingCatalogue:
         return instruction.id
 
     async def active(self) -> PackInstruction | None:
-        """The version new parcels are raised against."""
+        """The version new parcels are raised against.
+
+        `id` as well as time because this picks *one* row and two versions
+        published together tie on `created_at`, which would let the farm pack
+        against a different instruction from one parcel to the next
+        (`core.pagination`). `PackingService._instruction` sorts identically.
+        """
         found: PackInstruction | None = await self._db.scalar(
             select(PackInstruction)
             .where(PackInstruction.is_active.is_(True))
-            .order_by(PackInstruction.created_at.desc())
+            .order_by(PackInstruction.created_at.desc(), PackInstruction.id.desc())
             .limit(1)
         )
         return found

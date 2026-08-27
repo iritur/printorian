@@ -251,7 +251,15 @@ async def claim_ready_jobs(db: AsyncSession, *, limit: int = PLAN_BATCH_SIZE) ->
             # The planner sorts properly by due-date risk; this ordering only decides
             # *which* jobs a bounded batch sees, and priority-then-oldest is the
             # honest answer to that.
-            .order_by(PrintJob.priority.desc(), PrintJob.created_at)
+            #
+            # `id` last, because two terms still tie. Every job of one order is
+            # written by a single intake pass, so they share `created_at` to the
+            # last digit — it is `now()`, the transaction's clock — and at equal
+            # priority the batch boundary then falls wherever the planner likes.
+            # The job left outside it waits another pass for a reason nobody can
+            # state, which is precisely what an assignment record exists to rule
+            # out. The idiom and its one exception are in `core.pagination`.
+            .order_by(PrintJob.priority.desc(), PrintJob.created_at, PrintJob.id)
             .limit(limit)
             .with_for_update(skip_locked=True)
         )

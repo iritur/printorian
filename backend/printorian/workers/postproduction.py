@@ -94,7 +94,11 @@ class PostProductionSweep:
             await self._db.scalars(
                 select(PrintJob)
                 .where(PrintJob.status == JobStatus.SUCCEEDED)
-                .order_by(PrintJob.finished_at.desc())
+                # `id` as the tiebreak: jobs of one order finish together often
+                # enough, and a bounded batch whose membership is arbitrary can
+                # leave the same job unraised on pass after pass without ever
+                # saying so (`core.pagination`).
+                .order_by(PrintJob.finished_at.desc(), PrintJob.id.desc())
                 .limit(RAISE_BATCH)
             )
         )

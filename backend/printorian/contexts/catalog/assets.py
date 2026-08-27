@@ -158,6 +158,9 @@ class ModelLibrary:
         rows = await self._db.scalars(
             select(ModelAsset)
             .where(ModelAsset.uploaded_by == user_id)
+            # Single-term on purpose: the whole set comes back and nothing picks
+            # from it, so a tie swaps two rows on one person's list of uploads and
+            # changes nothing. `core.pagination` on when that stops being true.
             .order_by(ModelAsset.last_used_at.desc())
         )
         return [ModelAssetView.model_validate(row) for row in rows]

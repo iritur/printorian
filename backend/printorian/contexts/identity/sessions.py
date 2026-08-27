@@ -47,6 +47,8 @@ async def live_sessions(
             Session.revoked_at.is_(None),
             Session.expires_at > now,
         )
+        # Single-term on purpose (`core.pagination`): unbounded, and revoking
+        # names a session by id, so a tie moves a device in the list and nothing else.
         .order_by(Session.created_at.desc())
     )
     return [
