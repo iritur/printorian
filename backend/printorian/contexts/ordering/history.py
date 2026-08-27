@@ -63,6 +63,8 @@ async def lifetime(db: AsyncSession, clock: Clock, customer_id: EntityId) -> Lif
     """
     orders = list(
         await db.scalars(
+            # Single-term on purpose (`core.pagination`): every figure below is a
+            # sum, a count or a mean, so the order of the rows is not read at all.
             select(Order).where(Order.customer_id == customer_id).order_by(Order.created_at)
         )
     )
@@ -154,6 +156,9 @@ async def order_numbers(db: AsyncSession, customer_id: EntityId) -> dict[EntityI
     rows = await db.execute(
         select(Order.id, Order.number)
         .where(Order.customer_id == customer_id)
+        # Single-term on purpose (`core.pagination`): the result is a lookup map —
+        # callers `.get()` by id and hand the keys to a `WHERE IN` — so the sort is
+        # vestigial rather than a promise to anybody.
         .order_by(Order.created_at.desc())
     )
     # `t.tuple()` rather than a bare `dict(rows)`: a SQLAlchemy `Row` is a

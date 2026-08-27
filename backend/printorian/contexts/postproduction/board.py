@@ -66,7 +66,10 @@ async def board_columns(db: AsyncSession, *, now: datetime) -> list[Column]:
             # Nulls last: a task with no promise recorded is not thereby the most
             # urgent thing in the shop, which is what an unqualified ascending
             # sort would claim.
-            .order_by(Task.due_at.is_(None), Task.due_at, Task.created_at)
+            # `id` last, for the reason `core.pagination` gives: tasks raised by
+            # one sweep share a due date *and* the transaction's `now()`, and the
+            # limit turns that tie into which of them the shop is shown.
+            .order_by(Task.due_at.is_(None), Task.due_at, Task.created_at, Task.id)
             .limit(BOARD_LIMIT)
         )
     )

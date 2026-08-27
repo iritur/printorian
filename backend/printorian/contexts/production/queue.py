@@ -31,7 +31,11 @@ async def queue_position(db: AsyncSession, order_id: EntityId) -> QueuePosition 
         select(PrintJob)
         .where(PrintJob.order_id == order_id)
         # The latest attempt: a remade job is the one the customer is waiting on.
-        .order_by(PrintJob.created_at.desc())
+        # `id` because `created_at` alone does not pick one: an order's jobs are
+        # all written by a single intake pass, so they share the transaction's
+        # `now()` exactly, and «where is my order» would answer about a different
+        # line each time it was asked (`core.pagination`).
+        .order_by(PrintJob.created_at.desc(), PrintJob.id.desc())
         .limit(1)
     )
     if job is None:
@@ -88,11 +92,18 @@ async def _first_entered(db: AsyncSession, job_id: EntityId, status: JobStatus) 
     default — the same split `Session.expires_at` documents, where the injected
     clock and the server clock are deliberately different sources. For a stage
     label read by a person the two are indistinguishable.
+
+    Sorted on `sequence`, which is the one case where `core.pagination`'s
+    order-by-id idiom is the wrong answer. A job can pass `assigned`, `printing`
+    and `failed` inside one transaction, so all three share `created_at`; and
+    UUIDv7 only orders to the millisecond, so the key would not separate them
+    either. `JobEvent.sequence` exists for exactly this and is the only total
+    order over a job's history.
     """
     when: datetime | None = await db.scalar(
         select(JobEvent.created_at)
         .where(JobEvent.job_id == job_id, JobEvent.to_status == status.value)
-        .order_by(JobEvent.created_at)
+        .order_by(JobEvent.sequence)
         .limit(1)
     )
     return when

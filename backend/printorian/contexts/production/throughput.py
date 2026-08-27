@@ -70,7 +70,12 @@ async def throughput(db: AsyncSession, *, since: datetime, until: datetime) -> T
                 PrintJob.finished_at >= since,
                 PrintJob.finished_at < until,
             )
-            .order_by(PrintJob.finished_at.desc())
+            # `id` because the limit makes this sort decide *membership*, not
+            # presentation: prints that finished together tie, and a tie at the
+            # boundary moves rows in and out of the window between reads — so the
+            # success rate would differ run to run on unchanged data, which is
+            # ADR-0007's invented number wearing a percent sign.
+            .order_by(PrintJob.finished_at.desc(), PrintJob.id.desc())
             .limit(THROUGHPUT_LIMIT + 1)
         )
     ).all()

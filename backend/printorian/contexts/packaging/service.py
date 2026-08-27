@@ -317,7 +317,10 @@ class PackagingService:
             select(PackInstruction)
             .where(PackInstruction.is_active.is_(True))
             .options(selectinload(PackInstruction.steps))
-            .order_by(PackInstruction.created_at.desc())
+            # Same order as `InstructionCatalogue.active`, tiebreak included —
+            # two rows that disagreed about which version is current would be
+            # worse than either answer.
+            .order_by(PackInstruction.created_at.desc(), PackInstruction.id.desc())
             .limit(1)
         )
         return found

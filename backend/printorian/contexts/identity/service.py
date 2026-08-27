@@ -108,6 +108,8 @@ class IdentityService:
         return UserView.model_validate(user)
 
     async def list_users(self) -> list[UserView]:
+        # Single-term on purpose (`core.pagination`): unbounded, and a tie swaps
+        # two names in a staff list nothing reads by position.
         result = await self._db.scalars(select(User).order_by(User.created_at))
         return [UserView.model_validate(u) for u in result]
 
