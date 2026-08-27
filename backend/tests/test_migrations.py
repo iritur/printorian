@@ -19,6 +19,7 @@ Three things are asserted, and the third is the one that matters most:
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -135,3 +136,114 @@ def test_event_loop_is_not_required() -> None:
     """These tests run synchronously; Alembic's env.py owns its own loop."""
     with pytest.raises(RuntimeError):
         asyncio.get_running_loop()
+
+
+def _enum_checks_in_database(url: str) -> dict[str, set[str]]:
+    """Every ``ck_*_enum`` constraint PostgreSQL holds, mapped to the values it admits.
+
+    ``pg_get_constraintdef`` gives back what the server stored, not what was written:
+    ``x IN ('a', 'b')`` comes back as ``= ANY (ARRAY['a'::character varying, ...])``.
+    The quoted literals survive that rewrite intact, so they are what gets compared —
+    the shape of the predicate is PostgreSQL's business, the value set is ours.
+    """
+    engine = create_engine(url.replace("+asyncpg", "+psycopg2"), future=True)
+    try:
+        with engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    "SELECT conname, pg_get_constraintdef(oid) "
+                    "FROM pg_constraint WHERE contype = 'c'"
+                )
+            )
+            return {
+                name: set(re.findall(r"'([^']*)'", definition))
+                for name, definition in rows
+                if name.endswith("_enum")
+            }
+    finally:
+        engine.dispose()
+
+
+def _enum_checks_in_metadata() -> dict[str, set[str]]:
+    from sqlalchemy import Enum as SAEnum
+
+    import printorian.models  # noqa: F401 - registers every table on the metadata
+    from printorian.core.db import Base
+
+    return {
+        f"ck_{table.name}_{column.name}_enum": set(column.type.enums)
+        for table in Base.metadata.sorted_tables
+        for column in table.columns
+        if isinstance(column.type, SAEnum)
+    }
+
+
+def test_every_enum_column_is_checked_in_the_database(fresh_database: str) -> None:
+    """The migrations put a CHECK on every enum column, admitting exactly its members.
+
+    `test_schema_contracts` asserts the constraint exists in the *metadata*; this
+    asserts the migration path put the equivalent one in PostgreSQL, and it is the
+    only gate that does. `alembic check` compares CHECK constraints by name alone —
+    verified, not assumed — so a column left out of a migration is caught here by its
+    absence, and an enum member added without one is caught here by the value sets
+    disagreeing. Neither shows up as drift.
+    """
+    command.upgrade(_alembic_config(fresh_database), "head")
+
+    expected = _enum_checks_in_metadata()
+    present = _enum_checks_in_database(fresh_database)
+
+    assert expected, "no enum CHECK constraints in the metadata — the contract test explains"
+    assert not set(expected) - set(present), (
+        f"enum columns unguarded after `upgrade head`: {sorted(set(expected) - set(present))}. "
+        "A new enum column needs a migration adding its CHECK."
+    )
+
+    mismatched = {
+        name: {"models": sorted(values), "database": sorted(present[name])}
+        for name, values in expected.items()
+        if values != present[name]
+    }
+    assert not mismatched, (
+        f"enum members the migrations do not admit: {mismatched}. "
+        "Changing an enum needs a migration that rewrites its CHECK."
+    )
+
+
+def test_a_value_outside_the_enum_is_refused_by_postgres(fresh_database: str) -> None:
+    """Issue #43's actual scenario: a writer that is not the application.
+
+    Pydantic and the column type both live in the process; a psql session, an import
+    job or a data-fix script has neither. This goes in over raw SQL for that reason —
+    a test that went through the ORM would only prove the ORM works.
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    command.upgrade(_alembic_config(fresh_database), "head")
+    engine = create_engine(fresh_database.replace("+asyncpg", "+psycopg2"), future=True)
+    insert = text(
+        """
+        INSERT INTO users
+            (id, email, display_name, password_hash, role, is_active, locale,
+             phone, customer_kind)
+        VALUES
+            (gen_random_uuid(), :email, 'Nobody', 'x', :role, true, 'ru',
+             '', 'person')
+        """
+    )
+    try:
+        # The control. Without it a failure below could just as easily be the
+        # unique email or a missing column, and the test would pass for the wrong
+        # reason — so the same statement has to succeed with a legal role first.
+        with engine.begin() as connection:
+            connection.execute(insert, {"email": "legal@example.test", "role": "customer"})
+
+        with (
+            pytest.raises(IntegrityError) as refused,
+            engine.begin() as connection,
+        ):
+            connection.execute(insert, {"email": "illegal@example.test", "role": "wizard"})
+    finally:
+        engine.dispose()
+
+    assert "ck_users_role_enum" in str(refused.value)

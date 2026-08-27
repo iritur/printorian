@@ -13,7 +13,7 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 ## 1. Shape
 
 One PostgreSQL database (ADR-0001, D1). **42 tables** across twelve contexts, built
-by twenty Alembic migrations on a single linear head.
+by twenty-one Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
@@ -378,16 +378,6 @@ point is to choose rather than leave two answers standing.
 
 ## 9. Known gaps and accepted trade-offs
 
-**Enum columns carry no database-level CHECK.** SQLAlchemy names a generated enum
-constraint after the *enum type*, not the column, so a table with two columns of the
-same enum produces two identically-named constraints and PostgreSQL refuses to build
-the schema. `order_events` has exactly that shape — `from_status` and `to_status` are
-both `OrderStatus`. Avoiding it means a hand-picked unique name at every call site, a
-rule that holds until somebody adds the thirteenth enum column and forgets. Values
-are validated on write by the type and at the edge by Pydantic, and nothing but
-application code writes these columns, so the gap is narrow. Recorded in
-`core.db.enum_column` rather than left to be rediscovered.
-
 **`assignment_records` is not partitioned.** Two orders of magnitude smaller than
 telemetry, and its growth is bounded by planning frequency rather than by the clock.
 It is indexed and watched; ADR-0018 already carries the pattern for when it needs
@@ -450,7 +440,15 @@ The remainder of the schema to build, by phase:
 | _trigger_ | Commit the off-site sync job | [#16](https://github.com/iritur/printorian/issues/16) |
 | _trigger_ | Enforce foreign keys across the fast suite | [#47](https://github.com/iritur/printorian/issues/47) |
 
-Done since the original review: `metric_rollups` with retention enabled, `addresses` and `notification_prefs`, `catalog_models`, `journal_posts`.
+Done since the original review: `metric_rollups` with retention enabled, `addresses` and `notification_prefs`, `catalog_models`, `journal_posts`, and the enum CHECK constraints ([#43](https://github.com/iritur/printorian/issues/43)).
+
+The enum gap is worth a note because it was listed above as an accepted trade-off and
+turned out not to need accepting. The obstacle was never the constraint; it was that
+SQLAlchemy names a generated one after the enum *type*, so `order_events.from_status`
+and `to_status` collided and the schema would not build. Naming it after the *column*
+in `core.db.enum_column` removes the collision by construction, and 0019 puts a CHECK
+on all twenty-three enum columns. `alembic check` matches CHECK constraints by name
+only, so it will not notice an enum member added without a migration — `tests/test_migrations.py` compares the value sets against the migrated database instead.
 
 ---
 

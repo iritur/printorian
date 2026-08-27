@@ -195,12 +195,22 @@ Four things autogenerate cannot see, so they are always hand-written:
   the name through the naming convention *again* and looks for
   `ck_orders_ck_orders_total_non_negative`. Wrap already-final names in `op.f()`.
 
-### Widening an enum on a large table
+### Widening an enum
 
-Enum columns are `VARCHAR` with no CHECK (see `core.db.enum_column` for why), so adding
-a member is usually just a code change. If you ever *do* add a CHECK to a large table,
-never do it in one statement — a plain `ADD CONSTRAINT` takes `ACCESS EXCLUSIVE` and
-scans every row, which is seconds on `orders` and minutes on `job_events`:
+Enum columns are `VARCHAR` **with a CHECK** — `core.db.enum_column` builds one named
+after the column, and migration `0019_enum_check_constraints` put them on all
+twenty-three. So adding a member is not just a code change: it needs a migration that
+drops the old constraint and creates the new one, or the value the models now accept
+is one the database still refuses.
+
+Nothing catches this for you at the shape level. `alembic check` matches CHECK
+constraints **by name**, so a widened enum and an unchanged constraint look identical
+to it. What catches it is `test_every_enum_column_is_checked_in_the_database`, which
+compares the permitted value sets against the migrated database.
+
+On a large table, never add the constraint in one statement — a plain `ADD CONSTRAINT`
+takes `ACCESS EXCLUSIVE` and scans every row, which is seconds on `orders` and minutes
+on `job_events`:
 
 ```sql
 ALTER TABLE job_events ADD CONSTRAINT ck_job_events_x CHECK (...) NOT VALID;
@@ -208,7 +218,9 @@ ALTER TABLE job_events VALIDATE CONSTRAINT ck_job_events_x;
 ```
 
 `NOT VALID` takes the strong lock only briefly and skips the scan; `VALIDATE` does the
-scan under a weak lock that readers and writers can work alongside.
+scan under a weak lock that readers and writers can work alongside. Note that this only
+helps outside a migration: Alembic runs each revision in one transaction, so the strong
+lock is held to commit whichever form is used.
 
 ### Backups
 

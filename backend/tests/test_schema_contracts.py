@@ -193,3 +193,40 @@ def test_the_unlinked_id_list_has_no_stale_entries() -> None:
         )
     }
     assert not stale, f"UNLINKED_IDS entries that are no longer exemptions: {stale}"
+
+
+def test_every_enum_column_carries_a_check_constraint() -> None:
+    """A ``VARCHAR`` holding an enum must be checked by the database, not only by us.
+
+    `core.db.enum_column` asks SQLAlchemy for the constraint and renames it after the
+    column, because SQLAlchemy's own name is the enum *type* and two columns of one
+    enum on one table then collide — the case that kept these columns unchecked until
+    issue #43. Both halves are asserted here: that a constraint exists at all, and
+    that it is named after the column, which is the part that lets `order_events`
+    carry two.
+
+    This is also the tripwire under `_CheckedEnum._set_table`. If a future
+    SQLAlchemy stops calling that hook, the constraints vanish silently from every
+    ``create_all`` and every generated migration; here it is a failure with a name.
+    """
+    from sqlalchemy import CheckConstraint
+    from sqlalchemy import Enum as SAEnum
+
+    missing = []
+    for table in Base.metadata.sorted_tables:
+        present = {
+            constraint.name
+            for constraint in table.constraints
+            if isinstance(constraint, CheckConstraint) and constraint.name
+        }
+        for column in table.columns:
+            if not isinstance(column.type, SAEnum):
+                continue
+            expected = f"ck_{table.name}_{column.name}_enum"
+            if expected not in present:
+                missing.append(expected)
+
+    assert not missing, (
+        f"enum columns with no database-level CHECK: {missing}. "
+        "They must be declared with `core.db.enum_column`."
+    )
