@@ -7,8 +7,8 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-26 · 1227 backend tests (6 hardware skips), 218 frontend,
-all governance gates green (added pip-audit and npm audit gates for dependencies).
+**As of:** 2026-08-27 · 1236 backend tests (1230 passed, 6 hardware skips),
+218 frontend, all governance gates green (pip-audit and npm audit among them).
 
 **The system now runs on a real host.** A farm exists at `192.168.29.148`
 (Ubuntu 26.04, VMware), in production mode, and getting it there is what most of
@@ -21,6 +21,33 @@ had passed over, four of them in units committed hours earlier the same day.
 
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
+
+**A paid order now becomes print jobs without anybody clicking anything**
+([#41](https://github.com/iritur/printorian/issues/41)). `workers/intake.py` is a
+seventh worker loop, reconciling rather than reactive for the reason
+`workers/postproduction.py` argues: it asks "which paid orders have no jobs yet"
+every thirty seconds, so a tick missed during a restart costs latency and never an
+order.
+
+> **The gap was wider than the issue said.** #41 recorded that jobs were created by
+> "the jobs API, i.e. a person". They were not created by anything —
+> `grep -rn "create_job" printorian/` returns the definition and no caller, and
+> there is no create-job endpoint. What existed was a *test helper*, in
+> `tests/scenarios/test_repeat_order_skips_prep.py`, whose docstring reads "what a
+> caller does when an order is paid". This is that helper promoted into the
+> product, which is worth knowing because the scenario test has been green the
+> whole time the product could not do it.
+>
+> **Two things it will not do, both deliberate.** A cache *hit* still goes to prep
+> rather than straight to the queue: attaching a plate writes an `EstimateVariance`
+> whose `prepared_cost` is `NOT NULL`, and nothing prices a plate — a zero there
+> would record "the estimate was perfect" for a variance nobody measured, which is
+> §1 of CLAUDE.md in the flattering direction. Repricing from slicer truth is
+> [#58](https://github.com/iritur/printorian/issues/58). And a line carrying an
+> asset whose digest will not resolve **refuses the whole order** instead of making
+> the job: a job with an asset but no `model_hash` slices, prints and ships
+> correctly, and quietly sends every repeat of that configuration back through an
+> engineer for ever, because `plate_key` can never match it.
 
 **Open work has moved into GitHub issues, and this changes where to look first.**
 Forty-seven issues across twelve milestones, with the labels and the process in

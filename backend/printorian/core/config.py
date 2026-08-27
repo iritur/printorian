@@ -129,6 +129,11 @@ class Settings(BaseSettings):
     #: screen. The pass reconciles, so it is cheap to run often.
     postproduction_sweep_seconds: int = Field(default=60, ge=1)
     packaging_sweep_seconds: int = Field(default=60, ge=1)
+    #: How often a paid order becomes print jobs. Thirty rather than sixty: this
+    #: is the first thing that happens after the customer's money is taken, and
+    #: it is the interval the promise in `sla` is measured against — every second
+    #: an order sits paid and jobless is spent from a lead time already sold.
+    intake_sweep_seconds: int = Field(default=30, ge=1)
 
     # -- pricing guardrails ----------------------------------------------
     #: Fraction by which a sliced plate may exceed the quoted cost before the job

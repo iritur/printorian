@@ -37,7 +37,15 @@ logger = structlog.get_logger(__name__)
 
 #: The loops `printorian.workers` runs. Named here so the health report can say
 #: "postproduction is not beating" rather than only "one of them is not".
-LOOPS: Final = ("scheduler", "telemetry", "sla", "postproduction", "packaging", "maintenance")
+LOOPS: Final = (
+    "intake",
+    "scheduler",
+    "telemetry",
+    "sla",
+    "postproduction",
+    "packaging",
+    "maintenance",
+)
 
 #: Floor on a key's lifetime, in seconds. The telemetry poller sweeps every five
 #: seconds, so its window would otherwise be short enough that one slow pass over a
