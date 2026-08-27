@@ -38,7 +38,7 @@ does not exist, and nothing watches any of it.**
 | Backups | ADR-0019, `backend/scripts/backup.sh` | **Scheduled.** `printorian-backup.timer`, 03:00 daily, `Persistent=true`, and the dump runs inside the postgres container so client and server versions cannot drift. `pg_archivecleanup` runs with it, so WAL no longer grows unbounded |
 | Off-site copy | ADR-0019 | **Still nothing.** `backup.sh` names this as a deliberate gap and stops at the local disk; every copy of the farm's data is on one machine — [#16](https://github.com/iritur/printorian/issues/16) |
 | Restore drill | ADR-0019 "a failing drill is an incident" | **Scheduled.** `printorian-drill.timer`, Sundays 04:00, running `restore_drill.py` in the api container. A *failing* drill still reaches nobody — that is the alerting row |
-| Observability | ARCHITECTURE §10: "Prometheus metrics, `/health` covering DB, Redis and each driver" | **Partly.** `/health/ready` reports `database`, `telemetry_partitions`, `wal_archiving` and `event_relay` (the Redis check). **Drivers are still not covered** — [#21](https://github.com/iritur/printorian/issues/21). Prometheus metrics: still zero — [#20](https://github.com/iritur/printorian/issues/20) |
+| Observability | ARCHITECTURE §10, which now claims only what runs: "metrics are stubbed", drivers deliberately outside readiness | **Partly, and §10 says so.** `/health/ready` reports `database`, `telemetry_partitions`, `wal_archiving`, and `event_relay` **only where a relay is configured** — with no relay the key is absent rather than `ok`, so a count of four is a count of a full deployment. **Drivers are still not covered** — [#21](https://github.com/iritur/printorian/issues/21); §10 records why the API process cannot cover them. Prometheus metrics: still zero — [#20](https://github.com/iritur/printorian/issues/20) |
 | Alerting | — | **None.** The only monitor is a person looking at a screen — [#22](https://github.com/iritur/printorian/issues/22) |
 
 Two of these deserve to be named as more than gaps.
@@ -52,12 +52,14 @@ delay now that version control has one. [#15](https://github.com/iritur/printori
 and [#16](https://github.com/iritur/printorian/issues/16); [#25](https://github.com/iritur/printorian/issues/25)
 is the drill that would prove either.
 
-**ARCHITECTURE §10 still overstates what runs.** By the repository's own rule —
-*status docs say works / scaffolded / stubbed* — the observability row is
-**scaffolded**: the structured logging and four of the health checks are real, the
-metrics and the driver-aware check are not. Tracked as
-[#10](https://github.com/iritur/printorian/issues/10), because a second document
-saying a different thing is the drift this section was rewritten to end.
+**ARCHITECTURE §10 no longer overstates what runs**
+([#10](https://github.com/iritur/printorian/issues/10)). It used to be read as
+promising a driver-aware readiness check and metrics that do not exist; it now uses
+the repository's own vocabulary — *works / scaffolded / stubbed* — to mark the
+logging and the health checks as working and the metrics as **stubbed**, and it
+records why the API process has no driver connection state to report. None of the
+gaps below closed; what closed is a second document saying a different thing, which
+is the drift this section was rewritten to end.
 
 ---
 
@@ -517,13 +519,16 @@ image deliberately made unhealthy rolls itself back and alerts.
 
 ### Stage 5 — Observability and autonomy · **~1 week**
 
-Part application work, part infrastructure — the application half is the reason
-ARCHITECTURE §10 is currently overstated.
+Part application work, part infrastructure — the application half is everything
+ARCHITECTURE §10 marks **stubbed**.
 
 * `prometheus-fastapi-instrumentator` on the API; a `/metrics` endpoint on the
-  workers; the domain collectors listed in §5.
-* Fix `/health/ready` to cover **Redis and each driver's connection state**, as
-  §10 already claims.
+  workers; the domain collectors listed in §5. Note the name collision §10 warns
+  about: `/fleet/metrics` is the farm's occupancy figures, and reading it as instrumentation is the mistake. It is not a routing conflict — the fleet router carries `prefix="/fleet"`, so a bare `/metrics` stays free.
+* Extend `/health/ready` to **each driver's connection state**
+  ([#21](https://github.com/iritur/printorian/issues/21)). Redis is already covered
+  by the `event_relay` check; drivers are the harder half, because the live pool sits
+  in the worker process and the API would need a way to ask it.
 * VictoriaMetrics (single-node — lighter and better-compressing than Prometheus on
   one box), Grafana, Alertmanager, Loki + Alloy for the structlog JSON stream.
 * Three dashboards, no more: *Farm* (printers, jobs, queue), *Money* (orders, SLA

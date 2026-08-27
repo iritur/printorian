@@ -143,7 +143,7 @@ Customer ──┐
            │           ├── options: material spec(s), colors[≤4], scale, finishes[], rush
            │           └── PreparedPlate?  (null until prep completes)
            │
-           ├── SlaCommitment (promised_at, decay_policy) ──► PriceCredit (late discount)
+           ├── promised_at · decay_policy · sla_credit  (columns on the order, not an aggregate)
            ├── Payment (YooKassa/CloudPayments, ₽, receipt)
            │
            └── Job* ──── assignment ──► Printer ──── AmsSlot ──── MaterialLot
@@ -154,6 +154,8 @@ Customer ──┐
 ```
 
 Roughly 25 aggregates rather than 45 entities. Rule: an entity exists because a use case needs it, and it is introduced in the phase that needs it — not up front.
+
+**The delivery promise is three columns, and the aggregate was rejected rather than skipped.** An earlier version of this map drew an `SlaCommitment` emitting a `PriceCredit`; neither was ever built, and the reason belongs here because the drawing keeps inviting someone to build them. An order has at most one promise and one credit figure, so a second table buys no cardinality — and it would cost the ceiling: `sla_credit <= total` is a CHECK constraint on `orders` only because the credit sits on the same row as the total, and on a money path "never credit back more than was collected" is worth more enforced by PostgreSQL than by convention. The credit is recomputed from the promise on every sweep rather than accumulated, so there is no accrual ledger to give a second aggregate a job either. §5 is the mechanism.
 
 ---
 
@@ -201,7 +203,11 @@ Rule: when the prepared plate's cost exceeds the quoted cost by more than `varia
 
 ### SLA / late-delivery discount (C9)
 
-An `SlaCommitment` on the order carries `promised_at` and a named `decay_policy` (declarative, e.g. `linear(5%/day, cap 30%)`). A worker evaluates commitments and emits a `PriceCredit` line item. If already paid, the credit becomes a partial refund through the payment provider. Modeled explicitly so it is auditable, not an ad-hoc discount someone applies by hand.
+The promise lives on the order itself: `promised_at`, plus a named `decay_policy` drawn from a closed set (`standard` — 5%/day past a 12-hour grace, capped at 30%; `none`; `strict` — 10%/day past 2 hours, capped at 50%). The order stores the policy *code*, not its numbers — `POLICIES` in `ordering/policies.py` holds the rates, and `_credit_for` re-reads them on every sweep. So editing `standard` re-prices every promise not yet shipped, at the new rate, on the next pass. That is the trap ADR-0020 was written about, surviving here because an unshipped order has no pinned breakdown to protect it; what protects a promise is the freeze at dispatch below, and nothing else. Persisting the parameters alongside the code is the fix, and is not done. §4.2 says why these are columns rather than an aggregate.
+
+A worker (`workers/sla.py`) sweeps every order past its promise and still owing work, and **recomputes** `orders.sla_credit` from the promise, the policy and the total — recomputed rather than accumulated, so a pass that runs twice or a process that restarts mid-sweep cannot double-count. The clock stops when the parcel leaves: the credit is frozen on the transition to `shipped`, and no later sweep touches it.
+
+The credit is **not** a line item in the breakdown and cannot be one — the breakdown is pinned at checkout and never recomputed (ADR-0002, ADR-0020), so a figure that grows *after* payment has nowhere to live inside it. It settles in two places instead: revenue reads net it off (`Order.total - Order.sla_credit`, in `ordering/finance.py`), and where the order is already paid, `PaymentsService.refund_sla_credit` returns exactly the outstanding amount through the payment provider. Predictable and capped rather than an ad-hoc discount someone applies by hand — but **not audited**, and the word is avoided deliberately. The sweep overwrites `orders.sla_credit` in place; `refresh_sla_credit` writes no `order_events` row (the only two writers are placement and status transition), and the `SlaCreditAccrued` it publishes on a change goes to the in-process bus, whose sinks persist nothing. No prior value of the credit survives anywhere. On a money path that is a gap, not a design.
 
 ---
 
@@ -376,7 +382,7 @@ security boundary.
 | **Files** | Model assets and plates on the filesystem/NAS behind an `ObjectStore` interface (local now, S3-compatible later); DB stores references + hashes only |
 | **Time** | UTC everywhere internally; farm timezone applied only at presentation and in open-hours rules |
 | **Migrations** | Alembic only. One head. Migration tests run on every CI build against a fresh and a seeded database |
-| **Observability** | Structured JSON logs with correlation IDs (bound per request by `api.middleware`, and echoed on `X-Request-ID` so a trace begun at the proxy continues), one access line per request with its duration, `/health` and `/health/ready`, and `/health/workers` for whether each sweep is still sweeping. Prometheus metrics remain Stage 5 |
+| **Observability** | **Logging works.** Structured logs — JSON in production, plain text elsewhere — every line carrying the correlation id of the request that produced it, taken from the caller's `X-Request-ID` when there is one so a trace begun at the proxy continues, and echoed back so a person reporting a problem can quote it (`api.middleware`). One access line per request with its duration, which is the only signal here that can see a slow *request* rather than a slow *query*. **Health works, and the three endpoints answer three different questions.** `/health` touches nothing. `/health/ready` names each dependency separately so an outage names its own cause: `database`, `telemetry_partitions`, `wal_archiving`, and — only where a relay is configured at all — `event_relay`. Only `database` can come back `failed`, and only that returns 503; the other three report `degraded` at 200, because a broken backup or a quiet live board must not be turned into a broken farm. **Drivers are deliberately not among them** — the pool of live printer connections belongs to the *worker* process (`workers/drivers.py`, kept alive between passes so a fifty-machine farm does not reconnect every tick), so the API has no connection state to report and a check here would have to invent one. `/health/workers` covers the seven sweeps by name, from a beat each records at the *end* of a pass, and is kept out of readiness on purpose: a wedged sweep is a reason to alert, not to roll a release back. **Metrics are stubbed** — no exporter, no registry, no dependency, and nothing served at `/metrics`. Note the collision before concluding otherwise: `GET /fleet/metrics` and `/fleet/metrics/{printer_id}` are the *farm's* measured occupancy behind `VIEW_PRODUCTION`, not an instrumentation scrape. Stage 5 |
 | **Blocking work** | Nothing that computes for a second runs on the event loop. The API is one process, so a second spent parsing a mesh is a second in which it serves nothing — `core.cpu` runs that work in a bounded pool of threads, and the limit is injected rather than assumed |
 | **Rate limits** | Ceilings on the endpoints whose *cost* is the problem, and a lockout in front of password guessing (`core.ratelimit`). `POST /pricing/quote` takes an optional actor, so it is reachable without signing in and every call parses a mesh. In-process, which is correct while ADR-0003 holds and is recorded in DATABASE-REVIEW §9 as a trade-off rather than a fact |
 | **Request bodies** | Refused by size at the ASGI layer, before anything buffers them (`api.middleware.BodySizeLimitMiddleware`). A check inside a handler runs after `python-multipart` has already parsed the whole body, so it cannot decline to spend the memory |

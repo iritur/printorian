@@ -7,7 +7,7 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-27 · 1247 backend tests (1241 passed, 6 hardware skips),
+**As of:** 2026-08-27 · 1278 backend tests collected and the full suite green;
 218 frontend, all governance gates green (pip-audit and npm audit among them).
 
 **The system now runs on a real host.** A farm exists at `192.168.29.148`
@@ -21,6 +21,33 @@ had passed over, four of them in units committed hours earlier the same day.
 
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
+
+**Three documents now fail CI when their inventories go stale, and two overstated
+sections are corrected** ([#10](https://github.com/iritur/printorian/issues/10),
+[#11](https://github.com/iritur/printorian/issues/11),
+[#13](https://github.com/iritur/printorian/issues/13)). `DATABASE-REVIEW` §1,
+`DESIGN-KIT` §1 and `DESIGN-KIT` §4 are checked against `__tablename__`
+declarations, the console's routes, and the OpenAPI schema plus the frontend's client
+calls. Each gate was proven to *fail* — nine mutations, every one caught with a
+message naming the entry that drifted.
+
+> **Writing the corrections produced three false claims, which is the finding.** An
+> adversarial pass caught them before the commit, and each is worth knowing because
+> each was believable:
+>
+> - **The SLA credit is not audited.** `refresh_sla_credit` writes no `order_events`
+>   row, `SlaCreditAccrued` goes to a bus that persists nothing, and the sweep
+>   overwrites `orders.sla_credit` in place. **No prior value of the credit exists
+>   anywhere.** On a money path, worth fixing — not filed yet.
+> - **The order does not pin the terms it was sold under.** Only the policy *code* is
+>   stored; `POLICIES` holds the rates and `_credit_for` re-reads them every sweep, so
+>   editing `standard` re-prices every unshipped promise. This is exactly what ADR-0020
+>   exists to prevent, and the paragraph asserting otherwise cited ADR-0020 four lines
+>   later. The comment at `ordering/policies.py:173` still carries the same wrong claim.
+> - `/health/ready` reports `event_relay` only where a relay is configured, so "the
+>   four health checks" overcounts a deployment without one.
+>
+> The prose now states both gaps plainly instead of reassuring. Neither is fixed.
 
 **Every enum column now has a database-level CHECK**
 ([#43](https://github.com/iritur/printorian/issues/43)). Twenty-three columns across
