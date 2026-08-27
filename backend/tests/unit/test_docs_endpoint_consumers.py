@@ -299,7 +299,9 @@ def _unconsumed_operations() -> tuple[str, ...]:
         if any(_covers(path, literal) for literal in literals)
     }
     return tuple(
-        operation for operation in _served_operations() if operation.split(" ", 1)[1] not in consumed
+        operation
+        for operation in _served_operations()
+        if operation.split(" ", 1)[1] not in consumed
     )
 
 

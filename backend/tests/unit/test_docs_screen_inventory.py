@@ -67,10 +67,27 @@ CONTENTS_PAGE = "index.html"
 #: Spelled-out numbers, because §1 spells out every figure except the parameter count.
 #: The assertions compare against the *string* an author would have to type, so a failure
 #: can print the wording rather than making them work it out from a number.
-_UNITS = (
-    "one two three four five six seven eight nine ten eleven twelve thirteen fourteen "
-    "fifteen sixteen seventeen eighteen nineteen"
-).split()
+_UNITS = [
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+]
 NUMBER_WORDS: dict[int, str] = {n + 1: word for n, word in enumerate(_UNITS)}
 NUMBER_WORDS[20] = "twenty"
 NUMBER_WORDS.update({20 + n: f"twenty-{_UNITS[n - 1]}" for n in range(1, 10)})
@@ -280,7 +297,7 @@ def test_the_table_lists_exactly_the_kits_screens() -> None:
 
 
 def test_every_screen_called_built_has_a_route() -> None:
-    """"Built" has to mean an app renders it, not that somebody drew it.
+    """ "Built" has to mean an app renders it, not that somebody drew it.
 
     This is the check that was failing, unwritten, while §1 called `settings` unbuilt —
     in the other direction, and that is the direction that cost the time:
