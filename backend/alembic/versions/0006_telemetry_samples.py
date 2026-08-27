@@ -66,7 +66,8 @@ def upgrade() -> None:
             -- No CHECK on `state`, matching every other enum column in the schema.
             -- `enum_column` explains why they have none; adding one only here would
             -- read as drift on every `alembic check` and enforce nothing the others
-            -- enforce.
+            -- enforce. (Superseded: 0019 gives every enum column one, this table's
+            -- included, after fixing the naming collision that was the real cause.)
             CONSTRAINT ck_{TABLE}_progress_range
                 CHECK (progress_percent IS NULL OR (progress_percent BETWEEN 0 AND 100))
         ) PARTITION BY RANGE (created_at)

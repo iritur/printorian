@@ -7,7 +7,7 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-27 · 1244 backend tests (1238 passed, 6 hardware skips),
+**As of:** 2026-08-27 · 1247 backend tests (1241 passed, 6 hardware skips),
 218 frontend, all governance gates green (pip-audit and npm audit among them).
 
 **The system now runs on a real host.** A farm exists at `192.168.29.148`
@@ -21,6 +21,36 @@ had passed over, four of them in units committed hours earlier the same day.
 
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
+
+**Every enum column now has a database-level CHECK**
+([#43](https://github.com/iritur/printorian/issues/43)). Twenty-three columns across
+eighteen tables were bare `VARCHAR` in PostgreSQL, guarded only by the Python type and
+by Pydantic — both of which live inside the API process. Migration
+`0019_enum_check_constraints` puts a constraint on each, `telemetry_samples` included
+(a CHECK on a partitioned parent recurses into every partition and is inherited by
+every future one, so `fleet.retention` keeps creating months that carry it).
+
+> **The issue was filed as deferred, and the reason it gave was real but not the
+> obstacle it looked like.** SQLAlchemy names a generated enum constraint after the
+> enum *type*, so `order_events.from_status` and `to_status` — both `OrderStatus` —
+> produce two constraints with the same name and the schema will not build. The
+> recorded escape was a hand-picked name at every call site, which is a rule that
+> decays. Naming the constraint after the *column* instead removes the collision by
+> construction: a column is unique within its table by definition, so the twenty-fourth
+> enum column is safe without anybody remembering anything. That is what
+> `core.db.enum_column` does now.
+>
+> **`create_constraint=True` is still off, and turning it on will break `alembic
+> check`.** Alembic skips CHECK constraints marked `_type_bound` on the metadata side,
+> so a real constraint in the database reads as one the models dropped and every check
+> reports drift. `_CheckedEnum` builds an ordinary constraint instead. Migration 0006
+> hit this exact wall and recorded it; its comment now points forward.
+>
+> **What the gate does not cover.** Alembic matches CHECK constraints **by name
+> only** — measured, not assumed: adding a member to an enum with no migration behind
+> it passes `alembic check` clean. `test_every_enum_column_is_checked_in_the_database`
+> compares the permitted value sets against the migrated database and is the only
+> thing that catches it. Adding an enum member is now a migration.
 
 **A paid order now becomes print jobs without anybody clicking anything**
 ([#41](https://github.com/iritur/printorian/issues/41)). `workers/intake.py` is a
