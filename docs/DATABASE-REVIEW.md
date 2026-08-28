@@ -411,8 +411,34 @@ impossible; for partitioned telemetry, a cascading delete through hundreds of mi
 of rows is an outage rather than a cleanup.
 
 **Pagination covers the orders table only.** `fleet.table()` and the materials
-listing are still unbounded — both are bounded in practice by the size of the farm
-rather than by history, so they can wait for the screens that consume them.
+listing are still unbounded. Both are bounded in practice by the size of the farm
+rather than by history — tens of printers, hundreds of material specs — so an
+unbounded query there returns a bounded result, and `core/pagination.py` is waiting
+when that stops being true.
+
+The size at which it stops being true is **500 rows**, and it is now measured rather
+than remembered ([#45](https://github.com/iritur/printorian/issues/45)).
+`contexts/fleet/listings.py` and `contexts/inventory/listings.py` each count their
+own listing on every readiness probe, and `/health/ready` reports `printers_listing`
+and `materials_listing` separately so an alert names the one that grew. Three things
+about those readings are deliberate:
+
+- **The count stops at the trigger** (`core.pagination.capped_count` issues
+  `count(*)` over a `LIMIT`), so the check cannot become the expensive thing on a
+  path a container runtime probes every few seconds. The price is that a reading
+  past the line is a *floor* rather than a figure, and `ListingSize.is_exact` says
+  which it is instead of presenting a capped count as a measurement (§1 of the root
+  CLAUDE.md). The catalogue trick `assignment_records` uses is unavailable here:
+  these readings have a predicate, and `pg_class` counts whole relations.
+- **The printers reading counts retired machines too**, because
+  `include_inactive=true` returns them and nothing ever deletes a printer row — that
+  is the half that only climbs.
+- **The materials reading counts specs *and* the live lots nested inside them**,
+  because the response grows on both axes and paging the specs alone would not have
+  bounded it.
+
+Unlike `assignment_records` above, these two clear on their own: they are a live
+reading of a set that can shrink, not a threshold crossed once.
 
 **Telemetry retention is on** (`telemetry_retention_days = 90`), enabled in the same
 change that started summarising — which was the condition. Dropping a partition is

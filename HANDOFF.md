@@ -7,7 +7,7 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-28 · 1291 backend tests collected, 1285 passed and 6 skipped —
+**As of:** 2026-08-28 · 1303 backend tests collected, 1297 passed and 6 skipped —
 the `tests/contract/test_bambu_hardware.py` cases that need a printer plugged in —
 with all six backend gates green. The frontend was not touched or re-run in that
 session: its 218 tests and the audit gates were last verified on 2026-08-27.
@@ -24,11 +24,62 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**The two listings that were never paged now say when they need to be**
+([#45](https://github.com/iritur/printorian/issues/45)). `GET /printers` and
+`GET /materials` still return everything, which `DATABASE-REVIEW` §9 records as a
+deliberate gap and argues correctly: both are bounded by the size of the farm, not
+by history. `contexts/fleet/listings.py` and `contexts/inventory/listings.py` count
+their own listing on every readiness probe, and `/health/ready` reports
+`printers_listing` and `materials_listing` separately, `degraded` past 500 rows.
+
+> **#45 stays open too**, for the reason #44 does — `docs/WORKFLOW.md` §3, a
+> `deferred` issue closes when its trigger fires *and* the work is done. Nothing
+> here pages anything. What changed is that the trigger stopped being a sentence in
+> a document, which matters more here than it did for #44: the growth #45 names as
+> the dangerous one is the purchasing screen adding spare parts, packaging and
+> printers to the materials listing. That arrives as a *feature*, not as traffic,
+> and nobody is looking at row counts on the day a feature ships.
+>
+> **The count deliberately stops at the trigger.** `capped_count` issues
+> `count(*)` over a `LIMIT`, so the check costs the same on a farm with a million
+> lots as on one with six — a plain `count(*)` would be a scan growing at exactly
+> the rate of the problem it watches, at its most expensive on the farm that most
+> needs the answer. The catalogue trick #44 used is not available: these readings
+> have a predicate (active specs, lots with material left) and `pg_class` counts
+> whole relations. The price is that a reading past the line is a *floor*, and
+> `ListingSize.is_exact` says so rather than passing a capped count off as a
+> measurement.
+>
+> **Three counting decisions read as arbitrary and are not.** Retired printers are
+> counted, because `include_inactive=true` returns them and nothing ever deletes a
+> printer row — that is the half that only climbs. Inactive material specs are
+> *not*, because `/materials` has no such parameter and cannot be asked for them.
+> And the materials reading counts the live lots nested inside each spec as well as
+> the specs, because the response grows on both axes.
+>
+> **These two clear on their own**, unlike `assignment_records` beside them. They
+> read a set that can shrink; that check marks a threshold crossed once. Both
+> comments say which they are, because the reasoning does not transfer.
+>
+> **One of #45's three triggers is not measurable as the endpoint stands, and the
+> issue is worth amending.** It watches lots accumulating "without being retired",
+> citing `/materials/lots` — but there is no such route, and the lots that ride
+> inside `/materials` are only the ones with material left in them, because
+> `_to_view` drops a spent spool. So that half tracks material on hand, not
+> receiving history, and it will not climb the way the issue expects until the
+> route it names exists. `contexts/inventory/listings.py` says this where the next
+> reader will be standing.
+>
+> Seven mutations were run and each failed: dropping the wiring, removing the cap,
+> calling a saturated reading exact, filtering the printers count to active rows,
+> dropping the lot half, dropping the active-spec filter, and replacing the reading
+> with a confident zero.
+
 **The table ADR-0018 said would be "watched" is now actually watched**
 ([#44](https://github.com/iritur/printorian/issues/44)).
 `contexts/production/growth.py` measures `assignment_records` against the trigger
 `DATABASE-REVIEW` §9 states — 10 million rows or 20 GiB — and `/health/ready`
-reports it as a fifth check, `degraded` once either half is past. Two `pg_class`
+reports it as a check of its own, `degraded` once either half is past. Two `pg_class`
 columns, so a readiness probe pays nothing; `count(*)` over ten million rows on a
 path a container runtime calls every few seconds would have made the check the
 outage.
