@@ -1,0 +1,12 @@
+# CODEOWNERS
+# Assign code ownership to teams or users. Replace the placeholders below with
+# your org's actual GitHub usernames or team slugs (e.g. @org/backend-team).
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Examples:
+# /backend/ @iritur/backend-team
+# /frontend/ @iritur/frontend-team
+# /docs/ @iritur/docs-team
+
+# Default owner for everything (replace @iritur with your org or user)
+* @iritur
