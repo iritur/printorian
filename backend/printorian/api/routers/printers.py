@@ -35,6 +35,13 @@ async def printers_table(fleet: Fleet, include_inactive: bool = False) -> Printe
 
     Each row carries its live state, progress and ETA where the machine reported
     them, and ``needs_attention`` so the floor can see at a glance what to walk to.
+
+    **Unpaged, deliberately and temporarily.** A farm has tens of machines, so the
+    whole table is a bounded response (`DATABASE-REVIEW` §9). `include_inactive`
+    lifts the only filter, which makes this the largest response the endpoint can
+    be asked for — and `contexts.fleet.listings` counts exactly that on every
+    readiness probe, so `/health/ready` says `printers_listing: degraded` rather
+    than leaving the moment to be noticed.
     """
     return await fleet.table(include_inactive=include_inactive)
 

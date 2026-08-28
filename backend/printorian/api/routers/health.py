@@ -26,7 +26,9 @@ from typing import Any, Literal
 from fastapi import APIRouter, Request, Response, status
 from sqlalchemy import text
 
+from printorian.contexts.fleet import listings as fleet_listings
 from printorian.contexts.fleet import retention
+from printorian.contexts.inventory import listings as inventory_listings
 from printorian.contexts.production import growth
 from printorian.core.db import wal_archiving_stalled
 from printorian.core.heartbeat import Heartbeat
@@ -47,6 +49,8 @@ async def ready(request: Request, response: Response) -> dict[str, Any]:
     unroutable = 0
     stalled_segment: str | None = None
     oversized_assignments = False
+    oversized_printers = False
+    oversized_materials = False
 
     try:
         async for session in request.app.state.database.session():
@@ -71,6 +75,16 @@ async def ready(request: Request, response: Response) -> dict[str, Any]:
             # somebody had to remember to go and measure. Two catalogue columns,
             # so this costs a probe nothing (`contexts.production.growth`).
             oversized_assignments = await growth.assignment_records_need_partitioning(session)
+            # The two listings that still return everything (#45). They were left
+            # unpaged because both are bounded by the size of the farm rather than
+            # by history — and the growth that ends that argument does not arrive
+            # as traffic, it arrives as a feature: the purchasing screen putting
+            # spare parts, packaging and printers into the same listing. Nobody is
+            # looking at row counts on the day a feature ships, so this looks.
+            # Both counts stop at the trigger (`core.pagination.capped_count`), so
+            # neither can become the expensive thing on this path.
+            oversized_printers = await fleet_listings.printers_listing_oversized(session)
+            oversized_materials = await inventory_listings.materials_listing_oversized(session)
         checks["database"] = "ok"
         checks["telemetry_partitions"] = "ok" if unroutable == 0 else "degraded"
         # Degraded, and it will stay degraded until the table is partitioned —
@@ -80,6 +94,15 @@ async def ready(request: Request, response: Response) -> dict[str, Any]:
         # a partitioned one means copying it with writes stopped, and that price
         # only goes up.
         checks["assignment_records"] = "degraded" if oversized_assignments else "ok"
+        # Degraded for the same reason again — an oversized listing serves every
+        # request, it just serves a response with no ceiling on it — but unlike
+        # `assignment_records` above, these two *do* clear on their own. They are a
+        # live reading of a set that can shrink: retire enough printers, or
+        # deactivate enough specs, and the listing is inside its bounds again and
+        # says so. Nothing has been crossed once and for all here, which is why
+        # they are not given that check's stays-lit behaviour.
+        checks["printers_listing"] = "degraded" if oversized_printers else "ok"
+        checks["materials_listing"] = "degraded" if oversized_materials else "ok"
         # Degraded rather than failed, deliberately, and for the opposite reason
         # to the relay's. Serving is unaffected — so taking this process out of
         # rotation would turn a broken *backup* into a broken *farm*, which is

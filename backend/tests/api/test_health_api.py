@@ -2,7 +2,7 @@
 
 These lived in `test_auth_api.py`, which is a file about the authorization
 boundary and was two dozen lines from the 400-line gate. They are here because
-readiness now reports four things rather than two, and a check nobody asserts on is
+readiness now reports six things rather than two, and a check nobody asserts on is
 a check that can be deleted by accident.
 
 What matters most is the last case: `assignment_records` is reported *degraded*
@@ -22,7 +22,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from printorian.api.app import create_app
+from printorian.contexts.fleet.models import Printer
 from printorian.contexts.production import growth
+from printorian.core import pagination
 from printorian.core.clock import FixedClock
 from printorian.core.config import Settings
 from printorian.core.db import Base
@@ -103,6 +105,8 @@ async def test_readiness_names_the_watched_tables_separately(client: AsyncClient
     checks = (await client.get("/health/ready")).json()["checks"]
     assert checks["telemetry_partitions"] == "ok"
     assert checks["assignment_records"] == "ok"
+    assert checks["printers_listing"] == "ok"
+    assert checks["materials_listing"] == "ok"
 
 
 async def test_a_table_past_its_partition_trigger_degrades_readiness(
@@ -129,4 +133,34 @@ async def test_a_table_past_its_partition_trigger_degrades_readiness(
     # Not 503. A table that wants partitioning still serves every request, and a
     # readiness failure here would take the API out of rotation over a schema
     # chore — the outage would be the check, not the condition.
+    assert response.status_code == 200
+
+
+async def test_a_listing_past_its_paging_trigger_degrades_readiness(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The two listings that still return everything, watched rather than remembered.
+
+    Real rows and a moved threshold, for the same reason as the case above: a
+    stubbed reading goes on passing after the count breaks, which is precisely when
+    this has to work. One printer with the trigger at one is enough to prove the
+    count reads the table — a check that had quietly become "no rows, call it fine"
+    fails here, and that is the mutation worth catching.
+
+    `materials_listing` stays `ok` in the same response, which is the other half:
+    the two readings are separate, so an alert names the listing that grew.
+    """
+    monkeypatch.setattr(pagination, "UNPAGINATED_ROW_TRIGGER", 1)
+    db_session.add(Printer(name="The one that tips it over"))
+    await db_session.commit()
+
+    response = await client.get("/health/ready")
+    checks = response.json()["checks"]
+
+    assert checks["printers_listing"] == "degraded"
+    assert checks["materials_listing"] == "ok"
+    assert response.json()["status"] == "degraded"
+    # Not 503, for the reason the case above gives: an unpaged listing serves every
+    # request it is asked for. Taking the API out of rotation over a response that
+    # has grown would make the check the outage.
     assert response.status_code == 200

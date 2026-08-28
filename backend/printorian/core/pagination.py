@@ -58,6 +58,23 @@ for a screen to render decides only *presentation*: a tie swaps two adjacent row
 changes nothing computed, and adding a term there is the churn this note is not
 asking for. The sites that were read and deliberately left single-term say so where
 they sit.
+
+**Two listings are still unpaged, and the farm now measures when that stops being
+safe.** ``fleet.table()`` and the materials listing return everything
+(`DATABASE-REVIEW` §9): both are bounded by the size of the farm rather than by
+history — tens of printers, hundreds of material specs — so an unbounded query there
+returns a bounded result, and paging them today would be machinery guarding nothing.
+
+That argument has an expiry date, and the growth that ends it does not arrive as
+traffic. It arrives as a *feature*: the purchasing screen adds spare parts,
+packaging and printers to the same listing, and the row count changes character on
+the day it ships — when nobody is looking at row counts. So
+:data:`UNPAGINATED_ROW_TRIGGER`, :func:`capped_count` and :func:`capped_size` are
+here rather than a note asking someone to remember. Each context takes its own
+reading, because the predicate belongs to the context and a copy of it kept
+elsewhere would drift from the listing it claims to measure; `/health/ready` reports
+the verdict, which is the treatment `assignment_records` already gets and for the
+same reason.
 """
 
 from __future__ import annotations
@@ -66,6 +83,7 @@ import binascii
 from dataclasses import dataclass
 from typing import Any
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import InstrumentedAttribute
 from sqlalchemy.sql import Select
 
@@ -79,6 +97,15 @@ DEFAULT_PAGE_SIZE = 50
 #: The most any caller may ask for. A client asking for a million rows gets two
 #: hundred, rather than the server obligingly trying.
 MAX_PAGE_SIZE = 200
+
+#: The size at which a listing that returns everything has outgrown that decision.
+#:
+#: "A few hundred rows", from the deferral argument in `DATABASE-REVIEW` §9, read as
+#: 500. It is deliberately not derived from :data:`MAX_PAGE_SIZE`: that is a ceiling
+#: on what a *client* may ask for, and this is the point at which nobody should be
+#: asking for the whole thing at all. Tying them would make raising one silently
+#: move the other.
+UNPAGINATED_ROW_TRIGGER = 500
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,6 +176,69 @@ def after(
     return query.where(id_column < cursor.id)
 
 
+@dataclass(frozen=True, slots=True)
+class ListingSize:
+    """How many objects a listing that returns everything would serialise.
+
+    ``rows`` **saturates**. Counting stops at :data:`UNPAGINATED_ROW_TRIGGER`, so a
+    reading that reached the trigger is a *floor* rather than a measurement, and
+    ``is_exact`` is what says which of the two it is. A capped count presented as an
+    exact one would be a number the farm did not measure (root CLAUDE.md §1) — and
+    note which direction it errs in: the figure can only ever understate, and it
+    understates only by stopping at the line. So the verdict it feeds stays correct
+    either way; it is the figure printed beside the verdict that stops being a
+    measurement, and that is the part that has to say so.
+    """
+
+    listing: str
+    rows: int
+    is_exact: bool
+
+    @property
+    def past_trigger(self) -> bool:
+        """Whether this listing has reached the size at which it should be paged."""
+        return self.rows >= UNPAGINATED_ROW_TRIGGER
+
+
+def capped_count(query: Select[Any]) -> Select[Any]:
+    """Count what ``query`` matches, reading no more than the trigger.
+
+    ``SELECT count(*) FROM (<query> LIMIT trigger)`` — bounded by construction, and
+    that is the whole point of it. This runs on ``/health/ready``, which a container
+    runtime probes every few seconds, and a plain ``count(*)`` would be a scan that
+    grows at exactly the rate of the problem it is watching: the check would get
+    slower the more it had to say, and would be at its most expensive on the farm
+    that most needed the answer. `contexts.production.growth` refuses ``count(*)``
+    on the same path for the same reason and reaches for the catalogue instead;
+    that escape is not available here, because these readings have a *predicate* —
+    active specs, lots with material left in them — and ``pg_class`` counts whole
+    relations or nothing.
+
+    The price is that the answer stops being a number once it is over the line,
+    which :class:`ListingSize` carries honestly rather than rounding away.
+    """
+    return select(func.count()).select_from(query.limit(UNPAGINATED_ROW_TRIGGER).subquery())
+
+
+def capped_size(listing: str, *counts: int) -> ListingSize:
+    """One reading, from the capped counts that make it up.
+
+    A listing may serialise more than one kind of row — the materials table nests
+    each spec's lots inside it, so the response grows on two axes and either one
+    alone can be what makes it too big. Each part is counted and capped separately,
+    so any part that reached its cap makes the total a floor, and the reading says
+    so.
+
+    Summing capped parts cannot produce a false "fine": a part only saturates by
+    reaching the trigger, which on its own puts the total past it.
+    """
+    return ListingSize(
+        listing=listing,
+        rows=sum(counts),
+        is_exact=all(count < UNPAGINATED_ROW_TRIGGER for count in counts),
+    )
+
+
 def paginate(rows: list[Any], limit: int) -> Page:
     """Split an over-fetched result into a page and its continuation token."""
     if len(rows) <= limit:
@@ -161,9 +251,13 @@ def paginate(rows: list[Any], limit: int) -> Page:
 __all__ = [
     "DEFAULT_PAGE_SIZE",
     "MAX_PAGE_SIZE",
+    "UNPAGINATED_ROW_TRIGGER",
     "Cursor",
+    "ListingSize",
     "Page",
     "after",
+    "capped_count",
+    "capped_size",
     "clamp",
     "newest_first",
     "paginate",
