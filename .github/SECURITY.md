@@ -1,7 +1,8 @@
 # Security Policy
 
 ## Report a vulnerability
-Please report suspected security vulnerabilities privately to security@your-domain.example (replace with your team's contact) or use GitHub Security Advisories. Do not open public issues for security reports.
+
+Please report suspected security vulnerabilities privately via GitHub Security Advisories. Do not open public issues for security reports.
 
 We will acknowledge receipt within 72 hours and aim to provide a remediation timeline.
 
@@ -20,4 +21,4 @@ We prefer coordinated disclosure. Please avoid public disclosure until a fix is 
 (Optional) Provide a PGP key fingerprint or upload a key for encrypted reports.
 
 ---
-Replace contact details and timelines with your organisation's real values before merging.
+This repository uses GitHub Security Advisories as the private reporting channel for vulnerability disclosures.
