@@ -383,6 +383,26 @@ telemetry, and its growth is bounded by planning frequency rather than by the cl
 It is indexed and watched; ADR-0018 already carries the pattern for when it needs
 splitting.
 
+The trigger is **10 million rows or 20 GiB**, and it is now measured rather than
+remembered ([#44](https://github.com/iritur/printorian/issues/44)).
+`contexts/production/growth.py` reads both figures out of `pg_class` on every
+readiness probe — catalogue columns, so a probe pays nothing for it — and
+`/health/ready` reports `assignment_records` as `degraded` once either half is
+past. The row figure is `reltuples`, which is an estimate and is *absent* on a
+table nothing has analysed; it is reported as unknown there rather than as zero,
+leaving the exact byte figure to decide alone. The check does not clear on its
+own — it marks a threshold crossed once, and stays lit until the table is split,
+which is the opposite of `wal_archiving` beside it: that one compares watermarks
+precisely so a stall that has passed stops showing red.
+
+Retention on this table is a different problem from telemetry's, and worth knowing
+before anyone reaches for it. Dropping old telemetry is dropping a partition;
+trimming assignment records today would be a `DELETE` — slow, lock-holding, and
+leaving bloat only `VACUUM FULL` reclaims. That asymmetry is why the trigger is a
+size rather than an age, and CLAUDE.md §1 argues against trimming them at all: an
+assignment record exists to answer why a printer was chosen, and a farm that has
+deleted them cannot answer it.
+
 **`chosen_printer_id` and `telemetry_samples.printer_id` are typed UUIDs with no
 foreign key**, and are on the CI gate's exemption list with their reasons. Both are
 immutable history. For an audit record, `SET NULL` would erase the answer to the only

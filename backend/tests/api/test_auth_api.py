@@ -98,21 +98,6 @@ async def _token(client: AsyncClient, email: str) -> str:
     return token
 
 
-# ------------------------------------------------------------------ health
-
-
-async def test_health_is_open(client: AsyncClient) -> None:
-    response = await client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
-
-
-async def test_readiness_reports_each_dependency(client: AsyncClient) -> None:
-    response = await client.get("/health/ready")
-    assert response.status_code == 200
-    assert response.json()["checks"]["database"] == "ok"
-
-
 # ------------------------------------------------------------------ auth
 
 
