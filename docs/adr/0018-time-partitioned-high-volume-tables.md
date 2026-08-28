@@ -41,6 +41,13 @@ than telemetry and its growth is bounded by planning frequency rather than by th
 clock, so it is watched rather than pre-split. When it needs it, this ADR is where
 the pattern already is.
 
+"Watched" means measured, not remembered. `contexts.production.growth` reads the
+table's size out of the catalogue on every readiness probe and `/health/ready`
+reports `assignment_records` as `degraded` once it passes **10 million rows or
+20 GiB** — the trigger `DATABASE-REVIEW` §9 states. It was a number in a document
+for as long as this ADR has existed, which made "watched" a word rather than a
+mechanism.
+
 ## Consequences
 * PostgreSQL requires the partition key in every unique constraint, so
   `telemetry_samples` has a composite primary key `(id, created_at)` and does not
@@ -52,6 +59,16 @@ the pattern already is.
   insert**, so provisioning runs hourly and reports anything that lands in the
   `DEFAULT` partition — telemetry still recorded, but in a partition retention
   cannot drop and queries cannot prune.
+* The `assignment_records` check reads `pg_class.reltuples` and
+  `pg_total_relation_size`, never `count(*)`: a sequential scan over ten million
+  rows on a probe a container runtime calls every few seconds would make the check
+  the operational problem. `reltuples` is an estimate and is **absent** until
+  something analyses the table, so it is reported as unknown rather than as zero
+  and the exact byte figure decides alone in that state.
+* That check does not clear by itself. It reports a threshold crossed once, so it
+  stays `degraded` until the table is partitioned — unlike ADR-0019's archiving
+  check, which compares watermarks precisely so that a fault that has passed stops
+  showing red.
 * **`telemetry_retention_days` defaults to `0`, meaning no dropping.** Dropping is
   irreversible, and until rollups exist (Slice G) the raw samples are the only copy
   of what the farm measured. Retention is enabled in the same change that starts

@@ -27,6 +27,7 @@ from fastapi import APIRouter, Request, Response, status
 from sqlalchemy import text
 
 from printorian.contexts.fleet import retention
+from printorian.contexts.production import growth
 from printorian.core.db import wal_archiving_stalled
 from printorian.core.heartbeat import Heartbeat
 
@@ -45,6 +46,7 @@ async def ready(request: Request, response: Response) -> dict[str, Any]:
     checks: dict[str, Literal["ok", "failed", "degraded"]] = {}
     unroutable = 0
     stalled_segment: str | None = None
+    oversized_assignments = False
 
     try:
         async for session in request.app.state.database.session():
@@ -63,8 +65,21 @@ async def ready(request: Request, response: Response) -> dict[str, Any]:
             # here so it is visible to something other than a log line nobody
             # greps for.
             unroutable = await retention.unroutable_sample_count(session)
+            # The other large table, which ADR-0018 deliberately did *not*
+            # partition and said would be "watched" instead. Nothing was watching
+            # it: the trigger was a row count in `DATABASE-REVIEW` §9 that
+            # somebody had to remember to go and measure. Two catalogue columns,
+            # so this costs a probe nothing (`contexts.production.growth`).
+            oversized_assignments = await growth.assignment_records_need_partitioning(session)
         checks["database"] = "ok"
         checks["telemetry_partitions"] = "ok" if unroutable == 0 else "degraded"
+        # Degraded, and it will stay degraded until the table is partitioned —
+        # this reports a threshold crossed once, not a fault that comes and goes.
+        # Serving is unaffected today, which is why it must not be `failed`; what
+        # is affected is the cost of the fix, because converting a large table to
+        # a partitioned one means copying it with writes stopped, and that price
+        # only goes up.
+        checks["assignment_records"] = "degraded" if oversized_assignments else "ok"
         # Degraded rather than failed, deliberately, and for the opposite reason
         # to the relay's. Serving is unaffected — so taking this process out of
         # rotation would turn a broken *backup* into a broken *farm*, which is

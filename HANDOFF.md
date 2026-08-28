@@ -7,8 +7,10 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-27 · 1278 backend tests collected and the full suite green;
-218 frontend, all governance gates green (pip-audit and npm audit among them).
+**As of:** 2026-08-28 · 1291 backend tests collected, 1285 passed and 6 skipped —
+the `tests/contract/test_bambu_hardware.py` cases that need a printer plugged in —
+with all six backend gates green. The frontend was not touched or re-run in that
+session: its 218 tests and the audit gates were last verified on 2026-08-27.
 
 **The system now runs on a real host.** A farm exists at `192.168.29.148`
 (Ubuntu 26.04, VMware), in production mode, and getting it there is what most of
@@ -21,6 +23,35 @@ had passed over, four of them in units committed hours earlier the same day.
 
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
+
+**The table ADR-0018 said would be "watched" is now actually watched**
+([#44](https://github.com/iritur/printorian/issues/44)).
+`contexts/production/growth.py` measures `assignment_records` against the trigger
+`DATABASE-REVIEW` §9 states — 10 million rows or 20 GiB — and `/health/ready`
+reports it as a fifth check, `degraded` once either half is past. Two `pg_class`
+columns, so a readiness probe pays nothing; `count(*)` over ten million rows on a
+path a container runtime calls every few seconds would have made the check the
+outage.
+
+> **#44 stays open, and that is the point of it.** It is a `deferred` issue and
+> `docs/WORKFLOW.md` §3 says one closes only when its trigger fires and the work is
+> done. Nothing here partitions anything — the deferral is still correct for the
+> reasons ADR-0018 gives. What changed is that the trigger is measured rather than
+> remembered, which is the half of "indexed and watched" that was not true.
+>
+> **Two things about it read wrong at first and are deliberate.** The row figure is
+> `pg_class.reltuples`, an estimate that is **absent** — stored as `-1` — until
+> something analyses the table; it is reported as unknown rather than as zero, so
+> the exact byte figure decides alone in that state (root CLAUDE.md §1, and the
+> reason `estimated_rows` exists as its own function). And this check **does not
+> clear on its own**: it marks a threshold crossed once, so it stays lit until the
+> table is split. That is the opposite of `wal_archiving` two screens down, which
+> compares watermarks precisely so a fault that has passed stops showing red — the
+> reasoning there does not transfer, and both comments now say so.
+>
+> The four gates that would have let this ship broken were each mutated and each
+> failed: dropping the wiring, collapsing "never analysed" to zero, dropping the
+> byte half, and replacing the reading with a confident zero.
 
 **Three documents now fail CI when their inventories go stale, and two overstated
 sections are corrected** ([#10](https://github.com/iritur/printorian/issues/10),
@@ -391,6 +422,7 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 | Rate limiting and sign-in lockout are in-process | Correct for one API process (ADR-0003). Counters reset on restart; a second replica would get its own allowance. `docs/DATABASE-REVIEW.md` §9. |
 | No `/metrics` endpoint | Stage 5. `/health/workers` gives the honest liveness signal meanwhile — it reads beats each worker loop records at the *end* of a pass, so it distinguishes wedged from working. |
 | Off-site backup sync has a recipe, no committed job | Needs farm-specific credentials. |
+| `assignment_records` is not partitioned | ADR-0018's deferral still holds — bounded by planning frequency, not by the clock. `/health/ready` now reports when the trigger fires; [#44](https://github.com/iritur/printorian/issues/44) stays open until it does. |
 | Storefront `body` lifts the page ground | Predates Harvester; `--hv-bg` vs `--hv-void` is six values out of 255 in dark, identical in light. A visual call, not a cleanup. See `apps/web/src/app.css`. |
 | TypeScript held at 5.x | `openapi-typescript` crashes on TS 7. Reason and three failed workarounds are in `.github/dependabot.yml`. |
 | Six queries still sort on a timestamp alone | Read in one pass and left that way on purpose. See below. |
