@@ -110,6 +110,23 @@ class Order(Entity):
         CheckConstraint("sla_credit >= 0", name="sla_credit_non_negative"),
         # A credit larger than the order would refund more than was ever collected.
         CheckConstraint("sla_credit <= total", name="sla_credit_within_total"),
+        # The same three rules `DecayPolicy.__post_init__` enforces, restated where
+        # the values actually live. The dataclass guards what the application
+        # writes; these guard what the column can hold, which is the half that
+        # survives a bad backfill or a hand-run UPDATE.
+        CheckConstraint("decay_percent_per_day >= 0", name="decay_percent_per_day_non_negative"),
+        CheckConstraint("decay_grace_seconds >= 0", name="decay_grace_seconds_non_negative"),
+        CheckConstraint(
+            "decay_max_percent >= 0 AND decay_max_percent <= 100",
+            name="decay_max_percent_within_range",
+        ),
+        # All three or none. A half-pinned order reads as pinned and then needs a
+        # live lookup for the missing half — which is the reprice these columns
+        # exist to prevent, reintroduced through the back door.
+        CheckConstraint(
+            "num_nonnulls(decay_percent_per_day, decay_grace_seconds, decay_max_percent) IN (0, 3)",
+            name="decay_terms_all_or_none",
+        ),
     )
 
     number: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
@@ -143,6 +160,28 @@ class Order(Entity):
     # -- delivery promise ------------------------------------------------
     promised_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     decay_policy: Mapped[str] = mapped_column(String(32), nullable=False, default="standard")
+
+    #: The decay terms as they stood at checkout — ADR-0020 applied to the promise
+    #: rather than to the price.
+    #:
+    #: The code above was never enough on its own. It names a rule whose numbers
+    #: lived only in `POLICIES`, and `_credit_for` re-read that dict on every
+    #: sweep, so raising `standard` from 5%/day to 10%/day did not apply to new
+    #: orders — it re-priced every promise already sold, on the next pass of the
+    #: worker. The customer agreed to one number and was owed another, and the
+    #: order row recorded nothing that could say which.
+    #:
+    #: Null only for orders written before the terms were pinned, which is exactly
+    #: the shape `rate_snapshot_id` uses above and is read the same way: the
+    #: service falls back to the live policy for those, and pins nothing new.
+    decay_percent_per_day: Mapped[Decimal | None] = mapped_column(Numeric(6, 2), nullable=True)
+    #: Seconds rather than an interval: the grace is compared against a Python
+    #: `timedelta` in the pure policy object and never in SQL, so an integer needs
+    #: no dialect-specific type and cannot arrive as a month-bearing interval that
+    #: has no fixed length.
+    decay_grace_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    decay_max_percent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+
     #: Credit accrued for lateness, in currency units. Settled at refund time.
     sla_credit: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=Decimal(0))
 

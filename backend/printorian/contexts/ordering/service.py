@@ -18,7 +18,12 @@ from printorian.contexts.ordering.models import (
     OrderLine,
     RateSnapshotRecord,
 )
-from printorian.contexts.ordering.policies import OrderStatus, assert_transition, policy
+from printorian.contexts.ordering.policies import (
+    DecayPolicy,
+    OrderStatus,
+    assert_transition,
+    policy,
+)
 from printorian.contexts.ordering.schemas import (
     OrderTable,
     OrderView,
@@ -63,9 +68,15 @@ class OrderingService:
         but the values behind the hash lived only in code, so the moment a rate
         changed, every older hash pointed at nothing and ADR-0002's "recompute this
         quote years later" stopped being true. Now the hash resolves.
+
+        The delivery promise is pinned the same way and for the same reason. Storing
+        the policy *code* alone left the numbers in `POLICIES`, where an edit reached
+        backwards into every promise already sold; the three `decay_*` columns are
+        the copy that edit can no longer touch.
         """
         now = self._clock.now()
         await self._pin_rates(rates, breakdown.engine_version)
+        terms = policy(data.decay_policy)
         order = Order(
             number=await self._next_number(),
             status=OrderStatus.DRAFT,
@@ -77,7 +88,10 @@ class OrderingService:
             rate_snapshot_id=breakdown.rate_snapshot_id,
             engine_version=breakdown.engine_version,
             promised_at=now + timedelta(days=data.promised_days),
-            decay_policy=policy(data.decay_policy).code,
+            decay_policy=terms.code,
+            decay_percent_per_day=terms.percent_per_day,
+            decay_grace_seconds=int(terms.grace.total_seconds()),
+            decay_max_percent=terms.max_percent,
             delivery_method=data.delivery.method,
             delivery_city=data.delivery.city.strip(),
             delivery_postcode=data.delivery.postcode.strip(),
@@ -303,11 +317,37 @@ class OrderingService:
     def _credit_for(self, order: Order, now: object) -> Decimal:
         if order.promised_at is None:
             return Decimal(0)
-        percent = policy(order.decay_policy).percent_at(
+        percent = self._terms_for(order).percent_at(
             promised_at=order.promised_at,
             now=now,  # type: ignore[arg-type]
         )
         return (order.total * percent / Decimal(100)).quantize(Decimal("0.01"))
+
+    @staticmethod
+    def _terms_for(order: Order) -> DecayPolicy:
+        """The terms this order was sold under — not the ones in force today.
+
+        Rebuilt from the columns rather than looked up by code, because the lookup
+        is the defect: `POLICIES` holds current values, and reading it here made a
+        rate edit reach backwards into promises already sold.
+
+        The fallback covers orders placed before the columns existed. Those keep the
+        old behaviour, which is the honest option: their terms were never recorded,
+        and inventing a plausible set for them would be a number the farm never
+        measured. `decay_terms_all_or_none` is what makes checking one column enough
+        to know about all three.
+        """
+        percent_per_day = order.decay_percent_per_day
+        grace_seconds = order.decay_grace_seconds
+        max_percent = order.decay_max_percent
+        if percent_per_day is None or grace_seconds is None or max_percent is None:
+            return policy(order.decay_policy)
+        return DecayPolicy(
+            code=order.decay_policy,
+            percent_per_day=percent_per_day,
+            grace=timedelta(seconds=grace_seconds),
+            max_percent=max_percent,
+        )
 
     # -- internals -------------------------------------------------------
 

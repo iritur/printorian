@@ -170,8 +170,18 @@ class DecayPolicy:
         return min(self.max_percent, (days * self.percent_per_day).quantize(Decimal("0.01")))
 
 
-#: Named policies, so an order records *which* rule it was sold under and a later
-#: change to the standard terms cannot retroactively alter an existing promise.
+#: The named terms a checkout may be sold under, and the *current* value of each.
+#:
+#: Editing an entry here changes what the next order is sold and nothing that has
+#: already been sold. That is a recent fact rather than an obvious one: the order
+#: used to record only the policy code, so this dict was re-read on every sweep and
+#: raising `standard` re-priced every unshipped promise at the new rate. The order
+#: now copies these three numbers into `Order.decay_percent_per_day` and its two
+#: neighbours at placement, and the credit is computed from that copy.
+#:
+#: The consequence to keep in mind when editing: a policy's *name* is stable and its
+#: numbers are not, so two orders sold under `standard` a year apart may legitimately
+#: carry different terms. The order row, not this dict, is the record of which.
 POLICIES: dict[str, DecayPolicy] = {
     "standard": DecayPolicy(),
     "none": DecayPolicy(code="none", percent_per_day=Decimal(0), max_percent=Decimal(0)),

@@ -14,7 +14,14 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.ordering import DraftLine, OrderingService, OrderStatus, PlaceOrder
+from printorian.contexts.ordering import (
+    POLICIES,
+    DecayPolicy,
+    DraftLine,
+    OrderingService,
+    OrderStatus,
+    PlaceOrder,
+)
 from printorian.contexts.ordering.events import SlaCreditAccrued
 from printorian.contexts.pricing import (
     MaterialPrice,
@@ -248,3 +255,42 @@ async def test_the_loop_stops_promptly_when_asked() -> None:
 
     # An hour's interval, but the pass sets `stop`, so this returns at once.
     await asyncio.wait_for(run_forever(build, interval_seconds=3600, stop=stop), timeout=5)
+
+
+async def test_editing_a_policy_does_not_reprice_a_promise_already_sold(
+    service: OrderingService, clock: FixedClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The guarantee `POLICIES` claimed, which the code did not keep.
+
+    The order stored the policy *code* and `_credit_for` re-read the live rates on
+    every sweep, so raising `standard` from 5%/day to 10%/day did not price the
+    next sale — it re-priced every promise already sold, at the new rate, on the
+    next pass. ADR-0020's trap on the other money path.
+
+    The order now carries the three numbers as well as the name, so the edit
+    reaches forwards only.
+    """
+    sold = await a_paid_order(service)
+    # Promised in five days, so eight days on is two and a half past the grace.
+    clock.advance(timedelta(days=8))
+    await SlaSweep(service).sweep()
+
+    before = (await service.get(sold.id)).sla_credit
+    assert before == (sold.total * Decimal("12.5") / 100).quantize(Decimal("0.01"))
+
+    monkeypatch.setitem(POLICIES, "standard", DecayPolicy(percent_per_day=Decimal(10)))
+    later = await a_paid_order(service)
+
+    # The sweep that used to double this order's credit without anything about the
+    # order having changed.
+    await SlaSweep(service).sweep()
+    assert (await service.get(sold.id)).sla_credit == before
+
+    # The edit is not ignored — it applies to what was sold after it. `later` sits
+    # exactly where `sold` did a moment ago, two and a half days past its grace,
+    # and owes twice as much for it.
+    clock.advance(timedelta(days=8))
+    await SlaSweep(service).sweep()
+    assert (await service.get(later.id)).sla_credit == (later.total * Decimal(25) / 100).quantize(
+        Decimal("0.01")
+    )
