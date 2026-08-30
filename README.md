@@ -172,6 +172,7 @@ says it.
 | [docs/RUNBOOK-PAYMENTS.md](docs/RUNBOOK-PAYMENTS.md) | YooKassa and T-Pay: method selection, demo-store vs live-store testing, test cards |
 | [docs/RUNBOOK-FIRST-PRINT.md](docs/RUNBOOK-FIRST-PRINT.md) | Proving the driver against a real printer — the largest unproven assumption in the system |
 | [docs/BAMBU-LAN-PROTOCOL.md](docs/BAMBU-LAN-PROTOCOL.md) | Spike findings from a real printer — the spec the Phase 3 driver is built from |
+| [docs/PROPOSITIONS-ECOSYSTEM.md](docs/PROPOSITIONS-ECOSYSTEM.md) | Dated argument for what to adopt from the Klipper ecosystem — reasoning only, to be triaged into issues |
 
 ## Layout
 
