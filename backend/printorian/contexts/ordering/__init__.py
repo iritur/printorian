@@ -69,6 +69,7 @@ from printorian.contexts.ordering.schemas import (
     StatusCount,
 )
 from printorian.contexts.ordering.service import OrderingService
+from printorian.contexts.ordering.snapshots import RateSnapshotView, rate_snapshot_for
 
 __all__ = [
     "CREDIT_ACCRUED",
@@ -99,6 +100,7 @@ __all__ = [
     "Period",
     "PlaceOrder",
     "PromisePolicy",
+    "RateSnapshotView",
     "RepriceLine",
     "SlaCreditEntry",
     "StatusCount",
@@ -117,6 +119,7 @@ __all__ = [
     "orders_overview",
     "policy",
     "promised_hours",
+    "rate_snapshot_for",
     "spent",
     "window_for",
 ]

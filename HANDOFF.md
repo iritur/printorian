@@ -24,6 +24,37 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**The rates an order was priced at can now be looked at**
+([#40](https://github.com/iritur/printorian/issues/40)).
+`GET /orders/{order_id}/rate-snapshot` serves the pinned bundle, and the order
+desk gained a «Тарифы заказа» panel. ADR-0020's guarantee has always *held* —
+a rate edit changes the next quote and nothing already sold — and nothing could
+show it: an owner changes seventeen pricing rates, a customer asks why a repeat
+order costs more than last month's, and the system held both snapshots and could
+display neither.
+
+> **The payload is served as stored, and deliberately not rebuilt.**
+> `pricing.rates_from_dict` skips fields absent from a stored row and
+> `RateSnapshot` then supplies today's defaults for them — so a snapshot written
+> before a rate existed would come back carrying a number that was never in force,
+> indistinguishable from a measured one. The row goes out verbatim,
+> `schema_version` included, so its vintage is legible.
+>
+> **The id is the answer, not the table.** It is a content hash, so two orders
+> showing the same id were priced from identical rates and the difference between
+> them is in the configuration. The panel shows it abbreviated for exactly that
+> comparison.
+>
+> **An order that pinned nothing gets its own code.**
+> `error.ordering.rates_not_recorded`, distinct from `not_found`: the order exists
+> and its rates were never recorded. The panel renders that sentence and does not
+> even make the request — a table of zeros would be a claim about rates nobody was
+> charged.
+>
+> **The read lives in `ordering/snapshots.py`**, not on `OrderingService`, which is
+> at the 400-line gate. It wants none of what the service carries — no clock, no
+> bus, no transaction — so the split costs nothing.
+
 **The variance queue ADR-0013 feeds is no longer invisible**
 ([#39](https://github.com/iritur/printorian/issues/39)). `GET /jobs/variances`
 serves what slicing found against what was quoted, and the order desk gained a

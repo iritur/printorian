@@ -750,6 +750,10 @@ export const ru = {
   'desk.refund.reason': 'Причина возврата',
   'desk.refund.confirm': 'Подтвердить возврат',
   'desk.refund.sla': 'Вернуть компенсацию за просрочку',
+  'desk.snapshot': 'Тарифы заказа',
+  'desk.snapshot.none': 'Тарифы этого заказа не записаны',
+  'desk.snapshot.rate': 'Тариф',
+  'desk.snapshot.value': 'Значение',
   'desk.payments': 'Платежи',
   'desk.no_payments': 'Платежей нет',
 
@@ -1923,6 +1927,10 @@ export const en: Messages = {
   'desk.refund.reason': 'Refund reason',
   'desk.refund.confirm': 'Confirm refund',
   'desk.refund.sla': 'Refund the late-delivery credit',
+  'desk.snapshot': 'Order rates',
+  'desk.snapshot.none': 'The rates for this order were never recorded',
+  'desk.snapshot.rate': 'Rate',
+  'desk.snapshot.value': 'Value',
   'desk.payments': 'Payments',
   'desk.no_payments': 'No payments',
 

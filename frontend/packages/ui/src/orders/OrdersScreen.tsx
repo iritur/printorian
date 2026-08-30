@@ -33,6 +33,12 @@ export interface Order {
   paid_at: string | null
   created_at: string
   price_breakdown: Breakdown
+  /**
+   * The rates this order was priced from, or `null` for one placed before
+   * snapshots were persisted. Carried so the desk can tell "never recorded" from
+   * "not fetched yet" without asking the server a question whose answer is 404.
+   */
+  rate_snapshot_id: string | null
   events: OrderEvent[]
   /** Legal next states, computed by the server's state machine. */
   allowed_transitions: string[]

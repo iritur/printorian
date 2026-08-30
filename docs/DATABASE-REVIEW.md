@@ -95,7 +95,11 @@ stores the pinned `Breakdown`, the `engine_version`, and a `RESTRICT` foreign ke
 the immutable rate bundle the quote was built from. The breakdown alone can be
 *displayed*; only the snapshot lets the engine be re-run and the figure
 *recomputed*. The primary key is the bundle's own content hash, so identical rates
-are one row by construction.
+are one row by construction — which is also what makes the desk's «Тарифы
+заказа» panel a comparison rather than an investigation: two orders showing the
+same id were priced from the same rates. `GET /orders/{order_id}/rate-snapshot`
+serves the row verbatim, never rebuilt through `rates_from_dict`, because that
+fills fields absent from an older row with today's defaults (ADR-0007).
 
 **`assignment_records`** answers "why did job #4127 go to P1S-03?", including for
 jobs that were *not* assigned — every candidate, its rejection reasons and its score

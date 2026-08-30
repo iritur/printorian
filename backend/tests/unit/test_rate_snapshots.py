@@ -14,8 +14,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.ordering import OrderingService
-from printorian.contexts.ordering.models import RateSnapshotRecord
+from printorian.contexts.ordering import OrderingService, rate_snapshot_for
+from printorian.contexts.ordering.models import Order, RateSnapshotRecord
 from printorian.contexts.ordering.schemas import DraftLine, PlaceOrder
 from printorian.contexts.pricing import (
     DiscountLadder,
@@ -29,6 +29,7 @@ from printorian.contexts.pricing import (
     rates_to_dict,
 )
 from printorian.core.clock import FixedClock
+from printorian.core.errors import NotFoundError
 from printorian.core.events import EventBus
 from printorian.core.units import Duration, Mass
 
@@ -171,3 +172,49 @@ async def test_different_rates_are_stored_separately(
     assert first.rate_snapshot_id != second.rate_snapshot_id
     rows = list(await db_session.scalars(select(RateSnapshotRecord)))
     assert len(rows) == 2
+
+
+# ------------------------------------------------------ reading them back
+
+
+async def test_the_stored_rates_are_served_as_stored_rather_than_rebuilt(
+    service: OrderingService, db_session: AsyncSession
+) -> None:
+    """The payload comes back as it was written, not through `rates_from_dict`.
+
+    That function fills any field absent from a stored row with today's default,
+    which is exactly the wrong behaviour here: a snapshot written before a rate
+    existed would come back carrying a number that was never in force, and it
+    would be indistinguishable from a measured one (ADR-0007). The row is served
+    verbatim, `schema_version` and all, so its vintage is legible.
+    """
+    rates = RateSnapshot(margin_percent=Decimal(20))
+    order = await service.place(an_order(), price(a_spec(), rates), rates)
+
+    view = await rate_snapshot_for(db_session, order.id)
+
+    assert view.id == order.rate_snapshot_id
+    assert view.payload == rates_to_dict(rates)
+    assert view.payload["margin_percent"] == "20"
+
+
+async def test_an_order_with_no_snapshot_says_so_rather_than_inventing_rates(
+    service: OrderingService, db_session: AsyncSession
+) -> None:
+    """An order placed before ADR-0020 pinned nothing, and must say nothing.
+
+    `rate_snapshot_id` is nullable precisely so it can carry that fact. The code
+    is deliberately distinct from `not_found`: the order exists, and the honest
+    answer is that its rates were never recorded — a screen renders that, where a
+    table of zeros would be a claim about rates nobody ever charged.
+    """
+    order = await service.place(an_order(), price(a_spec(), RateSnapshot()), RateSnapshot())
+    row = await db_session.get(Order, order.id)
+    assert row is not None
+    row.rate_snapshot_id = None
+    await db_session.flush()
+
+    with pytest.raises(NotFoundError) as raised:
+        await rate_snapshot_for(db_session, order.id)
+
+    assert raised.value.code == "error.ordering.rates_not_recorded"

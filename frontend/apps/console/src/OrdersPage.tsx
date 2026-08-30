@@ -3,6 +3,7 @@ import { OrdersScreen, translate, useSession } from '@printorian/ui'
 
 import { ISSUE_REFUND, MANAGE_ORDER, OrderDesk } from './OrderDesk'
 import { PriceReview, VIEW_FINANCIALS } from './PriceReview'
+import { RateSnapshotPanel } from './RateSnapshotPanel'
 
 /**
  * The order desk: every order on the farm, and the controls to move one.
@@ -39,7 +40,10 @@ export function OrdersPage({ locale }: { locale: Locale }) {
             any of the production permissions — what a plate cost is money.
           */}
           {(actor?.permissions.includes(VIEW_FINANCIALS) ?? false) && (
-            <PriceReview order={order} locale={locale} />
+            <>
+              <PriceReview order={order} locale={locale} />
+              <RateSnapshotPanel order={order} locale={locale} />
+            </>
           )}
         </>
       )}
