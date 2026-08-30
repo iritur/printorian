@@ -24,6 +24,33 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**The SLA credit has a ledger, so a figure that left the farm can be checked**
+([#75](https://github.com/iritur/printorian/issues/75)). Every movement of
+`orders.sla_credit` appends a row to the new `sla_credit_entries`, carrying the
+previous value, the new one, the promise and the three decay terms it was derived
+from — the sweep's accruals and the freeze at dispatch alike. The column used to
+be its own only record: each pass overwrote it, `SlaCreditAccrued` went to a bus
+whose sinks persist nothing, and no prior value survived. Money leaves through
+`PaymentsService.refund_sla_credit` and revenue is reported net of the figure, so
+that was a gap rather than untidiness.
+
+> **It is a table of its own, and the issue asked for `order_events` rows.** The
+> deviation is recorded on the issue. `OrderView` eagerly loads `Order.events` on
+> every read, `table()` included — and the credit moves on *every* sweep: at the
+> default `sla_sweep_seconds=300` a `standard` promise moves 1 728 times before it
+> hits the 30% cap, so a page of twenty late orders would have carried
+> thirty-four thousand event rows in one response. The ledger is written far more
+> often than an order's history and is read by query, so it is deliberately not
+> reachable from `Order`.
+>
+> **`sla_sweep_seconds` is now also the ledger's resolution.** Worth knowing
+> before it is tuned for some other reason: halving it doubles the rows.
+>
+> **Nothing is backfilled and nothing can be.** The previous values were never
+> written down, and a ledger opening with rows reconstructed from today's column
+> would be an invented history (ADR-0007). An order already late when 0021 ran
+> gets its first entry on its next movement.
+
 **A promise now carries the terms it was sold under**
 ([#74](https://github.com/iritur/printorian/issues/74)). `orders` gained
 `decay_percent_per_day`, `decay_grace_seconds` and `decay_max_percent`, copied out
@@ -141,7 +168,8 @@ message naming the entry that drifted.
 > - **The SLA credit is not audited.** `refresh_sla_credit` writes no `order_events`
 >   row, `SlaCreditAccrued` goes to a bus that persists nothing, and the sweep
 >   overwrites `orders.sla_credit` in place. **No prior value of the credit exists
->   anywhere.** On a money path, worth fixing — not filed yet.
+>   anywhere.** On a money path, worth fixing — not filed yet. *(Filed as #75, and
+>   fixed below.)*
 > - **The order does not pin the terms it was sold under.** Only the policy *code* is
 >   stored; `POLICIES` holds the rates and `_credit_for` re-reads them every sweep, so
 >   editing `standard` re-prices every unshipped promise. This is exactly what ADR-0020
@@ -152,8 +180,8 @@ message naming the entry that drifted.
 >
 > The prose now states both gaps plainly instead of reassuring. The first two are
 > the issues [#75](https://github.com/iritur/printorian/issues/75) and
-> [#74](https://github.com/iritur/printorian/issues/74) were filed from; #74 is
-> fixed below and the `policies.py` comment no longer carries the wrong claim.
+> [#74](https://github.com/iritur/printorian/issues/74) were filed from, and both
+> are fixed below; the `policies.py` comment no longer carries the wrong claim.
 
 **Every enum column now has a database-level CHECK**
 ([#43](https://github.com/iritur/printorian/issues/43)). Twenty-three columns across
