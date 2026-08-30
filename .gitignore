@@ -55,3 +55,10 @@ Thumbs.db
 
 # Electron build output (electron-vite)
 out/
+
+# The GitHub wiki, cloned beside the tree for editing. It is its own repository
+# (printorian.wiki.git) with its own history, so committing it here would add a
+# gitlink to a submodule that is not declared in .gitmodules — a clone would get
+# an empty directory and no error. Re-clone with:
+#   git clone https://github.com/iritur/printorian.wiki.git wiki
+/wiki/
