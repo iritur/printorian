@@ -24,6 +24,36 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**The variance queue ADR-0013 feeds is no longer invisible**
+([#39](https://github.com/iritur/printorian/issues/39)). `GET /jobs/variances`
+serves what slicing found against what was quoted, and the order desk gained a
+«Пересмотр цены» panel that reads it. The detection has always worked — every
+plate attach writes an `EstimateVariance` and one beyond tolerance holds the job
+— and nothing served the rows, so the mechanism that stops a mis-estimated plate
+printing at a losing price was half-built.
+
+> **The route carries `VIEW_FINANCIALS` on top of the router's
+> `VIEW_PRODUCTION`.** A variance is a measurement and this one carries money;
+> CLAUDE.md §1 keeps the two apart precisely so a response about seconds does not
+> quietly start carrying rubles. The engineer who *records* the plate may not read
+> what it cost. The route is refused whole rather than answered with the money
+> blanked — a null means "not measured" (ADR-0007), and using it for "not
+> permitted" would make the two indistinguishable.
+>
+> **`exceeded_only` is opt-in, and that default is load-bearing.** The in-band
+> rows are the farm absorbing small differences and are the dataset ROADMAP Phase
+> 6 calibrates the estimator against. A read that dropped them would look like a
+> filter and take that dataset with it.
+>
+> **The route is declared above `GET /jobs/{job_id}`.** FastAPI matches in
+> declaration order, so the same route written below resolves as
+> `job_id="variances"` and fails as a 422 about a UUID nobody asked for, with no
+> warning. There is a test whose only job is to notice.
+>
+> **The desk had no `price_review` chip at all.** It was in none of the three
+> filters — not `awaiting_payment`, not `in_production`, not `shipped` — so the
+> one status that needs a person was reachable only by reading every row.
+
 **The farm can now be asked which printers it is actually connected to**
 ([#21](https://github.com/iritur/printorian/issues/21)). `/health/workers` grew a
 `drivers` key: one entry per printer the worker was asked to drive, with its

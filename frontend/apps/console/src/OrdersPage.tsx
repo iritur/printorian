@@ -2,6 +2,7 @@ import type { Locale } from '@printorian/ui'
 import { OrdersScreen, translate, useSession } from '@printorian/ui'
 
 import { ISSUE_REFUND, MANAGE_ORDER, OrderDesk } from './OrderDesk'
+import { PriceReview, VIEW_FINANCIALS } from './PriceReview'
 
 /**
  * The order desk: every order on the farm, and the controls to move one.
@@ -23,13 +24,24 @@ export function OrdersPage({ locale }: { locale: Locale }) {
       scope="all"
       title={translate(locale, 'orders.all.title')}
       renderDetail={(order, refresh) => (
-        <OrderDesk
-          order={order}
-          locale={locale}
-          mayAdvance={actor?.permissions.includes(MANAGE_ORDER) ?? false}
-          mayRefund={actor?.permissions.includes(ISSUE_REFUND) ?? false}
-          onChanged={refresh}
-        />
+        <>
+          <OrderDesk
+            order={order}
+            locale={locale}
+            mayAdvance={actor?.permissions.includes(MANAGE_ORDER) ?? false}
+            mayRefund={actor?.permissions.includes(ISSUE_REFUND) ?? false}
+            onChanged={refresh}
+          />
+          {/*
+            Gated here rather than left to 403, for the same reason the desk's
+            own controls are: a panel that renders an error to every operator is
+            worse than one that is absent. `VIEW_FINANCIALS` is deliberately not
+            any of the production permissions — what a plate cost is money.
+          */}
+          {(actor?.permissions.includes(VIEW_FINANCIALS) ?? false) && (
+            <PriceReview order={order} locale={locale} />
+          )}
+        </>
       )}
     />
   )

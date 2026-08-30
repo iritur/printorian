@@ -19,7 +19,9 @@ from fastapi import APIRouter, Depends, File, Response, UploadFile
 from printorian.api.deps import (
     AppSettings,
     CurrentActor,
+    DbSession,
     Models,
+    Ordering,
     Plates,
     Production,
     Storage,
@@ -29,8 +31,10 @@ from printorian.contexts.catalog import PreparedPlateView, RecordPlate, read_pla
 from printorian.contexts.identity import Permission
 from printorian.contexts.production import (
     AssignmentRecordView,
+    EstimateVarianceView,
     JobView,
     WaitListEntryView,
+    estimate_variances,
 )
 from printorian.core.errors import NotFoundError, ValidationError
 from printorian.core.ids import EntityId
@@ -88,6 +92,45 @@ async def find_plate(
     if plate is None:
         raise NotFoundError("error.catalog.plate_not_found", model_hash=model_hash)
     return plate
+
+
+@router.get(
+    "/variances",
+    dependencies=[Depends(requires(Permission.VIEW_FINANCIALS))],
+)
+async def variances(
+    db: DbSession,
+    ordering: Ordering,
+    order_id: EntityId | None = None,
+    exceeded_only: bool = False,
+) -> list[EstimateVarianceView]:
+    """What slicing found, against what the customer was quoted (ADR-0013).
+
+    **Declared above `/{job_id}` on purpose.** FastAPI matches in declaration
+    order, so the same route written below it resolves as `job_id="variances"`
+    and fails as a 422 that names a UUID nobody asked for. There is no warning;
+    the test below is the only thing that would notice.
+
+    **`VIEW_FINANCIALS` on top of the router's `VIEW_PRODUCTION`.** A variance is
+    a measurement, and this one carries money — CLAUDE.md §1 keeps the money
+    permission separate from every production permission precisely so a response
+    about seconds cannot quietly start carrying rubles. An engineer who may
+    prepare the plate is not thereby someone who may read what it cost.
+
+    Nothing is blanked for a caller who lacks it: this route is refused whole.
+    Returning the row with its money fields nulled would make "not permitted"
+    indistinguishable from "not measured", and ADR-0007 needs that distinction to
+    keep meaning something.
+
+    An unknown `order_id` is a 404 rather than an empty list, for the same reason
+    — an empty grid reads as "this order had no variances", which is a claim, and
+    the farm has not made it.
+    """
+    if order_id is not None:
+        # Raises `error.ordering.not_found` rather than answering with nothing.
+        await ordering.get(order_id)
+    rows = await estimate_variances(db, order_id=order_id, exceeded_only=exceeded_only)
+    return [EstimateVarianceView.model_validate(row) for row in rows]
 
 
 @router.get("/{job_id}")

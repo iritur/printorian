@@ -88,6 +88,48 @@ class WaitListEntryView(BaseModel):
     blocking_reasons: list[str] = Field(default_factory=list)
 
 
+class EstimateVarianceView(BaseModel):
+    """What slicing found, against what the customer was quoted.
+
+    Every recorded variance is here, not only the ones that exceeded the band.
+    ADR-0013 keeps the in-band ones deliberately: they are the farm absorbing
+    small differences, and they are the dataset ROADMAP Phase 6 calibrates the
+    mesh estimator against. A view that served only the escalations would leave
+    the estimator learning from its worst cases alone.
+
+    Nothing is derived here — no delta, no percentage. The four measured pairs are
+    carried as they were recorded and the client subtracts. A computed field would
+    be a second place the variance arithmetic lives, and `prep.assess_variance` is
+    the first (ADR-0013).
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: EntityId
+    job_id: EntityId
+    order_id: EntityId
+
+    #: Money, which is why the route carries `VIEW_FINANCIALS` on top of the
+    #: router's production permission. CLAUDE.md §1: a response about seconds must
+    #: not quietly start carrying rubles.
+    quoted_cost: Decimal
+    prepared_cost: Decimal
+    #: The band in force when this was judged, stored per variance rather than
+    #: read from configuration now — the same reason a rate snapshot is pinned.
+    tolerance: Decimal
+    within_tolerance: bool
+
+    #: The manufacturing pair behind the money. What the estimator is actually
+    #: calibrated on: a price is the product of an estimate and a tariff, and only
+    #: one of those is the estimator's to get right.
+    estimated_minutes: Decimal
+    prepared_minutes: Decimal
+    estimated_grams: Decimal
+    prepared_grams: Decimal
+
+    created_at: datetime
+
+
 class CreateJob(BaseModel):
     """What the ordering side hands to production once an order is paid."""
 

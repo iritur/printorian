@@ -181,6 +181,15 @@ export function OrdersScreen({ locale, scope, title, renderDetail }: OrdersScree
           ),
       },
       {
+        // The one status that needs a person and had no chip: `price_review` was
+        // in none of the three above, so a held order matched no filter at all
+        // and the desk had no way to ask "what is waiting on a decision?".
+        key: 'price_review',
+        label: t('order.status.price_review'),
+        match: (row) => row.status === 'price_review',
+        tone: 'warn',
+      },
+      {
         key: 'shipped',
         label: t('order.status.shipped'),
         match: (row) => ['shipped', 'completed'].includes(row.status),
