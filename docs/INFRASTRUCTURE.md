@@ -419,6 +419,24 @@ are, as of 2026-08-26:
    linear history required, force-pushes and deletion blocked. Verify with
    `gh api repos/iritur/printorian/branches/main/protection`.
 
+**Approvals are required at zero, deliberately.** `required_approving_review_count`
+is `0`, and that is a decision rather than the default it looks like. GitHub does
+not let an author approve their own pull request, so on a farm with one maintainer
+raising every PR, setting it to `1` does not produce a reviewer — it produces a
+branch that cannot be merged except through the admin bypass that
+`enforce_admins: false` leaves open. A gate everyone routes around is worse than
+an honest zero, because only the first kind gets believed. §6 already says the
+same thing about per-PR preview environments: *one reviewer who is also the
+author*. What actually stands between a mistake and `main` here is the three
+required checks and the six gates behind them, not a rubber-stamp approval.
+
+**The trigger that reverses this:** a second person reviewing. Then set
+`required_approving_review_count` to `1` **and** `enforce_admins` to `true` in the
+same change — the count alone is theatre while admins are exempt — and split
+`.github/CODEOWNERS` into per-area rules at the same time, since it currently
+names one owner for the same reason. Tracked as issue #67, held open as `deferred`
+so the trigger is not lost.
+
 **Exit criterion met.** A green CI run exists on `main`, and the working tree can
 be reconstructed on another machine from `git clone` alone.
 
