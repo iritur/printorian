@@ -1,12 +1,19 @@
-# CODEOWNERS
-# Assign code ownership to teams or users. Replace the placeholders below with
-# your org's actual GitHub usernames or team slugs (e.g. @org/backend-team).
-# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# Who gets asked to review what.
+#
+# GitHub resolves an owner to a **user** or a **team** (`@org/team`). It does not
+# resolve a bare organisation, which is what the placeholder `* @iritur` in the
+# first version of this file was: `iritur` is the org, so every rule here matched
+# and then assigned nobody, silently, for every PR since. Check this file with
+#
+#     gh api repos/iritur/printorian/codeowners/errors
+#
+# which is the only thing that would have caught it — a CODEOWNERS that names no
+# one looks exactly like a working one from the PR page.
 
-# Examples:
-# /backend/ @iritur/backend-team
-# /frontend/ @iritur/frontend-team
-# /docs/ @iritur/docs-team
-
-# Default owner for everything (replace @iritur with your org or user)
-* @iritur
+# One owner, because there is one maintainer. Per-area rules (`/backend/`,
+# `/frontend/`, `/.github/`) are deliberately not written yet: with a single owner
+# they would all name the same person, and four rules that resolve identically
+# read as routing that is not happening. Split this the day a second person has
+# write access — that is the same trigger that reopens the approvals decision in
+# docs/INFRASTRUCTURE.md §7 Stage 0.
+* @dimmus
