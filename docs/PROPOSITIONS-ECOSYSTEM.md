@@ -247,7 +247,7 @@ but the console's prep and library listings carry no thumbnail, and the mesh
 estimator has no per-model feedback loop on the frontend.
 **Realization:** extract a thumbnail and the sliced time/filament estimate at prep
 time for the prep and library screens, and pair them with `EstimateVariance`
-(already persisted, unserved — #39) so an engineer sees the delta at a glance.
+(persisted, and served at `GET /jobs/variances` since #39) so an engineer sees the delta at a glance.
 **Labels:** `area:backend` · `area:frontend` · `type:task`.
 
 ### 16. Sliced-plate / toolpath preview (G-code viewer) — P2

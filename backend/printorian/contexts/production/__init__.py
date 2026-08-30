@@ -29,6 +29,7 @@ from printorian.contexts.production.prep import (
     VarianceVerdict,
     assess_variance,
 )
+from printorian.contexts.production.reads import estimate_variances
 from printorian.contexts.production.schedule import (
     CommittedMaterial,
     Schedule,
@@ -42,6 +43,7 @@ from printorian.contexts.production.schemas import (
     AssignmentRecordView,
     CandidateView,
     CreateJob,
+    EstimateVarianceView,
     JobEventView,
     JobView,
     PlanOutcome,
@@ -60,6 +62,7 @@ __all__ = [
     "CreateJob",
     "EstimateSource",
     "EstimateVariance",
+    "EstimateVarianceView",
     "JobAssigned",
     "JobEvent",
     "JobEventView",
@@ -88,6 +91,7 @@ __all__ = [
     "assess_variance",
     "can_transition",
     "committed_material",
+    "estimate_variances",
     "schedule",
     "throughput",
     "wait_list_size",
