@@ -11,6 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from printorian.contexts.ordering import events as ordering_events
+from printorian.contexts.ordering.credit import (
+    CREDIT_ACCRUED,
+    CREDIT_FROZEN_AT_DISPATCH,
+    credit_for,
+    record,
+)
 from printorian.contexts.ordering.models import (
     ORDER_NUMBER_SEQUENCE,
     Order,
@@ -18,12 +24,7 @@ from printorian.contexts.ordering.models import (
     OrderLine,
     RateSnapshotRecord,
 )
-from printorian.contexts.ordering.policies import (
-    DecayPolicy,
-    OrderStatus,
-    assert_transition,
-    policy,
-)
+from printorian.contexts.ordering.policies import OrderStatus, assert_transition, policy
 from printorian.contexts.ordering.schemas import (
     OrderTable,
     OrderView,
@@ -247,7 +248,19 @@ class OrderingService:
             order.shipped_at = now
             # Freeze the credit at the moment of shipping: the clock stops when the
             # parcel leaves, not when someone gets round to clicking "completed".
-            order.sla_credit = self._credit_for(order, now)
+            # The freeze is the movement that matters most on this path — it is the
+            # figure the refund is paid against — so it is recorded like any other.
+            frozen = credit_for(order, now)
+            if frozen != order.sla_credit:
+                await record(
+                    self._db,
+                    order,
+                    previous=order.sla_credit,
+                    credit=frozen,
+                    at=now,
+                    reason=CREDIT_FROZEN_AT_DISPATCH,
+                )
+                order.sla_credit = frozen
 
         self._db.add(
             OrderEvent(
@@ -289,8 +302,16 @@ class OrderingService:
         if not order.status.counts_against_sla:
             return await self.get(order.id)
 
-        credit = self._credit_for(order, self._clock.now())
-        if credit != order.sla_credit:
+        now = self._clock.now()
+        previous = order.sla_credit
+        credit = credit_for(order, now)
+        if credit != previous:
+            # Written before the column changes and flushed with it: an entry that
+            # committed while the column did not would be a record of something
+            # that never happened.
+            await record(
+                self._db, order, previous=previous, credit=credit, at=now, reason=CREDIT_ACCRUED
+            )
             order.sla_credit = credit
             await self._db.flush()
             await self._bus.publish(
@@ -313,41 +334,6 @@ class OrderingService:
             order for order in await self._db.scalars(query) if order.status.counts_against_sla
         ]
         return [OrderView.model_validate(order) for order in orders]
-
-    def _credit_for(self, order: Order, now: object) -> Decimal:
-        if order.promised_at is None:
-            return Decimal(0)
-        percent = self._terms_for(order).percent_at(
-            promised_at=order.promised_at,
-            now=now,  # type: ignore[arg-type]
-        )
-        return (order.total * percent / Decimal(100)).quantize(Decimal("0.01"))
-
-    @staticmethod
-    def _terms_for(order: Order) -> DecayPolicy:
-        """The terms this order was sold under — not the ones in force today.
-
-        Rebuilt from the columns rather than looked up by code, because the lookup
-        is the defect: `POLICIES` holds current values, and reading it here made a
-        rate edit reach backwards into promises already sold.
-
-        The fallback covers orders placed before the columns existed. Those keep the
-        old behaviour, which is the honest option: their terms were never recorded,
-        and inventing a plausible set for them would be a number the farm never
-        measured. `decay_terms_all_or_none` is what makes checking one column enough
-        to know about all three.
-        """
-        percent_per_day = order.decay_percent_per_day
-        grace_seconds = order.decay_grace_seconds
-        max_percent = order.decay_max_percent
-        if percent_per_day is None or grace_seconds is None or max_percent is None:
-            return policy(order.decay_policy)
-        return DecayPolicy(
-            code=order.decay_policy,
-            percent_per_day=percent_per_day,
-            grace=timedelta(seconds=grace_seconds),
-            max_percent=max_percent,
-        )
 
     # -- internals -------------------------------------------------------
 

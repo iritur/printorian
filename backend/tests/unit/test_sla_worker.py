@@ -15,12 +15,15 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.ordering import (
+    CREDIT_ACCRUED,
+    CREDIT_FROZEN_AT_DISPATCH,
     POLICIES,
     DecayPolicy,
     DraftLine,
     OrderingService,
     OrderStatus,
     PlaceOrder,
+    credit_history,
 )
 from printorian.contexts.ordering.events import SlaCreditAccrued
 from printorian.contexts.pricing import (
@@ -294,3 +297,63 @@ async def test_editing_a_policy_does_not_reprice_a_promise_already_sold(
     assert (await service.get(later.id)).sla_credit == (later.total * Decimal(25) / 100).quantize(
         Decimal("0.01")
     )
+
+
+async def test_two_sweeps_leave_two_records_rather_than_one_overwritten_number(
+    service: OrderingService, clock: FixedClock, db_session: AsyncSession
+) -> None:
+    """The credit used to be its own only record, and each pass replaced it.
+
+    `refresh_sla_credit` wrote the new figure over the old one, published to a bus
+    whose sinks persist nothing, and left no `order_events` row — so a credit that
+    went from 0 ₽ to 4 200 ₽ was unexplainable the moment it had moved twice. This
+    is a money path: the figure is refunded through the payment provider and
+    revenue is reported net of it.
+    """
+    order = await a_paid_order(service)
+    clock.advance(timedelta(days=8))
+    await SlaSweep(service).sweep()
+    clock.advance(timedelta(days=1))
+    await SlaSweep(service).sweep()
+
+    history = await credit_history(db_session, order.id)
+
+    assert [entry.sequence for entry in history] == [1, 2]
+    assert all(entry.reason == CREDIT_ACCRUED for entry in history)
+    # The chain is unbroken: what the second pass replaced is what the first wrote.
+    assert history[0].previous == Decimal(0)
+    assert history[0].credit == history[1].previous
+    assert history[1].credit > history[1].previous
+    assert history[1].credit == (await service.get(order.id)).sla_credit
+
+    # Each entry says what it was derived from, so the figure can be checked
+    # rather than merely believed.
+    assert history[0].promised_at == order.promised_at
+    assert history[0].decay_policy == "standard"
+    assert history[0].decay_percent_per_day == Decimal(5)
+    assert history[0].decay_grace_seconds == 12 * 3600
+    assert history[0].decay_max_percent == Decimal(30)
+
+
+async def test_the_freeze_at_dispatch_is_recorded_like_any_other_movement(
+    service: OrderingService, clock: FixedClock, db_session: AsyncSession
+) -> None:
+    """The freeze is the figure the refund is paid against, so it is the one entry
+    the ledger cannot be missing."""
+    order = await a_paid_order(service)
+    for target in (
+        OrderStatus.QUEUED,
+        OrderStatus.PRINTING,
+        OrderStatus.POST_PRODUCTION,
+        OrderStatus.QUALITY_CHECK,
+        OrderStatus.PACKING,
+    ):
+        order = await service.advance(order.id, target)
+
+    clock.advance(timedelta(days=7))
+    shipped = await service.advance(order.id, OrderStatus.SHIPPED)
+
+    history = await credit_history(db_session, order.id)
+    assert [entry.reason for entry in history] == [CREDIT_FROZEN_AT_DISPATCH]
+    assert history[0].previous == Decimal(0)
+    assert history[0].credit == shipped.sla_credit > Decimal(0)

@@ -5,6 +5,12 @@ Public interface. The defining rule: an order's price is **pinned** at placement
 it). Nothing here ever reprices an existing order.
 """
 
+from printorian.contexts.ordering.credit import (
+    CREDIT_ACCRUED,
+    CREDIT_FROZEN_AT_DISPATCH,
+    SlaCreditEntry,
+    credit_history,
+)
 from printorian.contexts.ordering.finance import (
     CategorySpend,
     DayRevenue,
@@ -65,6 +71,8 @@ from printorian.contexts.ordering.schemas import (
 from printorian.contexts.ordering.service import OrderingService
 
 __all__ = [
+    "CREDIT_ACCRUED",
+    "CREDIT_FROZEN_AT_DISPATCH",
     "MIN_LEAD_HOURS",
     "MONTHS_SHOWN",
     "NOT_REVENUE",
@@ -92,12 +100,14 @@ __all__ = [
     "PlaceOrder",
     "PromisePolicy",
     "RepriceLine",
+    "SlaCreditEntry",
     "StatusCount",
     "StatusSlice",
     "Trend",
     "Window",
     "assert_transition",
     "can_transition",
+    "credit_history",
     "finance_overview",
     "lifetime",
     "lines_per_asset",

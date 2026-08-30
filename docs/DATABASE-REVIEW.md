@@ -12,15 +12,15 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **42 tables** across twelve contexts, built
-by twenty-two Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **43 tables** across twelve contexts, built
+by twenty-three Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
 | `identity` | `users`, `sessions` |
 | `account` | `addresses`, `notification_prefs` |
 | `inventory` | `material_specs`, `material_lots` |
-| `ordering` | `orders`, `order_lines`, `order_events`, `rate_snapshots` |
+| `ordering` | `orders`, `order_lines`, `order_events`, `rate_snapshots`, `sla_credit_entries` |
 | `payments` | `payments`, `refunds`, `payment_notifications` |
 | `catalog` | `model_assets`, `prepared_plates`, `catalog_models`, `catalog_model_materials` |
 | `fleet` | `printers`, `ams_slots`, `service_operations`, `telemetry_samples`, `metric_rollups` |
@@ -48,6 +48,7 @@ rate_snapshots ──< orders.rate_snapshot_id   (RESTRICT)
 
 orders ─┬─< order_lines                  (CASCADE)
         ├─< order_events                 (CASCADE)
+        ├─< sla_credit_entries           (CASCADE)
         ├─< payments                     (RESTRICT) ─┬─< refunds              (CASCADE)
         │                                            └─< payment_notifications (CASCADE)
         └─< print_jobs                   (CASCADE) ─┬─< job_events            (CASCADE)
