@@ -24,6 +24,27 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**A promise now carries the terms it was sold under**
+([#74](https://github.com/iritur/printorian/issues/74)). `orders` gained
+`decay_percent_per_day`, `decay_grace_seconds` and `decay_max_percent`, copied out
+of `POLICIES` at placement; `_credit_for` computes from that copy. Before this the
+order recorded only the policy *code*, so raising `standard` from 5%/day to 10%/day
+did not price the next sale — it doubled the credit owed on every promise already
+sold, on the next pass of `workers/sla.py`.
+
+> **The test is the part worth keeping.** It sweeps, edits `POLICIES` between two
+> sweeps, and sweeps again: without the fix the second sweep moves an existing
+> order's credit from 183.27 ₽ to 366.54 ₽, which is the defect stated as a number.
+> All six gates passed both before and after — this is the D13 case again, where
+> shape was green and behaviour was wrong.
+>
+> **Migration 0020 backfills the three known codes with the values they hold
+> today**, and leaves any other code null. That is not an invented number: today's
+> values are what every existing order is *already* being priced at, so writing
+> them down changes nothing anyone is owed and only stops the next edit reaching
+> backwards. A row with an unrecognised code has no recorded terms and gets none;
+> `_terms_for` falls back to the live lookup for those, exactly as before.
+
 **The two listings that were never paged now say when they need to be**
 ([#45](https://github.com/iritur/printorian/issues/45)). `GET /printers` and
 `GET /materials` still return everything, which `DATABASE-REVIEW` §9 records as a
@@ -129,7 +150,10 @@ message naming the entry that drifted.
 > - `/health/ready` reports `event_relay` only where a relay is configured, so "the
 >   four health checks" overcounts a deployment without one.
 >
-> The prose now states both gaps plainly instead of reassuring. Neither is fixed.
+> The prose now states both gaps plainly instead of reassuring. The first two are
+> the issues [#75](https://github.com/iritur/printorian/issues/75) and
+> [#74](https://github.com/iritur/printorian/issues/74) were filed from; #74 is
+> fixed below and the `policies.py` comment no longer carries the wrong claim.
 
 **Every enum column now has a database-level CHECK**
 ([#43](https://github.com/iritur/printorian/issues/43)). Twenty-three columns across

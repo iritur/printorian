@@ -143,7 +143,7 @@ Customer ──┐
            │           ├── options: material spec(s), colors[≤4], scale, finishes[], rush
            │           └── PreparedPlate?  (null until prep completes)
            │
-           ├── promised_at · decay_policy · sla_credit  (columns on the order, not an aggregate)
+           ├── promised_at · decay_policy (+ its pinned rates) · sla_credit  (columns, not an aggregate)
            ├── Payment (YooKassa/CloudPayments, ₽, receipt)
            │
            └── Job* ──── assignment ──► Printer ──── AmsSlot ──── MaterialLot
@@ -203,7 +203,7 @@ Rule: when the prepared plate's cost exceeds the quoted cost by more than `varia
 
 ### SLA / late-delivery discount (C9)
 
-The promise lives on the order itself: `promised_at`, plus a named `decay_policy` drawn from a closed set (`standard` — 5%/day past a 12-hour grace, capped at 30%; `none`; `strict` — 10%/day past 2 hours, capped at 50%). The order stores the policy *code*, not its numbers — `POLICIES` in `ordering/policies.py` holds the rates, and `_credit_for` re-reads them on every sweep. So editing `standard` re-prices every promise not yet shipped, at the new rate, on the next pass. That is the trap ADR-0020 was written about, surviving here because an unshipped order has no pinned breakdown to protect it; what protects a promise is the freeze at dispatch below, and nothing else. Persisting the parameters alongside the code is the fix, and is not done. §4.2 says why these are columns rather than an aggregate.
+The promise lives on the order itself: `promised_at`, plus a named `decay_policy` drawn from a closed set (`standard` — 5%/day past a 12-hour grace, capped at 30%; `none`; `strict` — 10%/day past 2 hours, capped at 50%). The order stores the policy code **and the three numbers behind it** — `decay_percent_per_day`, `decay_grace_seconds`, `decay_max_percent`, copied out of `POLICIES` at placement. It stored only the code until #74, and `_credit_for` re-read the live dict on every sweep, so editing `standard` re-priced every promise not yet shipped at the new rate on the next pass. That was ADR-0020's trap on the other money path, surviving because an unshipped order has no pinned breakdown to protect it. The credit is now computed from the pinned copy, and an edit to `POLICIES` reaches forwards only; the freeze at dispatch below is no longer the only thing protecting a promise. Orders placed before the columns existed carry nulls and keep the old lookup — their terms were never recorded, and a plausible guess would be worse than the gap (ADR-0007). §4.2 says why these are columns rather than an aggregate.
 
 A worker (`workers/sla.py`) sweeps every order past its promise and still owing work, and **recomputes** `orders.sla_credit` from the promise, the policy and the total — recomputed rather than accumulated, so a pass that runs twice or a process that restarts mid-sweep cannot double-count. The clock stops when the parcel leaves: the credit is frozen on the transition to `shipped`, and no later sweep touches it.
 
