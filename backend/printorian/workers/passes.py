@@ -194,6 +194,13 @@ class TelemetryPass:
             printers = await all_printers(session)
             drivers = await self._pool.refresh(fleet, printers)
             outcome = await telemetry.TelemetryPoller(fleet, drivers).sweep(printers)
+        # Published from this pass and no other. It refreshes the pool on the
+        # shortest interval in the process, so the window a reader sees matches
+        # the loop that actually writes it; publishing from the scheduler as well
+        # would put two writers with two different windows on the same keys.
+        await self._runtime.record_driver_states(
+            self._pool.states(), self._runtime.settings.telemetry_poll_seconds
+        )
         await self._runtime.record_beat("telemetry", self._runtime.settings.telemetry_poll_seconds)
         return outcome
 

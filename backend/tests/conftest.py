@@ -345,6 +345,7 @@ def wire_app(
     """
     from printorian.api.ws import Hub
     from printorian.core.cpu import CpuGate
+    from printorian.core.driver_health import DriverStates
     from printorian.core.heartbeat import Heartbeat
     from printorian.core.ratelimit import Lockout, RateLimiter
 
@@ -357,6 +358,7 @@ def wire_app(
     app.state.limiter = RateLimiter(clock)  # type: ignore[attr-defined]
     app.state.lockout = Lockout(clock)  # type: ignore[attr-defined]
     app.state.heartbeat = Heartbeat(settings.redis_url)  # type: ignore[attr-defined]
+    app.state.driver_states = DriverStates(settings.redis_url)  # type: ignore[attr-defined]
     # No relay: the suite runs without Redis, and the hub still receives every
     # event raised in this process straight off the bus.
     app.state.relay = None  # type: ignore[attr-defined]

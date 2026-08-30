@@ -18,6 +18,7 @@ from printorian.core.clock import SystemClock
 from printorian.core.config import Settings, get_settings
 from printorian.core.cpu import CpuGate
 from printorian.core.db import Database
+from printorian.core.driver_health import DriverHealth, DriverStates
 from printorian.core.events import EventBus
 from printorian.core.heartbeat import Heartbeat, ttl_for
 from printorian.core.relay import EventRelay
@@ -45,10 +46,15 @@ class WorkerRuntime:
         self.relay = EventRelay(self.settings.redis_url, self.settings.events_channel)
         # What lets a wedged loop be told apart from a working one (`core.heartbeat`).
         self.heartbeat = Heartbeat(self.settings.redis_url)
+        # And the same trick for the driver pool. This process is the only one
+        # that holds the printer connections, so it is the only one that can say
+        # anything true about them (`core.driver_health`).
+        self.driver_states = DriverStates(self.settings.redis_url)
 
     async def open(self) -> None:
         """Connect the things that talk to Redis, and start relaying events."""
         await self.heartbeat.start()
+        await self.driver_states.start()
         if self.settings.events_relay_enabled:
             await self.relay.start()
             self.relay.attach(self.bus)
@@ -66,6 +72,20 @@ class WorkerRuntime:
             ttl_seconds=ttl_for(interval_seconds, self.settings.worker_stale_intervals),
         )
 
+    async def record_driver_states(self, states: list[DriverHealth], interval_seconds: int) -> None:
+        """Publish what the pool currently knows about each printer.
+
+        The window is derived from the publishing loop's own interval, exactly as
+        a beat's is — no second setting to keep in step with the first. A reading
+        older than that is not reported as stale but as `unknown`, because the
+        thing that stopped is the *publisher*, and what a printer was doing while
+        nobody was looking is not something this can claim to know.
+        """
+        await self.driver_states.publish(
+            states,
+            ttl_seconds=ttl_for(interval_seconds, self.settings.worker_stale_intervals),
+        )
+
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
         """One unit of work, committed on success."""
@@ -75,6 +95,7 @@ class WorkerRuntime:
     async def dispose(self) -> None:
         await self.relay.aclose()
         await self.heartbeat.aclose()
+        await self.driver_states.aclose()
         await self.database.dispose()
 
 

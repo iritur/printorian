@@ -9,6 +9,7 @@ come back without restarting the process.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -17,6 +18,7 @@ from printorian.contexts.fleet import ConnectionMode, CreatePrinter, FleetServic
 from printorian.contexts.fleet.models import Printer
 from printorian.core.clock import FixedClock
 from printorian.core.config import Settings
+from printorian.core.driver_health import CONNECTED, UNAVAILABLE
 from printorian.core.events import EventBus
 from printorian.core.secrets import SecretBox
 from printorian.drivers import DriverUnavailableError
@@ -250,3 +252,80 @@ async def test_a_recovery_is_always_reported(
     assert "driver_connected" in printed
     # Names what it recovered from, so a flapping machine is visible as flapping.
     assert "recovered=error.driver.unavailable" in printed
+
+
+async def test_the_pool_reports_every_printer_it_was_asked_to_drive(
+    fleet: FleetService, monkeypatch: pytest.MonkeyPatch, clock: FixedClock
+) -> None:
+    """Including the one it could not reach, which is the whole point.
+
+    Reporting only the live connections would make an unreachable machine
+    indistinguishable from one that was never registered — and the unreachable one
+    is what `/health/workers` grew a `drivers` key for.
+    """
+    printer = await a_printer(fleet)
+
+    class Dead(FakeDriver):
+        async def connect(self, info: object) -> None:
+            raise DriverUnavailableError("error.driver.unavailable")
+
+    pool = pool_with(monkeypatch, Dead(), clock)
+    await pool.refresh(fleet, [printer])
+
+    states = pool.states()
+
+    assert [(state.name, state.state) for state in states] == [(printer.name, UNAVAILABLE)]
+    # A code, never prose (ADR-0012), and when the state began rather than when it
+    # was last noticed — "unreachable" and "unreachable since 09:00" differ.
+    assert states[0].code == "error.driver.unavailable"
+    assert states[0].since == clock.now().isoformat()
+
+
+async def test_an_outage_does_not_get_younger_every_pass(
+    fleet: FleetService, monkeypatch: pytest.MonkeyPatch, clock: FixedClock
+) -> None:
+    """`since` is set when the state changed, not when the last pass looked.
+
+    Re-stamping it each pass would cap every outage at one interval, so a printer
+    unreachable all week would report as unreachable for thirty seconds.
+    """
+    printer = await a_printer(fleet)
+
+    class Dead(FakeDriver):
+        async def connect(self, info: object) -> None:
+            raise DriverUnavailableError("error.driver.unavailable")
+
+    pool = pool_with(monkeypatch, Dead(), clock)
+    await pool.refresh(fleet, [printer])
+    began = pool.states()[0].since
+
+    clock.advance(timedelta(hours=6))
+    await pool.refresh(fleet, [printer])
+
+    assert pool.states()[0].since == began
+
+
+async def test_a_recovered_printer_reports_when_the_connection_was_made(
+    fleet: FleetService, monkeypatch: pytest.MonkeyPatch, clock: FixedClock
+) -> None:
+    printer = await a_printer(fleet)
+
+    class Flaky(FakeDriver):
+        fail = True
+
+        async def connect(self, info: object) -> None:
+            if Flaky.fail:
+                raise DriverUnavailableError("error.driver.unavailable")
+            await super().connect(info)
+
+    pool = pool_with(monkeypatch, Flaky(), clock)
+    await pool.refresh(fleet, [printer])
+
+    clock.advance(timedelta(minutes=5))
+    Flaky.fail = False
+    await pool.refresh(fleet, [printer])
+
+    state = pool.states()[0]
+    assert state.state == CONNECTED
+    assert state.since == clock.now().isoformat()
+    assert state.code is None

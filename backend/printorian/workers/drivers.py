@@ -30,11 +30,26 @@ from printorian.contexts.fleet import FleetService
 from printorian.contexts.fleet.models import Printer
 from printorian.core.clock import Clock
 from printorian.core.config import Settings
+from printorian.core.driver_health import CONNECTED, UNAVAILABLE, DriverHealth
 from printorian.core.errors import PrintorianError
 from printorian.drivers import DriverError, PrinterDriver
 from printorian.drivers import registry as driver_registry
 
 logger = structlog.get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class _Failure:
+    """Why a printer has no driver, and since when.
+
+    The code alone was enough while this only fed the deduplicated log line. It is
+    not enough to *report*: "unavailable" and "unavailable since 03:14" are
+    different facts, and only the second says whether anybody should walk over and
+    look at the machine.
+    """
+
+    code: str
+    since: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,7 +87,16 @@ class DriverPool:
         # switched off is logged once rather than on every pass. Six offline
         # printers on a thirty-second tick is otherwise 720 identical lines an
         # hour, which is how a log stops being read.
-        self._last_failure: dict[str, str] = {}
+        self._last_failure: dict[str, _Failure] = {}
+        # When each live connection was made. Set in `_connect`, which runs only
+        # when a connection is actually (re)made, so it is the true start of the
+        # current state rather than the time of the last pass that noticed.
+        self._connected_since: dict[str, str] = {}
+        # Every printer the pool was asked to drive on its last pass, by name.
+        # What `states` reports on — the *observed* roster, never the `printers`
+        # table, because a printer this process has never tried to reach is not
+        # one it can say anything about (root CLAUDE.md §1).
+        self._roster: dict[str, str] = {}
 
     async def refresh(
         self, fleet: FleetService, printers: list[Printer]
@@ -85,6 +109,7 @@ class DriverPool:
         left open against a machine nobody is watching.
         """
         wanted = {str(printer.id): printer for printer in printers}
+        self._roster = {printer_id: printer.name for printer_id, printer in wanted.items()}
         # Gone from the fleet: close the socket *and* forget the printer entirely,
         # so one re-registered later is treated as new.
         await self._retire(set(self._drivers) - set(wanted), forget=True)
@@ -104,6 +129,42 @@ class DriverPool:
             await self._connect(fleet, printer, fingerprint)
 
         return dict(self._drivers)
+
+    def states(self) -> list[DriverHealth]:
+        """What this pool would say about each printer it was asked to drive.
+
+        Pure: no I/O and no clock. Every timestamp it reports was recorded at the
+        moment the state actually changed, so calling this twice in a pass cannot
+        move a `since`, and a slow publish cannot age one.
+
+        Every printer in the roster appears, the ones with no driver included.
+        Reporting only what is connected would make an unreachable machine
+        indistinguishable from one that was never registered — and the unreachable
+        one is what the endpoint exists for.
+        """
+        report: list[DriverHealth] = []
+        for printer_id, name in self._roster.items():
+            if printer_id in self._drivers:
+                report.append(
+                    DriverHealth(
+                        printer_id=printer_id,
+                        name=name,
+                        state=CONNECTED,
+                        since=self._connected_since.get(printer_id),
+                    )
+                )
+                continue
+            failure = self._last_failure.get(printer_id)
+            report.append(
+                DriverHealth(
+                    printer_id=printer_id,
+                    name=name,
+                    state=UNAVAILABLE,
+                    code=failure.code if failure else None,
+                    since=failure.since if failure else None,
+                )
+            )
+        return report
 
     async def aclose(self) -> None:
         """Disconnect everything. Called once, on the way out."""
@@ -125,26 +186,39 @@ class DriverPool:
             # next pass and never cached as a failure — but reported only when the
             # reason changes, so a printer that stays off says so once.
             code = getattr(exc, "code", type(exc).__name__)
-            if self._last_failure.get(printer_id) != code:
+            previous = self._last_failure.get(printer_id)
+            # Compared on the code alone. Folding the timestamp into the comparison
+            # would make every pass look like a new reason — restoring the per-pass
+            # logging this dedupe exists to prevent, and resetting `since` on every
+            # tick, so an outage could never grow older than one interval.
+            if previous is None or previous.code != code:
                 logger.info(
                     "driver_unavailable", printer_id=printer_id, brand=printer.brand, code=code
                 )
-                self._last_failure[printer_id] = code
+                self._last_failure[printer_id] = _Failure(
+                    code=code, since=self._clock.now().isoformat()
+                )
+            self._connected_since.pop(printer_id, None)
             return
 
         self._drivers[printer_id] = driver
         self._fingerprints[printer_id] = fingerprint
+        self._connected_since[printer_id] = self._clock.now().isoformat()
         # Worth a line every time it happens: a connection coming back is news,
         # and a machine that reconnects repeatedly is a fault worth seeing.
-        recovered = self._last_failure.pop(printer_id, None)
+        failure = self._last_failure.pop(printer_id, None)
         logger.info(
-            "driver_connected", printer_id=printer_id, brand=printer.brand, recovered=recovered
+            "driver_connected",
+            printer_id=printer_id,
+            brand=printer.brand,
+            recovered=failure.code if failure else None,
         )
 
     async def _retire(self, printer_ids: set[str], *, forget: bool = False) -> None:
         for printer_id in printer_ids:
             driver = self._drivers.pop(printer_id, None)
             self._fingerprints.pop(printer_id, None)
+            self._connected_since.pop(printer_id, None)
             if forget:
                 # Left the fleet. Dropping the failure state means a machine
                 # re-registered later is reported again rather than staying silent.

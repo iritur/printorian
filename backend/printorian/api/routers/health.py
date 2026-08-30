@@ -7,10 +7,11 @@ that conflates them makes bad decisions:
   policy reads.
 * ``/health/ready`` — can this process *serve*? Names each dependency separately
   so an outage names its own cause.
-* ``/health/workers`` — is the farm's background work still happening? Deliberately
-  **not** part of readiness: a wedged sweep is not a reason to take the API out of
-  rotation or roll a release back, and folding it into readiness would do exactly
-  that. It is a monitoring signal, and it fails with 503 so an alert can key on it.
+* ``/health/workers`` — is the farm's background work still happening, and which
+  printers is it actually connected to? Deliberately **not** part of readiness: a
+  wedged sweep is not a reason to take the API out of rotation or roll a release
+  back, and folding it into readiness would do exactly that. It is a monitoring
+  signal, and it fails with 503 so an alert can key on it.
 
 All three are unauthenticated, which is what a container runtime and a monitoring
 probe need. They carry no farm data — dependency names, loop names and timestamps —
@@ -31,6 +32,7 @@ from printorian.contexts.fleet import retention
 from printorian.contexts.inventory import listings as inventory_listings
 from printorian.contexts.production import growth
 from printorian.core.db import wal_archiving_stalled
+from printorian.core.driver_health import DriverStates
 from printorian.core.heartbeat import Heartbeat
 
 router = APIRouter(tags=["health"])
@@ -130,18 +132,44 @@ async def ready(request: Request, response: Response) -> dict[str, Any]:
 
 @router.get("/health/workers")
 async def workers(request: Request, response: Response) -> dict[str, Any]:
-    """Whether each worker loop has swept within its own window.
+    """Whether each worker loop has swept, and which printers it is connected to.
 
     A beat is recorded at the *end* of a pass, so this distinguishes a loop that
     is working from one that is merely running — the distinction
     `deploy/compose.prod.yml` correctly refused to fake with a process check.
+
+    The drivers are reported here rather than in readiness because the API holds
+    no connection state of its own: the pool lives in the worker, which publishes
+    what it sees (`core.driver_health`). Per printer and never as a count — an
+    outage that cannot name its own cause is one somebody has to go and find.
     """
     heartbeat: Heartbeat = request.app.state.heartbeat
     report = await heartbeat.report()
+    driver_states: DriverStates = request.app.state.driver_states
+    drivers = await driver_states.report()
 
-    if not all(loop.is_healthy for loop in report):
+    # **Only the loops decide the status code.** A printer being switched off is a
+    # normal Tuesday on a farm, and letting it turn this endpoint red would leave
+    # the workers probe permanently failing — destroying the working-versus-wedged
+    # signal the endpoint exists for, and training whoever is on call to ignore
+    # it. An alert about a driver keys on `drivers.*.state` and `since` in the
+    # body instead.
+    healthy = all(loop.is_healthy for loop in report)
+    if not healthy:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return {
-        "status": "ok" if all(loop.is_healthy for loop in report) else "degraded",
+        "status": "ok" if healthy else "degraded",
         "loops": {loop.loop: {"state": loop.state, "last_beat": loop.last_beat} for loop in report},
+        # Empty means *nothing has been published* — no Redis, or a worker down
+        # longer than the roster's window. It does not mean the farm has no
+        # printers, and nothing downstream may read it as a fleet size.
+        "drivers": {
+            driver.printer_id: {
+                "name": driver.name,
+                "state": driver.state,
+                "code": driver.code,
+                "since": driver.since,
+            }
+            for driver in drivers
+        },
     }

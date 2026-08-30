@@ -53,7 +53,8 @@ NOT_A_SCREEN_CONSUMER: dict[str, str] = {
     "GET /health/workers": (
         "An operations probe. HANDOFF §2 records it as the honest liveness signal "
         "while there is no `/metrics` endpoint: it reads the beat each worker loop "
-        "writes at the *end* of a pass, so it separates wedged from working. "
+        "writes at the *end* of a pass, so it separates wedged from working, and "
+        "the per-printer driver state the worker publishes beside it. "
         "Surfacing that is Stage 5's job."
     ),
     "GET /settings": (

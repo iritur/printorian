@@ -28,6 +28,7 @@ from printorian.core import pagination
 from printorian.core.clock import FixedClock
 from printorian.core.config import Settings
 from printorian.core.db import Base
+from printorian.core.driver_health import CONNECTED, UNAVAILABLE, UNKNOWN, DriverHealth
 from printorian.core.events import EventBus
 from printorian.core.storage import InMemoryObjectStore
 from tests.conftest import wire_app
@@ -164,3 +165,101 @@ async def test_a_listing_past_its_paging_trigger_degrades_readiness(
     # request it is asked for. Taking the API out of rotation over a response that
     # has grown would make the check the outage.
     assert response.status_code == 200
+
+
+class _PublishedStates:
+    """Stands in for the worker's published readings, which the API only reads."""
+
+    def __init__(self, *drivers: DriverHealth) -> None:
+        self._drivers = list(drivers)
+
+    async def report(self) -> list[DriverHealth]:
+        return self._drivers
+
+
+def publish(client: AsyncClient, *drivers: DriverHealth) -> None:
+    """Put readings where the endpoint looks for them.
+
+    Reaching through the transport for the app because the fixture yields only the
+    client. The alternative — a second fixture returning the pair — would touch
+    every case in this file to answer one of them.
+    """
+    client._transport.app.state.driver_states = _PublishedStates(*drivers)  # type: ignore[attr-defined]
+
+
+async def test_the_workers_probe_names_each_driver_rather_than_counting_them(
+    client: AsyncClient,
+) -> None:
+    """A count cannot say which machine to walk over to.
+
+    The pool lives in the worker process, so the API reports what the worker
+    published (`core.driver_health`) instead of inventing a connection state it has
+    no way to observe.
+    """
+    publish(
+        client,
+        DriverHealth(printer_id="p1", name="P1S-01", state=CONNECTED, since="2026-03-02T09:00:00"),
+        DriverHealth(
+            printer_id="p2",
+            name="P1S-02",
+            state=UNAVAILABLE,
+            code="error.driver.unavailable",
+            since="2026-03-02T03:14:00",
+        ),
+        DriverHealth(printer_id="p3", name="P1S-03", state=UNKNOWN),
+    )
+
+    body = (await client.get("/health/workers")).json()
+
+    assert body["drivers"]["p1"] == {
+        "name": "P1S-01",
+        "state": CONNECTED,
+        "code": None,
+        "since": "2026-03-02T09:00:00",
+    }
+    assert body["drivers"]["p2"]["code"] == "error.driver.unavailable"
+    assert body["drivers"]["p2"]["since"] == "2026-03-02T03:14:00"
+    # Named by the worker and then not reported on again: not `ok`, not gone.
+    assert body["drivers"]["p3"]["state"] == UNKNOWN
+
+
+async def test_a_printer_that_is_switched_off_changes_neither_probe(
+    client: AsyncClient,
+) -> None:
+    """Two rules in one case, and both were in the issue.
+
+    Readiness must not see drivers at all — taking the API out of rotation because
+    one printer is unreachable turns a broken printer into a broken farm. And the
+    workers probe must not fail on one either, or it sits permanently red on any
+    farm with a machine switched off, which destroys the working-versus-wedged
+    signal it exists for.
+    """
+    before = await client.get("/health/workers")
+
+    publish(
+        client,
+        DriverHealth(
+            printer_id="p2", name="P1S-02", state=UNAVAILABLE, code="error.driver.unavailable"
+        ),
+    )
+    after = await client.get("/health/workers")
+    ready = await client.get("/health/ready")
+
+    # Whatever the loops make it, an unreachable printer does not move it.
+    assert after.status_code == before.status_code
+    assert after.json()["status"] == before.json()["status"]
+    assert after.json()["drivers"]["p2"]["state"] == UNAVAILABLE
+
+    assert ready.status_code == 200
+    assert "drivers" not in ready.json()["checks"]
+
+
+async def test_nothing_published_is_reported_as_nothing_published(
+    client: AsyncClient,
+) -> None:
+    """No Redis in the suite, so this is the real default: an empty map.
+
+    It must not be read as "this farm has no printers" — the roster is what the
+    worker observed, and an absent one means nobody has said anything yet.
+    """
+    assert (await client.get("/health/workers")).json()["drivers"] == {}
