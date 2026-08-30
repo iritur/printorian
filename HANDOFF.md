@@ -24,6 +24,39 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**The farm can now be asked which printers it is actually connected to**
+([#21](https://github.com/iritur/printorian/issues/21)). `/health/workers` grew a
+`drivers` key: one entry per printer the worker was asked to drive, with its
+state, the error code behind an `unavailable`, and when that state began. The
+worker publishes it (`core.driver_health`) down the same Redis-with-an-expiry
+channel the heartbeat uses, because the connection pool lives in the worker and
+the API holds no connection state of its own.
+
+> **The original filing's premise had already been corrected, and the gap
+> survived it.** ARCHITECTURE §10 says readiness must not report on drivers, and
+> that is right — the API cannot see a connection, so a check there would invent
+> one. But "which process owns the fact" is not an argument about whether the
+> fact should be observable, and a driver unreachable for six hours is still a
+> printer the farm believes it can dispatch to.
+>
+> **Two keys with two windows, and the difference is the design.** The readings
+> expire with the loop that writes them; the roster — the printers the worker
+> last said it was driving — is written afterwards and lives four times as long.
+> Without that gap a silent worker takes the roster with it and the report goes
+> quietly empty, which reads as "this farm has no printers". With it, the
+> readings lapse first and every printer the roster still names reports
+> `unknown`. That is the ADR-0007 case, and it has its own test.
+>
+> **No driver changes a status code**, and both halves of that were in the issue.
+> Not readiness, where one unreachable printer would take the whole API out of
+> rotation. And not `/health/workers` either: a farm with a machine switched off
+> is normal, and a probe that is permanently red is a probe nobody reads. Only
+> the loops decide the code; an alert about a driver keys on the body.
+>
+> **The roster is what the worker observed, never the `printers` table.** Reading
+> the table for it would report on machines this process never tried to reach —
+> root CLAUDE.md §1's denominator rule, in the one place it would have been
+> easiest to get wrong.
 **The SLA credit has a ledger, so a figure that left the farm can be checked**
 ([#75](https://github.com/iritur/printorian/issues/75)). Every movement of
 `orders.sla_credit` appends a row to the new `sla_credit_entries`, carrying the

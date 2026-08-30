@@ -40,6 +40,7 @@ from printorian.core.clock import SystemClock
 from printorian.core.config import Settings, get_settings
 from printorian.core.cpu import CpuGate
 from printorian.core.db import Database
+from printorian.core.driver_health import DriverStates
 from printorian.core.events import EventBus
 from printorian.core.heartbeat import Heartbeat
 from printorian.core.logging import configure_logging
@@ -89,6 +90,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # at `/health/workers` (`core.heartbeat`).
         app.state.heartbeat = Heartbeat(resolved.redis_url)
         await app.state.heartbeat.start()
+        # Same arrangement for the driver pool's state: the workers publish, this
+        # process reports it at `/health/workers` (`core.driver_health`).
+        app.state.driver_states = DriverStates(resolved.redis_url)
+        await app.state.driver_states.start()
 
         # The hub turns published events into WebSocket traffic. Attached here so
         # every event a request emits reaches watching clients in the same process.
@@ -113,6 +118,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if app.state.relay is not None:
                 await app.state.relay.aclose()
             await app.state.heartbeat.aclose()
+            await app.state.driver_states.aclose()
             await app.state.database.dispose()
 
     app = FastAPI(
