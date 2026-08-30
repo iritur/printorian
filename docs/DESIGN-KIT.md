@@ -182,12 +182,11 @@ Re-checked against the code; five of these were recorded as missing and are not.
 
 ## 4. Backend capability nothing consumes
 
-**This list has moved to the issue tracker.** Thirteen of the fourteen endpoints this section once carried now have consumers. The two that remain are tracked as:
+**This list has moved to the issue tracker.** Thirteen of the fourteen endpoints this section once carried now have consumers. The one that remains is tracked as:
 
 - [#38](https://github.com/iritur/printorian/issues/38) — **`GET /materials/{code}`**, the materials detail popup
-- [#40](https://github.com/iritur/printorian/issues/40) — **`RateSnapshotRecord`**, persisted per ADR-0020
 
-`TelemetrySample` was the headline entry here and no longer is: `metric_rollups` summarises it and `/fleet/metrics` serves it. `EstimateVariance` left the same way — `GET /jobs/variances` serves it and the order desk's «Пересмотр цены» panel reads it.
+`TelemetrySample` was the headline entry here and no longer is: `metric_rollups` summarises it and `/fleet/metrics` serves it. `EstimateVariance` left the same way — `GET /jobs/variances` serves it and the order desk's «Пересмотр цены» panel reads it. So did `RateSnapshotRecord`: `GET /orders/{order_id}/rate-snapshot` serves it and «Тарифы заказа» reads it.
 
 ## 5. Order to build the rest in
 

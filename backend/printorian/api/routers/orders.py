@@ -34,7 +34,9 @@ from printorian.contexts.ordering import (
     OrderTable,
     OrderView,
     PlaceOrder,
+    RateSnapshotView,
     RepriceLine,
+    rate_snapshot_for,
 )
 from printorian.contexts.pricing import (
     price,
@@ -161,6 +163,32 @@ async def get_order(order_id: EntityId, actor: CurrentActor, ordering: Ordering)
     raise PermissionDeniedError(
         "error.permission_denied", permission=Permission.VIEW_ALL_ORDERS.value
     )
+
+
+@router.get(
+    "/{order_id}/rate-snapshot",
+    dependencies=[Depends(requires(Permission.VIEW_FINANCIALS))],
+)
+async def order_rate_snapshot(order_id: EntityId, db: DbSession) -> RateSnapshotView:
+    """Every rate this order's price was built from, as it was pinned at checkout.
+
+    ADR-0020's guarantee, made visible. The settings audit answers *what changed
+    and when*; this answers what **this order** was priced against, which is the
+    question a customer asking "why does this cost more than last month's" is
+    actually asking. Comparing the `id` between two orders answers it outright —
+    the id is the content hash, so equal ids mean the rates did not move and the
+    difference is in the configuration.
+
+    `VIEW_FINANCIALS`, and not one of the production permissions: a rate snapshot
+    is money end to end, and CLAUDE.md §1 keeps that permission separate for
+    exactly this kind of response.
+
+    An order that pinned nothing — one placed before snapshots were persisted — is
+    a 404 carrying `error.ordering.rates_not_recorded`, deliberately distinct from
+    the code for an order that does not exist. The screen renders "not recorded";
+    a table of zeros would be a claim about rates nobody ever charged (ADR-0007).
+    """
+    return await rate_snapshot_for(db, order_id)
 
 
 @router.get("/{order_id}/queue")
