@@ -222,9 +222,11 @@ def _covers(spec_path: str, literal: str) -> bool:
     in `ParcelDetail.tsx` is one call site covering nine endpoints. An OpenAPI
     `{param}` may **not**: it has to line up with a `{}` and never with an arbitrary
     literal. Read symmetrically, `/materials/recommend` "consumes"
-    `/materials/{code}` — which deletes the one endpoint §4 actually names from the
-    derived set and leaves this gate green while proving nothing. That false
-    positive happened while this file was being written.
+    `/materials/{code}` — which deleted the only endpoint §4 then named from the
+    derived set and left this gate green while proving nothing. That false positive
+    happened while this file was being written. `/materials/{code}` has a real
+    consumer now (#38) and the rule is unchanged: it is about the shape of the two
+    wildcards, not about that one route.
     """
     spec = spec_path.strip("/").split("/")
     seen = literal.strip("/").split("/")
