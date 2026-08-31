@@ -793,6 +793,14 @@ export const ru = {
   'materials.color_hex': 'Цвет',
   'materials.density': 'Плотность, г/см³',
   'materials.price_gram': 'Цена за грамм',
+  // The detail window's «Свойства» panel. These five ride in
+  // `GET /materials/{code}` and in no table column.
+  'materials.properties': 'Свойства',
+  'materials.tensile': 'Прочность на разрыв, МПа',
+  'materials.hdt': 'Температура размягчения, °C',
+  'materials.flexible': 'Гибкий',
+  'materials.outdoor': 'Пригоден для улицы',
+  'materials.purchase_price': 'Закупка за 1000 м',
 
   // The scenario's two location kinds: a storage place, or a printer's AMS slot.
   // Assembled from parts here — the backend never sends prose (ADR-0012).
@@ -845,6 +853,9 @@ export const ru = {
   'common.cancel': 'Отмена',
   'common.confirm': 'Подтвердить',
   'common.yes': 'да',
+  // The counterpart `common.yes` never had, because until now nothing rendered a
+  // declared `false` — a null figure is an em dash and is a different sentence.
+  'common.no': 'нет',
   'common.saved': 'Сохранено',
   // -- settings screen (design/settings.html) ----------------------------
   'settings.title': 'Настройки',
@@ -1968,6 +1979,12 @@ export const en: Messages = {
   'materials.color_hex': 'Colour',
   'materials.density': 'Density, g/cm³',
   'materials.price_gram': 'Price per gram',
+  'materials.properties': 'Properties',
+  'materials.tensile': 'Tensile strength, MPa',
+  'materials.hdt': 'Heat deflection, °C',
+  'materials.flexible': 'Flexible',
+  'materials.outdoor': 'Outdoor safe',
+  'materials.purchase_price': 'Purchase per 1000 m',
 
   'location.stock': 'In stock',
   'location.shelf': 'Shelf {shelf}',
@@ -2015,6 +2032,7 @@ export const en: Messages = {
   'common.cancel': 'Cancel',
   'common.confirm': 'Confirm',
   'common.yes': 'yes',
+  'common.no': 'no',
   'common.saved': 'Saved',
   // -- settings screen (design/settings.html) ----------------------------
   'settings.title': 'Settings',
