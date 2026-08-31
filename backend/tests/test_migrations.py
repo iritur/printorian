@@ -1,8 +1,11 @@
 """Schema truth: the real migrations, against real PostgreSQL.
 
-Everything else in the suite runs on SQLite for speed. This file is where the
-schema is actually verified, because Alembic is the only mechanism that will ever
-touch a production database (ADR-0008).
+This file is where the **migrations** are verified, because Alembic is the only
+mechanism that will ever touch a production database (ADR-0008), and it builds its
+own scratch database to do it. The rest of the suite runs against a schema built
+from the ORM metadata — on real PostgreSQL since ADR-0021, not on SQLite as this
+paragraph said until issue #47 went looking; the claim mattered, because a suite on
+SQLite is a suite with no foreign keys.
 
 Skipped automatically when no PostgreSQL is reachable, so ``pytest`` works with no
 Docker. CI always has one, so these never silently stop running there.
