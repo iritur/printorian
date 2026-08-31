@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends
 from printorian.api.deps import AppClock, CurrentActor, DbSession, FarmSettings, Identity, requires
 from printorian.contexts.fleet import retention
 from printorian.contexts.identity import Permission
+from printorian.contexts.production import clear_wait_list
 from printorian.contexts.settings import SectionView, SettingChangeView, SettingUpdate, SettingView
 
 router = APIRouter(
@@ -126,3 +127,27 @@ async def drop_telemetry(db: DbSession, clock: AppClock, settings: FarmSettings)
         db, now=clock.now(), retention_days=retention_days
     )
     return {"dropped": len(dropped)}
+
+
+@router.post("/clear-wait-list")
+async def clear_waiting(db: DbSession, actor: CurrentActor) -> dict[str, int]:
+    """Empty the wait list — the kit's «Очистить лист ожидания».
+
+    Shares `production.clear_wait_list` with the planner's own per-job replace, so
+    "remove a wait-list row" means one thing in the farm rather than two; the same
+    arrangement `drop-telemetry` has with the maintenance worker.
+
+    Audited per row like `reset-rates`, but into the *job journal* rather than the
+    settings audit: no setting changed, and the thing actually destroyed is each
+    job's recorded reason for waiting. `contexts.production.wait_list` carries the
+    argument, including why this does not put the jobs back to «Подготовка» the way
+    the kit's hint says it does.
+
+    Gated on `MANAGE_SETTINGS` alone, like the other two, because the whole router
+    is. That is the screen's gate rather than a claim about production, and
+    `docs/DESIGN-KIT.md` §2.1 already carries the per-section split as deferred.
+
+    The count is what was removed, never what the list is thought to hold: an empty
+    list answers `0` because nothing was there, and that is a measurement.
+    """
+    return {"cleared": await clear_wait_list(db, by=actor.user_id)}

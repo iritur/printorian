@@ -75,9 +75,15 @@ One control per `kind`, all built — `integer` 31 · `decimal` 30 · `boolean` 
 `finance.yookassa_secret_key`, is write-only: stored encrypted and never read
 back. Editing a row marks it dirty, reveals the previous value, offers a per-row
 revert and counts into a save bar; each save writes an audited «было · стало»
-that `GET /settings/history` serves back under **Обслуживание системы**. Two of
-the kit's irreversible operations are built and guarded by typing the farm name
-first — reset rates and drop telemetry.
+that `GET /settings/history` serves back under **Обслуживание системы**. All three
+of the kit's irreversible operations are built and guarded by typing the farm name
+first — reset rates, drop telemetry and clear the wait list. The third one's hint
+is the one place the screen deliberately does *not* say what the kit says: the kit
+promises waiting orders return to «Подготовка», and `production.policies` has no
+such transition — `READY` goes only to `ASSIGNED` or `CANCELLED`. The operation
+removes the recorded reasons for waiting and leaves the jobs ready, the button says
+so, and which of the two is wrong is a question for a person rather than something
+the code should guess (`contexts/production/wait_list.py`).
 
 **The store is read at the edge, not only stored.** Five resolutions run per
 request or per worker pass rather than once at process start: `resolve_rates` and
@@ -96,14 +102,12 @@ own `ok` / `degraded` / `failed` distinction kept intact and a fourth state,
 rather than served: `SECTION_ORDER` has fourteen entries because a read-only page
 has nothing for a settings catalogue to carry, and that is still the right call.
 
-**What is still owed.** The settings that are *tables* rather than scalars, and two
-behaviours the screen displays without wiring:
+**What is still owed.** The settings that are *tables* rather than scalars, and one
+behaviour the screen displays without wiring:
 
 - [#29](https://github.com/iritur/printorian/issues/29) — the six table-valued
   sections. The volume ladder and the customer tiers are built and are the
   pattern to copy, not to reinvent.
-- [#31](https://github.com/iritur/printorian/issues/31) —
-  «Очистить лист ожидания», the last unbuilt irreversible operation.
 - [#32](https://github.com/iritur/printorian/issues/32) — worker loop intervals
   still take effect only on restart.
 

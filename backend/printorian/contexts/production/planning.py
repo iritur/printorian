@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from printorian.contexts.catalog import PreparedPlate
 from printorian.contexts.fleet import JobRequirements
 from printorian.contexts.production import events as job_events
+from printorian.contexts.production import wait_list
 from printorian.contexts.production.journal import record_event
 from printorian.contexts.production.models import AssignmentRecord, PrintJob, WaitListEntry
 from printorian.contexts.production.policies import (
@@ -183,14 +184,13 @@ async def _refresh_wait_list(
 
     A job is either waiting or it is not. Appending would let the cabinet show a
     customer a stale reason beside a current one.
+
+    The delete goes through `wait_list.discard` rather than being written out
+    here, because the settings screen's «Очистить лист ожидания» removes rows from
+    this same table and two hand-written deletes to one irreversible act are how
+    the two stop agreeing about what removing a row means.
     """
-    for entry in result.wait_list:
-        existing = await db.scalar(
-            select(WaitListEntry).where(WaitListEntry.job_id == by_id[entry.job_id].id)
-        )
-        if existing is not None:
-            await db.delete(existing)
-    await db.flush()
+    await wait_list.discard(db, job_ids=[by_id[entry.job_id].id for entry in result.wait_list])
 
     for entry in result.wait_list:
         job = by_id[entry.job_id]

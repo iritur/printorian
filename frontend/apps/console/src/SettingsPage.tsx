@@ -954,7 +954,15 @@ function formatCell(value: unknown): string {
   return String(value)
 }
 
-/** The kit's «Необратимые операции» — one of them, the safe one, is wired. */
+/**
+ * The kit's «Необратимые операции» — all three of them, now that clearing the
+ * wait list exists.
+ *
+ * Every one goes through `ConfirmAction` rather than carrying its own confirm,
+ * which is the point: the gate is one component, so the blank-farm-name hole that
+ * armed «Подтвердить» on an empty box was closed in one place for all three, and a
+ * fourth operation cannot be added without it.
+ */
 function IrreversibleOps(props: { locale: Locale; farmName: string; onDone: () => void }) {
   const t = (key: MessageKey) => translate(props.locale, key)
 
@@ -986,6 +994,18 @@ function IrreversibleOps(props: { locale: Locale; farmName: string; onDone: () =
           actionLabel={t('settings.irreversible.drop')}
           onRun={async () => {
             await api.post('/settings/drop-telemetry', undefined)
+            props.onDone()
+          }}
+        />
+        <hr className="hv-hr" />
+        <ConfirmAction
+          locale={props.locale}
+          farmName={props.farmName}
+          name={t('settings.irreversible.clear_wait_list')}
+          hint={t('settings.irreversible.clear_wait_list.hint')}
+          actionLabel={t('settings.irreversible.clear')}
+          onRun={async () => {
+            await api.post('/settings/clear-wait-list', undefined)
             props.onDone()
           }}
         />

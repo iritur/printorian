@@ -27,6 +27,44 @@ tree as it now stands, and the distinction is recorded rather than smoothed over
 because "the suite passed" and "the suite passed on *this* tree" are the two
 claims this file has already been corrected for confusing once.
 
+**The third irreversible operation exists, and it shares its delete with the
+planner** ([#31](https://github.com/iritur/printorian/issues/31)).
+`POST /settings/clear-wait-list` empties the wait list, audited per row into each
+job's own journal. Every removal of a `wait_list_entries` row now goes through
+`contexts/production/wait_list.py`: the planner's per-job replace calls
+`discard`, the owner's «Очистить» calls `clear_wait_list`, and the arrangement is
+the one `drop-telemetry` already has with the maintenance worker — one function,
+so «сделать сейчас» and the scheduled path cannot come to mean different things.
+
+> **The kit's hint describes a transition the state machine refuses, and it was
+> not implemented.** `design/settings.html` says clearing returns waiting orders
+> to «Подготовка». `production.policies.TRANSITIONS` gives `READY` only
+> `ASSIGNED` and `CANCELLED`, and the note beside `ON_HOLD` says why nothing goes
+> back to `PENDING` — the plate exists, and re-slicing it would not be the fix. So
+> the operation removes the *record of the wait* and leaves the job where it was,
+> the hint on the button says that instead, and
+> `test_clearing_the_wait_list_does_not_move_the_job` is what fails if somebody
+> later implements the kit literally. Which of the two is wrong is a question for
+> a person; the code does not guess.
+>
+> **What is irreversible here is the reasons, not the queue.** A still-blocked
+> job is written back onto the list by the next planning pass seconds later. Why
+> it was stuck, what was blocking it and when it was predicted to start are held
+> nowhere else, so `clear_wait_list` copies each row into the job journal before
+> dropping it — an audit reading only "the list was cleared" would answer none of
+> the questions the list was answering. `by` travels in `JobEvent.details`
+> because that table has no actor column, unlike `OrderEvent`; a migration on the
+> busiest history table for one caller was the alternative and was not taken.
+>
+> **Three mutations were applied, run and reverted.** Deleting the journal write
+> left «cleared: 1» and a green endpoint — the audit test failed. Reporting the
+> rows without deleting them left the body reading `{"cleared": 1}` with the row
+> still in the table, which is precisely the 200-proves-nothing shape CLAUDE.md §2
+> warns about, and only the read-back assertion noticed. Reopening the blank-farm-
+> name hole in `ConfirmAction` failed the wait-list confirm test as well as the
+> reset-rates one, which is the evidence that the third operation went through the
+> shared gate rather than growing its own.
+
 **The delete rules are held to a test, and one way this suite can lie is now
 written down** ([#47](https://github.com/iritur/printorian/issues/47)).
 `backend/tests/test_referential_integrity.py` is the inventory — all forty-eight
