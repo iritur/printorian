@@ -890,6 +890,90 @@ export const ru = {
   'settings.section.diagnostics': 'Диагностика',
   'settings.section.maintenance': 'Обслуживание системы',
 
+  // -- diagnostics (design/settings.html §14) ----------------------------
+  // Read-only: nothing in this section is a setting. Every figure is read from
+  // `/health/ready` or `/health/workers`, and «Не измерено» is a first-class
+  // answer here rather than a fallback — a check nobody could reach is not a
+  // check that passed (CLAUDE.md §1).
+  'settings.diagnostics.checks': 'Проверки готовности',
+  'settings.diagnostics.loops': 'Фоновые циклы',
+  'settings.diagnostics.drivers': 'Драйверы принтеров',
+  'settings.diagnostics.updated': 'ОБНОВЛЕНО {at}',
+  'settings.diagnostics.latency': 'ОТВЕТ {ms} МС',
+  'settings.diagnostics.foot': 'ПРОВЕРКИ ВЫПОЛНЯЮТСЯ ПО ЗАПРОСУ, НЕ КЭШИРУЮТСЯ',
+  'settings.diagnostics.rerun': 'Прогнать заново',
+  'settings.diagnostics.probing': 'Опрашиваем…',
+  'settings.diagnostics.no_answer':
+    'Ответа нет. Состояние подсистем не измерено — это не то же самое, что «всё в порядке».',
+  'settings.diagnostics.no_checks': 'Сервер ответил, но не назвал ни одной проверки.',
+  'settings.diagnostics.no_loops': 'Сервер ответил, но не назвал ни одного цикла.',
+  'settings.diagnostics.no_drivers':
+    'О драйверах ничего не публиковалось. Это не значит, что у фермы нет принтеров — только что о них никто не отчитался.',
+
+  'settings.diagnostics.stat.readiness': 'Готовность',
+  'settings.diagnostics.stat.checks': '{ok} ИЗ {total} ПРОВЕРОК',
+  'settings.diagnostics.stat.loops': 'Циклы в работе',
+  'settings.diagnostics.stat.loops_of': 'ИЗ {total} НАБЛЮДАЕМЫХ',
+  'settings.diagnostics.stat.drivers': 'Принтеры на связи',
+  //: «Наблюдаемых», не «опубликованных»: принтер остаётся в реестре и после
+  //: того, как его показание протухло, поэтому знаменателем служит число тех,
+  //: чьё состояние действительно измерено.
+  'settings.diagnostics.stat.drivers_of': 'ИЗ {total} НАБЛЮДАЕМЫХ',
+  'settings.diagnostics.stat.unmeasured': 'НЕ ИЗМЕРЕНО',
+  //: Хвост к знаменателю: сколько строк не измерено вовсе. Без него ферма, у
+  //: которой пять циклов из семи нечитаемы, выглядит как ферма с пятью циклами.
+  'settings.diagnostics.stat.also_unmeasured': '{unknown} НЕ ИЗМЕРЕНО',
+
+  // Three vocabularies for the same four verdicts: a dependency is «в норме», a
+  // loop «работает», a printer «на связи». «Деградация» is deliberately its own
+  // word and not a shade of «Сбой» — it means the farm is serving and some
+  // guarantee behind it has stopped holding.
+  'settings.diagnostics.verdict.ok': 'В норме',
+  'settings.diagnostics.verdict.degraded': 'Деградация',
+  'settings.diagnostics.verdict.failed': 'Сбой',
+  'settings.diagnostics.verdict.unknown': 'Не измерено',
+  'settings.diagnostics.beat.ok': 'Работает',
+  'settings.diagnostics.beat.degraded': 'Деградация',
+  'settings.diagnostics.beat.failed': 'Не отвечает',
+  'settings.diagnostics.beat.unknown': 'Не измерено',
+  'settings.diagnostics.link.ok': 'На связи',
+  'settings.diagnostics.link.degraded': 'Деградация',
+  'settings.diagnostics.link.failed': 'Недоступен',
+  'settings.diagnostics.link.unknown': 'Не измерено',
+
+  // One entry per check `/health/ready` can report. A name with no entry falls
+  // back to the raw id rather than vanishing, so a check added on the server
+  // shows up unnamed instead of not at all.
+  'settings.diagnostics.check.database': 'База данных',
+  'settings.diagnostics.check.database.hint': 'Соединение с PostgreSQL и запрос к нему.',
+  'settings.diagnostics.check.telemetry_partitions': 'Разделы телеметрии',
+  'settings.diagnostics.check.telemetry_partitions.hint':
+    'Замеры, которые не удалось отнести к месяцу. Не ноль — нарезка разделов отстаёт, и такие строки не удалит хранение.',
+  'settings.diagnostics.check.assignment_records': 'Журнал назначений',
+  'settings.diagnostics.check.assignment_records.hint':
+    'Таблица против порога ADR-0018. Отметка ставится один раз и не гаснет сама — её снимает разбиение таблицы.',
+  'settings.diagnostics.check.printers_listing': 'Список принтеров',
+  'settings.diagnostics.check.printers_listing.hint':
+    'Список отдаётся целиком, без страниц. Деградация — он перерос предел, за которым это перестаёт быть безопасным.',
+  'settings.diagnostics.check.materials_listing': 'Список материалов',
+  'settings.diagnostics.check.materials_listing.hint':
+    'То же для материалов, считая живые катушки внутри спецификаций.',
+  'settings.diagnostics.check.wal_archiving': 'Архивация WAL',
+  'settings.diagnostics.check.wal_archiving.hint':
+    'Деградация, а не сбой: ферма обслуживает запросы, а гарантия резервной копии перестала держаться.',
+  'settings.diagnostics.check.event_relay': 'Ретранслятор событий',
+  'settings.diagnostics.check.event_relay.hint':
+    'Доставка событий воркеров в живые доски. Без него API работает, доски молчат.',
+
+  // The worker loops, in the order `core.heartbeat.LOOPS` names them.
+  'settings.diagnostics.loop.intake': 'Приём оплаченных заказов',
+  'settings.diagnostics.loop.scheduler': 'Планировщик',
+  'settings.diagnostics.loop.telemetry': 'Опрос телеметрии',
+  'settings.diagnostics.loop.sla': 'Обход SLA',
+  'settings.diagnostics.loop.postproduction': 'Постобработка',
+  'settings.diagnostics.loop.packaging': 'Упаковка',
+  'settings.diagnostics.loop.maintenance': 'Обслуживание и хранение',
+
   // -- general
   'settings.field.general.farm_name': 'Название фермы',
   'settings.field.general.farm_name.hint': 'Выводится в письмах, счетах и на экране цеха.',
@@ -1187,6 +1271,7 @@ export const ru = {
   'settings.section.notify.desc': 'Матрица «событие × канал». Строки — то, что происходит в системе; столбцы — куда об этом сообщать.',
   'settings.section.security.desc': 'Сессии, пароли и ключи API. Права проверяются на сервере.',
   'settings.section.integrations.desc': 'Внешние системы, от которых зависит ферма. Каждая показывает своё фактическое состояние.',
+  'settings.section.diagnostics.desc': 'Фактическое состояние подсистем, прочитанное у самой фермы. Ничего из этого не настраивается — раздел показывает, что система думает о себе прямо сейчас.',
   'settings.section.maintenance.desc': 'Резервные копии, хранение данных и необратимые операции.',
   'settings.group.general.farm': 'Ферма',
   'settings.group.general.display': 'Представление',
@@ -2067,6 +2152,73 @@ export const en: Messages = {
   'settings.section.diagnostics': 'Diagnostics',
   'settings.section.maintenance': 'System maintenance',
 
+  // -- diagnostics (design/settings.html §14) ----------------------------
+  'settings.diagnostics.checks': 'Readiness checks',
+  'settings.diagnostics.loops': 'Background loops',
+  'settings.diagnostics.drivers': 'Printer drivers',
+  'settings.diagnostics.updated': 'READ AT {at}',
+  'settings.diagnostics.latency': 'ANSWERED IN {ms} MS',
+  'settings.diagnostics.foot': 'CHECKS RUN ON REQUEST, NOTHING IS CACHED',
+  'settings.diagnostics.rerun': 'Run again',
+  'settings.diagnostics.probing': 'Probing…',
+  'settings.diagnostics.no_answer':
+    'Nothing answered. The subsystems were not measured — which is not the same as being fine.',
+  'settings.diagnostics.no_checks': 'The server answered and named no checks.',
+  'settings.diagnostics.no_loops': 'The server answered and named no loops.',
+  'settings.diagnostics.no_drivers':
+    'Nothing has been published about the drivers. It does not mean the farm has no printers — only that nobody reported on them.',
+
+  'settings.diagnostics.stat.readiness': 'Readiness',
+  'settings.diagnostics.stat.checks': '{ok} OF {total} CHECKS',
+  'settings.diagnostics.stat.loops': 'Loops sweeping',
+  'settings.diagnostics.stat.loops_of': 'OF {total} OBSERVED',
+  'settings.diagnostics.stat.drivers': 'Printers connected',
+  'settings.diagnostics.stat.drivers_of': 'OF {total} OBSERVED',
+  'settings.diagnostics.stat.unmeasured': 'NOT MEASURED',
+  'settings.diagnostics.stat.also_unmeasured': '{unknown} NOT MEASURED',
+
+  'settings.diagnostics.verdict.ok': 'Healthy',
+  'settings.diagnostics.verdict.degraded': 'Degraded',
+  'settings.diagnostics.verdict.failed': 'Failed',
+  'settings.diagnostics.verdict.unknown': 'Not measured',
+  'settings.diagnostics.beat.ok': 'Sweeping',
+  'settings.diagnostics.beat.degraded': 'Degraded',
+  'settings.diagnostics.beat.failed': 'Not beating',
+  'settings.diagnostics.beat.unknown': 'Not measured',
+  'settings.diagnostics.link.ok': 'Connected',
+  'settings.diagnostics.link.degraded': 'Degraded',
+  'settings.diagnostics.link.failed': 'Unreachable',
+  'settings.diagnostics.link.unknown': 'Not measured',
+
+  'settings.diagnostics.check.database': 'Database',
+  'settings.diagnostics.check.database.hint': 'The PostgreSQL connection, and a query over it.',
+  'settings.diagnostics.check.telemetry_partitions': 'Telemetry partitions',
+  'settings.diagnostics.check.telemetry_partitions.hint':
+    'Samples that could not be routed to a month. Non-zero means partition provisioning has fallen behind, and retention cannot drop those rows.',
+  'settings.diagnostics.check.assignment_records': 'Assignment records',
+  'settings.diagnostics.check.assignment_records.hint':
+    'The table against the threshold ADR-0018 set. Marked once and does not clear on its own — partitioning the table is what clears it.',
+  'settings.diagnostics.check.printers_listing': 'Printers listing',
+  'settings.diagnostics.check.printers_listing.hint':
+    'The listing is served whole, unpaged. Degraded means it has outgrown the size at which that stays safe.',
+  'settings.diagnostics.check.materials_listing': 'Materials listing',
+  'settings.diagnostics.check.materials_listing.hint':
+    'The same for materials, counting the live lots nested inside each spec.',
+  'settings.diagnostics.check.wal_archiving': 'WAL archiving',
+  'settings.diagnostics.check.wal_archiving.hint':
+    'Degraded rather than failed: the farm serves every request while the backup guarantee behind it has stopped holding.',
+  'settings.diagnostics.check.event_relay': 'Event relay',
+  'settings.diagnostics.check.event_relay.hint':
+    'Worker events reaching the live boards. Without it the API serves and the boards go quiet.',
+
+  'settings.diagnostics.loop.intake': 'Paid-order intake',
+  'settings.diagnostics.loop.scheduler': 'Scheduler',
+  'settings.diagnostics.loop.telemetry': 'Telemetry poll',
+  'settings.diagnostics.loop.sla': 'SLA sweep',
+  'settings.diagnostics.loop.postproduction': 'Post-processing',
+  'settings.diagnostics.loop.packaging': 'Packaging',
+  'settings.diagnostics.loop.maintenance': 'Maintenance and retention',
+
   // -- general
   'settings.field.general.farm_name': 'Farm name',
   'settings.field.general.farm_name.hint': 'Shown in emails, invoices and on the shop-floor screen.',
@@ -2364,6 +2516,7 @@ export const en: Messages = {
   'settings.section.notify.desc': 'The «event × channel» matrix. Rows are what happens; columns are where it is reported.',
   'settings.section.security.desc': 'Sessions, passwords and API keys. Permissions are enforced server-side.',
   'settings.section.integrations.desc': 'The external systems the farm depends on. Each shows its actual state, not its settings.',
+  'settings.section.diagnostics.desc': 'The actual state of the subsystems, read from the farm itself. Nothing here is a setting — the section shows what the system thinks of itself right now.',
   'settings.section.maintenance.desc': 'Backups, data retention and irreversible operations.',
   'settings.group.general.farm': 'Farm',
   'settings.group.general.display': 'Presentation',

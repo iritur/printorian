@@ -7,14 +7,23 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-31 · 1 329 backend tests collected and 232 frontend tests, with
-all ten gates green. The backend suite was run end to end **in CI** on each of the
-five older pull requests below — about six minutes there and about ninety on a
-Windows workstation, so locally the six backend gates and the tests touching each
-change were run instead, and the CI job is the full-suite evidence. What was *not*
-re-run locally in this session: the complete backend suite in one pass. The counts
-above are `pytest --collect-only` and the frontend `vitest` total, not a claim
-about a local green run.
+**As of:** 2026-08-31 · 1 329 backend tests collected and 249 frontend tests, and
+**not** all ten gates green on this branch. The diagnostics panel is frontend-only:
+its four frontend gates ran and no backend gate did, which the paragraph below
+spells out. The backend suite was run end to end **in CI** on each of the six
+older pull requests below — about six minutes there against the same PostgreSQL,
+about ninety on a Windows workstation — so locally the six backend gates and the
+tests touching each change were run instead, and the CI job is the full-suite
+evidence. The backend count above is carried forward from the previous entry and
+was **not** re-measured here; the frontend count was, on the merged tree.
+
+The most recent entry below — the diagnostics panel — is frontend-only. Its four
+frontend gates were each run separately after `main` was merged in, and each
+printed `exit=0`: `typecheck`, `lint`, `test` (249 passed across 23 files) and
+`build`. **No backend gate was run locally for it**, because nothing under
+`backend/` changed. CI is the evidence for that half, and on this branch it is
+real rather than assumed: every check passed before the merge commit, the backend
+job and the image release gate included.
 
 The materials-popup change is the sixth entry in §1 and is not one of those five;
 its evidence is narrower too. The four frontend gates were run locally and are
@@ -36,6 +45,73 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**The farm can now be asked what it thinks of itself**
+([#30](https://github.com/iritur/printorian/issues/30)). The settings screen grew
+the kit's fourteenth section, «Диагностика», and it is the one section where
+nothing is a setting: `/health/ready`, `/health/workers` and the driver roster,
+drawn as `.hv-health` rows with the backend's own `ok` / `degraded` / `failed`
+distinction kept intact. The signals have been real for a while — a beat is
+recorded at the *end* of a pass, so a wedged loop is distinguishable from a
+running one — and until now their only consumer was a person with `curl`. It is
+**not** a substitute for Stage 5 monitoring and should not be argued as one: a
+dashboard somebody has to open is not an alert.
+
+> **`api.get` could not be used, and that is the whole shape of the file.** Both
+> endpoints answer **503 with a full body** when something is wrong — readiness
+> when a check has failed, workers whenever a loop is not beating — and
+> `ApiClient` throws on any non-2xx, funnelling the body through `readErrorBody`,
+> which keeps only `{code}`-shaped payloads and discards the rest. Going through
+> it would have blanked the panel in precisely the state it exists to explain.
+> `DiagnosticsPanel` therefore probes with a bare `fetch` and reads the body
+> whatever the status code was. There is a test whose only job is to notice.
+>
+> **A fourth state exists, and it is the point.** `unknown` is not a backend
+> verdict: it is what the panel says when it could not measure — the probe did
+> not answer, the roster names a printer whose reading has lapsed, or the value
+> is one this build has never heard of. The mapping is a **whitelist**, so a
+> verdict added on the server tomorrow renders grey and unnamed rather than green
+> and wrong. A `!== 'failed'` would have been the flattering error CLAUDE.md §1
+> is about, and there is a mutation test for exactly that.
+>
+> **`degraded` says a different word, not only a different colour.** `paused`
+> (amber) against `error` (red) is the visual half; the pill's text is the half
+> that survives a reader who cannot separate the two. The distinction is
+> load-bearing — `wal_archiving` degraded means every request is being served and
+> the backup guarantee behind it has stopped holding.
+>
+> **Every denominator is what answered.** «1 из 2 проверок» is counted from the
+> checks the probe returned, because `event_relay` is reported only where a relay
+> is configured and a fixed total would have left a deployment without one
+> permanently reading one check short. The same rule is why an empty driver
+> roster gets its own sentence rather than a blank list: `core.driver_health` is
+> explicit that empty means *nothing was published*, and a blank panel there
+> would have said "this farm has no printers". **And the numerator over it is
+> withheld when nothing answered.** A row whose verdict is `unknown` was not a
+> reading, so it counts on neither side of the fraction: `Heartbeat.report()`
+> returns all seven loops with `state="unknown"` when the store cannot be read,
+> and a tile keyed on the length of that list drew «0 из 7 циклов» — seven loops
+> reported stopped, on the evidence that nobody looked. It now reads an em dash
+> over «НЕ ИЗМЕРЕНО», and a partly-measured group carries its shortfall
+> («ИЗ 2 НАБЛЮДАЕМЫХ · 1 НЕ ИЗМЕРЕНО») so that all-fine, partly-known and
+> measured-nothing stay three different things on the tile.
+>
+> **Two of the kit's four stat tiles were dropped rather than filled.** Nothing
+> in the system measures uptime or the event-queue depth, and a tile reading
+> `0 events queued` on a farm whose relay is down is an invented number with a
+> nicer font. «Версии» and «Журнал» are absent for the same reason — no endpoint
+> serves either.
+>
+> **The tab is inserted by the console, not served.** `SECTION_ORDER` carries
+> fourteen sections where the kit's rail draws fifteen, because a read-only page
+> has nothing for a settings *catalogue* to describe — that is still right, and
+> it left the rail one entry short. The rail's own length is now what the
+> «Разделы» count reports, and the section number in each heading is read from
+> the rail, so «Обслуживание системы» is section 15 as the kit has it rather than
+> 14. The tab is in the rail as soon as that load has *settled*, whatever it
+> settled as: `GET /settings/sections` reads the database, so gating it on the
+> catalogue hid «Диагностика» in exactly the outage it explains, and a failed
+> catalogue now leaves the diagnostics tab standing alone rather than an empty
+> rail under an error banner.
 **DESIGN-KIT §4 is empty for the first time, and the materials popup is why**
 ([#38](https://github.com/iritur/printorian/issues/38)). `GET /materials/{code}`
 was the last endpoint the API served that nothing called. The issue allowed either
@@ -471,8 +547,8 @@ is a separate audited «было · стало», shown in «Обслужива�
 > tiers' discount and margin override reach the engine through `resolve_tiers()`,
 > while the loyalty `from_spend` thresholds that *earn* a tier stay in
 > `loyalty.py`. The rest — maintenance intervals, zones, event matrix, API keys,
-> webhooks — and the diagnostics panel are **not built** — see §3. Two of the three
-> irreversible operations are wired: `POST /settings/reset-rates` drops every
+> webhooks — are **not built** — see §3; the diagnostics panel now is, above.
+> Two of the three irreversible operations are wired: `POST /settings/reset-rates` drops every
 > `pricing.*` override (audited per row), and `POST /settings/drop-telemetry` runs
 > retention now through the **shared clamp** — `retention.drop_telemetry_past_retention`,
 > which the maintenance worker also uses, so «drop now» and the scheduled sweep
