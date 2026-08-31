@@ -285,6 +285,49 @@ describe('the diagnostics section', () => {
     expect(await screen.findByText('База данных')).toBeInTheDocument()
     expect(screen.getByText('Проверки готовности')).toBeInTheDocument()
   })
+
+  it('is still reachable when the settings catalogue itself does not load', async () => {
+    // The state worth opening this panel in is the state that breaks the screen
+    // around it. `GET /settings/sections` reads the database, so when
+    // `/health/ready` answers 503 with `database: failed` the catalogue does not
+    // arrive either — and a rail built only from `sections` left an error banner
+    // over an empty list with «Диагностика» not in it. The panel would have gone
+    // blank in exactly the outage it exists to explain, which is the failure its
+    // bare `fetch` was written against, one level up.
+    net.handler = (url: string) => {
+      if (url.endsWith('/settings/sections') || url.endsWith('/settings/history')) {
+        return Promise.resolve({
+          ok: false,
+          status: 503,
+          json: () => Promise.resolve({ code: 'error.internal' }),
+        } as unknown as Response)
+      }
+      if (url.endsWith('/health/ready')) {
+        return Promise.resolve({
+          ok: false,
+          status: 503,
+          json: () => Promise.resolve({ status: 'failed', checks: { database: 'failed' } }),
+        } as unknown as Response)
+      }
+      if (url.endsWith('/health/workers'))
+        return Promise.resolve(jsonOk({ status: 'ok', loops: {}, drivers: {} }))
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+
+    // The one tab that needs no catalogue is the one tab left, and it is open:
+    // nothing else in the rail can be built, so «Диагностика» is what the reader
+    // lands on rather than something they have to find.
+    // Matched loosely: the rail appends a chevron to the *selected* tab, so the
+    // accessible name here is not the accessible name in the test above.
+    expect(await screen.findByRole('tab', { name: /Диагностика/ })).toBeInTheDocument()
+    expect(screen.getAllByRole('tab')).toHaveLength(1)
+
+    // And it answers the question the banner above it cannot: which dependency.
+    const row = (await screen.findByText('База данных')).closest('.hv-health')
+    expect(row?.querySelector('.hv-state')).toHaveAttribute('data-state', 'error')
+  })
 })
 
 describe('editing', () => {

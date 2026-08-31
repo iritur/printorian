@@ -21,12 +21,26 @@ interface ReadyBody {
   checks: Record<string, 'ok' | 'failed'>
 }
 
+/**
+ * What the strip has, which is a verdict and nothing else.
+ *
+ * It also carried `checks` and `latencyMs`, held for a diagnostics section that
+ * did not exist yet. That section exists now — `apps/console`'s
+ * `DiagnosticsPanel` — and reads neither: it probes `/health/ready` itself with a
+ * bare `fetch`, because `api.get` throws on the 503 the endpoint answers with
+ * when a check has failed and `readErrorBody` keeps only `{code}`-shaped
+ * payloads, which is precisely the body that panel is for. So the two fields
+ * were promises about a consumer that chose otherwise, and they are deleted
+ * rather than reworded (CLAUDE.md §4).
+ *
+ * The cost, stated rather than hidden: with the panel open the console probes
+ * `/health/ready` twice — this hook's 30-second heartbeat for the strip, and the
+ * panel's own probe on mount and on «Прогнать заново». They stay separate on
+ * purpose. The strip must keep beating on its own schedule whatever the panel is
+ * doing, and the panel must be able to read a body this hook throws away.
+ */
 export interface Health {
   status: HealthStatus
-  /** Per-dependency, for the settings screen's diagnostics section. */
-  checks: Record<string, 'ok' | 'failed'>
-  /** Round trip of the last probe, in ms. The kit's `.hv-health__ms`. */
-  latencyMs: number | null
 }
 
 /** How often to re-probe. Slow on purpose: this is a heartbeat, not telemetry. */
@@ -41,37 +55,24 @@ const INTERVAL_MS = 30_000
  * path for a real failure and not an exception to be swallowed silently.
  */
 export function useHealth(): Health {
-  const [health, setHealth] = useState<Health>({
-    status: 'PROBING',
-    checks: {},
-    latencyMs: null,
-  })
+  const [health, setHealth] = useState<Health>({ status: 'PROBING' })
 
   useEffect(() => {
     let alive = true
     const controller = new AbortController()
 
     const probe = async () => {
-      const started = performance.now()
       try {
         const body = await api.get<ReadyBody>('/health/ready', { signal: controller.signal })
         if (!alive) return
-        setHealth({
-          status: body.status === 'ok' ? 'ONLINE' : 'DEGRADED',
-          checks: body.checks,
-          latencyMs: Math.round(performance.now() - started),
-        })
+        setHealth({ status: body.status === 'ok' ? 'ONLINE' : 'DEGRADED' })
       } catch (error) {
         if (!alive || controller.signal.aborted) return
         // A 503 is the server answering — it is degraded, not unreachable, and
         // the distinction is what tells an operator whether to look at the farm
         // or at the network. Anything else means nothing answered at all.
         const degraded = error instanceof ApiError && error.status === 503
-        setHealth({
-          status: degraded ? 'DEGRADED' : 'OFFLINE',
-          checks: {},
-          latencyMs: Math.round(performance.now() - started),
-        })
+        setHealth({ status: degraded ? 'DEGRADED' : 'OFFLINE' })
       }
     }
 

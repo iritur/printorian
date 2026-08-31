@@ -301,12 +301,25 @@ export function SettingsPage({ locale }: { locale: Locale }) {
   // should cost the rail its order, never the whole tab.
   const served = (sections ?? []).map((section) => section.id)
   const anchor = served.indexOf('maintenance')
-  const railIds =
-    sections === null
-      ? []
-      : anchor === -1
-        ? [...served, DIAGNOSTICS]
-        : [...served.slice(0, anchor), DIAGNOSTICS, ...served.slice(anchor)]
+  //: The rail is empty only while the first load is still in flight. Once it has
+  //: *settled* the diagnostics tab is in it whatever it settled as, because that
+  //: section needs no catalogue at all — `sectionFields` is `[]` for it by
+  //: design, and the panel reads the health endpoints directly.
+  //:
+  //: This is not tidiness. `GET /settings/sections` reads the database, so the
+  //: state that makes the panel worth opening — the one where `/health/ready`
+  //: answers 503 with `database: failed` — is the same state in which the
+  //: catalogue does not arrive. Gating the tab on `sections` meant an error
+  //: banner over an empty rail with «Диагностика» not in it: the panel going
+  //: blank in exactly the outage it exists to explain, which is the failure the
+  //: bare `fetch` inside `DiagnosticsPanel` was written against, reintroduced one
+  //: level up.
+  const settled = sections !== null || error !== null
+  const railIds = !settled
+    ? []
+    : anchor === -1
+      ? [...served, DIAGNOSTICS]
+      : [...served.slice(0, anchor), DIAGNOSTICS, ...served.slice(anchor)]
   const tabs = railIds.map((id) => ({ key: id, label: t(`settings.section.${id}` as MessageKey) }))
   const current = tabs.some((tab) => tab.key === active) ? active : tabs[0]?.key
   const farmNameValue = String(

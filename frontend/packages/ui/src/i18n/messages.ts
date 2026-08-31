@@ -904,8 +904,14 @@ export const ru = {
   'settings.diagnostics.stat.loops': 'Циклы в работе',
   'settings.diagnostics.stat.loops_of': 'ИЗ {total} НАБЛЮДАЕМЫХ',
   'settings.diagnostics.stat.drivers': 'Принтеры на связи',
-  'settings.diagnostics.stat.drivers_of': 'ИЗ {total} ОПУБЛИКОВАННЫХ',
+  //: «Наблюдаемых», не «опубликованных»: принтер остаётся в реестре и после
+  //: того, как его показание протухло, поэтому знаменателем служит число тех,
+  //: чьё состояние действительно измерено.
+  'settings.diagnostics.stat.drivers_of': 'ИЗ {total} НАБЛЮДАЕМЫХ',
   'settings.diagnostics.stat.unmeasured': 'НЕ ИЗМЕРЕНО',
+  //: Хвост к знаменателю: сколько строк не измерено вовсе. Без него ферма, у
+  //: которой пять циклов из семи нечитаемы, выглядит как ферма с пятью циклами.
+  'settings.diagnostics.stat.also_unmeasured': '{unknown} НЕ ИЗМЕРЕНО',
 
   // Three vocabularies for the same four verdicts: a dependency is «в норме», a
   // loop «работает», a printer «на связи». «Деградация» is deliberately its own
@@ -2149,8 +2155,9 @@ export const en: Messages = {
   'settings.diagnostics.stat.loops': 'Loops sweeping',
   'settings.diagnostics.stat.loops_of': 'OF {total} OBSERVED',
   'settings.diagnostics.stat.drivers': 'Printers connected',
-  'settings.diagnostics.stat.drivers_of': 'OF {total} PUBLISHED',
+  'settings.diagnostics.stat.drivers_of': 'OF {total} OBSERVED',
   'settings.diagnostics.stat.unmeasured': 'NOT MEASURED',
+  'settings.diagnostics.stat.also_unmeasured': '{unknown} NOT MEASURED',
 
   'settings.diagnostics.verdict.ok': 'Healthy',
   'settings.diagnostics.verdict.degraded': 'Degraded',

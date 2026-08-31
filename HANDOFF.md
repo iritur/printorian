@@ -7,18 +7,20 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-31 · 1 329 backend tests collected and 236 frontend tests, with
-all ten gates green. The backend suite was run end to end **in CI** on each of the
-five pull requests below — it takes about six minutes there and about ninety on a
-Windows workstation, so locally the six backend gates and the tests touching each
-change were run instead, and the CI job is the full-suite evidence. What was *not*
-re-run locally in this session: the complete backend suite in one pass. The counts
-above are `pytest --collect-only` and the frontend `vitest` total, not a claim
-about a local green run.
+**As of:** 2026-08-31 · 1 329 backend tests collected and 241 frontend tests, and
+not all ten gates green: the newest of the six pull requests below is
+frontend-only, its four frontend gates ran and no backend gate did, as the
+paragraph below spells out. The backend suite was run end to end **in CI** on each
+of those six — it takes about six minutes there and about ninety on a Windows
+workstation, so locally the six backend gates and the tests touching each change
+were run instead, and the CI job is the full-suite evidence. What was *not* re-run
+locally in this session: the complete backend suite in one pass. The counts above
+are `pytest --collect-only` and the frontend `vitest` total, not a claim about a
+local green run.
 
 The most recent entry below — the diagnostics panel — is frontend-only. Its four
 frontend gates were each run separately and each printed `exit=0`: `typecheck`,
-`lint`, `test` (236 passed across 21 files) and `build`. **No backend gate was run
+`lint`, `test` (241 passed across 21 files) and `build`. **No backend gate was run
 for it**, because nothing under `backend/` changed and the single shared test
 database was in use by another session. The backend figure above is carried
 forward from the previous entry, not re-measured.
@@ -75,7 +77,15 @@ dashboard somebody has to open is not an alert.
 > permanently reading one check short. The same rule is why an empty driver
 > roster gets its own sentence rather than a blank list: `core.driver_health` is
 > explicit that empty means *nothing was published*, and a blank panel there
-> would have said "this farm has no printers".
+> would have said "this farm has no printers". **And the numerator over it is
+> withheld when nothing answered.** A row whose verdict is `unknown` was not a
+> reading, so it counts on neither side of the fraction: `Heartbeat.report()`
+> returns all seven loops with `state="unknown"` when the store cannot be read,
+> and a tile keyed on the length of that list drew «0 из 7 циклов» — seven loops
+> reported stopped, on the evidence that nobody looked. It now reads an em dash
+> over «НЕ ИЗМЕРЕНО», and a partly-measured group carries its shortfall
+> («ИЗ 2 НАБЛЮДАЕМЫХ · 1 НЕ ИЗМЕРЕНО») so that all-fine, partly-known and
+> measured-nothing stay three different things on the tile.
 >
 > **Two of the kit's four stat tiles were dropped rather than filled.** Nothing
 > in the system measures uptime or the event-queue depth, and a tile reading
@@ -89,7 +99,11 @@ dashboard somebody has to open is not an alert.
 > it left the rail one entry short. The rail's own length is now what the
 > «Разделы» count reports, and the section number in each heading is read from
 > the rail, so «Обслуживание системы» is section 15 as the kit has it rather than
-> 14.
+> 14. The tab is in the rail as soon as that load has *settled*, whatever it
+> settled as: `GET /settings/sections` reads the database, so gating it on the
+> catalogue hid «Диагностика» in exactly the outage it explains, and a failed
+> catalogue now leaves the diagnostics tab standing alone rather than an empty
+> rail under an error banner.
 
 **The rates an order was priced at can now be looked at**
 ([#40](https://github.com/iritur/printorian/issues/40)).

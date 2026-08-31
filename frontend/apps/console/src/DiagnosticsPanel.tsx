@@ -35,10 +35,13 @@ import { translate, translateError } from '@printorian/ui'
  * the first, because colour alone is no distinction at all for a reader who
  * cannot separate amber from red.
  *
- * **Every denominator is what answered, never a roster.** "14 of 15 checks" is
- * counted from the checks the probe actually returned — `event_relay` is only
- * reported where a relay is configured, so a fixed 15 would have made a
- * deployment without one permanently look one short.
+ * **Every denominator is what answered, never a roster — and the numerator over
+ * it is withheld when nothing answered.** "14 of 15 checks" is counted from the
+ * checks the probe actually returned: `event_relay` is only reported where a
+ * relay is configured, so a fixed 15 would have made a deployment without one
+ * permanently look one short. The same rule applied to the rows themselves is
+ * `tally` below, and it is the harder half — a row whose verdict is `unknown`
+ * was not a reading, so it belongs in neither side of the fraction.
  */
 
 /** Where the console's API lives, matching `SessionProvider`'s client. */
@@ -205,6 +208,63 @@ function overall(verdicts: Verdict[]): Verdict {
   return 'ok'
 }
 
+/** What a stat tile is allowed to say about a group of rows. */
+interface Tally {
+  /** Rows that answered `ok`. Only ever counted among the measured ones. */
+  ok: number
+  /** Rows that reported *any* verdict this build recognises. The denominator. */
+  measured: number
+  /** Rows the farm named and did not measure. Neither numerator nor denominator. */
+  unmeasured: number
+}
+
+/**
+ * Split a group of rows into what was measured and what was not.
+ *
+ * This exists because the roster and the readings are two different lists that
+ * happen to arrive in one object, and the tile has to be built from the second.
+ * `Heartbeat.report()` iterates the compile-time constant `LOOPS` and returns
+ * **all seven** entries with `state="unknown"` whenever the store cannot be read
+ * — no Redis client, or an `mget` that raised — so a body full of rows that
+ * measured nothing is the ordinary shape of a Redis outage rather than a corner
+ * case. The driver roster does the same for a printer whose reading has lapsed.
+ *
+ * Counting those rows into the denominator makes the farm look worse with every
+ * reading it loses. Counting their absence as a zero in the numerator is the
+ * flattering half and the worse one: «0 из 7 циклов» asserts that seven loops
+ * have stopped, when what the panel knows is that nobody answered — the exact
+ * pair root CLAUDE.md §1 forbids, an invented numerator over a roster.
+ */
+function tally(verdicts: Verdict[]): Tally {
+  const measured = verdicts.filter((verdict) => verdict !== 'unknown')
+  return {
+    ok: measured.filter((verdict) => verdict === 'ok').length,
+    measured: measured.length,
+    unmeasured: verdicts.length - measured.length,
+  }
+}
+
+/**
+ * A tile's caption: the denominator that was observed, and the shortfall.
+ *
+ * Three outcomes have to stay apart, because they are three different
+ * instructions to whoever is reading. Nothing measured is «НЕ ИЗМЕРЕНО» beside a
+ * withheld figure. Everything measured is the bare fraction. In between — some
+ * rows answered and some did not — the fraction is true of the rows it counts
+ * and says nothing about the rest, so the «· 2 НЕ ИЗМЕРЕНО» half is what stops a
+ * farm with five of seven loops unreadable reading as a farm with five loops.
+ */
+function noteOf(
+  t: (key: MessageKey, details?: Record<string, unknown>) => string,
+  of: MessageKey,
+  counted: Tally,
+): string {
+  if (counted.measured === 0) return t('settings.diagnostics.stat.unmeasured')
+  const base = t(of, { ok: counted.ok, total: counted.measured })
+  if (counted.unmeasured === 0) return base
+  return `${base} · ${t('settings.diagnostics.stat.also_unmeasured', { unknown: counted.unmeasured })}`
+}
+
 /**
  * The entries of something the server called a mapping.
  *
@@ -260,16 +320,20 @@ export function DiagnosticsPanel({ locale }: { locale: Locale }) {
 
   const checks = ready.kind === 'answered' ? entriesOf<string>(ready.body.checks) : []
   const checkVerdicts = checks.map(([, raw]) => verdictOf(raw))
-  const checksOk = checkVerdicts.filter((verdict) => verdict === 'ok').length
 
   const loops = workers.kind === 'answered' ? entriesOf<WorkersBody['loops'][string]>(workers.body.loops) : []
   const loopVerdicts = loops.map(([, loop]) => loopVerdict(String(loop?.state ?? '')))
-  const loopsBeating = loopVerdicts.filter((verdict) => verdict === 'ok').length
 
   const drivers =
     workers.kind === 'answered' ? entriesOf<WorkersBody['drivers'][string]>(workers.body.drivers) : []
   const driverVerdicts = drivers.map(([, driver]) => driverVerdict(String(driver?.state ?? '')))
-  const driversConnected = driverVerdicts.filter((verdict) => verdict === 'ok').length
+
+  //: Each tile is built from what was measured, never from the length of the
+  //: list that arrived — the roster is not the reading, and an empty list is
+  //: only the loudest case of a group that measured nothing.
+  const checksTally = tally(checkVerdicts)
+  const loopsTally = tally(loopVerdicts)
+  const driversTally = tally(driverVerdicts)
 
   return (
     <>
@@ -284,31 +348,40 @@ export function DiagnosticsPanel({ locale }: { locale: Locale }) {
         <StatCard
           label={t('settings.diagnostics.stat.readiness')}
           value={t(VERDICT_WORD[overall(checkVerdicts)])}
-          note={
-            checks.length === 0
-              ? t('settings.diagnostics.stat.unmeasured')
-              : t('settings.diagnostics.stat.checks', { ok: checksOk, total: checks.length })
-          }
+          note={noteOf(t, 'settings.diagnostics.stat.checks', checksTally)}
           verdict={overall(checkVerdicts)}
         />
+        {/*
+          The figure is withheld, not zeroed, when nothing was measured — and
+          «nothing» is not the same question as «no rows». A heartbeat store the
+          worker cannot read answers with all seven loops present and every one
+          of them `unknown`, so a tile keyed on `loops.length` would have read
+          «0 из 7 циклов» on the farm's worst morning: an invented numerator over
+          a roster, and flattering in neither direction — it says the loops are
+          stopped when what happened is that nobody looked.
+
+          `overall` already withholds the tone for the same case, so the tile
+          goes untinted; between them the reader can tell all-fine from
+          partly-measured from measured-nothing, which are three different
+          things to do next.
+        */}
         <StatCard
           label={t('settings.diagnostics.stat.loops')}
-          value={loops.length === 0 ? '—' : String(loopsBeating)}
-          note={
-            loops.length === 0
-              ? t('settings.diagnostics.stat.unmeasured')
-              : t('settings.diagnostics.stat.loops_of', { total: loops.length })
-          }
+          value={loopsTally.measured === 0 ? '—' : String(loopsTally.ok)}
+          note={noteOf(t, 'settings.diagnostics.stat.loops_of', loopsTally)}
           verdict={overall(loopVerdicts)}
         />
+        {/*
+          Same shape, and the roster makes it likelier here: `core.driver_health`
+          keeps naming a printer for a window after its reading has lapsed, so a
+          farm whose worker has gone still lists its printers with `unknown`
+          states. «0 из 6 подключено» would be a claim that six printers are
+          off the air; the honest answer is that nobody knows about any of them.
+        */}
         <StatCard
           label={t('settings.diagnostics.stat.drivers')}
-          value={drivers.length === 0 ? '—' : String(driversConnected)}
-          note={
-            drivers.length === 0
-              ? t('settings.diagnostics.stat.unmeasured')
-              : t('settings.diagnostics.stat.drivers_of', { total: drivers.length })
-          }
+          value={driversTally.measured === 0 ? '—' : String(driversTally.ok)}
+          note={noteOf(t, 'settings.diagnostics.stat.drivers_of', driversTally)}
           verdict={overall(driverVerdicts)}
         />
       </div>

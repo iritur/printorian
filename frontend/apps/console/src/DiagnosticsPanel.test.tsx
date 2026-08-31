@@ -60,7 +60,36 @@ function pill(label: string): HTMLElement {
   return state as HTMLElement
 }
 
+/** One of the three stat tiles: the figure it prints and the caption under it. */
+function tile(label: string): { value: string; note: string; tone: string | null } {
+  const card = screen.getByText(label).closest('.hv-stat')
+  if (!card) throw new Error(`no stat card for «${label}»`)
+  return {
+    value: card.querySelector('.hv-stat__v')?.textContent ?? '',
+    note: card.querySelector('.hv-micro')?.textContent ?? '',
+    tone: card.getAttribute('data-tone'),
+  }
+}
+
 const NO_LOOPS = { status: 'ok', loops: {}, drivers: {} }
+
+/**
+ * What `/health/workers` answers when the heartbeat store cannot be read.
+ *
+ * Not invented for the test: `Heartbeat.report()` iterates the compile-time
+ * constant `LOOPS` and returns every one of them with `state="unknown"` when
+ * there is no Redis client or the `mget` raised. So the roster is full and not
+ * one reading in it was taken.
+ */
+const UNREADABLE_LOOPS = {
+  status: 'degraded',
+  loops: Object.fromEntries(
+    ['intake', 'scheduler', 'telemetry', 'sla', 'postproduction', 'packaging', 'maintenance'].map(
+      (loop) => [loop, { state: 'unknown', last_beat: null }],
+    ),
+  ),
+  drivers: {},
+}
 
 beforeEach(() => {
   serve({
@@ -118,6 +147,9 @@ describe('the readiness checks', () => {
     await screen.findByText('База данных')
     expect(pill('База данных')).toHaveAttribute('data-state', 'offline')
     expect(pill('База данных')).toHaveTextContent('Не измерено')
+    // And it is not counted into the tile either way: «0 ИЗ 1 ПРОВЕРОК» reads as
+    // a failed check and «1 ИЗ 1» as a passing one, and the check did neither.
+    expect(tile('Готовность').note).toBe('НЕ ИЗМЕРЕНО')
   })
 
   it('counts the denominator from the checks that answered, not from a roster', async () => {
@@ -212,8 +244,59 @@ describe('the worker loops', () => {
     // wedged loop either — claiming either would be a reading nobody took.
     expect(pill('Опрос телеметрии')).toHaveAttribute('data-state', 'offline')
 
-    // One of three is beating, and the tile says so against what it observed.
-    expect(screen.getByText('ИЗ 3 НАБЛЮДАЕМЫХ')).toBeInTheDocument()
+    // Three loops arrived and two of them were readings. One of those two is
+    // beating, so the tile is «1 из 2» and says separately that a third loop was
+    // not measured — the denominator is what answered, and the row that did not
+    // answer is in neither half of the fraction.
+    expect(tile('Циклы в работе').value).toBe('1')
+    expect(tile('Циклы в работе').note).toBe('ИЗ 2 НАБЛЮДАЕМЫХ · 1 НЕ ИЗМЕРЕНО')
+  })
+
+  it('withholds the figure entirely when no loop reading was taken', async () => {
+    // The case this tile is most likely to be read in, and the one it used to
+    // lie in: the heartbeat store is unreadable, so the roster arrives complete
+    // and empty of readings. `loops.length === 0 ? '—' : String(beating)` drew
+    // «0» over «ИЗ 7 НАБЛЮДАЕМЫХ» here — seven loops reported stopped, on the
+    // evidence that nobody looked at any of them (root CLAUDE.md §1).
+    serve({ ready: { status: 'ok', checks: { database: 'ok' } }, workers: UNREADABLE_LOOPS })
+
+    render(<DiagnosticsPanel locale="ru" />)
+
+    await screen.findByText('Планировщик')
+    expect(tile('Циклы в работе').value).toBe('—')
+    expect(tile('Циклы в работе').note).toBe('НЕ ИЗМЕРЕНО')
+    // Neither a zero anywhere on the tile, nor a denominator taken from the
+    // seven rows that measured nothing.
+    expect(tile('Циклы в работе').value).not.toContain('0')
+    expect(tile('Циклы в работе').note).not.toContain('7')
+    // And no tone: green, amber and red are all claims, and none was earned.
+    expect(tile('Циклы в работе').tone).toBeNull()
+  })
+
+  it('keeps «some measured» apart from «all fine» on the tile itself', async () => {
+    // Three states, three tiles, and the reader has to be able to tell them
+    // apart from the figure alone — «2» with every loop measured means the farm
+    // is sweeping, and «2» with five loops unread means almost nothing.
+    serve({
+      ready: { status: 'ok', checks: { database: 'ok' } },
+      workers: {
+        status: 'ok',
+        loops: {
+          scheduler: { state: 'beating', last_beat: '2026-08-31T09:15:00Z' },
+          sla: { state: 'beating', last_beat: '2026-08-31T09:15:00Z' },
+        },
+        drivers: {},
+      },
+    })
+
+    render(<DiagnosticsPanel locale="ru" />)
+
+    await screen.findByText('Планировщик')
+    expect(tile('Циклы в работе').value).toBe('2')
+    expect(tile('Циклы в работе').note).toBe('ИЗ 2 НАБЛЮДАЕМЫХ')
+    // Everything observed and everything healthy is the one case that earns the
+    // green tone, which is what stops the two «2»s reading alike.
+    expect(tile('Циклы в работе').tone).toBe('good')
   })
 
   it('shows an em dash for a loop that has never beaten', async () => {
@@ -236,6 +319,56 @@ describe('the drivers', () => {
     expect(await screen.findByText(/Это не значит, что у фермы нет принтеров/)).toBeInTheDocument()
     // And the tile withholds a figure rather than reporting zero connected.
     expect(screen.getByText('Принтеры на связи').parentElement?.textContent).toContain('—')
+  })
+
+  it('withholds the figure for a roster whose every reading has lapsed', async () => {
+    // The roster and the readings are two Redis windows with different lives, so
+    // a worker that has gone leaves the printers named and every state
+    // `unknown`. «0 из 3 подключено» would be a claim that three printers are
+    // off the air; what the panel knows is that it heard about none of them.
+    serve({
+      ready: { status: 'ok', checks: { database: 'ok' } },
+      workers: {
+        status: 'ok',
+        loops: {},
+        drivers: {
+          'p-1': { name: 'P-01', state: 'unknown', code: null, since: null },
+          'p-2': { name: 'P-02', state: 'unknown', code: null, since: null },
+          'p-3': { name: 'P-03', state: 'unknown', code: null, since: null },
+        },
+      },
+    })
+
+    render(<DiagnosticsPanel locale="ru" />)
+
+    await screen.findByText('P-01')
+    // The rows are drawn — the farm does have three printers and that is worth
+    // saying — and the tile above them declines to summarise readings nobody
+    // took, rather than summarising them as zero.
+    expect(tile('Принтеры на связи').value).toBe('—')
+    expect(tile('Принтеры на связи').note).toBe('НЕ ИЗМЕРЕНО')
+    expect(tile('Принтеры на связи').tone).toBeNull()
+  })
+
+  it('counts the printers that reported, and says how many did not', async () => {
+    serve({
+      ready: { status: 'ok', checks: { database: 'ok' } },
+      workers: {
+        status: 'ok',
+        loops: {},
+        drivers: {
+          'p-1': { name: 'P-01', state: 'connected', code: null, since: null },
+          'p-8': { name: 'P-08', state: 'unavailable', code: null, since: null },
+          'p-9': { name: 'P-09', state: 'unknown', code: null, since: null },
+        },
+      },
+    })
+
+    render(<DiagnosticsPanel locale="ru" />)
+
+    await screen.findByText('P-01')
+    expect(tile('Принтеры на связи').value).toBe('1')
+    expect(tile('Принтеры на связи').note).toBe('ИЗ 2 НАБЛЮДАЕМЫХ · 1 НЕ ИЗМЕРЕНО')
   })
 
   it('names the printer, its state and the code behind an unavailable one', async () => {
