@@ -133,19 +133,45 @@ second writer cannot get past them.
 
 ### Referential integrity
 
-Twenty-eight foreign keys, each with a deliberate delete rule:
+**Forty-eight foreign keys, each with a deliberate delete rule** — 26 `CASCADE`,
+15 `SET NULL`, 7 `RESTRICT`. The enumeration is
+`backend/tests/test_referential_integrity.py` rather than the list below: it names
+all forty-eight as `table.column`, fails if a forty-ninth is added without somebody
+deciding what it does on delete, and reads the rules back out of `pg_constraint` so
+that what the database is *holding* is what the models declare. Look there for which
+key carries which rule. What follows is why there are three groups, which is the
+half a test cannot carry.
 
-- **`CASCADE`** where the child has no meaning without its parent — order lines,
-  events, refunds, job history.
-- **`SET NULL`** where the child outlives the reference. Removing a member of staff
-  must not delete the record of what they did; decommissioning a printer must not
-  destroy the jobs it ran.
-- **`RESTRICT`** on `payments.order_id`, `orders.rate_snapshot_id`, and the two
-  references to `model_assets` — neither an order with money against it, nor the
-  rates a price depends on, nor geometry a job still has to print may be deleted
-  out from under it. The last of those is load-bearing: it is the *whole* of what
-  stops model retention collecting a mesh an open order needs, which is why the
-  sweep never has to ask `ordering` anything.
+> This section said "twenty-eight" from the original review until 2026-08-31, and
+> that is what a list restated in prose does (CLAUDE.md §4). Four contexts have been
+> added since that commit — `account`, `packaging`, `postproduction` and `settings`
+> — each bringing keys of its own, and nothing objected, because nothing was reading
+> this paragraph against the schema. The counts above come from the ORM metadata and
+> were confirmed against `pg_constraint` in `printorian_test`; the test is what keeps
+> them true from here.
+
+- **`CASCADE`** (26) where the child has no meaning without its parent — order lines
+  and events, refunds, job history, the steps of a packaging or postproduction task.
+  Each of them describes something *about* its parent and cannot be read alone, so
+  leaving one behind produces a row nobody can interpret and nobody will delete.
+- **`SET NULL`** (15) where the child outlives the reference. Removing a member of
+  staff must not delete the record of what they did; decommissioning a printer must
+  not destroy the jobs it ran or the lots that were loaded into it.
+- **`RESTRICT`** (7) where the parent may not go at all while a child points at it:
+  `payments.order_id`, `orders.rate_snapshot_id`, `packaging_task_tara.tara_id`,
+  `postproduction_tasks.operation_id`, and the **three** references to `model_assets`
+  — from `order_lines`, `print_jobs` and `catalog_models`. Neither an order with
+  money against it, nor the rates a price depends on, nor geometry a job still has to
+  print may be deleted out from under it. `order_lines.model_asset_id` is load-bearing
+  beyond the rest: it is the *whole* of what stops model retention collecting a mesh
+  an open order needs, which is why the sweep never has to ask `ordering` anything.
+
+`model_assets` carries a **fourth** reference, `prepared_plates.model_asset_id`, and
+that one is `SET NULL` deliberately. A plate is a cached slice and can be produced
+again from the geometry, so losing the link costs a re-slice; a job has to print that
+geometry and has nothing to fall back to. The four sit together in the inventory with
+that reason written beside them, because reading them as one group is where the
+mistake would be made — and mis-reading it was how this section came to say "two".
 
 The **material ↔ AMS slot ↔ printer triangle** is fully constrained, which matters
 more than it looks: it is the exact data the scheduler's hard eligibility filter
@@ -166,9 +192,11 @@ does not exist.
 
 ### Domain invariants
 
-Forty-eight CHECK constraints. Money and mass are non-negative; `refunded_amount <=
-amount`; `remaining_grams <= initial_grams`; quantities and scales are positive;
-percentages sit in `[0, 100]`; a job cannot finish before it started.
+One hundred and twenty-six CHECK constraints — 103 domain invariants and the
+twenty-three enum-membership checks 0019 added (§10). Money and mass are
+non-negative; `refunded_amount <= amount`; `remaining_grams <= initial_grams`;
+quantities and scales are positive; percentages sit in `[0, 100]`; a job cannot
+finish before it started.
 
 `refunded_amount <= amount` is the one that most earns its keep — without it, a bug
 in the refund path or one hand-written `UPDATE` during an incident can return more
@@ -190,6 +218,15 @@ same spirit as the import contracts:
 
 The point of rule 1 is not the foreign key. It is that *the choice has to be made
 and written down* rather than made by omission.
+
+`tests/test_referential_integrity.py` takes that one step further and holds the
+*rule* each key carries, and `tests/unit/test_delete_rules.py` holds what the rules
+do — one representative of each category deleted against real rows. The pair is
+deliberate rather than tidy: a session running `SET session_replication_role =
+replica` leaves every constraint sitting in `pg_constraint` and enforces none of
+them, so the catalogue file passes every assertion while all six behaviour tests
+fail. Present and enforced are different facts, and it takes both files to hold them
+([#47](https://github.com/iritur/printorian/issues/47)).
 
 ---
 
@@ -489,9 +526,24 @@ The remainder of the schema to build, by phase:
 | _trigger_ | Paginate the fleet and materials listings | [#45](https://github.com/iritur/printorian/issues/45) |
 | _trigger_ | Evaluate TimescaleDB or telemetry on its own instance | [#46](https://github.com/iritur/printorian/issues/46) |
 | _trigger_ | Commit the off-site sync job | [#16](https://github.com/iritur/printorian/issues/16) |
-| _trigger_ | Enforce foreign keys across the fast suite | [#47](https://github.com/iritur/printorian/issues/47) |
 
-Done since the original review: `metric_rollups` with retention enabled, `addresses` and `notification_prefs`, `catalog_models`, `journal_posts`, and the enum CHECK constraints ([#43](https://github.com/iritur/printorian/issues/43)).
+Done since the original review: `metric_rollups` with retention enabled, `addresses` and `notification_prefs`, `catalog_models`, `journal_posts`, the enum CHECK constraints ([#43](https://github.com/iritur/printorian/issues/43)), and the delete rules of §3 ([#47](https://github.com/iritur/printorian/issues/47)).
+
+**#47 is worth a note, because most of what this section said it was waiting for had
+already happened.** The row here read "enforce foreign keys across the fast suite",
+and the issue behind it described 66 tests building against a fabricated parent id.
+That was true when it was written and stopped being true at ADR-0021:
+`conftest.clean_database` builds the schema with `Base.metadata.create_all` against
+real PostgreSQL, which emits every key, and `tests/factories.py` gives those tests
+real parents at 29 call sites across 18 files. Measured rather than inferred — 48
+foreign keys in `printorian_test`, and a `PrintJob` inserted against an invented
+`order_id` comes back `IntegrityError`. What was genuinely missing was the issue's
+last clause: nothing asserted what a delete rule *is*, so flipping
+`order_lines.model_asset_id` from `RESTRICT` to `CASCADE` is one word that passed all
+six gates and the whole suite. `tests/test_referential_integrity.py` and
+`tests/unit/test_delete_rules.py` are that assertion, and correcting §3 above is the
+other half of the same finding: this document had gone on describing twenty-eight
+keys through four more contexts' worth of them.
 
 The enum gap is worth a note because it was listed above as an accepted trade-off and
 turned out not to need accepting. The obstacle was never the constraint; it was that

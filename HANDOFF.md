@@ -7,44 +7,71 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-31 · 1 329 backend tests collected and 249 frontend tests, and
-**not** all ten gates green on this branch. The diagnostics panel is frontend-only:
-its four frontend gates ran and no backend gate did, which the paragraph below
-spells out. The backend suite was run end to end **in CI** on each of the six
-older pull requests below — about six minutes there against the same PostgreSQL,
-about ninety on a Windows workstation — so locally the six backend gates and the
-tests touching each change were run instead, and the CI job is the full-suite
-evidence. The backend count above is carried forward from the previous entry and
-was **not** re-measured here; the frontend count was, on the merged tree.
+**As of:** 2026-08-31 · 1 340 backend tests collected and 249 frontend tests, and
+**not** all ten gates green on this branch in one place. The backend count was
+measured here, on the tree with `main` merged in; the frontend count is carried
+forward from the diagnostics entry below and was **not** re-measured, because this
+branch changes no file under `frontend/` and this worktree has no `node_modules`.
 
-The most recent entry below — the diagnostics panel — is frontend-only. Its four
-frontend gates were each run separately after `main` was merged in, and each
-printed `exit=0`: `typecheck`, `lint`, `test` (249 passed across 23 files) and
-`build`. **No backend gate was run locally for it**, because nothing under
-`backend/` changed. CI is the evidence for that half, and on this branch it is
-real rather than assumed: every check passed before the merge commit, the backend
-job and the image release gate included.
+What ran locally on the merged tree: the six backend gates, each separately and
+each `exit=0` — `ruff check`, `ruff format --check`, `mypy --strict` (216 source
+files), `lint-imports` (6 contracts kept, 0 broken), `check_context_isolation.py`
+and `check_file_length.py`.
 
-The materials-popup change is the sixth entry in §1 and is not one of those five;
-its evidence is narrower too. The four frontend gates were run locally and are
-green (232 tests), and on the backend `ruff check`, `ruff format --check`,
-`mypy`, `check_file_length.py` and `tests/unit/test_docs_endpoint_consumers.py` —
-the one gate it changes, and one that needs no database. The backend suite was
-**not** run locally for it, because another session held the shared test
-database; CI is the evidence for that half.
+The full backend suite was run end to end **on this branch before `main` was
+merged in** — 1 333 passed, 7 skipped, `exit=0`, 24m43s — and that run does not
+describe the merged tree: merging brought in `_docs_endpoint_support.py` and
+`test_docs_endpoint_consumers.py` from the two pull requests that landed while
+this one was in review. CI on this pull request is the full-suite evidence for the
+tree as it now stands, and the distinction is recorded rather than smoothed over,
+because "the suite passed" and "the suite passed on *this* tree" are the two
+claims this file has already been corrected for confusing once.
 
-**The system now runs on a real host.** A farm exists at `192.168.29.148`
-(Ubuntu 26.04, VMware), in production mode, and getting it there is what most of
-§1 is about — deploying it found nine defects that all six gates and 1174 tests
-had passed over, four of them in units committed hours earlier the same day.
+**The delete rules are held to a test, and one way this suite can lie is now
+written down** ([#47](https://github.com/iritur/printorian/issues/47)).
+`backend/tests/test_referential_integrity.py` is the inventory — all forty-eight
+foreign keys grouped by rule, read back out of `pg_constraint` rather than off the
+models — and `backend/tests/unit/test_delete_rules.py` exercises one representative
+of each rule against real rows.
 
----
-
-## 1. What landed recently, and why it matters
-
-Read this section before touching the fleet, the dashboard, pricing or the
-stylesheets — each item changes something a person will notice.
-
+> **`SET session_replication_role = replica` is the finding worth carrying
+> forward.** A session that runs it leaves every constraint sitting in
+> `pg_constraint` and enforces none of them. Applied to the `db_session` fixture as
+> a mutation, the catalogue file passed every assertion and all six behaviour tests
+> failed. That is why there are two files rather than one, and it is the shape to
+> expect from any test that reads a catalogue and concludes something is being
+> enforced: present and enforced are different facts. Measured, not reasoned about
+> — the mutation was applied, run and reverted, along with three others.
+>
+> **Every delete in the behaviour file is issued as SQL rather than through
+> `session.delete`.** `Order.lines` and `Order.events` carry `cascade="all,
+> delete-orphan"`, so the ORM would do the deleting itself, in Python, and every
+> assertion would pass against a database holding no constraints at all — precisely
+> the state these tests exist to detect. Do not "simplify" them onto the ORM.
+>
+> **The issue's premise had already expired, and its last clause had not.** #47 was
+> filed as "66 tests build against a fabricated parent id, so foreign keys are off
+> in the fast suite". ADR-0021 moved the suite onto real PostgreSQL,
+> `conftest.clean_database` emits every key through `create_all`, and
+> `tests/factories.py` already gives those tests real parents — 29 calls across 18
+> files. Measured before anything was written: 48 foreign keys in `printorian_test`,
+> and a `PrintJob` inserted against an invented `order_id` refused with
+> `IntegrityError`. What was *not* true is that a wrong cascade would fail anything.
+>
+> **`docs/DATABASE-REVIEW.md` §3 said "twenty-eight foreign keys" and named "the two
+> references to `model_assets`".** There are forty-eight — 26 `CASCADE`, 15 `SET
+> NULL`, 7 `RESTRICT` — and three `RESTRICT` references to `model_assets`, plus a
+> fourth that is `SET NULL` on purpose (`prepared_plates`: a plate can be re-sliced,
+> a job cannot). §3 is corrected and now points at the test as the enumeration
+> instead of restating a list, and §10 no longer carries #47 as outstanding work.
+> The count had been describing the schema of the initial commit through four
+> further contexts.
+>
+> **The full backend suite was run locally for this branch** — not only in CI, and
+> unlike the session the As-of line above describes: `1333 passed, 7 skipped in
+> 1483.44s`, `exit=0`, against the compose PostgreSQL on 5433. The document-only
+> follow-up that corrected §3 re-ran the six backend gates and the two new test
+> files rather than the whole suite again.
 **The farm can now be asked what it thinks of itself**
 ([#30](https://github.com/iritur/printorian/issues/30)). The settings screen grew
 the kit's fourteenth section, «Диагностика», and it is the one section where
@@ -851,6 +878,17 @@ What exists now so that proving it is one command rather than a project:
 - **`ruff format --check` was failing on `main`** before this run, on a migration
   committed as raw alembic output. Fixed in passing; worth knowing the gate can
   drift without anyone noticing, because a red CI on `main` is easy to live with.
+- **#47 needs amending before it closes, and the `drift` record needs deciding.**
+  Its "Done when" opens with "the 66 tests build real parents" and "foreign keys
+  are enforced for the whole fast suite", both of which ADR-0021 and
+  `tests/factories.py` had already made true; only the third clause was the work
+  (§1). WORKFLOW §3 says a "Done when" that turned out to be the wrong criterion is
+  amended *in the issue before closing*, so the record says what was delivered —
+  and WORKFLOW §5 says the stale document gets its own `drift` issue rather than a
+  silent close. The correction to `DATABASE-REVIEW` §3 and §10 landed with the same
+  pull request, so what is left is a filing decision: amend #47, and decide whether
+  a `drift` issue closed by its own merge is still worth opening for the record.
+  Editing the tracker is not an agent's to do.
 
 ## 6. If you are picking up mid-flight
 
