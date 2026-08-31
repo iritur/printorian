@@ -4,6 +4,22 @@
 consumer while the list sat still, so for an unknown stretch the section described
 a backlog that had almost entirely been built. That is the drift these close.
 
+**Two of the gates here are skipped now, and that is the recorded state of §4.**
+`test_every_endpoint_named_in_section_4_really_has_no_consumer` and
+`test_every_class_named_in_section_4_is_still_mapped` are parametrized over what §4
+names, §4 names nothing since #38, and pytest reports an empty parameter set as a
+skip — the run reads `6 passed, 2 skipped`. `test_every_tree_that_is_scanned_exists`
+says below that a skip is how a gate stops running without anyone noticing, and the
+distinction is worth being explicit about rather than leaving a reader to reconcile
+the two: that one would be a gate skipping itself over a condition it measured,
+which is why it is an assertion instead. These two have no rows to check because
+the document they check has no rows, and the thing that could make them *silently*
+empty — `DOC_ENTRY` ceasing to match the bullet shape — is what `SAMPLE_BULLET` and
+`test_section_4_still_parses_into_the_entries_it_carries` exist to catch. The other
+direction, `test_every_unconsumed_endpoint_is_named_in_the_doc_or_exempted`, is not
+parametrized and runs whatever §4 holds; it is the one that fails when an endpoint
+quietly loses its consumer, and it is unaffected by all of this.
+
 The three derivations live in `_docs_endpoint_support.py`.
 """
 

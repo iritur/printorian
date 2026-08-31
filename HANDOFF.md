@@ -7,21 +7,22 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-30 · 1 329 backend tests collected and 231 frontend tests, with
+**As of:** 2026-08-31 · 1 329 backend tests collected and 232 frontend tests, with
 all ten gates green. The backend suite was run end to end **in CI** on each of the
-five pull requests below — it takes about six minutes there and about ninety on a
+five older pull requests below — about six minutes there and about ninety on a
 Windows workstation, so locally the six backend gates and the tests touching each
 change were run instead, and the CI job is the full-suite evidence. What was *not*
 re-run locally in this session: the complete backend suite in one pass. The counts
 above are `pytest --collect-only` and the frontend `vitest` total, not a claim
 about a local green run.
 
-The materials-popup change below is narrower and its evidence is narrower too: the
-four frontend gates were run locally and are green (231 tests), and on the backend
-`ruff check`, `ruff format --check`, `mypy`, `check_file_length.py` and
-`tests/unit/test_docs_endpoint_consumers.py` — the one gate it changes, and one
-that needs no database. The backend suite was **not** run locally for it, because
-another session held the shared test database; CI is the evidence for that half.
+The materials-popup change is the sixth entry in §1 and is not one of those five;
+its evidence is narrower too. The four frontend gates were run locally and are
+green (232 tests), and on the backend `ruff check`, `ruff format --check`,
+`mypy`, `check_file_length.py` and `tests/unit/test_docs_endpoint_consumers.py` —
+the one gate it changes, and one that needs no database. The backend suite was
+**not** run locally for it, because another session held the shared test
+database; CI is the evidence for that half.
 
 **The system now runs on a real host.** A farm exists at `192.168.29.148`
 (Ubuntu 26.04, VMware), in production mode, and getting it there is what most of
@@ -51,7 +52,15 @@ where a spool is and never what the plastic is.
 > The console declines to draw the farm's buying price for anyone without the
 > money permission (root CLAUDE.md §1), which is a decision about a screen and
 > **not** an access control — anyone who can call the route still gets the field.
-> Whether the route should blank it is a backend question and is not filed.
+> The measured fact behind that sentence, because it is worse than "the console
+> is being careful": `GET /materials` and `GET /materials/{code}` both return
+> `MaterialSpecView` with `purchase_price_per_1000m` populated, neither carries a
+> permission dependency, and nothing above them requires a session — so the
+> farm's buying price is served to an anonymous caller. Whether the route should
+> withhold it is a backend decision and it needs an issue, which is a person's to
+> file: open work belongs in the tracker and not in this document
+> (docs/WORKFLOW.md), so what is recorded here is the state, not the task. It was
+> raised in the review of #85 and is waiting on that issue.
 >
 > **An empty §4 broke the gate that watches §4**, and the fix is worth knowing
 > before the next entry is closed. `test_section_4_still_parses_into_the_entries_it_carries`
@@ -61,12 +70,22 @@ where a spool is and never what the plastic is.
 > and §4 is *meant* to reach zero; emptying it failed the gate rather than the
 > section. The parser is now proven against a `SAMPLE_BULLET` constant instead, and
 > the spelled-count assertion flips to "an empty section must not still spell a
-> count". Both directions were mutated and both fail.
+> count". Both directions were mutated and both fail. The two parametrized gates
+> now collect nothing and pytest reports that as `6 passed, 2 skipped`; the
+> module docstring says so in as many words, because an unexplained skip in the
+> file whose whole subject is gates that stop running without anyone noticing is
+> the last thing that file should leave to inference.
 >
-> **The measurement that the issue is actually closed** is the other direction of
-> the same gate: deleting the path literal from `MaterialDetail.tsx` makes
+> **What measures that the issue is closed** is `MaterialsPage.test.tsx`: it opens
+> a row on the table a person opens a material from and watches the request for
+> `/materials/{code}` go out. The docs gate is the weaker half of that pair and
+> the difference is worth knowing — deleting the path literal from
+> `MaterialDetail.tsx` does make
 > `test_every_unconsumed_endpoint_is_named_in_the_doc_or_exempted` fail naming
-> `GET /materials/{code}` and nothing else. That was run.
+> `GET /materials/{code}` and nothing else, and that was run, but it is a scan of
+> the source text: a detail window no screen mounted would keep it green.
+> Reachability is a question about the bundle (`frontend/CLAUDE.md`), and the
+> built console bundle does carry the detail read.
 
 **The rates an order was priced at can now be looked at**
 ([#40](https://github.com/iritur/printorian/issues/40)).

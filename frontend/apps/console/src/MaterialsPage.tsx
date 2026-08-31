@@ -16,7 +16,7 @@ import {
 
 import { Field } from './FleetAdmin'
 import { MaterialDetail } from './MaterialDetail'
-import type { MaterialLot } from './MaterialDetail'
+import type { MaterialLot } from './MaterialLots'
 
 /**
  * The materials table (scenario item M1), with the inventory actions behind
