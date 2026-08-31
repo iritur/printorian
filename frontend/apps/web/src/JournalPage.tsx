@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { SECTIONS, SECTION_META, api, useChrome } from '@printorian/ui'
+import { FilterChips, SECTIONS, SECTION_META, api, useChrome } from '@printorian/ui'
 import type { Locale, Section } from '@printorian/ui'
 
 /**
@@ -214,7 +214,16 @@ export function JournalPage({
   }, [])
 
   const counted = useMemo(() => {
-    const table = new Map(index?.counts.map((entry) => [entry.section, entry.count]))
+    /*
+      `null` until the index arrives, not `0`.
+
+      A section the server has counted at zero and a section nobody has counted
+      yet are different facts, and the chips used to print both as `0` while the
+      «Все» chip beside them printed «—» — one row of numbers making two
+      different promises. The em dash is `FilterChips`' answer to a null count.
+    */
+    if (index === null) return SECTIONS.map((name) => ({ name, count: null }))
+    const table = new Map(index.counts.map((entry) => [entry.section, entry.count]))
     return SECTIONS.map((name) => ({ name, count: table.get(name) ?? 0 }))
   }, [index])
 
@@ -308,34 +317,24 @@ export function JournalPage({
       </section>
 
       <div className="hv-row hv-row--between">
-        <div className="hv-tags">
-          <button
-            className="hv-tag"
-            type="button"
-            aria-pressed={section === null}
-            onClick={() => setSection(null)}
-          >
-            <span className="hv-tag__k">Все</span>
-            <span className="hv-tag__n">{count(index?.total)}</span>
-          </button>
-          {counted.map((entry) => (
-            <button
-              key={entry.name}
-              className="hv-tag"
-              type="button"
-              aria-pressed={section === entry.name}
-              {...(SECTION_META[entry.name].tone
-                ? { 'data-tone': SECTION_META[entry.name].tone }
-                : {})}
-              // Clicking the active chip clears it: the row is a filter, and a
-              // filter you cannot turn off is a trap.
-              onClick={() => setSection(section === entry.name ? null : entry.name)}
-            >
-              <span className="hv-tag__k">{SECTION_META[entry.name].label}</span>
-              <span className="hv-tag__n">{entry.count}</span>
-            </button>
-          ))}
-        </div>
+        {/*
+          Clicking the active chip clears it — the rule now lives in the shared
+          component rather than in this file, which is the point of there being
+          a shared component: the console's tables and the account's order
+          history had each decided it for themselves.
+        */}
+        <FilterChips
+          label="Разделы журнала"
+          all={{ label: 'Все', count: index?.total ?? null }}
+          chips={counted.map((entry) => ({
+            key: entry.name,
+            label: SECTION_META[entry.name].label,
+            count: entry.count,
+            tone: SECTION_META[entry.name].tone,
+          }))}
+          active={section}
+          onSelect={(key) => setSection(key as Section | null)}
+        />
         <input
           className="hv-input"
           type="search"
@@ -457,7 +456,9 @@ export function JournalPage({
                   three figures the same width in a tabular face.
                 */}
                 <span className="hv-stat__v">
-                  {String(counted.filter((entry) => entry.count > 0).length).padStart(2, '0')}
+                  {String(
+                    counted.filter((entry) => entry.count !== null && entry.count > 0).length,
+                  ).padStart(2, '0')}
                 </span>
               </div>
               {/*

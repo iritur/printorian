@@ -265,3 +265,73 @@ describe('the sections rail', () => {
     expect(screen.getByText('Когда писать')).toBeTruthy()
   })
 })
+
+describe('the order history chips', () => {
+  /** Three orders, one in each of the kit's three groups. */
+  const ORDERS = {
+    rows: [
+      {
+        id: 'o1',
+        number: 'P-0001',
+        status: 'printing',
+        total: '1000.00',
+        currency: 'RUB',
+        created_at: '2026-08-01T09:00:00Z',
+        lines: [{ model_name: 'Кронштейн', quantity: 2 }],
+      },
+      {
+        id: 'o2',
+        number: 'P-0002',
+        status: 'completed',
+        total: '2000.00',
+        currency: 'RUB',
+        created_at: '2026-07-01T09:00:00Z',
+        lines: [{ model_name: 'Корпус', quantity: 1 }],
+      },
+      {
+        id: 'o3',
+        number: 'P-0003',
+        status: 'cancelled',
+        total: '3000.00',
+        currency: 'RUB',
+        created_at: '2026-06-01T09:00:00Z',
+        lines: [{ model_name: 'Шестерня', quantity: 4 }],
+      },
+    ],
+  }
+
+  it('counts the whole history, and filters to one group', async () => {
+    serve(SETTLED, { '/orders/mine': ORDERS })
+    open('orders')
+
+    await waitFor(() => expect(screen.getByText('P-0001')).toBeTruthy())
+
+    // The counts are of everything, not of what is shown — which is what makes
+    // the row readable at a glance rather than a description of itself.
+    expect(screen.getByRole('button', { name: /Все\s*3/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /В работе\s*1/ })).toBeTruthy()
+
+    await userEvent.click(screen.getByRole('button', { name: /В работе\s*1/ }))
+
+    expect(screen.getByText('P-0001')).toBeTruthy()
+    expect(screen.queryByText('P-0002')).toBeNull()
+    expect(screen.getByRole('button', { name: /В работе\s*1/ })).toBeTruthy()
+  })
+
+  it('clears the filter when the chip in force is pressed again', async () => {
+    serve(SETTLED, { '/orders/mine': ORDERS })
+    open('orders')
+
+    await waitFor(() => expect(screen.getByText('P-0001')).toBeTruthy())
+
+    await userEvent.click(screen.getByRole('button', { name: /Отменены\s*1/ }))
+    expect(screen.queryByText('P-0001')).toBeNull()
+
+    // The rule the shared component settles. This screen used to be the one that
+    // said no, so the same gesture meant different things here and in the
+    // journal.
+    await userEvent.click(screen.getByRole('button', { name: /Отменены\s*1/ }))
+    expect(screen.getByText('P-0001')).toBeTruthy()
+    expect(screen.getByText('P-0002')).toBeTruthy()
+  })
+})

@@ -5,6 +5,7 @@ import type { Locale } from '../i18n/messages'
 import { translate } from '../i18n/translate'
 import { NavOverlay } from '../nav/NavOverlay'
 import type { NavRoute } from '../nav/NavOverlay'
+import { AuthDialog } from '../session/AuthDialog'
 import { useSession } from '../session/session'
 import { Clock } from './Clock'
 import { StatusBar } from './StatusBar'
@@ -83,6 +84,17 @@ export function AppShell({
     reports nothing — in which case the shell falls back to the `meta` prop.
   */
   const [reported, setReported] = useState<Chrome | null>(null)
+
+  /*
+    Whether the sign-in popup is up.
+
+    The masthead used to hold nothing at all for a signed-out visitor: the whole
+    right-hand group appeared only once there was an actor, so the way in was
+    whichever screen happened to render an `AuthPanel` — the cabinet, the account,
+    the checkout. Getting there from the catalogue meant leaving the catalogue,
+    which is exactly the cost `design/js/auth.js` was written to avoid.
+  */
+  const [signingIn, setSigningIn] = useState(false)
   const shown = reported?.meta ?? meta
   const here = reported?.path ?? path
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key)
@@ -214,13 +226,21 @@ export function AppShell({
         </div>
 
         <div className="hv-appbar__right">
-          {actor && (
+          {actor ? (
             <>
               <span className="hv-who">{actor.email}</span>
               <button type="button" className="hv-btn hv-btn--sm" onClick={() => void signOut()}>
                 {t('checkout.sign_out')}
               </button>
             </>
+          ) : (
+            <button
+              type="button"
+              className="hv-btn hv-btn--sm"
+              onClick={() => setSigningIn(true)}
+            >
+              {t('checkout.sign_in')}
+            </button>
           )}
 
           <ThemeSwitch locale={locale} />
@@ -232,6 +252,20 @@ export function AppShell({
       </main>
 
       <StatusBar note={statusNote} />
+
+      {/*
+        Registration follows the realm, not a prop. The console admits staff the
+        owner has already created — a self-service «Зарегистрироваться» on the
+        farm's own console would be a way to hand yourself an account, which is
+        the one thing the two realms exist to keep apart.
+      */}
+      {signingIn && (
+        <AuthDialog
+          locale={locale}
+          allowRegister={realm === 'public'}
+          onClose={() => setSigningIn(false)}
+        />
+      )}
     </div>
   )
 }

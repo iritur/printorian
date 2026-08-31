@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import type { Locale } from '@printorian/ui'
-import { api, translate } from '@printorian/ui'
+import type { ChipTone, Locale } from '@printorian/ui'
+import { FilterChips, api, translate } from '@printorian/ui'
 
 import { NONE, formatMoney, shortDate } from './account'
 
@@ -57,7 +57,10 @@ const GROUP_LABEL: Record<Group, string> = {
   cancelled: 'Отменены',
 }
 
-const GROUP_TONE: Partial<Record<Group, 'live' | 'good'>> = { active: 'live', done: 'good' }
+/** The three that are actually a filter. «Все» is the absence of one. */
+const FILTERED = ['active', 'done', 'cancelled'] as const satisfies readonly Group[]
+
+const GROUP_TONE: Partial<Record<Group, ChipTone>> = { active: 'live', done: 'good' }
 
 /**
  * Status to the kit's `data-state`, which is what colours the chip.
@@ -117,21 +120,24 @@ export function AccountOrders({ locale, onTrack }: { locale: Locale; onTrack: ()
   return (
     <>
       <div className="hv-row hv-row--between">
-        <div className="hv-tags">
-          {(Object.keys(GROUPS) as Group[]).map((key) => (
-            <button
-              key={key}
-              className="hv-tag"
-              type="button"
-              data-tone={GROUP_TONE[key]}
-              aria-pressed={group === key}
-              onClick={() => setGroup(key)}
-            >
-              <span className="hv-tag__k">{GROUP_LABEL[key]}</span>
-              <span className="hv-tag__n">{counts[key]}</span>
-            </button>
-          ))}
-        </div>
+        {/*
+          «Все» is the group with no filter on it, so it goes in `all` rather
+          than among the chips — which is also what gives it the shared
+          component's clearing rule: pressing the chip already in force comes
+          back here as `null`, and `null` is this screen's «Все».
+        */}
+        <FilterChips
+          label="Фильтр заказов"
+          all={{ label: GROUP_LABEL.all, count: counts.all }}
+          chips={FILTERED.map((key) => ({
+            key,
+            label: GROUP_LABEL[key],
+            count: counts[key],
+            tone: GROUP_TONE[key],
+          }))}
+          active={group === 'all' ? null : group}
+          onSelect={(key) => setGroup((key as Group | null) ?? 'all')}
+        />
         <button className="hv-btn hv-btn--sm" type="button" onClick={onTrack}>
           Ход выполнения ›
         </button>
