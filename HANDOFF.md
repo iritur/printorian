@@ -7,10 +7,14 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-28 · 1303 backend tests collected, 1297 passed and 6 skipped —
-the `tests/contract/test_bambu_hardware.py` cases that need a printer plugged in —
-with all six backend gates green. The frontend was not touched or re-run in that
-session: its 218 tests and the audit gates were last verified on 2026-08-27.
+**As of:** 2026-08-30 · 1 329 backend tests collected and 225 frontend tests, with
+all ten gates green. The backend suite was run end to end **in CI** on each of the
+five pull requests below — it takes about six minutes there and about ninety on a
+Windows workstation, so locally the six backend gates and the tests touching each
+change were run instead, and the CI job is the full-suite evidence. What was *not*
+re-run locally in this session: the complete backend suite in one pass. The counts
+above are `pytest --collect-only` and the frontend `vitest` total, not a claim
+about a local green run.
 
 **The system now runs on a real host.** A farm exists at `192.168.29.148`
 (Ubuntu 26.04, VMware), in production mode, and getting it there is what most of
