@@ -7,26 +7,25 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-30 · 1 329 backend tests collected and 225 frontend tests, with
-all ten gates green. The backend suite was run end to end **in CI** on each of the
-five pull requests below — it takes about six minutes there and about ninety on a
-Windows workstation, so locally the six backend gates and the tests touching each
-change were run instead, and the CI job is the full-suite evidence. What was *not*
-re-run locally in this session: the complete backend suite in one pass. The counts
-above are `pytest --collect-only` and the frontend `vitest` total, not a claim
-about a local green run.
+**As of:** 2026-08-31 · 1 340 backend tests collected and 249 frontend tests, and
+**not** all ten gates green on this branch in one place. The backend count was
+measured here, on the tree with `main` merged in; the frontend count is carried
+forward from the diagnostics entry below and was **not** re-measured, because this
+branch changes no file under `frontend/` and this worktree has no `node_modules`.
 
-**The system now runs on a real host.** A farm exists at `192.168.29.148`
-(Ubuntu 26.04, VMware), in production mode, and getting it there is what most of
-§1 is about — deploying it found nine defects that all six gates and 1174 tests
-had passed over, four of them in units committed hours earlier the same day.
+What ran locally on the merged tree: the six backend gates, each separately and
+each `exit=0` — `ruff check`, `ruff format --check`, `mypy --strict` (216 source
+files), `lint-imports` (6 contracts kept, 0 broken), `check_context_isolation.py`
+and `check_file_length.py`.
 
----
-
-## 1. What landed recently, and why it matters
-
-Read this section before touching the fleet, the dashboard, pricing or the
-stylesheets — each item changes something a person will notice.
+The full backend suite was run end to end **on this branch before `main` was
+merged in** — 1 333 passed, 7 skipped, `exit=0`, 24m43s — and that run does not
+describe the merged tree: merging brought in `_docs_endpoint_support.py` and
+`test_docs_endpoint_consumers.py` from the two pull requests that landed while
+this one was in review. CI on this pull request is the full-suite evidence for the
+tree as it now stands, and the distinction is recorded rather than smoothed over,
+because "the suite passed" and "the suite passed on *this* tree" are the two
+claims this file has already been corrected for confusing once.
 
 **The delete rules are held to a test, and one way this suite can lie is now
 written down** ([#47](https://github.com/iritur/printorian/issues/47)).
@@ -73,6 +72,123 @@ of each rule against real rows.
 > 1483.44s`, `exit=0`, against the compose PostgreSQL on 5433. The document-only
 > follow-up that corrected §3 re-ran the six backend gates and the two new test
 > files rather than the whole suite again.
+**The farm can now be asked what it thinks of itself**
+([#30](https://github.com/iritur/printorian/issues/30)). The settings screen grew
+the kit's fourteenth section, «Диагностика», and it is the one section where
+nothing is a setting: `/health/ready`, `/health/workers` and the driver roster,
+drawn as `.hv-health` rows with the backend's own `ok` / `degraded` / `failed`
+distinction kept intact. The signals have been real for a while — a beat is
+recorded at the *end* of a pass, so a wedged loop is distinguishable from a
+running one — and until now their only consumer was a person with `curl`. It is
+**not** a substitute for Stage 5 monitoring and should not be argued as one: a
+dashboard somebody has to open is not an alert.
+
+> **`api.get` could not be used, and that is the whole shape of the file.** Both
+> endpoints answer **503 with a full body** when something is wrong — readiness
+> when a check has failed, workers whenever a loop is not beating — and
+> `ApiClient` throws on any non-2xx, funnelling the body through `readErrorBody`,
+> which keeps only `{code}`-shaped payloads and discards the rest. Going through
+> it would have blanked the panel in precisely the state it exists to explain.
+> `DiagnosticsPanel` therefore probes with a bare `fetch` and reads the body
+> whatever the status code was. There is a test whose only job is to notice.
+>
+> **A fourth state exists, and it is the point.** `unknown` is not a backend
+> verdict: it is what the panel says when it could not measure — the probe did
+> not answer, the roster names a printer whose reading has lapsed, or the value
+> is one this build has never heard of. The mapping is a **whitelist**, so a
+> verdict added on the server tomorrow renders grey and unnamed rather than green
+> and wrong. A `!== 'failed'` would have been the flattering error CLAUDE.md §1
+> is about, and there is a mutation test for exactly that.
+>
+> **`degraded` says a different word, not only a different colour.** `paused`
+> (amber) against `error` (red) is the visual half; the pill's text is the half
+> that survives a reader who cannot separate the two. The distinction is
+> load-bearing — `wal_archiving` degraded means every request is being served and
+> the backup guarantee behind it has stopped holding.
+>
+> **Every denominator is what answered.** «1 из 2 проверок» is counted from the
+> checks the probe returned, because `event_relay` is reported only where a relay
+> is configured and a fixed total would have left a deployment without one
+> permanently reading one check short. The same rule is why an empty driver
+> roster gets its own sentence rather than a blank list: `core.driver_health` is
+> explicit that empty means *nothing was published*, and a blank panel there
+> would have said "this farm has no printers". **And the numerator over it is
+> withheld when nothing answered.** A row whose verdict is `unknown` was not a
+> reading, so it counts on neither side of the fraction: `Heartbeat.report()`
+> returns all seven loops with `state="unknown"` when the store cannot be read,
+> and a tile keyed on the length of that list drew «0 из 7 циклов» — seven loops
+> reported stopped, on the evidence that nobody looked. It now reads an em dash
+> over «НЕ ИЗМЕРЕНО», and a partly-measured group carries its shortfall
+> («ИЗ 2 НАБЛЮДАЕМЫХ · 1 НЕ ИЗМЕРЕНО») so that all-fine, partly-known and
+> measured-nothing stay three different things on the tile.
+>
+> **Two of the kit's four stat tiles were dropped rather than filled.** Nothing
+> in the system measures uptime or the event-queue depth, and a tile reading
+> `0 events queued` on a farm whose relay is down is an invented number with a
+> nicer font. «Версии» and «Журнал» are absent for the same reason — no endpoint
+> serves either.
+>
+> **The tab is inserted by the console, not served.** `SECTION_ORDER` carries
+> fourteen sections where the kit's rail draws fifteen, because a read-only page
+> has nothing for a settings *catalogue* to describe — that is still right, and
+> it left the rail one entry short. The rail's own length is now what the
+> «Разделы» count reports, and the section number in each heading is read from
+> the rail, so «Обслуживание системы» is section 15 as the kit has it rather than
+> 14. The tab is in the rail as soon as that load has *settled*, whatever it
+> settled as: `GET /settings/sections` reads the database, so gating it on the
+> catalogue hid «Диагностика» in exactly the outage it explains, and a failed
+> catalogue now leaves the diagnostics tab standing alone rather than an empty
+> rail under an error banner.
+**DESIGN-KIT §4 is empty for the first time, and the materials popup is why**
+([#38](https://github.com/iritur/printorian/issues/38)). `GET /materials/{code}`
+was the last endpoint the API served that nothing called. The issue allowed either
+answer — build the popup or delete the route — and the popup was built:
+`apps/console/src/MaterialDetail.tsx` reads the spec by code when a row is opened,
+so the window now shows density, tensile strength, heat-deflection temperature and
+the flexible/outdoor flags. None of those five is a column of the materials table,
+which is why the old popup — rendered from the row it was opened from — could say
+where a spool is and never what the plastic is.
+
+> **The purchase price is behind `VIEW_FINANCIALS`, and the route is not.**
+> `GET /materials/{code}` carries `purchase_price_per_1000m` and has no permission
+> dependency of its own, because the storefront configurator needs the catalogue.
+> The console declines to draw the farm's buying price for anyone without the
+> money permission (root CLAUDE.md §1), which is a decision about a screen and
+> **not** an access control — anyone who can call the route still gets the field.
+> The measured fact behind that sentence, because it is worse than "the console
+> is being careful": `GET /materials` and `GET /materials/{code}` both return
+> `MaterialSpecView` with `purchase_price_per_1000m` populated, neither carries a
+> permission dependency, and nothing above them requires a session — so the
+> farm's buying price is served to an anonymous caller. Whether the route should
+> withhold it is a backend decision and it needs an issue, which is a person's to
+> file: open work belongs in the tracker and not in this document
+> (docs/WORKFLOW.md), so what is recorded here is the state, not the task. It was
+> raised in the review of #85 and is waiting on that issue.
+>
+> **An empty §4 broke the gate that watches §4**, and the fix is worth knowing
+> before the next entry is closed. `test_section_4_still_parses_into_the_entries_it_carries`
+> asserted `len(parsed) == len(bullets) and parsed` — the trailing term was there so
+> that a broken `DOC_ENTRY` regex could not make the two parametrized gates collect
+> zero cases and report green. But it also required §4 to carry a bullet for ever,
+> and §4 is *meant* to reach zero; emptying it failed the gate rather than the
+> section. The parser is now proven against a `SAMPLE_BULLET` constant instead, and
+> the spelled-count assertion flips to "an empty section must not still spell a
+> count". Both directions were mutated and both fail. The two parametrized gates
+> now collect nothing and pytest reports that as `6 passed, 2 skipped`; the
+> module docstring says so in as many words, because an unexplained skip in the
+> file whose whole subject is gates that stop running without anyone noticing is
+> the last thing that file should leave to inference.
+>
+> **What measures that the issue is closed** is `MaterialsPage.test.tsx`: it opens
+> a row on the table a person opens a material from and watches the request for
+> `/materials/{code}` go out. The docs gate is the weaker half of that pair and
+> the difference is worth knowing — deleting the path literal from
+> `MaterialDetail.tsx` does make
+> `test_every_unconsumed_endpoint_is_named_in_the_doc_or_exempted` fail naming
+> `GET /materials/{code}` and nothing else, and that was run, but it is a scan of
+> the source text: a detail window no screen mounted would keep it green.
+> Reachability is a question about the bundle (`frontend/CLAUDE.md`), and the
+> built console bundle does carry the detail read.
 
 **The rates an order was priced at can now be looked at**
 ([#40](https://github.com/iritur/printorian/issues/40)).
@@ -458,8 +574,8 @@ is a separate audited «было · стало», shown in «Обслужива�
 > tiers' discount and margin override reach the engine through `resolve_tiers()`,
 > while the loyalty `from_spend` thresholds that *earn* a tier stay in
 > `loyalty.py`. The rest — maintenance intervals, zones, event matrix, API keys,
-> webhooks — and the diagnostics panel are **not built** — see §3. Two of the three
-> irreversible operations are wired: `POST /settings/reset-rates` drops every
+> webhooks — are **not built** — see §3; the diagnostics panel now is, above.
+> Two of the three irreversible operations are wired: `POST /settings/reset-rates` drops every
 > `pricing.*` override (audited per row), and `POST /settings/drop-telemetry` runs
 > retention now through the **shared clamp** — `retention.drop_telemetry_past_retention`,
 > which the maintenance worker also uses, so «drop now» and the scheduled sweep

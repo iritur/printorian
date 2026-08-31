@@ -33,13 +33,13 @@ from another document has only moved the drift.
 **Seventeen of twenty-one are built.** Every public screen ships; the four that do
 not are all control-realm. `settings` was the nearest of them and is now built —
 102 parameters across fourteen sections, served and audited. What is left of it is
-the table-valued settings and the diagnostics panel, not the screen (§2.1).
+the table-valued settings, not the screen (§2.1).
 
 | Screen | Realm | State |
 |---|---|---|
 | `promo` `catalog` `configurator` `checkout` `cabinet` `account` `auth` `blog` `blog-post` | public | **built** — all nine |
 | `dashboard` `orders` `fleet` `materials` `users` `postproduction` `packaging` | control | **built** |
-| `settings` | control | **built** — scalars; the tables and Диагностика remain, §2.1 |
+| `settings` | control | **built** — scalars and Диагностика; the tables remain, §2.1 |
 | `service` | control | **not built** — §2.2 |
 | `purchasing` | control | **not built** — §2.3 |
 | `store` | control | **not built** — §2.4 |
@@ -87,15 +87,21 @@ row resolves to the code default, so an empty table prices exactly as the farm
 always did, and an order keeps the rate snapshot it was agreed at (ADR-0020) —
 changing a margin moves the next quote and nothing already sold.
 
-**What is still owed.** The kit's fifteenth section and the settings that are
-*tables* rather than scalars:
+**Диагностика is built, and it is the one section that is not a form.**
+[`DiagnosticsPanel.tsx`](../frontend/apps/console/src/DiagnosticsPanel.tsx) draws
+the kit's section 14 from `/health/ready` and `/health/workers` — each dependency,
+each worker loop and each printer the worker says it is driving, with the backend's
+own `ok` / `degraded` / `failed` distinction kept intact and a fourth state,
+«не измерено», for anything that did not answer. The tab is inserted by the console
+rather than served: `SECTION_ORDER` has fourteen entries because a read-only page
+has nothing for a settings catalogue to carry, and that is still the right call.
+
+**What is still owed.** The settings that are *tables* rather than scalars, and two
+behaviours the screen displays without wiring:
 
 - [#29](https://github.com/iritur/printorian/issues/29) — the six table-valued
   sections. The volume ladder and the customer tiers are built and are the
   pattern to copy, not to reinvent.
-- [#30](https://github.com/iritur/printorian/issues/30) — **Диагностика**, the
-  fifteenth section. Read-only, nothing in it is a setting, and it is the only
-  place the health checks would be seen.
 - [#31](https://github.com/iritur/printorian/issues/31) —
   «Очистить лист ожидания», the last unbuilt irreversible operation.
 - [#32](https://github.com/iritur/printorian/issues/32) — worker loop intervals
@@ -182,11 +188,11 @@ Re-checked against the code; five of these were recorded as missing and are not.
 
 ## 4. Backend capability nothing consumes
 
-**This list has moved to the issue tracker.** Thirteen of the fourteen endpoints this section once carried now have consumers. The one that remains is tracked as:
-
-- [#38](https://github.com/iritur/printorian/issues/38) — **`GET /materials/{code}`**, the materials detail popup
+**This list has moved to the issue tracker, and it is now empty.** All fourteen endpoints this section once carried have consumers. The last of them was `GET /materials/{code}`, and [#38](https://github.com/iritur/printorian/issues/38) put two ways of closing it: build the materials detail popup the route was written for, or delete the route. **The popup was built.** `frontend/apps/console/src/MaterialDetail.tsx` reads the spec by code when a row is opened, which is where the density, the tensile figure, the heat-deflection temperature and the two suitability flags come from — none of those is a column of the materials table, so before this the window had nothing to show them from and the route had no caller.
 
 `TelemetrySample` was the headline entry here and no longer is: `metric_rollups` summarises it and `/fleet/metrics` serves it. `EstimateVariance` left the same way — `GET /jobs/variances` serves it and the order desk's «Пересмотр цены» panel reads it. So did `RateSnapshotRecord`: `GET /orders/{order_id}/rate-snapshot` serves it and «Тарифы заказа» reads it.
+
+**An empty section is not a finished one, and this one is measured from both ends.** `backend/tests/unit/test_docs_endpoint_consumers.py` fails if an entry listed here has quietly gained a consumer — the drift that took thirteen of them at once while the section sat still. It also fails in the other direction, which is the one that matters now that nothing is listed: an endpoint the API serves, with no path literal anywhere under `frontend/apps/*/src` or `frontend/packages/*/src`, has to be named here or exempted in `NOT_A_SCREEN_CONSUMER` with the reason. That list holds twenty-three routes — three no screen can ever have, and twenty that are real gaps, each naming the screen or the action that is missing. It is longer than this section ever was, so reading "nothing is listed here" as "the backend owes the console nothing" would be precisely the flattering mistake §4 exists to catch.
 
 ## 5. Order to build the rest in
 

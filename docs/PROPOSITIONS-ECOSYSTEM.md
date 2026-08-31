@@ -145,17 +145,19 @@ Telegram/Discord/email first; route `attention.raised`, `printer.error`,
 Moonraker maintains a **component registry**: every subsystem (Klippy, the file
 manager, each configured sensor, each update target) reports a status, version and
 error, and one endpoint serves the whole picture. That is exactly what Printorian's
-unbuilt Диагностика screen is for, and the fleet's many parts need it.
+Диагностика screen is for, and the fleet's many parts need it.
 
 ### 7. Component & health registry (Диагностика) — P2
 **Source:** Moonraker component registry.
-**Printorian now:** `/health/ready` has five checks, each worker beats at end of
-pass, and the settings screen's fifteenth section — Диагностика — is unbuilt (#30).
+**Printorian now:** `/health/ready` names its dependencies one by one, each worker
+beats at the end of a pass, and Диагностика reads both (#30) — a flat list of
+verdicts, not a registry carrying versions.
 **Realization:** build Диагностика as a registry, not a list: per printer (state +
 driver version + last telemetry), per AMS, per worker (last beat vs now), plus
 postgres/redis/backup/edge — each carrying a status and a version, so "is the farm
 healthy" and "what is running which version" are the same screen.
-**Labels:** `area:backend` · `area:frontend` · `type:task` — builds on #30.
+**Labels:** `area:backend` · `area:frontend` · `type:task` — builds on #30, which
+shipped the list this would deepen.
 
 ### 8. Environmental sensors — ambient + dry-box humidity — P3 (hw)
 **Source:** Moonraker sensors (DS18B20, etc.).

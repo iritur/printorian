@@ -50,13 +50,11 @@ NOT_A_SCREEN_CONSUMER: dict[str, str] = {
         "Reached from a link in a sent email, so the consumer is the mail body, not "
         "a screen. The token is the whole of the authentication."
     ),
-    "GET /health/workers": (
-        "An operations probe. HANDOFF §2 records it as the honest liveness signal "
-        "while there is no `/metrics` endpoint: it reads the beat each worker loop "
-        "writes at the *end* of a pass, so it separates wedged from working, and "
-        "the per-printer driver state the worker publishes beside it. "
-        "Surfacing that is Stage 5's job."
-    ),
+    # `GET /health/workers` was here, exempted as "an operations probe … surfacing
+    # that is Stage 5's job". It has a screen consumer now — the settings screen's
+    # «Диагностика» section reads it (#30) — so the exemption is gone rather than
+    # reworded. Keeping it would have failed the stale-entry gate next door, which
+    # is the direction that catches an exemption nobody is following any more.
     "GET /settings": (
         "`SettingsPage.tsx` builds the screen from `/settings/sections` and the "
         "audit from `/settings/history`. The flat key/value dump has no caller and "
@@ -222,9 +220,11 @@ def _covers(spec_path: str, literal: str) -> bool:
     in `ParcelDetail.tsx` is one call site covering nine endpoints. An OpenAPI
     `{param}` may **not**: it has to line up with a `{}` and never with an arbitrary
     literal. Read symmetrically, `/materials/recommend` "consumes"
-    `/materials/{code}` — which deletes the one endpoint §4 actually names from the
-    derived set and leaves this gate green while proving nothing. That false
-    positive happened while this file was being written.
+    `/materials/{code}` — which deleted the only endpoint §4 then named from the
+    derived set and left this gate green while proving nothing. That false positive
+    happened while this file was being written. `/materials/{code}` has a real
+    consumer now (#38) and the rule is unchanged: it is about the shape of the two
+    wildcards, not about that one route.
     """
     spec = spec_path.strip("/").split("/")
     seen = literal.strip("/").split("/")

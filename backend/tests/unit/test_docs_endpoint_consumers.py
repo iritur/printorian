@@ -4,6 +4,22 @@
 consumer while the list sat still, so for an unknown stretch the section described
 a backlog that had almost entirely been built. That is the drift these close.
 
+**Two of the gates here are skipped now, and that is the recorded state of §4.**
+`test_every_endpoint_named_in_section_4_really_has_no_consumer` and
+`test_every_class_named_in_section_4_is_still_mapped` are parametrized over what §4
+names, §4 names nothing since #38, and pytest reports an empty parameter set as a
+skip — the run reads `6 passed, 2 skipped`. `test_every_tree_that_is_scanned_exists`
+says below that a skip is how a gate stops running without anyone noticing, and the
+distinction is worth being explicit about rather than leaving a reader to reconcile
+the two: that one would be a gate skipping itself over a condition it measured,
+which is why it is an assertion instead. These two have no rows to check because
+the document they check has no rows, and the thing that could make them *silently*
+empty — `DOC_ENTRY` ceasing to match the bullet shape — is what `SAMPLE_BULLET` and
+`test_section_4_still_parses_into_the_entries_it_carries` exist to catch. The other
+direction, `test_every_unconsumed_endpoint_is_named_in_the_doc_or_exempted`, is not
+parametrized and runs whatever §4 holds; it is the one that fails when an endpoint
+quietly loses its consumer, and it is unaffected by all of this.
+
 The three derivations live in `_docs_endpoint_support.py`.
 """
 
@@ -16,6 +32,7 @@ from tests.unit._docs_endpoint_support import (
     DESIGN_KIT,
     DOC_CLASSES,
     DOC_ENDPOINTS,
+    DOC_ENTRY,
     FRONTEND_TREES,
     NOT_A_SCREEN_CONSUMER,
     NUMBER_WORDS,
@@ -27,6 +44,20 @@ from tests.unit._docs_endpoint_support import (
     _section_4,
     _served_operations,
     _unconsumed_operations,
+)
+
+#: The bullet shape §4 is written in, as one line the parser can be held against on
+#: a day the section carries none of its own. It is the last entry §4 ever had, kept
+#: verbatim after #38 built its consumer.
+#:
+#: The self-check used to be "§4 has at least one bullet", which is a guard with an
+#: expiry date on it: the list is *meant* to reach zero, and reaching it failed this
+#: gate rather than the section. What the assertion is actually for — noticing that
+#: `DOC_ENTRY` has stopped matching, which would make the two parametrized gates
+#: above collect nothing and report green — needs a bullet, not §4's bullet.
+SAMPLE_BULLET = (
+    "- [#38](https://github.com/iritur/printorian/issues/38) — "
+    "**`GET /materials/{code}`**, the materials detail popup"
 )
 
 # --------------------------------------------------------------- the gates
@@ -102,18 +133,36 @@ def test_section_4_still_parses_into_the_entries_it_carries() -> None:
     """A parametrized gate over an empty list is a gate that stopped running.
 
     If the bullet format changes and `DOC_ENTRY` stops matching, the two tests above
-    collect zero cases and report green. This is what fails instead. It also holds
-    §4's own spelled count against the bullets under it, which is the one number in
-    the section derivable from the section.
+    collect zero cases and report green. This is what fails instead — against
+    `SAMPLE_BULLET` rather than against §4's own first line, because §4 is empty now
+    and an empty section must not be able to disarm the parser it is checked with. It
+    also holds §4's own spelled count against the bullets under it, which is the one
+    number in the section derivable from the section.
     """
+    assert DOC_ENTRY.match(SAMPLE_BULLET), (
+        f"DOC_ENTRY in {__file__} no longer matches the shape §4's bullets are "
+        "written in, so both gates above would collect nothing and report green. The "
+        "expected shape is ``- [#NN](url) — **`SUBJECT`**, prose``."
+    )
+
     bullets = [line for line in _section_4() if line.startswith("- [#")]
     parsed = DOC_ENDPOINTS + DOC_CLASSES
-    assert len(parsed) == len(bullets) and parsed, (
+    assert len(parsed) == len(bullets), (
         f"§4 of {DESIGN_KIT.name} has {len(bullets)} issue bullets and DOC_ENTRY in "
         f"{__file__} read {len(parsed)} of them. The expected shape is "
         "``- [#NN](url) — **`SUBJECT`**, prose``."
     )
+
     spelled = REMAINING_COUNT.search("\n".join(_section_4()))
+    if not bullets:
+        # A section that lists nothing and still counts something is the drift in
+        # miniature, and `NUMBER_WORDS` deliberately has no word for zero: the
+        # sentence should be gone rather than set to "none".
+        assert spelled is None, (
+            f"§4 of {DESIGN_KIT.name} carries no bullets and still spells a count: "
+            f"{spelled.group(0) if spelled else ''}."
+        )
+        return
     assert spelled and NUMBER_WORDS.get(spelled.group(1).lower()) == len(bullets), (
         f"§4 of {DESIGN_KIT.name} says {spelled.group(1) if spelled else '(no count)'} "
         f"entries remain and lists {len(bullets)}."
