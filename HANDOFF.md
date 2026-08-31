@@ -28,6 +28,52 @@ had passed over, four of them in units committed hours earlier the same day.
 Read this section before touching the fleet, the dashboard, pricing or the
 stylesheets — each item changes something a person will notice.
 
+**The delete rules are held to a test, and one way this suite can lie is now
+written down** ([#47](https://github.com/iritur/printorian/issues/47)).
+`backend/tests/test_referential_integrity.py` is the inventory — all forty-eight
+foreign keys grouped by rule, read back out of `pg_constraint` rather than off the
+models — and `backend/tests/unit/test_delete_rules.py` exercises one representative
+of each rule against real rows.
+
+> **`SET session_replication_role = replica` is the finding worth carrying
+> forward.** A session that runs it leaves every constraint sitting in
+> `pg_constraint` and enforces none of them. Applied to the `db_session` fixture as
+> a mutation, the catalogue file passed every assertion and all six behaviour tests
+> failed. That is why there are two files rather than one, and it is the shape to
+> expect from any test that reads a catalogue and concludes something is being
+> enforced: present and enforced are different facts. Measured, not reasoned about
+> — the mutation was applied, run and reverted, along with three others.
+>
+> **Every delete in the behaviour file is issued as SQL rather than through
+> `session.delete`.** `Order.lines` and `Order.events` carry `cascade="all,
+> delete-orphan"`, so the ORM would do the deleting itself, in Python, and every
+> assertion would pass against a database holding no constraints at all — precisely
+> the state these tests exist to detect. Do not "simplify" them onto the ORM.
+>
+> **The issue's premise had already expired, and its last clause had not.** #47 was
+> filed as "66 tests build against a fabricated parent id, so foreign keys are off
+> in the fast suite". ADR-0021 moved the suite onto real PostgreSQL,
+> `conftest.clean_database` emits every key through `create_all`, and
+> `tests/factories.py` already gives those tests real parents — 29 calls across 18
+> files. Measured before anything was written: 48 foreign keys in `printorian_test`,
+> and a `PrintJob` inserted against an invented `order_id` refused with
+> `IntegrityError`. What was *not* true is that a wrong cascade would fail anything.
+>
+> **`docs/DATABASE-REVIEW.md` §3 said "twenty-eight foreign keys" and named "the two
+> references to `model_assets`".** There are forty-eight — 26 `CASCADE`, 15 `SET
+> NULL`, 7 `RESTRICT` — and three `RESTRICT` references to `model_assets`, plus a
+> fourth that is `SET NULL` on purpose (`prepared_plates`: a plate can be re-sliced,
+> a job cannot). §3 is corrected and now points at the test as the enumeration
+> instead of restating a list, and §10 no longer carries #47 as outstanding work.
+> The count had been describing the schema of the initial commit through four
+> further contexts.
+>
+> **The full backend suite was run locally for this branch** — not only in CI, and
+> unlike the session the As-of line above describes: `1333 passed, 7 skipped in
+> 1483.44s`, `exit=0`, against the compose PostgreSQL on 5433. The document-only
+> follow-up that corrected §3 re-ran the six backend gates and the two new test
+> files rather than the whole suite again.
+
 **The rates an order was priced at can now be looked at**
 ([#40](https://github.com/iritur/printorian/issues/40)).
 `GET /orders/{order_id}/rate-snapshot` serves the pinned bundle, and the order
@@ -716,6 +762,17 @@ What exists now so that proving it is one command rather than a project:
 - **`ruff format --check` was failing on `main`** before this run, on a migration
   committed as raw alembic output. Fixed in passing; worth knowing the gate can
   drift without anyone noticing, because a red CI on `main` is easy to live with.
+- **#47 needs amending before it closes, and the `drift` record needs deciding.**
+  Its "Done when" opens with "the 66 tests build real parents" and "foreign keys
+  are enforced for the whole fast suite", both of which ADR-0021 and
+  `tests/factories.py` had already made true; only the third clause was the work
+  (§1). WORKFLOW §3 says a "Done when" that turned out to be the wrong criterion is
+  amended *in the issue before closing*, so the record says what was delivered —
+  and WORKFLOW §5 says the stale document gets its own `drift` issue rather than a
+  silent close. The correction to `DATABASE-REVIEW` §3 and §10 landed with the same
+  pull request, so what is left is a filing decision: amend #47, and decide whether
+  a `drift` issue closed by its own merge is still worth opening for the record.
+  Editing the tracker is not an agent's to do.
 
 ## 6. If you are picking up mid-flight
 
