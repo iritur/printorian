@@ -179,6 +179,20 @@ describe('the readiness checks', () => {
     expect(screen.getAllByText('НЕ ИЗМЕРЕНО').length).toBeGreaterThan(0)
   })
 
+  it('does not report a round trip for a probe that never answered', async () => {
+    // `probe()` times its catch block as well as its success path, so an
+    // unreachable readiness check still carries a `latencyMs`. It is a real
+    // number and it measures the wrong thing: how long the failure took, under
+    // a label that reads «ОТВЕТ … МС». The foot must stay silent rather than
+    // report a round trip nobody completed.
+    serve({ ready: undefined, workers: undefined })
+
+    render(<DiagnosticsPanel locale="ru" />)
+
+    await screen.findAllByText(/Состояние подсистем не измерено/)
+    expect(screen.queryByText(/ОТВЕТ\s*\d+\s*МС/)).not.toBeInTheDocument()
+  })
+
   it('keeps the body of a 503, because that is the answer this panel is for', async () => {
     // `ApiClient` throws on a non-2xx and `readErrorBody` keeps only
     // `{code}`-shaped payloads, so going through it would have blanked the panel

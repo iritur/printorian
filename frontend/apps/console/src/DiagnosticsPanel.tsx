@@ -410,7 +410,13 @@ export function DiagnosticsPanel({ locale }: { locale: Locale }) {
         <div className="hv-panel__foot">
           <span>
             {t('settings.diagnostics.foot')}
-            {ready.kind !== 'probing' && ` · ${t('settings.diagnostics.latency', { ms: ready.latencyMs })}`}
+            {/*: `answered` and not merely `!== 'probing'`. `probe()` fills
+                `latencyMs` from its catch block too, so an unreachable probe
+                carries a real number — time-to-failure — and this line calls it
+                «ОТВЕТ {ms} МС» / "answered in {ms} ms". Printing it there states
+                a round trip that never completed, under a body sentence saying
+                the subsystem could not be measured at all (CLAUDE.md §1). */}
+            {ready.kind === 'answered' && ` · ${t('settings.diagnostics.latency', { ms: ready.latencyMs })}`}
           </span>
           <button className="hv-btn hv-btn--sm" type="button" disabled={busy} onClick={rerun}>
             {t('settings.diagnostics.rerun')}
