@@ -27,6 +27,74 @@ tree as it now stands, and the distinction is recorded rather than smoothed over
 because "the suite passed" and "the suite passed on *this* tree" are the two
 claims this file has already been corrected for confusing once.
 
+**The three design-kit conventions that were never ported now exist once each,
+and the row that said so had been wrong about one of them**
+([#37](https://github.com/iritur/printorian/issues/37)). `FilterChips` is the
+counter-chip row, and there had been three of them — the console's table tags, the
+account's four order groups, the journal's sections — each with its own copy of the
+markup and its own answer to whether pressing the chip already in force clears it.
+Two said yes and one said no, which is the same control behaving differently
+depending on where you met it. The rule is settled in the component now, and the
+count is `number | null`: the journal's row had been printing «—» for the total it
+had not received and `0` for every section beside it, in the same line of pixels.
+
+> **`Tabs` is built with no caller, deliberately.** The strip is what the purchase
+> order, the shipment and every detail popup after them are drawn with in the kit,
+> and the argument for porting it before those screens exist is that otherwise each
+> of the four invents its own — the failure ROADMAP names under "Management tables
+> are not a phase". It shares `shell/tablist.ts` with the existing `TabRail` so a
+> rail and a strip cannot drift into two controls: one stop in the page's tab order
+> for the whole list, arrow keys on the axis it is drawn on, and selection following
+> focus. Fourteen settings sections used to be fourteen Tab presses.
+>
+> **`AuthDialog` got its opener from the masthead, which had none.** `AppShell`'s
+> right-hand group rendered only for a signed-in actor, so a signed-out visitor's
+> only way in was to leave for a screen that happened to render an `AuthPanel` —
+> and reaching one from the catalogue costs the catalogue, which is the exact cost
+> `design/js/auth.js` was written to avoid. It is the same `AuthPanel` in the kit's
+> popup chrome, not a second sign-in form, and it stands itself down once there is
+> a session: the control it was opened from is gone by then.
+>
+> **That opener put two copies of one form in one document, and a review caught
+> it.** The three screens «Войти» is most likely to be pressed on — the checkout,
+> the cabinet, the account — each already render an inline `AuthPanel` for exactly
+> the signed-out state the masthead offers it in, so the popup mounted a second
+> panel over the first. `AuthPanel` wrote its field ids as literals, from when only
+> one of it could exist, and `<label for>` resolves to the **first** match in tree
+> order: the popup's «Электронная почта» drove the input on the page underneath,
+> which the overlay covers and `aria-modal` declares inert. Focus landed outside
+> the dialog, where `Modal`'s Tab trap cannot reach it — that trap only intervenes
+> on the first and last focusable *inside* the dialog — so Tab then walked the page
+> behind the popup, and autofill and screen readers read the same wrong pairing.
+> The ids come from `useId()` now. The other hardcoded `htmlFor` ids in the tree
+> (`co-city`, `cfg-material`, `j-title`) are left alone deliberately: each belongs
+> to a form only one of which can be on screen, and this one stopped being that the
+> day the shell grew a way in.
+>
+> **DESIGN-KIT §3 said "CSS section 22 not ported" and section 22 had been ported.**
+> `packages/ui/src/harvester/tabs.css` is it, near enough verbatim, and `TabRail`
+> and `TabView` had been built, exported and in use on two screens. The row had been
+> carried forward from a plan rather than read off the file — the mistake that
+> document's own opening warns about, made in that document. What was genuinely
+> missing was the horizontal strip and the keyboard behaviour. `data-bind` is now
+> written down as **deliberately not ported** with the reason, so the next reader
+> does not build it out of completeness.
+>
+> **The kit's attributes are not all worth keeping.** `data-tab-panel` survives
+> because the ported CSS selects on it; `data-tabs` and `data-tab-target` were how
+> the static kit's JavaScript found a button's panel, and React state is that
+> wiring. Emitting them anyway would have been a hook with no handler.
+>
+> **Measured on this branch, not asserted.** All four frontend gates run separately:
+> `typecheck` `exit=0`, `lint` `exit=0`, `test` `exit=0` with **276 passed** across
+> 28 files (249 before this branch), `build` `exit=0`. Each new behaviour was
+> mutation-proved — the em dash, the clearing rule, the arrow keys, the dialog
+> standing down, the masthead's way in and the two panels not colliding were each
+> broken deliberately, the test watched to fail, and the change restored. The bundles were then read rather than
+> grepped: `hv-tabs__btn` appears **zero** times in either `apps/*/dist/assets/*.js`,
+> which is what "no caller yet" means, and `hv-tags` appears exactly once in each,
+> which is what "one chip row" means.
+
 **The delete rules are held to a test, and one way this suite can lie is now
 written down** ([#47](https://github.com/iritur/printorian/issues/47)).
 `backend/tests/test_referential_integrity.py` is the inventory — all forty-eight

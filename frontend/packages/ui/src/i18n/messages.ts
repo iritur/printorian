@@ -212,6 +212,12 @@ export const ru = {
   'queue.waitlist.material_not_loaded': 'Ждём загрузки материала — сроки уточняем',
   'queue.waitlist.no_capable_printer': 'Требуется решение инженера',
   'queue.no_estimate': 'Точный срок пока назвать не можем',
+  // The sign-in popup's own chrome. `AuthDialog` is the kit's `data-auth-open`
+  // window, and it borrows the checkout's field labels — only the frame around
+  // them is its own.
+  'auth.title': 'Доступ :: Вход',
+  'auth.session_none': 'СЕАНС :: НЕ УСТАНОВЛЕН',
+
   'checkout.title': 'Оформление заказа',
   'checkout.place': 'Оформить заказ',
   'checkout.pay': 'Перейти к оплате',
@@ -1495,6 +1501,9 @@ export const en: Messages = {
   'queue.waitlist.material_not_loaded': 'Waiting for material to be loaded — no date yet',
   'queue.waitlist.no_capable_printer': 'Needs an engineer to decide',
   'queue.no_estimate': 'We cannot give a reliable date yet',
+  'auth.title': 'Access :: Sign in',
+  'auth.session_none': 'SESSION :: NOT ESTABLISHED',
+
   'checkout.title': 'Checkout',
   'checkout.place': 'Place order',
   'checkout.pay': 'Continue to payment',
