@@ -55,6 +55,22 @@ had not received and `0` for every section beside it, in the same line of pixels
 > popup chrome, not a second sign-in form, and it stands itself down once there is
 > a session: the control it was opened from is gone by then.
 >
+> **That opener put two copies of one form in one document, and a review caught
+> it.** The three screens «Войти» is most likely to be pressed on — the checkout,
+> the cabinet, the account — each already render an inline `AuthPanel` for exactly
+> the signed-out state the masthead offers it in, so the popup mounted a second
+> panel over the first. `AuthPanel` wrote its field ids as literals, from when only
+> one of it could exist, and `<label for>` resolves to the **first** match in tree
+> order: the popup's «Электронная почта» drove the input on the page underneath,
+> which the overlay covers and `aria-modal` declares inert. Focus landed outside
+> the dialog, where `Modal`'s Tab trap cannot reach it — that trap only intervenes
+> on the first and last focusable *inside* the dialog — so Tab then walked the page
+> behind the popup, and autofill and screen readers read the same wrong pairing.
+> The ids come from `useId()` now. The other hardcoded `htmlFor` ids in the tree
+> (`co-city`, `cfg-material`, `j-title`) are left alone deliberately: each belongs
+> to a form only one of which can be on screen, and this one stopped being that the
+> day the shell grew a way in.
+>
 > **DESIGN-KIT §3 said "CSS section 22 not ported" and section 22 had been ported.**
 > `packages/ui/src/harvester/tabs.css` is it, near enough verbatim, and `TabRail`
 > and `TabView` had been built, exported and in use on two screens. The row had been
@@ -70,11 +86,11 @@ had not received and `0` for every section beside it, in the same line of pixels
 > wiring. Emitting them anyway would have been a hook with no handler.
 >
 > **Measured on this branch, not asserted.** All four frontend gates run separately:
-> `typecheck` `exit=0`, `lint` `exit=0`, `test` `exit=0` with **273 passed** across
-> 27 files (249 before this branch), `build` `exit=0`. Each new behaviour was
+> `typecheck` `exit=0`, `lint` `exit=0`, `test` `exit=0` with **276 passed** across
+> 28 files (249 before this branch), `build` `exit=0`. Each new behaviour was
 > mutation-proved — the em dash, the clearing rule, the arrow keys, the dialog
-> standing down and the masthead's way in were each broken deliberately, the test
-> watched to fail, and the change restored. The bundles were then read rather than
+> standing down, the masthead's way in and the two panels not colliding were each
+> broken deliberately, the test watched to fail, and the change restored. The bundles were then read rather than
 > grepped: `hv-tabs__btn` appears **zero** times in either `apps/*/dist/assets/*.js`,
 > which is what "no caller yet" means, and `hv-tags` appears exactly once in each,
 > which is what "one chip row" means.

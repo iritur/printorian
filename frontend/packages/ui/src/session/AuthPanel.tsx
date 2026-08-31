@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
 
@@ -35,9 +35,22 @@ export interface AuthPanelProps {
  * different things from the browser — `current-password` against `new-password`
  * for autofill, and a minimum length that only applies to one of them — and a
  * single form cannot declare both.
+ *
+ * **More than one of it can be on screen at once**, which is why the field ids
+ * are generated rather than written down. The checkout, the cabinet and the
+ * account each render this panel inline, and `AppShell`'s masthead «Войти»
+ * shows for exactly the signed-out state those three are showing it in — so
+ * opening the popup there puts two copies of the form in one document. With
+ * literal ids that is two `#auth-email`s, and `<label for>` resolves to the
+ * *first* match in tree order: the popup's label would drive the input on the
+ * page behind it, which `aria-modal` has just declared inert. Focus would land
+ * outside the dialog, past the point `Modal`'s Tab trap can catch it — it only
+ * intervenes on the first and last focusable *inside* the dialog — and autofill
+ * and screen readers would read the same wrong pairing.
  */
 export function AuthPanel({ locale, hint, allowRegister = true }: AuthPanelProps) {
   const { signIn, register } = useSession()
+  const field = useId()
   const [mode, setMode] = useState<'in' | 'new'>('in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -88,12 +101,12 @@ export function AuthPanel({ locale, hint, allowRegister = true }: AuthPanelProps
       )}
 
       <div className="hv-field">
-        <label className="hv-label" htmlFor="auth-email">
+        <label className="hv-label" htmlFor={`${field}-email`}>
           {t('checkout.email')}
         </label>
         <input
           className="hv-input"
-          id="auth-email"
+          id={`${field}-email`}
           type="email"
           autoComplete="email"
           required
@@ -103,12 +116,12 @@ export function AuthPanel({ locale, hint, allowRegister = true }: AuthPanelProps
       </div>
 
       <div className="hv-field">
-        <label className="hv-label" htmlFor="auth-password">
+        <label className="hv-label" htmlFor={`${field}-password`}>
           {t('checkout.password')}
         </label>
         <input
           className="hv-input"
-          id="auth-password"
+          id={`${field}-password`}
           type="password"
           /*
             The tab decides this. `current-password` on the sign-in path lets a
