@@ -27,6 +27,44 @@ tree as it now stands, and the distinction is recorded rather than smoothed over
 because "the suite passed" and "the suite passed on *this* tree" are the two
 claims this file has already been corrected for confusing once.
 
+**A wait-list row now ends when the wait does, and not one pass later.**
+`planning._refresh_wait_list` discarded rows only for the jobs in
+`result.wait_list` — the ones *still* waiting. A job wait-listed on one pass and
+assigned on the next fell out of that set and kept its `wait_list_entries` row
+for ever: nothing else deletes one except the owner's farm-wide clear and the
+cascade from the job or its order. The discard now covers the whole claimed batch
+(`by_id.values()`), which is the honest set, because the planner decides every
+job it looks at — assigned or wait-listed, never neither.
+
+> **It was three wrong answers, not one.** `queue.queue_position` read the stale
+> row and told a customer whose job was `assigned` why it had been stuck three
+> passes earlier. Worse, a position is counted by comparing `predicted_start`
+> across the *whole table*, so the phantom sat one place in front of every other
+> customer and inflated their numbers too. And `reads.wait_list` and
+> `schedule.wait_list_size` count rows straight out of the same table, so the
+> floor's list and the dashboard chip carried it as well. Neither of those two
+> needed a change of their own — they were reading a table that was lying.
+>
+> **Both are held to tests that fail without the fix**, in
+> `tests/unit/test_queue_position.py`. `test_a_job_that_gets_assigned_leaves_the_wait_list`
+> runs two passes — busy machine, then free — and asserts no row, no `reason`, and
+> zero from `wait_list_size`; it failed on the row assertion before the change.
+> `test_a_job_that_stopped_waiting_stops_counting_against_others` puts a second
+> customer behind the first and asserts their position falls from 2 to 1; it
+> failed with `assert 2 == 1`. The second test is the one worth keeping: a
+> per-job assertion cannot see a defect whose damage lands on somebody else's row.
+>
+> **This branch is stacked on
+> [#31](https://github.com/iritur/printorian/issues/31)'s**, not on `main`. The
+> fix goes through `wait_list.discard`, which that branch introduced; writing a
+> second delete here to avoid the dependency would have re-created exactly the
+> divergence #31 exists to prevent. Merge that one first.
+>
+> **`WaitListEntry`'s own docstring stated the invariant that was false** — "re-
+> planning replaces the row rather than appending" describes half a rule. It now
+> says the other half, next to the column definitions, because that is where the
+> next person adding a reader of this table will be standing.
+
 **The third irreversible operation exists, and it shares its delete with the
 planner** ([#31](https://github.com/iritur/printorian/issues/31)).
 `POST /settings/clear-wait-list` empties the wait list, audited per row into each
@@ -894,6 +932,19 @@ What exists now so that proving it is one command rather than a project:
 
 ## 5. Needs a person, not an agent
 
+- **A cancelled job keeps its wait-list row, and that is a second defect on a
+  different path — it needs an issue.** Measured, not reasoned about: a probe run
+  against the fixed tree wait-listed a job, cancelled it, and
+  `queue_position` still answered `job_status=cancelled` with
+  `reason='waitlist.awaiting_capacity'`, `position=1` and a predicted start.
+  `ProductionService.cancel` does not touch `wait_list_entries`, and a cancelled
+  job is never claimed by another planning pass, so unlike the defect §1 fixes
+  this row is stale *permanently* and keeps inflating other customers' positions.
+  It was left out deliberately: the fix asked for was scoped to
+  `_refresh_wait_list`, and folding an unrelated behaviour change into it is what
+  WORKFLOW §3 means by one issue closing on one demonstrated criterion. The shape
+  of the fix is one call to `wait_list.discard(db, job_ids=[job.id])` in `cancel`,
+  plus the test that fails without it. Editing the tracker is not an agent's to do.
 - **Dev account passwords have drifted from the docs.** `DEVELOPMENT.md` lists
   `floor@printorian.example` / `shop-floor-pass-1`; the stored hash does not match.
   `boss@printorian.example` was reset to the documented `owner-pass-12345` and

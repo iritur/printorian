@@ -212,9 +212,12 @@ class AssignmentRecord(Entity):
 class WaitListEntry(Entity):
     """A job nothing can take yet, and why.
 
-    One row per job — a job is either waiting or it is not, and re-planning
-    replaces the row rather than appending, so the cabinet never shows a customer
-    a stale reason alongside a current one.
+    One row per job — a job is either waiting or it is not, so the cabinet never
+    shows a customer a stale reason alongside a current one. Both halves of that
+    are `planning._refresh_wait_list`'s job, and the second is the one that was
+    missing: a pass replaces the row of a job still waiting *and* removes the row
+    of one it has just assigned. Nothing else deletes a row except the owner's
+    farm-wide clear and the cascade from the job or the order.
     """
 
     __tablename__ = "wait_list_entries"
