@@ -188,11 +188,11 @@ Re-checked against the code; five of these were recorded as missing and are not.
 
 ## 4. Backend capability nothing consumes
 
-**This list has moved to the issue tracker.** Thirteen of the fourteen endpoints this section once carried now have consumers. The one that remains is tracked as:
-
-- [#38](https://github.com/iritur/printorian/issues/38) — **`GET /materials/{code}`**, the materials detail popup
+**This list has moved to the issue tracker, and it is now empty.** All fourteen endpoints this section once carried have consumers. The last of them was `GET /materials/{code}`, and [#38](https://github.com/iritur/printorian/issues/38) put two ways of closing it: build the materials detail popup the route was written for, or delete the route. **The popup was built.** `frontend/apps/console/src/MaterialDetail.tsx` reads the spec by code when a row is opened, which is where the density, the tensile figure, the heat-deflection temperature and the two suitability flags come from — none of those is a column of the materials table, so before this the window had nothing to show them from and the route had no caller.
 
 `TelemetrySample` was the headline entry here and no longer is: `metric_rollups` summarises it and `/fleet/metrics` serves it. `EstimateVariance` left the same way — `GET /jobs/variances` serves it and the order desk's «Пересмотр цены» panel reads it. So did `RateSnapshotRecord`: `GET /orders/{order_id}/rate-snapshot` serves it and «Тарифы заказа» reads it.
+
+**An empty section is not a finished one, and this one is measured from both ends.** `backend/tests/unit/test_docs_endpoint_consumers.py` fails if an entry listed here has quietly gained a consumer — the drift that took thirteen of them at once while the section sat still. It also fails in the other direction, which is the one that matters now that nothing is listed: an endpoint the API serves, with no path literal anywhere under `frontend/apps/*/src` or `frontend/packages/*/src`, has to be named here or exempted in `NOT_A_SCREEN_CONSUMER` with the reason. That list holds twenty-three routes — three no screen can ever have, and twenty that are real gaps, each naming the screen or the action that is missing. It is longer than this section ever was, so reading "nothing is listed here" as "the backend owes the console nothing" would be precisely the flattering mistake §4 exists to catch.
 
 ## 5. Order to build the rest in
 

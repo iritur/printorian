@@ -6,7 +6,6 @@ import {
   DataTable,
   Modal,
   api,
-  formatLocation,
   formatMoney,
   summarizeLocations,
   translate,
@@ -16,6 +15,8 @@ import {
 } from '@printorian/ui'
 
 import { Field } from './FleetAdmin'
+import { MaterialDetail } from './MaterialDetail'
+import type { MaterialLot } from './MaterialLots'
 
 /**
  * The materials table (scenario item M1), with the inventory actions behind
@@ -29,17 +30,14 @@ const MANAGE_INVENTORY = 'manage_inventory'
 const VIEW_PRODUCTION = 'view_production'
 const STATUSES = ['stock', 'in_printer', 'ordered', 'none'] as const
 
-interface Lot {
-  id: string
-  label: string
-  remaining_grams: string
-  location_kind: string
-  shelf: string | null
-  printer_id: string | null
-  ams_unit: number | null
-  ams_slot: number | null
-}
-
+/**
+ * One row of `GET /materials`, which is a *subset* of what a material is.
+ *
+ * The physical properties and the purchase price ride in the same response and
+ * are deliberately not declared here: the window that shows them reads
+ * `GET /materials/{code}` and types it there, so this screen cannot start
+ * rendering a detail out of a row that a future paged listing would trim.
+ */
 interface Material {
   id: string
   code: string
@@ -51,7 +49,7 @@ interface Material {
   status: string
   total_remaining_grams: string
   lot_count: number
-  lots: Lot[]
+  lots: MaterialLot[]
 }
 
 interface MaterialTable {
@@ -80,20 +78,15 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
       : null,
   )
   const [error, setError] = useState<string | null>(null)
-  const [selected, setSelected] = useState<Material | null>(null)
-
   /*
-    The material as the *table* currently has it, not the snapshot taken when the
-    row was clicked.
+    The *code* of the open material, not the row it was opened from.
 
-    Adding a lot used to close the popup, because `selected` was a captured object
-    and would have gone on showing the old lots. Re-reading it here is what the
-    fleet detail already does with printer telemetry, and it means the window can
-    stay open and simply update — which is the behaviour a popup implies.
+    The window re-reads the material by code (`MaterialDetail`), so holding a row
+    here would only give it a second, staler copy of the same facts to disagree
+    with. It also means the table can reload underneath without the popup
+    flickering or reverting.
   */
-  const shown = selected
-    ? (table?.rows.find((row) => row.code === selected.code) ?? selected)
-    : null
+  const [selected, setSelected] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [printerNames, setPrinterNames] = useState<Record<string, string>>({})
 
@@ -249,152 +242,28 @@ export function MaterialsPage({ locale }: { locale: Locale }) {
         isLoading={table === null}
         loadingLabel={t('common.loading')}
         initialSort={{ key: 'code', direction: 'asc' }}
-        onRowActivate={setSelected}
+        onRowActivate={(row) => setSelected(row.code)}
       />
 
       {/* The material's own window, as the scenario's table asks (item M1) and
           the kit draws it. It was a panel below the table, so opening a row
           pushed that row out from under the pointer — and the "add lot" form
-          inside it now sits in a popup for free. */}
-      {shown && (
-        <Modal
-          wide
-          title={`${shown.code} :: ${t('materials.title')}`}
-          meta={[
-            { label: 'СЕМЕЙСТВО', value: shown.family },
-            { label: 'ЦВЕТ', value: shown.color_name || '—' },
-          ]}
-          status={translate(locale, `material.status.${shown.status}` as MessageKey)}
-          path={`/INVENTORY/MATERIALS/${shown.code.toUpperCase()}`}
+          inside it now sits in a popup for free.
+
+          Keyed by the code so that opening a different material starts a fresh
+          fetch rather than showing the previous one's figures while the new
+          request is in flight. */}
+      {selected && (
+        <MaterialDetail
+          key={selected}
+          code={selected}
+          locale={locale}
+          printerNames={printerNames}
           onClose={() => setSelected(null)}
-          footer={
-            <>
-              <span>{shown.name}</span>
-              <button
-                className="hv-btn hv-btn--sm"
-                type="button"
-                onClick={() => setSelected(null)}
-              >
-                {t('common.close')}
-              </button>
-            </>
-          }
-        >
-          <dl className="admin-detail__facts">
-            <dt>{t('materials.family')}</dt>
-            <dd>{shown.family}</dd>
-            <dt>{t('materials.stock')}</dt>
-            <dd>{Number(shown.total_remaining_grams).toFixed(0)}</dd>
-            <dt>{t('materials.price')}</dt>
-            <dd>
-              {formatMoney(
-                (Number(shown.sell_price_per_gram) * 1000).toFixed(2),
-                'RUB',
-                locale,
-              )}
-            </dd>
-          </dl>
-
-          {/* Per-lot, because the column above collapses duplicates: this is
-              where someone finds which spool to physically fetch. */}
-          <h4>{t('materials.lots')}</h4>
-          {shown.lots.length === 0 ? (
-            <p className="admin-detail__muted">{t('common.empty')}</p>
-          ) : (
-            <ul className="admin-detail__list">
-              {shown.lots.map((lot) => (
-                <li key={lot.id}>
-                  <span>{lot.label || lot.id.slice(0, 8)}</span>
-                  <span className="admin-detail__muted">
-                    {formatLocation(lot, locale, printerNames)}
-                  </span>
-                  <span>{Number(lot.remaining_grams).toFixed(0)} г</span>
-                  {/* Only for a spool actually in a machine — there is nothing
-                      to remove from a shelf. */}
-                  {mayManage && lot.location_kind === 'printer' && lot.printer_id && (
-                    <UnmountButton lot={lot} locale={locale} onDone={() => void load()} />
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {mayManage && (
-            <LotForm material={shown} locale={locale} onDone={() => void load()} />
-          )}
-        </Modal>
+          onChanged={() => void load()}
+        />
       )}
     </section>
-  )
-}
-
-function UnmountButton({
-  lot,
-  locale,
-  onDone,
-}: {
-  lot: Lot
-  locale: Locale
-  onDone: () => void
-}) {
-  const t = (key: MessageKey) => translate(locale, key)
-  const [open, setOpen] = useState(false)
-  const [shelf, setShelf] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const submit = () => {
-    setBusy(true)
-    setError(null)
-    // The shelf is optional: an operator who has not put the spool away yet
-    // still records the removal, and "in stock, place unknown" beats the system
-    // believing it is loaded.
-    const query = shelf ? `?shelf=${encodeURIComponent(shelf)}` : ''
-    api
-      .delete(`/printers/${lot.printer_id}/slots/${lot.ams_unit}/${lot.ams_slot}${query}`)
-      .then(onDone)
-      .catch((exc: unknown) =>
-        setError(
-          exc instanceof ApiError
-            ? translateError(locale, { code: exc.code, details: exc.details })
-            : translate(locale, 'error.internal'),
-        ),
-      )
-      .finally(() => setBusy(false))
-  }
-
-  if (!open) {
-    return (
-      <button className="hv-btn hv-btn--sm" type="button" onClick={() => setOpen(true)}>
-        {t('materials.unmount')}
-      </button>
-    )
-  }
-
-  return (
-    <span className="desk__refund-actions">
-      <label className="cfg__field">
-        <span>{t('materials.unmount.shelf')}</span>
-        <input value={shelf} onChange={(event) => setShelf(event.target.value)} />
-      </label>
-      <button
-        className="hv-btn hv-btn--sm hv-btn--danger"
-        type="button"
-        disabled={busy}
-        onClick={submit}
-      >
-        {t('common.save')}
-      </button>
-      <button
-        className="hv-btn hv-btn--sm"
-        type="button"
-        disabled={busy}
-        onClick={() => setOpen(false)}
-      >
-        {t('common.cancel')}
-      </button>
-      {error && <span className="cfg__error">{error}</span>}
-    </span>
   )
 }
 
@@ -526,68 +395,5 @@ function MaterialForm({
 
       </form>
     </Modal>
-  )
-}
-
-function LotForm({
-  material,
-  locale,
-  onDone,
-}: {
-  material: Material
-  locale: Locale
-  onDone: () => void
-}) {
-  const t = (key: MessageKey) => translate(locale, key)
-  const [grams, setGrams] = useState('1000')
-  const [shelf, setShelf] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  return (
-    <form
-      className="admin-detail__row"
-      onSubmit={(event) => {
-        event.preventDefault()
-        setBusy(true)
-        setError(null)
-        api
-          .post('/materials/lots', {
-            spec_code: material.code,
-            initial_grams: Number(grams),
-            shelf: shelf || null,
-          })
-          .then(onDone)
-          .catch((exc: unknown) =>
-            setError(
-              exc instanceof ApiError
-                ? translateError(locale, { code: exc.code, details: exc.details })
-                : translate(locale, 'error.internal'),
-            ),
-          )
-          .finally(() => setBusy(false))
-      }}
-    >
-      <Field label={t('materials.lot.grams')}>
-        <input
-          type="number"
-          min="1"
-          required
-          value={grams}
-          onChange={(event) => setGrams(event.target.value)}
-        />
-      </Field>
-      <Field label={t('materials.lot.shelf')}>
-        <input value={shelf} onChange={(event) => setShelf(event.target.value)} />
-      </Field>
-      <button className="hv-btn hv-btn--sm" type="submit" disabled={busy}>
-        {t('materials.add_lot')}
-      </button>
-      {error && (
-          <p className="hv-hint hv-bad" role="alert">
-            {error}
-          </p>
-        )}
-    </form>
   )
 }
