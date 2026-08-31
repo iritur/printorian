@@ -33,13 +33,13 @@ from another document has only moved the drift.
 **Seventeen of twenty-one are built.** Every public screen ships; the four that do
 not are all control-realm. `settings` was the nearest of them and is now built —
 102 parameters across fourteen sections, served and audited. What is left of it is
-the table-valued settings and the diagnostics panel, not the screen (§2.1).
+the table-valued settings, not the screen (§2.1).
 
 | Screen | Realm | State |
 |---|---|---|
 | `promo` `catalog` `configurator` `checkout` `cabinet` `account` `auth` `blog` `blog-post` | public | **built** — all nine |
 | `dashboard` `orders` `fleet` `materials` `users` `postproduction` `packaging` | control | **built** |
-| `settings` | control | **built** — scalars; the tables and Диагностика remain, §2.1 |
+| `settings` | control | **built** — scalars and Диагностика; the tables remain, §2.1 |
 | `service` | control | **not built** — §2.2 |
 | `purchasing` | control | **not built** — §2.3 |
 | `store` | control | **not built** — §2.4 |
@@ -87,15 +87,21 @@ row resolves to the code default, so an empty table prices exactly as the farm
 always did, and an order keeps the rate snapshot it was agreed at (ADR-0020) —
 changing a margin moves the next quote and nothing already sold.
 
-**What is still owed.** The kit's fifteenth section and the settings that are
-*tables* rather than scalars:
+**Диагностика is built, and it is the one section that is not a form.**
+[`DiagnosticsPanel.tsx`](../frontend/apps/console/src/DiagnosticsPanel.tsx) draws
+the kit's section 14 from `/health/ready` and `/health/workers` — each dependency,
+each worker loop and each printer the worker says it is driving, with the backend's
+own `ok` / `degraded` / `failed` distinction kept intact and a fourth state,
+«не измерено», for anything that did not answer. The tab is inserted by the console
+rather than served: `SECTION_ORDER` has fourteen entries because a read-only page
+has nothing for a settings catalogue to carry, and that is still the right call.
+
+**What is still owed.** The settings that are *tables* rather than scalars, and two
+behaviours the screen displays without wiring:
 
 - [#29](https://github.com/iritur/printorian/issues/29) — the six table-valued
   sections. The volume ladder and the customer tiers are built and are the
   pattern to copy, not to reinvent.
-- [#30](https://github.com/iritur/printorian/issues/30) — **Диагностика**, the
-  fifteenth section. Read-only, nothing in it is a setting, and it is the only
-  place the health checks would be seen.
 - [#31](https://github.com/iritur/printorian/issues/31) —
   «Очистить лист ожидания», the last unbuilt irreversible operation.
 - [#32](https://github.com/iritur/printorian/issues/32) — worker loop intervals

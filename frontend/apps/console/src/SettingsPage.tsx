@@ -14,6 +14,8 @@ import {
   useSession,
 } from '@printorian/ui'
 
+import { DiagnosticsPanel } from './DiagnosticsPanel'
+
 /**
  * The farm's own settings (design/settings.html).
  *
@@ -25,9 +27,28 @@ import {
  *
  * Owner-only: the nav gates the whole screen on `manage_settings`, and the API
  * enforces it again, so hiding the tab never weakens anything.
+ *
+ * One section of the rail is not backed by the catalogue at all — see
+ * `DIAGNOSTICS` below.
  */
 
 const MANAGE_SETTINGS = 'manage_settings'
+
+/**
+ * The kit's fourteenth section, which the server does not serve.
+ *
+ * `SECTION_ORDER` deliberately carries fourteen sections where the kit draws
+ * fifteen: diagnostics is read-only — «Ничего из этого не настраивается» — so
+ * there is nothing for a settings *catalogue* to describe. That is the right
+ * call on the server and it leaves the rail one entry short, because the kit
+ * still puts «Диагностика» between «Интеграции» and «Обслуживание системы» and
+ * it is the only place in the product the health checks are seen.
+ *
+ * So the tab is inserted here rather than invented as a fieldless section
+ * server-side, which would have meant a catalogue entry that answers no
+ * question anybody asks of a catalogue.
+ */
+const DIAGNOSTICS = 'diagnostics'
 
 interface SettingView {
   key: string
@@ -274,11 +295,20 @@ export function SettingsPage({ locale }: { locale: Locale }) {
 
   if (ready && !entitled) return <p className="notice">{t('fleet.forbidden')}</p>
 
-  const tabs = (sections ?? []).map((section) => ({
-    key: section.id,
-    label: t(`settings.section.${section.id}` as MessageKey),
-  }))
-  const current = sections?.some((section) => section.id === active) ? active : tabs[0]?.key
+  // Diagnostics goes where the kit's rail puts it — before «Обслуживание
+  // системы», not appended after it. Falling back to the end rather than
+  // assuming the anchor exists: a server that renamed or dropped `maintenance`
+  // should cost the rail its order, never the whole tab.
+  const served = (sections ?? []).map((section) => section.id)
+  const anchor = served.indexOf('maintenance')
+  const railIds =
+    sections === null
+      ? []
+      : anchor === -1
+        ? [...served, DIAGNOSTICS]
+        : [...served.slice(0, anchor), DIAGNOSTICS, ...served.slice(anchor)]
+  const tabs = railIds.map((id) => ({ key: id, label: t(`settings.section.${id}` as MessageKey) }))
+  const current = tabs.some((tab) => tab.key === active) ? active : tabs[0]?.key
   const farmNameValue = String(
     (sections ?? [])
       .flatMap((section) => section.fields)
@@ -369,7 +399,10 @@ export function SettingsPage({ locale }: { locale: Locale }) {
           <section className="hv-panel">
             <div className="hv-panel__head">
               <span>{t('settings.sections')}</span>
-              <span className="hv-panel__aside">{t('settings.sections.count', { count: sections?.length ?? 0 })}</span>
+              {/* The rail's own length, not the catalogue's: diagnostics is a
+                  section the reader can click and the server never sends, so a
+                  count taken from `sections` reads one short of the screen. */}
+              <span className="hv-panel__aside">{t('settings.sections.count', { count: tabs.length })}</span>
             </div>
             <TabRail
               tabs={tabs}
@@ -395,7 +428,7 @@ export function SettingsPage({ locale }: { locale: Locale }) {
             <TabView name={current}>
               <div className="hv-frame hv-frame--wide">
                 <span className="hv-micro">
-                  {`РАЗДЕЛ ${String((sections?.findIndex((section) => section.id === current) ?? -1) + 1).padStart(2, '0')} · ${current.toUpperCase()}`}
+                  {`РАЗДЕЛ ${String(tabs.findIndex((tab) => tab.key === current) + 1).padStart(2, '0')} · ${current.toUpperCase()}`}
                 </span>
                 <h1
                   className="hv-display"
@@ -427,6 +460,13 @@ export function SettingsPage({ locale }: { locale: Locale }) {
                   </section>
                 )
               })}
+
+              {/* Read-only, and the one section with no `.hv-set` rows at all —
+                  `buckets` is empty here because the catalogue has nothing to
+                  send. The save bar below still counts the whole screen: it
+                  reports edits pending in *other* sections, and hiding it on
+                  this tab would hide them. */}
+              {current === DIAGNOSTICS && <DiagnosticsPanel locale={locale} />}
 
               {current === 'maintenance' && (
                 <>

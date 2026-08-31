@@ -256,6 +256,37 @@ describe('the sections', () => {
   })
 })
 
+describe('the diagnostics section', () => {
+  it('is in the rail even though the catalogue has no such section', async () => {
+    // The server serves fourteen sections and the kit draws fifteen: diagnostics
+    // is read-only, so there is nothing for a settings catalogue to carry. The
+    // rail has to be one longer than what arrived, and the panel it opens reads
+    // the health endpoints rather than any settings row.
+    net.handler = (url: string) => {
+      if (url.endsWith('/settings/sections')) return Promise.resolve(jsonOk(aSections()))
+      if (url.endsWith('/settings/history')) return Promise.resolve(jsonOk([]))
+      if (url.endsWith('/health/ready'))
+        return Promise.resolve(jsonOk({ status: 'ok', checks: { database: 'ok' } }))
+      if (url.endsWith('/health/workers'))
+        return Promise.resolve(jsonOk({ status: 'ok', loops: {}, drivers: {} }))
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+    await screen.findByText('Название фермы')
+
+    // Four sections came back; the rail offers five, and the count beside it
+    // says five rather than reporting the catalogue's length at the reader.
+    expect(screen.getAllByRole('tab')).toHaveLength(aSections().length + 1)
+    expect(screen.getByText(String(aSections().length + 1))).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Диагностика' }))
+
+    expect(await screen.findByText('База данных')).toBeInTheDocument()
+    expect(screen.getByText('Проверки готовности')).toBeInTheDocument()
+  })
+})
+
 describe('editing', () => {
   it('marks a row dirty, counts it, and PUTs exactly that key on save', async () => {
     const put: Array<[string, unknown]> = []

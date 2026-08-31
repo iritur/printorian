@@ -50,13 +50,11 @@ NOT_A_SCREEN_CONSUMER: dict[str, str] = {
         "Reached from a link in a sent email, so the consumer is the mail body, not "
         "a screen. The token is the whole of the authentication."
     ),
-    "GET /health/workers": (
-        "An operations probe. HANDOFF §2 records it as the honest liveness signal "
-        "while there is no `/metrics` endpoint: it reads the beat each worker loop "
-        "writes at the *end* of a pass, so it separates wedged from working, and "
-        "the per-printer driver state the worker publishes beside it. "
-        "Surfacing that is Stage 5's job."
-    ),
+    # `GET /health/workers` was here, exempted as "an operations probe … surfacing
+    # that is Stage 5's job". It has a screen consumer now — the settings screen's
+    # «Диагностика» section reads it (#30) — so the exemption is gone rather than
+    # reworded. Keeping it would have failed the stale-entry gate next door, which
+    # is the direction that catches an exemption nobody is following any more.
     "GET /settings": (
         "`SettingsPage.tsx` builds the screen from `/settings/sections` and the "
         "audit from `/settings/history`. The flat key/value dump has no caller and "
