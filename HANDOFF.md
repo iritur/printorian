@@ -7,7 +7,7 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-31 · 1 329 backend tests collected and 241 frontend tests, and
+**As of:** 2026-08-31 · 1 329 backend tests collected and 242 frontend tests, and
 not all ten gates green: the newest of the six pull requests below is
 frontend-only, its four frontend gates ran and no backend gate did, as the
 paragraph below spells out. The backend suite was run end to end **in CI** on each
@@ -20,7 +20,7 @@ local green run.
 
 The most recent entry below — the diagnostics panel — is frontend-only. Its four
 frontend gates were each run separately and each printed `exit=0`: `typecheck`,
-`lint`, `test` (241 passed across 21 files) and `build`. **No backend gate was run
+`lint`, `test` (242 passed across 21 files) and `build`. **No backend gate was run
 for it**, because nothing under `backend/` changed and the single shared test
 database was in use by another session. The backend figure above is carried
 forward from the previous entry, not re-measured.
