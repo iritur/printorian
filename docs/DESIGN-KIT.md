@@ -167,7 +167,9 @@ What backend exists: `MaterialLot` with location.
 
 ## 3. Conventions every screen honours
 
-Re-checked against the code; five of these were recorded as missing and are not.
+Re-checked against the code; five of these were recorded as missing and are not,
+and a sixth — the tabs row — was recorded as missing while half of it was already
+in the tree. Every row here is a claim about a file, so check the file.
 
 | Convention | State |
 |---|---|
@@ -180,11 +182,47 @@ Re-checked against the code; five of these were recorded as missing and are not.
 | `data-sentiment` (spend up = bad, revenue up = good) | ✅ |
 | Shared modal | ✅ `shell/Modal.tsx` |
 | Sortable headers | ✅ `DataTable` — via props, not the kit's `data-sort-value` |
-| Filter counter chips | ◐ ad-hoc per screen, not a shared component |
-| `data-bind` live numeric readouts | ◐ React owns this; the attribute is not used |
-| `data-tabs` / `data-tab-target` / `data-tab-panel` | ❌ CSS section 22 not ported |
-| `data-auth-open` popup on any element | ❌ |
+| Filter counter chips | ✅ `FilterChips`, and the three screens that hand-rolled it converted to it |
+| `data-bind` live numeric readouts | — **deliberately not ported**, and not an omission |
+| `data-tabs` / `data-tab-target` / `data-tab-panel` | ✅ `Tabs` · `TabRail` · `TabView`, over `harvester/tabs.css` |
+| `data-auth-open` popup on any element | ✅ `AuthDialog`, opened from the masthead |
 | Tabular figures, right-aligned, basis underneath | ✅ |
+
+**Tabs are two shapes and one convention.** `TabRail` is the vertical rail the
+account's seven sections and settings' fourteen use; `Tabs` is the horizontal
+strip the kit draws for the faces of a single thing — the printer popup's
+«Сейчас · Параметры · Обслуживание · Слоты AMS», and the purchase order and the
+shipment when those are built. Both switch a `TabView`, which is the panel and
+its entry animation, and both take their arrow keys from `shell/tablist.ts` so a
+rail and a strip cannot become two controls. Nothing imports `Tabs` yet: it is
+built ahead of the screens that need it precisely so the four of them do not each
+invent one, which is the failure ROADMAP names under "Management tables are not a
+phase".
+
+The row above used to read "CSS section 22 not ported", and section 22 had been
+ported — `packages/ui/src/harvester/tabs.css` is it, near enough verbatim, and has
+been since the account screen landed. The status had been carried forward from a
+plan instead of read off the file, which is the mistake this document's own
+opening warns about. What was actually missing was the horizontal strip and the
+keyboard behaviour — the rail and the panel were built, exported and in use on two
+screens while this table called the whole convention absent.
+
+**The kit's three attributes do not all survive the port, and that is correct.**
+`data-tab-panel` stays, because the ported CSS selects on it to animate the panel
+that just became current. `data-tabs` and `data-tab-target` do not: they were how
+the static kit's JavaScript found the panel a button switched to, and in React the
+component holds that relationship. Emitting them anyway would be markup that does
+nothing — a hook with no handler, which the next reader has to prove is dead
+before they may touch it.
+
+**`data-bind` is deliberately not ported. Do not build it.** In the kit it wires a
+range input to a live readout, because the kit is static HTML and has no other way
+to make a number follow a slider; in React the readout is a render of the same
+state the input sets, which is the configurator's `%` and `шт` already working
+without an attribute. Porting it would add a second path to the same pixel, and
+the second path is the one that goes stale. This entry is `—` rather than `❌`
+for that reason: it is not owed, and an issue that asks for it should be closed as
+answered here rather than opened again out of completeness.
 
 ## 4. Backend capability nothing consumes
 

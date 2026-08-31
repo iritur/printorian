@@ -18,9 +18,9 @@ export interface AuthPanelProps {
    * "sign in to place an order" — copy that made sense while this form existed
    * only at the checkout, and stopped making sense the moment two apps used it.
    */
-  hint?: string
+  hint?: string | undefined
   /** Hidden where nobody may self-register — the console admits existing staff. */
-  allowRegister?: boolean
+  allowRegister?: boolean | undefined
 }
 
 /**

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
+import { tablistKeyDown } from './tablist'
+
 /**
  * The kit's vertical section rail, with the marker that travels between rows.
  *
@@ -16,6 +18,11 @@ import type { ReactNode } from 'react'
  * **The panel replays its entry animation on every switch.** `is-entering` is
  * added on change and removed on `animationend`; without the removal the class
  * stays applied and the animation only ever plays once, on first paint.
+ *
+ * `Tabs` is the same convention laid on its side, and the two share their
+ * keyboard handling through `tablist.ts` rather than each having its own: a rail
+ * and a strip that move under different keys are two controls, not one in two
+ * orientations.
  */
 
 export interface TabRailProps<Key extends string> {
@@ -63,7 +70,18 @@ export function TabRail<Key extends string>({
       className="hv-tree hv-rail"
       style={{ padding: 'var(--hv-2) 0' }}
       role="tablist"
+      // Told, not inferred: a screen reader announces "vertical" from this and
+      // nothing else, and the axis the arrow keys move on is decided below.
+      aria-orientation="vertical"
       aria-label={label}
+      onKeyDown={(event) =>
+        tablistKeyDown(
+          event,
+          tabs.map((tab) => tab.key),
+          onSelect,
+          'vertical',
+        )
+      }
     >
       {tabs.map((tab) => (
         <button
@@ -72,6 +90,10 @@ export function TabRail<Key extends string>({
           type="button"
           role="tab"
           aria-selected={tab.key === current}
+          // One stop in the page's tab order for the whole rail. Fourteen
+          // settings sections would otherwise be fourteen Tab presses between
+          // the menu and the form somebody came here to fill in.
+          tabIndex={tab.key === current ? 0 : -1}
           onClick={() => onSelect(tab.key)}
         >
           {tab.label}
