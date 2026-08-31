@@ -445,6 +445,66 @@ describe('the irreversible operations', () => {
       screen.getByText('Сначала задайте название фермы — им подтверждается операция'),
     ).toBeInTheDocument()
   })
+
+  it('will not arm the wait-list clear on a farm with no name either', async () => {
+    // The same gate, asserted on the third operation rather than inferred from the
+    // first. The hole was fixed once in `ConfirmAction`, and this is what says the
+    // newest caller went through it instead of growing a confirm of its own.
+    const blank = aSections()
+    blank[0]!.fields[0]!.value = ''
+    net.handler = (url: string) => {
+      if (url.endsWith('/settings/sections')) return Promise.resolve(jsonOk(blank))
+      if (url.endsWith('/settings/history')) return Promise.resolve(jsonOk([]))
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+    await screen.findByLabelText('Название фермы')
+    await userEvent.click(screen.getByRole('tab', { name: 'Обслуживание системы' }))
+
+    await screen.findByText('Очистить лист ожидания')
+    await userEvent.click(screen.getByRole('button', { name: 'Очистить' }))
+
+    expect(screen.queryByRole('button', { name: 'Подтвердить' })).not.toBeInTheDocument()
+    expect(
+      screen.getByText('Сначала задайте название фермы — им подтверждается операция'),
+    ).toBeInTheDocument()
+  })
+
+  it('clears the wait list only after the farm name is typed', async () => {
+    const posted: string[] = []
+    net.handler = (url: string, init?: RequestInit) => {
+      if (url.endsWith('/settings/sections')) return Promise.resolve(jsonOk(aSections()))
+      if (url.endsWith('/settings/history')) return Promise.resolve(jsonOk([]))
+      if (url.endsWith('/settings/clear-wait-list') && init?.method === 'POST') {
+        posted.push(url)
+        return Promise.resolve(jsonOk({ cleared: 2 }))
+      }
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+    await screen.findByText('Название фермы')
+    await userEvent.click(screen.getByRole('tab', { name: 'Обслуживание системы' }))
+
+    await screen.findByText('Очистить лист ожидания')
+    await userEvent.click(screen.getByRole('button', { name: 'Очистить' }))
+
+    const confirm = screen.getByRole('button', { name: 'Подтвердить' })
+    expect(confirm).toBeDisabled()
+    // Nothing has been asked of the server yet, which is the half of "two steps"
+    // that a disabled button alone would not prove.
+    expect(posted).toEqual([])
+
+    await userEvent.type(
+      screen.getByLabelText('Введите название фермы для подтверждения'),
+      'KN-SOL.21',
+    )
+    expect(confirm).not.toBeDisabled()
+
+    await userEvent.click(confirm)
+    await waitFor(() => expect(posted.length).toBe(1))
+  })
 })
 
 describe('the panels', () => {

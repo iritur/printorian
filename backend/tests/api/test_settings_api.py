@@ -13,13 +13,20 @@ from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.pricing import RateSnapshot
+from printorian.contexts.production import JobEvent, JobStatus, PrintJob, WaitListEntry
+from printorian.contexts.production.wait_list import CLEARED_BY_HAND
+from printorian.contexts.scheduling import WAIT_MATERIAL_NOT_LOADED
 from printorian.core.clock import FixedClock
 from printorian.core.config import Settings
 from printorian.core.events import EventBus
+from printorian.core.ids import EntityId, new_id
 from printorian.core.storage import InMemoryObjectStore
 from tests.api._checkout_support import a_shop, place, token_for
+from tests.conftest import ensure_order
 from tests.unit.test_mesh_analysis import cube_triangles, to_binary_stl
 
 MARGIN = "pricing.margin_percent"
@@ -229,3 +236,127 @@ async def test_reset_rates_returns_to_defaults(client: AsyncClient) -> None:
     rows = {row["key"]: row for row in (await client.get("/settings", headers=auth)).json()}
     assert rows[MARGIN]["value"] == rows[MARGIN]["default"]
     assert rows[MARGIN]["is_overridden"] is False
+
+
+# ------------------------------------------------------------ clearing the wait list
+
+
+async def a_waiting_job(session: AsyncSession, *, reason: str) -> EntityId:
+    """One ready job with a wait-list row against it, committed. Returns its id.
+
+    The row is built rather than produced by a planning pass on purpose: what is
+    under test is what *clearing* does to a row that exists, and a pass arranged to
+    leave a job waiting would be a test of the planner sitting in front of it.
+
+    `predicted_start` is left null, which is the wait that needs a person rather
+    than time (`WaitListEntry.predicted_start`) — and the case where the reason is
+    the only thing the row was carrying.
+
+    An id rather than the instance, deliberately. The endpoint writes through its
+    own session, so anything this one is still holding is a stale copy; handing
+    back the key forces every assertion below to be a fresh read, which is the
+    only kind that can notice what the endpoint actually did.
+    """
+    order_id = new_id()
+    await ensure_order(session, order_id, number=f"WAIT-{order_id.hex[:6]}")
+    job = PrintJob(order_id=order_id, status=JobStatus.READY)
+    session.add(job)
+    await session.flush()
+    session.add(
+        WaitListEntry(
+            job_id=job.id,
+            order_id=order_id,
+            reason=reason,
+            blocking_reasons=["pla-black"],
+        )
+    )
+    await session.commit()
+    return job.id
+
+
+async def test_clearing_the_wait_list_removes_the_rows(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """The behaviour, not the status code: the table is empty afterwards.
+
+    A 200 with the rows still there is exactly the shape CLAUDE.md §2 warns about,
+    so the count in the body is checked *and* the table is read back.
+    """
+    auth = await owner(client)
+    await a_waiting_job(db_session, reason=WAIT_MATERIAL_NOT_LOADED)
+
+    body = (await client.post("/settings/clear-wait-list", headers=auth)).json()
+
+    assert body["cleared"] == 1
+    db_session.expire_all()
+    assert await db_session.scalar(select(func.count()).select_from(WaitListEntry)) == 0
+
+
+async def test_clearing_the_wait_list_writes_what_it_destroyed_into_the_journal(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Audited per row, like `reset-rates`, and carrying the reason that is now gone.
+
+    The reason, the blocking material and who ran it are held nowhere else once the
+    row is deleted. An audit saying only "the list was cleared" would answer none of
+    the questions the list was answering, so the journal row is checked for the
+    contents rather than for its existence.
+    """
+    auth = await owner(client)
+    job_id = await a_waiting_job(db_session, reason=WAIT_MATERIAL_NOT_LOADED)
+
+    await client.post("/settings/clear-wait-list", headers=auth)
+
+    db_session.expire_all()
+    events = list(
+        await db_session.scalars(
+            select(JobEvent).where(JobEvent.job_id == job_id, JobEvent.reason == CLEARED_BY_HAND)
+        )
+    )
+    assert len(events) == 1
+    assert events[0].details["wait_reason"] == WAIT_MATERIAL_NOT_LOADED
+    assert events[0].details["blocking_reasons"] == ["pla-black"]
+    assert events[0].details["cleared_by"] is not None
+    # Null because nothing predicted a start — the wait needed a person. A date
+    # here would be the queue's version of fake telemetry.
+    assert events[0].details["predicted_start"] is None
+
+
+async def test_clearing_the_wait_list_does_not_move_the_job(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """The kit's hint says «Подготовка»; `TRANSITIONS` says there is no such edge.
+
+    `READY` may only go to `ASSIGNED` or `CANCELLED`, and nothing returns to
+    `PENDING` — the plate exists, and re-slicing it would not be the fix. So the
+    operation removes the record of the wait and leaves the job where it was. This
+    is the assertion that fails if somebody later "implements the hint".
+    """
+    auth = await owner(client)
+    job_id = await a_waiting_job(db_session, reason=WAIT_MATERIAL_NOT_LOADED)
+
+    await client.post("/settings/clear-wait-list", headers=auth)
+
+    db_session.expire_all()
+    stored = await db_session.get(PrintJob, job_id)
+    assert stored is not None
+    assert stored.status is JobStatus.READY
+
+
+async def test_clearing_an_empty_wait_list_reports_nothing_rather_than_failing(
+    client: AsyncClient,
+) -> None:
+    """Zero because nothing was there — a measurement, not a default."""
+    auth = await owner(client)
+
+    response = await client.post("/settings/clear-wait-list", headers=auth)
+
+    assert response.status_code == 200
+    assert response.json()["cleared"] == 0
+
+
+async def test_a_customer_may_not_clear_the_wait_list(client: AsyncClient) -> None:
+    """The confirm is a client-side gate. The permission is the one that holds."""
+    auth = await token_for(client, "buyer@example.com")
+
+    assert (await client.post("/settings/clear-wait-list", headers=auth)).status_code == 403
