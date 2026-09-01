@@ -7,27 +7,30 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-31 · **1 345 backend tests collected**, and **not** all ten
+**As of:** 2026-08-31 · **1 347 backend tests collected**, and **not** all ten
 gates green on this branch in one place. The count and the six gates below were
-measured on the tree with `main` merged in, which is what this branch now is:
-`main` gained the design-kit conventions (#88) while this was in review.
+measured here, on the tree this branch actually is: it is stacked on
+[#89](https://github.com/iritur/printorian/pull/89) rather than on `main`, and
+that branch has `main` merged into it, so `main`'s design-kit conventions (#88)
+are underneath this too. 1 345 was #89's own merged tree; the two extra are the
+wait-list tests below, and the figure is re-measured rather than inherited
+because inheriting one is the mistake the next paragraph but one is about.
 
 **The frontend count is deliberately absent rather than carried forward.** The
 line arrived on `main` saying 249 with the #37 entry directly beneath it saying
 **276 across 28 files** — a paragraph disagreeing with the paragraph under it,
 which is exactly the drift CLAUDE.md §4 warns about, and it is not repaired by
-copying either number up. Neither describes this tree anyway: 249 predates #88 and
-276 predates the `SettingsPage` tests this branch adds. This worktree has no
-`node_modules`, so the merged figure was not measured and is therefore not
-claimed. CI on this pull request is the frontend evidence.
+copying either number up. Neither describes this tree anyway: 249 predates #88,
+and 276 predates the `SettingsPage` tests #89 adds underneath this branch. This
+worktree has no `node_modules`, so the figure was not measured and is therefore
+not claimed — and nothing under `frontend/` changed on this branch, so there was
+nothing here to measure it for. CI is the frontend evidence.
 
-What ran locally on the merged tree: the six backend gates, each separately and
-each `exit=0` — `ruff check`, `ruff format --check` (369 files), `mypy --strict`
-(**217** source files, up one for `wait_list.py`), `lint-imports` (6 contracts
-kept, 0 broken), `check_context_isolation.py` and `check_file_length.py`. They
-were run with the interpreter from a sibling worktree, because a fresh worktree
-has no `.venv`; that mypy reports 217 files rather than 216 is the evidence it
-read *this* tree and not the one the interpreter lives in.
+What ran locally on this tree: the six backend gates, each invoked separately and
+each exit code read on its own — `ruff check` `exit=0`, `ruff format --check`
+`exit=0` (369 files), `mypy --strict` `exit=0` (**217** source files),
+`lint-imports` `exit=0` (6 contracts kept, 0 broken),
+`check_context_isolation.py` `exit=0`, `check_file_length.py` `exit=0`.
 
 **The full-suite figure this line used to carry was never about this branch.**
 1 333 passed / 7 skipped, `exit=0`, 24m43s was measured on
@@ -35,10 +38,21 @@ read *this* tree and not the one the interpreter lives in.
 branch", and travelled onto `main` and then onto this one unchanged — which is
 the pronoun quietly changing referent under a number, and is why "the suite
 passed" and "the suite passed on *this* tree" are the two claims this file has
-already been corrected for confusing once. It describes neither this branch,
-which adds `tests/api/test_settings_api.py`, nor the merge with #88 on top of it.
-No full-suite run on the merged tree is claimed here; CI on this pull request is
-that evidence.
+already been corrected for confusing once. It describes none of the trees since:
+not #89's, which adds `tests/api/test_settings_api.py`, not its merge with #88,
+and not this one. **No full-suite pass is claimed here.** CI on the pull request
+is that evidence.
+
+> **Two local attempts, and what each one is worth saying.** The first ran ~290
+> tests and failed roughly 200 of them, across `tests/api` files this branch does
+> not touch; every one of those files passes on its own, seconds later. That is
+> the trap `backend/CLAUDE.md` names — two sessions sharing `printorian_test`
+> truncate each other's tables — and there are three other worktrees on this
+> machine. It is recorded because a run like that reads as "this branch is
+> broken" and is not, and the tell is that the failures are *everywhere except*
+> the change. The second attempt reached 19% with **no** failures and was killed
+> by a session restart, not by the code. Neither is a pass, so neither is quoted
+> as one.
 
 **A wait-list row now ends when the wait does, and not one pass later.**
 `planning._refresh_wait_list` discarded rows only for the jobs in
