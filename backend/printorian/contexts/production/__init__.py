@@ -52,6 +52,7 @@ from printorian.contexts.production.schemas import (
 )
 from printorian.contexts.production.service import ProductionService
 from printorian.contexts.production.throughput import Throughput, throughput
+from printorian.contexts.production.wait_list import clear_wait_list
 
 __all__ = [
     "TRANSITIONS",
@@ -90,6 +91,7 @@ __all__ = [
     "assert_transition",
     "assess_variance",
     "can_transition",
+    "clear_wait_list",
     "committed_material",
     "estimate_variances",
     "schedule",

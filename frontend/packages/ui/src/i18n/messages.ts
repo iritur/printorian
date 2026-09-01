@@ -212,6 +212,12 @@ export const ru = {
   'queue.waitlist.material_not_loaded': 'Ждём загрузки материала — сроки уточняем',
   'queue.waitlist.no_capable_printer': 'Требуется решение инженера',
   'queue.no_estimate': 'Точный срок пока назвать не можем',
+  // The sign-in popup's own chrome. `AuthDialog` is the kit's `data-auth-open`
+  // window, and it borrows the checkout's field labels — only the frame around
+  // them is its own.
+  'auth.title': 'Доступ :: Вход',
+  'auth.session_none': 'СЕАНС :: НЕ УСТАНОВЛЕН',
+
   'checkout.title': 'Оформление заказа',
   'checkout.place': 'Оформить заказ',
   'checkout.pay': 'Перейти к оплате',
@@ -1252,6 +1258,9 @@ export const ru = {
   'settings.irreversible.drop_telemetry': 'Удалить телеметрию старше срока хранения',
   'settings.irreversible.drop_telemetry.hint': 'Дропает партиции, которые целиком вышли за срок хранения. Безопасно: срез зажат по фактически обобщённым часам.',
   'settings.irreversible.drop': 'Удалить',
+  'settings.irreversible.clear_wait_list': 'Очистить лист ожидания',
+  'settings.irreversible.clear_wait_list.hint': 'Удалит записанные причины ожидания. Задания останутся готовыми — следующий проход планировщика составит лист заново.',
+  'settings.irreversible.clear': 'Очистить',
   'settings.field.pricing.tiers': 'Тарифы клиентов',
   'settings.field.pricing.tiers.hint': 'Скидка клиента складывается со скидкой за объём. Пороги, за которые тариф зарабатывается, задаются лестницей лояльности.',
   'settings.tiers.code': 'Код',
@@ -1495,6 +1504,9 @@ export const en: Messages = {
   'queue.waitlist.material_not_loaded': 'Waiting for material to be loaded — no date yet',
   'queue.waitlist.no_capable_printer': 'Needs an engineer to decide',
   'queue.no_estimate': 'We cannot give a reliable date yet',
+  'auth.title': 'Access :: Sign in',
+  'auth.session_none': 'SESSION :: NOT ESTABLISHED',
+
   'checkout.title': 'Checkout',
   'checkout.place': 'Place order',
   'checkout.pay': 'Continue to payment',
@@ -2497,6 +2509,9 @@ export const en: Messages = {
   'settings.irreversible.drop_telemetry': 'Drop telemetry past retention',
   'settings.irreversible.drop_telemetry.hint': 'Drops partitions entirely past retention. Safe: the cutoff is clamped to the hours actually summarised.',
   'settings.irreversible.drop': 'Delete',
+  'settings.irreversible.clear_wait_list': 'Clear the wait list',
+  'settings.irreversible.clear_wait_list.hint': 'Deletes the recorded reasons for waiting. The jobs stay ready — the next planning pass builds the list again.',
+  'settings.irreversible.clear': 'Clear',
   'settings.field.pricing.tiers': 'Customer tiers',
   'settings.field.pricing.tiers.hint': 'A customer discount composes with the volume discount. The spend thresholds that earn a tier live in the loyalty ladder.',
   'settings.tiers.code': 'Code',

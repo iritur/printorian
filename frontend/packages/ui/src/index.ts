@@ -11,6 +11,12 @@ export type {
   Tone,
 } from './DataTable/types'
 
+// The counter chips above a filtered list — one component, after three screens
+// had each hand-rolled their own and disagreed about whether the active chip
+// could be turned off.
+export { FilterChips } from './filters/FilterChips'
+export type { ChipTone, FilterChip, FilterChipsProps } from './filters/FilterChips'
+
 export { DEFAULT_LOCALE, catalogues, en, ru } from './i18n/messages'
 export type { Locale, MessageKey, Messages } from './i18n/messages'
 export { plural } from './i18n/plural'
@@ -35,6 +41,10 @@ export type {
 // The session is shared infrastructure, not a storefront detail: both the public
 // app and the farm console sign the same people in against the same cookie.
 export { AuthPanel } from './session/AuthPanel'
+// The same panel in the kit's popup, so signing in never costs the page you
+// were on — `design/js/auth.js`'s `[data-auth-open]`, with React as the opener.
+export { AuthDialog } from './session/AuthDialog'
+export type { AuthDialogProps } from './session/AuthDialog'
 export { SessionProvider, api, useSession } from './session/session'
 export type { Actor } from './session/session'
 
@@ -58,6 +68,10 @@ export { useChrome } from './shell/chrome'
 export type { Chrome, MetaItem } from './shell/chrome'
 export { TabRail, TabView } from './shell/TabRail'
 export type { TabRailProps } from './shell/TabRail'
+// The rail's horizontal twin, for the faces of one thing rather than the
+// sections of one screen. Both switch a `TabView`.
+export { Tabs } from './shell/Tabs'
+export type { TabsProps } from './shell/Tabs'
 export type { AppShellProps } from './shell/AppShell'
 export type { ErrorBoundaryProps } from './shell/ErrorBoundary'
 
