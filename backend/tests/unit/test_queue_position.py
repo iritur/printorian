@@ -11,10 +11,18 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.fleet import PrinterCapability
-from printorian.contexts.production import CreateJob, JobStatus, ProductionService
+from printorian.contexts.production import (
+    CreateJob,
+    JobStatus,
+    JobView,
+    ProductionService,
+    WaitListEntry,
+    wait_list_size,
+)
 from printorian.contexts.scheduling import SchedulablePrinter
 from printorian.core.clock import FixedClock
 from printorian.core.events import EventBus
@@ -67,12 +75,22 @@ def a_job(**overrides: object) -> CreateJob:
     return CreateJob(**{**base, **overrides})  # type: ignore[arg-type]
 
 
-def a_printer(*, loaded: tuple, state: PrinterState, free_at=None) -> SchedulablePrinter:
+def a_printer(
+    *,
+    loaded: tuple = (("PLA", "white", Decimal(800)),),
+    state: PrinterState = PrinterState.IDLE,
+    free_at=None,
+    printer_id=None,
+    width_mm: Decimal = Decimal(256),
+) -> SchedulablePrinter:
+    # `printer_id` is a parameter because `print_jobs.printer_id` is a real foreign
+    # key: a test that expects an *assignment* has to plan onto a machine the fleet
+    # actually holds, which the caller has to have created (`ensure_printer`).
     return SchedulablePrinter(
         capability=PrinterCapability(
-            printer_id=str(new_id()),
+            printer_id=str(printer_id or new_id()),
             state=state,
-            width_mm=Decimal(256),
+            width_mm=width_mm,
             depth_mm=Decimal(256),
             height_mm=Decimal(256),
             nozzle_diameter_mm=Decimal("0.4"),
@@ -83,9 +101,9 @@ def a_printer(*, loaded: tuple, state: PrinterState, free_at=None) -> Schedulabl
     )
 
 
-async def _prepared(production: ProductionService) -> CreateJob:
-    order = a_job()
-    job = await production.create_job(order)
+async def _prepared(production: ProductionService, **overrides: object) -> JobView:
+    """A job with its plate attached, which is what makes the planner look at it."""
+    job = await production.create_job(a_job(**overrides))
     await production.attach_prepared_plate(
         job.id,
         plate_id=SEED_PLATE_ID,
@@ -250,3 +268,100 @@ async def test_the_position_names_the_machine_and_the_attempt(
     assert position.assigned_at is not None
     # Assigned, not started: the machine has not confirmed it is running.
     assert position.started_at is None
+
+
+# ------------------------------------------------- when the waiting stops
+
+
+async def test_a_job_that_gets_assigned_leaves_the_wait_list(
+    production: ProductionService, db_session: AsyncSession, clock: FixedClock
+) -> None:
+    """The row has to go when the wait *ends*, not only when its reason changes.
+
+    A pass that assigns a job leaves it out of `Plan.wait_list` — it is not
+    waiting any more — so a refresh that rewrites only the rows named there keeps
+    the old one indefinitely. Nothing else removes it: the farm-wide clear is a
+    person pressing a button, and the foreign keys cascade only when the job or
+    its order is destroyed. The customer is then shown the reason their work was
+    stuck three passes ago, beside a job that is already on a machine.
+    """
+    machine = new_id()
+    await ensure_printer(db_session, machine, name="P-01")
+    job = await _prepared(production)
+    busy = a_printer(
+        printer_id=machine,
+        state=PrinterState.PRINTING,
+        free_at=clock.now() + timedelta(hours=2),
+    )
+
+    # One pass with the only machine mid-print, so the job queues for capacity...
+    await production.plan_pass([busy])
+    waiting = await production.queue_position(job.order_id)
+    assert waiting is not None and waiting.reason == "waitlist.awaiting_capacity"
+
+    # ...and one with it free, which is what takes the job off the list.
+    await production.plan_pass([a_printer(printer_id=machine)])
+
+    assert (await production.get(job.id)).status is JobStatus.ASSIGNED
+    rows = await db_session.scalars(select(WaitListEntry).where(WaitListEntry.job_id == job.id))
+    assert list(rows) == []
+
+    position = await production.queue_position(job.order_id)
+    assert position is not None
+    assert position.job_status is JobStatus.ASSIGNED
+    assert position.reason is None
+    assert position.position is None
+    assert position.predicted_start is None
+
+    # `reads.wait_list` and the dashboard's chip count rows straight out of the
+    # table, so a row left behind is also a job the floor is told is stuck.
+    assert await production.wait_list() == []
+    assert await wait_list_size(db_session) == 0
+
+
+async def test_a_job_that_stopped_waiting_stops_counting_against_others(
+    production: ProductionService, db_session: AsyncSession, clock: FixedClock
+) -> None:
+    """A stale row is not only its own customer's problem — it is somebody else's number.
+
+    Position is counted by comparing predicted starts across the whole table, so
+    a job that has already been assigned is still one place of queue in front of
+    everyone behind it. Two customers and two machines: the small machine comes
+    free first and can only take the small job; the big one is hours away and is
+    the only thing that will ever take the large job. So the small job is
+    predicted to start first and the large one is behind it — until the small job
+    is assigned, at which point the large one is first in a queue of one.
+    """
+    small_id, big_id = new_id(), new_id()
+    await ensure_printer(db_session, small_id, name="P-01")
+    await ensure_printer(db_session, big_id, name="P-02")
+    other_order = new_id()
+    await ensure_order(db_session, other_order, number="TEST-2")
+
+    soon, later = clock.now() + timedelta(hours=1), clock.now() + timedelta(hours=3)
+    small_busy = a_printer(
+        printer_id=small_id,
+        state=PrinterState.PRINTING,
+        free_at=soon,
+        width_mm=Decimal(120),
+    )
+    big_busy = a_printer(printer_id=big_id, state=PrinterState.PRINTING, free_at=later)
+
+    fits_anywhere = await _prepared(production)
+    await _prepared(production, order_id=other_order, width_mm=Decimal(200))
+
+    await production.plan_pass([small_busy, big_busy])
+    behind = await production.queue_position(other_order)
+    assert behind is not None
+    assert behind.position == 2
+
+    # The small machine comes free and takes the only job it can. The large job
+    # still waits on the big machine — and is now first, not second.
+    await production.plan_pass([a_printer(printer_id=small_id, width_mm=Decimal(120)), big_busy])
+
+    assert (await production.get(fits_anywhere.id)).status is JobStatus.ASSIGNED
+    ahead = await production.queue_position(other_order)
+    assert ahead is not None
+    assert ahead.reason == "waitlist.awaiting_capacity"
+    assert ahead.position == 1
+    assert await wait_list_size(db_session) == 1

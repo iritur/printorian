@@ -7,27 +7,30 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-31 · **1 345 backend tests collected**, and **not** all ten
+**As of:** 2026-08-31 · **1 347 backend tests collected**, and **not** all ten
 gates green on this branch in one place. The count and the six gates below were
-measured on the tree with `main` merged in, which is what this branch now is:
-`main` gained the design-kit conventions (#88) while this was in review.
+measured here, on the tree this branch actually is. It was written stacked on
+[#89](https://github.com/iritur/printorian/pull/89), which has since merged, so
+`main` is merged in and #89's wait-list module and #88's design-kit conventions
+are both underneath. 1 345 was #89's own tree; the two extra are the wait-list
+tests below, and the figure is re-measured rather than inherited — inheriting one
+is the mistake the next paragraph but one is about.
 
 **The frontend count is deliberately absent rather than carried forward.** The
 line arrived on `main` saying 249 with the #37 entry directly beneath it saying
 **276 across 28 files** — a paragraph disagreeing with the paragraph under it,
 which is exactly the drift CLAUDE.md §4 warns about, and it is not repaired by
-copying either number up. Neither describes this tree anyway: 249 predates #88 and
-276 predates the `SettingsPage` tests this branch adds. This worktree has no
-`node_modules`, so the merged figure was not measured and is therefore not
-claimed. CI on this pull request is the frontend evidence.
+copying either number up. Neither describes this tree anyway: 249 predates #88,
+and 276 predates the `SettingsPage` tests #89 adds underneath this branch. This
+worktree has no `node_modules`, so the figure was not measured and is therefore
+not claimed — and nothing under `frontend/` changed on this branch, so there was
+nothing here to measure it for. CI is the frontend evidence.
 
-What ran locally on the merged tree: the six backend gates, each separately and
-each `exit=0` — `ruff check`, `ruff format --check` (369 files), `mypy --strict`
-(**217** source files, up one for `wait_list.py`), `lint-imports` (6 contracts
-kept, 0 broken), `check_context_isolation.py` and `check_file_length.py`. They
-were run with the interpreter from a sibling worktree, because a fresh worktree
-has no `.venv`; that mypy reports 217 files rather than 216 is the evidence it
-read *this* tree and not the one the interpreter lives in.
+What ran locally on this tree: the six backend gates, each invoked separately and
+each exit code read on its own — `ruff check` `exit=0`, `ruff format --check`
+`exit=0` (369 files), `mypy --strict` `exit=0` (**217** source files),
+`lint-imports` `exit=0` (6 contracts kept, 0 broken),
+`check_context_isolation.py` `exit=0`, `check_file_length.py` `exit=0`.
 
 **The full-suite figure this line used to carry was never about this branch.**
 1 333 passed / 7 skipped, `exit=0`, 24m43s was measured on
@@ -35,10 +38,74 @@ read *this* tree and not the one the interpreter lives in.
 branch", and travelled onto `main` and then onto this one unchanged — which is
 the pronoun quietly changing referent under a number, and is why "the suite
 passed" and "the suite passed on *this* tree" are the two claims this file has
-already been corrected for confusing once. It describes neither this branch,
-which adds `tests/api/test_settings_api.py`, nor the merge with #88 on top of it.
-No full-suite run on the merged tree is claimed here; CI on this pull request is
-that evidence.
+already been corrected for confusing once. It describes none of the trees since:
+not #89's, which adds `tests/api/test_settings_api.py`, not its merge with #88,
+and not this one. **No full-suite pass is claimed here.** CI on the pull request
+is that evidence.
+
+> **Four local attempts, no pass, and the diagnosis was wrong once.** Recorded in
+> full because the wrong diagnosis is the useful part.
+>
+> The first run failed ~200 tests across `tests/api` files this branch does not
+> touch, and each of those files passed on its own seconds later. That was written
+> down here as the concurrent-session trap `backend/CLAUDE.md` names — plausible,
+> three other worktrees are live on this machine, and **not measured**. The second
+> reached 19% clean and was killed by a session restart. The third was killed by a
+> merge committed into the working tree while it ran, which left `planning.py`
+> holding conflict markers; that one is nobody's fault but the author's.
+>
+> The fourth errored from 5% onward, and the cause turned out to be that
+> **PostgreSQL was gone**: nothing listening on 5433, `docker` unable to reach its
+> daemon, a direct `asyncpg.connect` refused. Docker Desktop had stopped. Which
+> makes a restarting container the better-supported explanation for run one as
+> well — the DB dying mid-run and coming back fits both the mass failures *and*
+> the single file passing immediately after, and no evidence was ever gathered for
+> the concurrency story that was written here first.
+>
+> The lesson worth keeping is not about Docker. A run whose failures land
+> everywhere *except* the change has an environmental cause, and there is more
+> than one candidate; `pg_stat_activity` or a bare `connect` settles it in one
+> command, and guessing costs a paragraph of confident prose that has to be
+> retracted. Check that the database is up **before** reading a failure list.
+
+**A wait-list row now ends when the wait does, and not one pass later.**
+`planning._refresh_wait_list` discarded rows only for the jobs in
+`result.wait_list` — the ones *still* waiting. A job wait-listed on one pass and
+assigned on the next fell out of that set and kept its `wait_list_entries` row
+for ever: nothing else deletes one except the owner's farm-wide clear and the
+cascade from the job or its order. The discard now covers the whole claimed batch
+(`by_id.values()`), which is the honest set, because the planner decides every
+job it looks at — assigned or wait-listed, never neither.
+
+> **It was three wrong answers, not one.** `queue.queue_position` read the stale
+> row and told a customer whose job was `assigned` why it had been stuck three
+> passes earlier. Worse, a position is counted by comparing `predicted_start`
+> across the *whole table*, so the phantom sat one place in front of every other
+> customer and inflated their numbers too. And `reads.wait_list` and
+> `schedule.wait_list_size` count rows straight out of the same table, so the
+> floor's list and the dashboard chip carried it as well. Neither of those two
+> needed a change of their own — they were reading a table that was lying.
+>
+> **Both are held to tests that fail without the fix**, in
+> `tests/unit/test_queue_position.py`. `test_a_job_that_gets_assigned_leaves_the_wait_list`
+> runs two passes — busy machine, then free — and asserts no row, no `reason`, and
+> zero from `wait_list_size`; it failed on the row assertion before the change.
+> `test_a_job_that_stopped_waiting_stops_counting_against_others` puts a second
+> customer behind the first and asserts their position falls from 2 to 1; it
+> failed with `assert 2 == 1`. The second test is the one worth keeping: a
+> per-job assertion cannot see a defect whose damage lands on somebody else's row.
+>
+> **It was written against [#31](https://github.com/iritur/printorian/issues/31)'s
+> branch rather than `main`**, because the fix goes through `wait_list.discard`
+> and that branch introduced it; writing a second delete here to dodge the
+> dependency would have re-created exactly the divergence #31 exists to prevent.
+> #31 has since merged as #89 and `main` is merged in here, so the dependency is
+> now history rather than a merge order to remember.
+>
+> **`WaitListEntry`'s own docstring stated the invariant that was false** — "re-
+> planning replaces the row rather than appending" describes half a rule. It now
+> says the other half, next to the column definitions, because that is where the
+> next person adding a reader of this table will be standing.
 
 **The third irreversible operation exists, and it shares its delete with the
 planner** ([#31](https://github.com/iritur/printorian/issues/31)).
@@ -975,6 +1042,19 @@ What exists now so that proving it is one command rather than a project:
 
 ## 5. Needs a person, not an agent
 
+- **A cancelled job keeps its wait-list row, and that is a second defect on a
+  different path — it needs an issue.** Measured, not reasoned about: a probe run
+  against the fixed tree wait-listed a job, cancelled it, and
+  `queue_position` still answered `job_status=cancelled` with
+  `reason='waitlist.awaiting_capacity'`, `position=1` and a predicted start.
+  `ProductionService.cancel` does not touch `wait_list_entries`, and a cancelled
+  job is never claimed by another planning pass, so unlike the defect §1 fixes
+  this row is stale *permanently* and keeps inflating other customers' positions.
+  It was left out deliberately: the fix asked for was scoped to
+  `_refresh_wait_list`, and folding an unrelated behaviour change into it is what
+  WORKFLOW §3 means by one issue closing on one demonstrated criterion. The shape
+  of the fix is one call to `wait_list.discard(db, job_ids=[job.id])` in `cancel`,
+  plus the test that fails without it. Editing the tracker is not an agent's to do.
 - **Dev account passwords have drifted from the docs.** `DEVELOPMENT.md` lists
   `floor@printorian.example` / `shop-floor-pass-1`; the stored hash does not match.
   `boss@printorian.example` was reset to the documented `owner-pass-12345` and
