@@ -7,30 +7,32 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-31 · **1 347 backend tests collected**, and **not** all ten
-gates green on this branch in one place. The count and the six gates below were
-measured here, on the tree this branch actually is. It was written stacked on
-[#89](https://github.com/iritur/printorian/pull/89), which has since merged, so
-`main` is merged in and #89's wait-list module and #88's design-kit conventions
-are both underneath. 1 345 was #89's own tree; the two extra are the wait-list
-tests below, and the figure is re-measured rather than inherited — inheriting one
-is the mistake the next paragraph but one is about.
+**As of:** 2026-09-01 · **283 frontend tests across 29 files**, all four frontend
+gates `exit=0`, and **no backend suite or gate run on this branch at all**.
 
-**The frontend count is deliberately absent rather than carried forward.** The
-line arrived on `main` saying 249 with the #37 entry directly beneath it saying
-**276 across 28 files** — a paragraph disagreeing with the paragraph under it,
-which is exactly the drift CLAUDE.md §4 warns about, and it is not repaired by
-copying either number up. Neither describes this tree anyway: 249 predates #88,
-and 276 predates the `SettingsPage` tests #89 adds underneath this branch. This
-worktree has no `node_modules`, so the figure was not measured and is therefore
-not claimed — and nothing under `frontend/` changed on this branch, so there was
-nothing here to measure it for. CI is the frontend evidence.
+**The frontend figure was measured twice on purpose, so the difference is the
+evidence.** `npm run test` at this branch's tip gives 283 across 29 files; the
+same command with this branch's changes stashed — that is, `main` — gives **278
+across 28**, and the five between them are the tests this branch adds. The line
+arrived here saying the count was "deliberately absent" because that worktree had
+no `node_modules`; this one has them, so the figure is stated rather than
+deferred to CI. It also settles the older disagreement: neither 249 nor 276
+described any tree that still exists.
 
-What ran locally on this tree: the six backend gates, each invoked separately and
-each exit code read on its own — `ruff check` `exit=0`, `ruff format --check`
-`exit=0` (369 files), `mypy --strict` `exit=0` (**217** source files),
-`lint-imports` `exit=0` (6 contracts kept, 0 broken),
-`check_context_isolation.py` `exit=0`, `check_file_length.py` `exit=0`.
+**No backend claim is made for this branch.** This worktree has no `.venv`, so
+neither the six backend gates nor the suite were executed here, and no collected
+count is carried up — a number nobody re-ran is exactly the drift CLAUDE.md §4
+warns about. Nothing on this branch touches `backend/`.
+
+**The backend figures below belong to `main`, not to this branch.** They were
+measured on the trees [#89](https://github.com/iritur/printorian/pull/89) and
+[#90](https://github.com/iritur/printorian/pull/90) were merged from, both of
+which are underneath this branch now, and they are left as those branches
+measured them rather than restated as though this session had re-run them: the
+six backend gates each invoked separately and each `exit=0` — `ruff check`,
+`ruff format --check` (369 files), `mypy --strict` (**217** source files),
+`lint-imports` (6 contracts kept, 0 broken), `check_context_isolation.py`,
+`check_file_length.py` — and **1 347 backend tests collected** on #90's tree.
 
 **The full-suite figure this line used to carry was never about this branch.**
 1 333 passed / 7 skipped, `exit=0`, 24m43s was measured on
@@ -107,6 +109,52 @@ job it looks at — assigned or wait-listed, never neither.
 > says the other half, next to the column definitions, because that is where the
 > next person adding a reader of this table will be standing.
 
+**The masthead no longer tells a signed-in customer they are signed out, and the
+journal's «—» is now proved at the screen rather than at the component**
+(follow-up to [#88](https://github.com/iritur/printorian/pull/88), whose second
+review round landed after it had merged). `AppShell` destructured only `actor`
+from `useSession`, so for the whole `/auth/me` round trip the storefront masthead
+drew «Войти» at someone who was already signed in — and a visitor who believed it
+and started typing lost their input, because the answer arriving turns `actor`
+non-null and `AuthDialog` stands itself down the moment there is a session. The
+right-hand group is empty again until there is an answer, which is what it was
+before #88 gave it an opener. `apps/console/src/App.tsx` and the `Session` type's
+own docstring had each written the rule down already; the shell was the one place
+that had not read it.
+
+> **The headline ADR-0007 fix had no screen-level test, and that gap was
+> measured, not argued.** #88 stopped `JournalPage` printing `0` for a section
+> the server had not counted — and its `counted` memo reverted to the pre-#88
+> `index?.counts` form left the entire suite green. `FilterChips.test.tsx` proves
+> the *component* honours `count: null`; nothing proved the *page* hands it one.
+> `apps/web/src/JournalPage.test.tsx` now pins both halves — «—» while `/journal`
+> is still in flight, `0` once the server has answered with none — because the
+> defect is the two facts collapsing into each other, not either one alone.
+>
+> **The catch one branch above it invents the same number, and is deliberately
+> left alone.** `JournalPage.tsx`'s `.catch(() => setIndex({ rows: [], counts:
+> [], total: 0, … }))` renders a backend outage as «Все 0» and «0 ВЫПУСКОВ». It
+> predates #88 and is a decision about what a *failed* load should say, not what
+> a *pending* one should; pinning it from a branch about the pending state would
+> pin the wrong behaviour. Written down here rather than fixed quietly or filed —
+> whether it becomes an issue is a person's call.
+>
+> **Three mutations applied, run and reverted.** Dropping the `ready` guard put
+> «Войти» back into the not-yet-asked masthead and the new shell test failed on
+> the button it found. Restoring `index?.counts` at the journal's memo rendered
+> «Себестоимость0» — the defect verbatim — and the pending-index test failed.
+> Making that same memo answer `null` for a section the server counted at zero
+> failed the other two tests, which is the evidence the page keeps the two facts
+> apart rather than merely preferring one of them.
+>
+> **`Tabs` has one tabbed detail view behind it in the kit, not three**, and the
+> #37 entry below is corrected to say so. It claimed, in the present tense, that
+> the strip is what the purchase order and the shipment "are drawn with in the
+> kit"; `grep -c data-tabs design/*.html` gives `purchasing.html:0` and
+> `logistics.html:0`. That was a claim about a file written without reading the
+> file, inside the entry for the pull request whose whole thesis was that a claim
+> about a file had been carried forward without reading it.
+
 **The third irreversible operation exists, and it shares its delete with the
 planner** ([#31](https://github.com/iritur/printorian/issues/31)).
 `POST /settings/clear-wait-list` empties the wait list, audited per row into each
@@ -156,11 +204,15 @@ depending on where you met it. The rule is settled in the component now, and the
 count is `number | null`: the journal's row had been printing «—» for the total it
 had not received and `0` for every section beside it, in the same line of pixels.
 
-> **`Tabs` is built with no caller, deliberately.** The strip is what the purchase
-> order, the shipment and every detail popup after them are drawn with in the kit,
-> and the argument for porting it before those screens exist is that otherwise each
-> of the four invents its own — the failure ROADMAP names under "Management tables
-> are not a phase". It shares `shell/tablist.ts` with the existing `TabRail` so a
+> **`Tabs` is built with no caller, deliberately.** The kit draws the strip on
+> exactly one real screen — `design/fleet.html`'s printer popup, «Сейчас ·
+> Параметры · Обслуживание · Слоты AMS» — plus `design/index.html`'s own
+> component gallery. `design/purchasing.html` and `design/logistics.html` carry
+> no `hv-tabs` and no `data-tabs` at all: the purchase order and the shipment are
+> screens the strip is *for* **when those are built**, which is how
+> `docs/DESIGN-KIT.md` words it and how this line should have. The argument for
+> porting it before they exist is that otherwise each of them invents its own —
+> the failure ROADMAP names under "Management tables are not a phase". It shares `shell/tablist.ts` with the existing `TabRail` so a
 > rail and a strip cannot drift into two controls: one stop in the page's tab order
 > for the whole list, arrow keys on the axis it is drawn on, and selection following
 > focus. Fourteen settings sections used to be fourteen Tab presses.
