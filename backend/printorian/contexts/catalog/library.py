@@ -80,6 +80,19 @@ class PlateLibrary:
         thing is, and it is not this function's call"; both leave the job in the
         prep queue, which is where a person can see it.
 
+        **That is not a guarantee that a plate reaches the machine it was sliced
+        for, and this paragraph used to be read as one.** It only declines when
+        there are *two* rows. With exactly one, the plate goes out and nothing
+        downstream compares its `printer_profile` with the printer the planner
+        picks — `JobRequirements` has no profile term and `Printer` has no profile
+        column. Worse, the two-row case the argument above rests on cannot arise
+        from the console at all: `POST /jobs/{id}/plate/file` defaults the profile
+        to the literal `"default"` and the console sends none, so re-slicing a
+        configuration for a second machine lands on the *same* key and `record`
+        upserts over the first row instead of producing the ambiguity this function
+        would have refused. `workers/plate_admission` lists the profile among the
+        dimensions nothing checks, and says what closing it would cost.
+
         The key is still the authority. A row qualifies when *its own* profile and
         layout, fed back through `plate_key` with this configuration's geometry,
         material and scale, reproduce the key it is stored under — so the

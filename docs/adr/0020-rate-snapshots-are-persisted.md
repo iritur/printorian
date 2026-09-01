@@ -73,6 +73,19 @@ one rate to `RateSnapshot` would silently re-rate every older order this path
 touches, and nothing in the result would say so — which would undo this ADR by the
 exact mechanism it was written to prevent, one release later.
 
+**The rates are half of a reproducible price; the engine is the other half, and
+that half is now checked too.** ADR-0002 is explicit that pinned rates alone do not
+fix a result — the calculation shape has to be pinned with them, which is what
+`Order.engine_version` and `RateSnapshotRecord.engine_version` are for, and
+`pricing.delta` already computes a `comparable` flag on exactly this mismatch.
+`prepared_cost` is `line_total`, produced by the engine of the day, plus a
+difference computed by today's; let `ENGINE_VERSION` move with a changed labour or
+margin rule and that sum is a hybrid nobody priced, entered on ADR-0013's table as
+measured, with no column on `EstimateVariance` to say so. `_rates_for` refuses a
+moved engine on either record, exactly as it refuses a drifted snapshot. It was
+raised as a bounded residual in the third review of #92 and closed rather than
+written down, because refusing costs one engineer's click.
+
 **And one input of that reprice is not pinned, because it was never in the
 snapshot.** `RateSnapshot` carries no material price;
 `MaterialSpec.sell_price_per_gram` is a mutable catalogue column, and

@@ -32,11 +32,19 @@ then divided that whole bed by a quantity of one and priced it as a single unit'
 work: 4.26% over the quote — inside ADR-0013's band — so it queued, printed two,
 shipped one, and recorded the estimate as accurate.
 
-`PreparedPlate.copies` is where the number lives now, and the refusal is here
-rather than in the caller because both halves of the comparison are here: the
-plate's recorded layout and the line's quantity must agree, and a plate whose
-copies nobody wrote down is refused whatever the line says.
+`PreparedPlate.copies` is where the number lives now, and the refusal is on this
+side of the split rather than in the caller because both halves of the comparison
+are here: the plate's recorded layout and the line's quantity must agree.
 `pricing.reprice.prepared_cost` is what that division would otherwise assume.
+
+**Which plate may be attached is no longer decided in this file.** Three reviews
+found three unguarded dimensions one at a time, so the whole set now lives in
+`workers/plate_admission.py` as one predicate with one refusal code per
+dimension, and `_usable_plate` asks it. What stays here is the money: the rates
+the order was sold under, the engine that read them, and the catalogue price the
+difference is computed at. Read `plate_admission`'s docstring before adding a
+condition to either — it says what is already checked, what is deliberately not,
+and what each open dimension would cost to close.
 """
 
 from __future__ import annotations
@@ -52,6 +60,7 @@ from printorian.contexts.inventory import InventoryService
 from printorian.contexts.ordering import DeliveryMethod, rate_snapshot_for
 from printorian.contexts.ordering.models import Order, OrderLine
 from printorian.contexts.pricing import (
+    ENGINE_VERSION,
     FINISH_CATALOGUE,
     FinishOption,
     MaterialPrice,
@@ -63,6 +72,7 @@ from printorian.contexts.pricing import (
 )
 from printorian.core.errors import NotFoundError, ValidationError
 from printorian.core.units import Duration, Mass
+from printorian.workers.plate_admission import admits
 
 logger = structlog.get_logger(__name__)
 
@@ -138,6 +148,13 @@ class CachedPlates:
         this one is "does a plate exist that is *this line's* plate", and what
         follows it is "can that plate be priced without inventing anything". Every
         refusal here is about the plate; every refusal there is about the money.
+
+        The second half of the question — *is this the right plate for this line,
+        or only a plate with the same key* — is `workers/plate_admission.admits`,
+        which enumerates every dimension that has to match and why. It is a
+        separate module rather than more branches here because the enumeration is
+        the point: three reviews found three missing comparisons one at a time,
+        and a list nobody can miss is what stops the fourth being found by luck.
         """
         if not model_hash:
             # A line with no geometry on file — the manual order desk — can never
@@ -152,24 +169,18 @@ class CachedPlates:
         )
         if plate is None:
             return None
-        if plate.copies is None or plate.copies != line.quantity:
-            # The plate's minutes and grams are the whole bed's. `attach_plate`
-            # writes them onto the job as its total work and `prepared_cost`
-            # divides them by `line.quantity` to get a per-unit figure, so both
-            # steps are asserting how many parts are on that bed. Agreeing counts
-            # is the only thing that makes either true.
-            #
-            # `None` — a plate recorded before this column existed, or by an
-            # engineer who did not say — is refused rather than assumed to be one.
-            # One is the value that makes the common case attach, so guessing it
-            # would reinstate exactly the failure this guard exists for.
+
+        refusal = admits(line, plate)
+        if refusal is not None:
+            # Logged at `info` rather than `warning`: a refusal is the farm
+            # declining to act unattended, which is the designed outcome of a
+            # dimension it cannot check — not a fault. The code says which one.
             logger.info(
-                "intake.plate_layout_does_not_match_line",
+                refusal.code,
                 order_id=str(order.id),
                 line_id=str(line.id),
                 plate_id=str(plate.id),
-                plate_copies=plate.copies,
-                line_quantity=line.quantity,
+                **refusal.details,
             )
             return None
         return plate
@@ -189,6 +200,17 @@ class CachedPlates:
         That is the whole guard against ADR-0020 being quietly undone. Without it
         this path would reprice a two-year-old order at whichever rates a later
         release happened to add, and nothing would say so.
+
+        **The rates are half of a reproducible price; the engine is the other
+        half.** ADR-0002 says a quote is reproducible only when the calculation
+        shape is pinned alongside the rates, which is why `Order.engine_version`
+        and `RateSnapshotRecord.engine_version` exist and why `pricing.delta`
+        already refuses to call two prices comparable across a version change.
+        `prepared_cost` is `line_total` — produced by the engine of the day — plus
+        a difference computed by today's. Let the engine move and that sum is a
+        hybrid nobody priced, entered on ADR-0013's table as measured, with no
+        column on `EstimateVariance` to say so. So a moved engine refuses, exactly
+        as a drifted snapshot does, and the order goes in front of an engineer.
         """
         try:
             record = await rate_snapshot_for(self._db, order.id)
@@ -197,6 +219,21 @@ class CachedPlates:
             # way to price their plate: the rates they were sold under were never
             # written down.
             logger.warning("intake.rates_not_pinned", order_id=str(order.id))
+            return None
+
+        if record.engine_version != ENGINE_VERSION or order.engine_version != ENGINE_VERSION:
+            # Both, because they are two different claims: the snapshot's version
+            # is the engine that *read those rates*, and the order's is the engine
+            # that produced `line_total`, the anchor the difference is added to.
+            # An order predating the field carries `""`, which is not a version
+            # this release can vouch for either.
+            logger.warning(
+                "intake.engine_version_moved",
+                order_id=str(order.id),
+                order_engine=order.engine_version,
+                snapshot_engine=record.engine_version,
+                engine=ENGINE_VERSION,
+            )
             return None
 
         try:

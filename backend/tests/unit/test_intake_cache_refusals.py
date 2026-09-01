@@ -10,10 +10,11 @@ it is a variance written from a number nobody took, which looks exactly like a
 measured one for ever afterwards (CLAUDE.md §1), on the table ADR-0013 exists to
 make trustworthy.
 
-So: no pinned rates, rates that no longer rebuild to their own hash, a payload that
-will not rebuild at all, a material gone from the catalogue, a plate with no
-minutes, a multi-line order whose `line_total` was never a quote, and a sweep wired
-without a plate library. Each leaves the job `PENDING` and the order in `PREP` —
+So: no pinned rates, rates that no longer rebuild to their own hash, an order
+priced by an engine this release is not, a payload that will not rebuild at all, a
+material gone from the catalogue, a plate with no minutes, a multi-line order whose
+`line_total` was never a quote, and a sweep wired without a plate library. Each
+leaves the job `PENDING` and the order in `PREP` —
 which is exactly where every order went before
 [#58](https://github.com/iritur/printorian/issues/58), so the fallback is the
 behaviour #41 shipped rather than a new one.
@@ -118,6 +119,40 @@ async def test_a_stored_snapshot_that_no_longer_rebuilds_to_its_own_id_is_refuse
     await a_cached_plate(library)
     order_id = await a_paid_order(
         db_session, number="DRIFT-1", asset_id=asset_id, rates=rates, payload=payload
+    )
+
+    await sweep.sweep()
+
+    assert (await the_job(db_session, order_id)).status is JobStatus.PENDING
+    assert await status_of(db_session, order_id) is OrderStatus.PREP
+    assert await the_variance(db_session, order_id) is None
+
+
+async def test_an_order_priced_by_an_older_engine_is_not_repriced_by_this_one(
+    db_session: AsyncSession, library: PlateLibrary, sweep: IntakeSweep
+) -> None:
+    """The rates are half of a reproducible price; the engine is the other half.
+
+    `prepared_cost` is `line_total` — produced by whichever engine priced the order
+    — plus a difference computed by today's. Let `ENGINE_VERSION` move with a
+    changed labour or margin rule and that sum is a hybrid nobody priced, entered
+    on ADR-0013's table as measured, with no column on `EstimateVariance` to say
+    so. `pricing.delta` already treats an engine-version difference as the thing
+    that makes two prices non-comparable; `_rates_for` now treats it the same way,
+    exactly as it treats a snapshot that no longer hashes to its own row.
+
+    The magnitude is bounded by the delta rather than by the total, which is why
+    the third review filed this as a note. It is refused rather than documented
+    because refusing costs an engineer's click and the alternative costs the one
+    guarantee ADR-0020 exists to give.
+
+    Delete the `engine_version` comparison in `_rates_for` and this order queues.
+    """
+    await a_material(db_session)
+    asset_id = await an_asset(db_session)
+    await a_cached_plate(library)
+    order_id = await a_paid_order(
+        db_session, number="ENGINE-1", asset_id=asset_id, engine_version="0.9.0"
     )
 
     await sweep.sweep()

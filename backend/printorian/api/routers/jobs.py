@@ -14,7 +14,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 
 from printorian.api.deps import (
     AppSettings,
@@ -191,7 +191,13 @@ async def upload_plate_file(
     settings: AppSettings,
     actor: CurrentActor,
     printer_profile: str = "default",
-    copies: int | None = None,
+    # The same bound `RecordPlate.copies` carries, declared here because a query
+    # parameter is validated *before* the handler runs and the model is validated
+    # after `storage.put`. Without it `?copies=0` raised a bare pydantic
+    # `ValidationError` out of the handler — unhandled by `api/errors.py`, so a 500
+    # with no machine-readable code (ADR-0012) and an uploaded blob orphaned in the
+    # object store with no row referencing it.
+    copies: Annotated[int | None, Query(ge=1)] = None,
     quoted_cost: Decimal = Decimal(0),
 ) -> JobView:
     """Take the sliced plate an engineer produced, and read the truth out of it.

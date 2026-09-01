@@ -3,9 +3,11 @@
 Shared by `test_intake_cache_hit.py`, which asserts that the automatic path
 happens and that the number it writes down was measured;
 `test_intake_plate_selection.py`, which asserts every plate it refuses to choose;
+`test_intake_bed_admission.py`, which asserts everything about the *bed* that has
+to match before a plate goes to a machine unwatched;
 `test_intake_cache_refusals.py`, which asserts every way a chosen plate cannot be
 priced honestly; and `test_intake_pass_wiring.py`, which asserts the pass the
-worker runs is built to do any of it. One set of rows, because all four are about
+worker runs is built to do any of it. One set of rows, because all five are about
 the same order arriving in different states of the world — a second, subtly
 different order builder is how they would drift into disagreeing about what a
 cache hit even is.
@@ -67,6 +69,17 @@ TOLERANCE = Decimal("0.15")
 #: What the mesh heuristic guessed at quote time, per unit.
 QUOTED_MINUTES = Decimal(120)
 QUOTED_GRAMS = Decimal(50)
+
+#: The geometry the line was priced from, as `_pricing_spec` writes it onto the
+#: order. Present rather than `{}` because the unattended path **refuses a line
+#: whose part was never measured**: the job's box is what `fleet.can_take` judges
+#: a machine against, and a zero there reads as "fits everything". A line built
+#: without this is a line that goes to prep, which is what
+#: `test_intake_bed_admission.py` asserts on purpose.
+CUBE_MESH: dict[str, object] = {
+    "measured": True,
+    "bounding_box_mm": {"x": "40", "y": "40", "z": "40"},
+}
 
 #: What the slicer actually found for the whole plate. Longer and heavier than
 #: the guess on purpose: a plate that came in *under* the estimate is within
@@ -179,6 +192,9 @@ async def a_paid_order(
     line_total: Decimal = Decimal(3000),
     quantity: int = 1,
     lines: int = 1,
+    colors: list[str] | None = None,
+    mesh: dict[str, object] | None = None,
+    engine_version: str = "1.0.0",
 ) -> EntityId:
     """An order sitting where `payments` leaves it, with its rates pinned.
 
@@ -192,7 +208,7 @@ async def a_paid_order(
             RateSnapshotRecord(
                 id=snapshot_id,
                 payload=payload if payload is not None else rates_to_dict(rates),
-                engine_version="1.0.0",
+                engine_version=engine_version,
             )
         )
         await db.flush()
@@ -202,7 +218,7 @@ async def a_paid_order(
         number=number,
         status=OrderStatus.PAID,
         rate_snapshot_id=snapshot_id,
-        engine_version="1.0.0",
+        engine_version=engine_version,
     )
     db.add(order)
     await db.flush()
@@ -215,7 +231,8 @@ async def a_paid_order(
                 material_code=MATERIAL,
                 quantity=quantity,
                 scale=Decimal(1),
-                colors=["white"],
+                colors=list(colors) if colors is not None else ["white"],
+                mesh=dict(mesh) if mesh is not None else dict(CUBE_MESH),
                 estimated_minutes=QUOTED_MINUTES,
                 estimated_grams=QUOTED_GRAMS,
                 line_total=line_total if index == 0 else Decimal(1000),
@@ -234,6 +251,8 @@ async def a_cached_plate(
     model_hash: str = CUBE_SHA,
     material_code: str = MATERIAL,
     copies: int | None = 1,
+    slots: int = 1,
+    has_content: bool = True,
 ) -> PreparedPlateView:
     """What an engineer's slicing left behind for the *previous* order.
 
@@ -242,7 +261,14 @@ async def a_cached_plate(
     is nullable precisely so an unrecorded layout stays unrecorded, and
     `test_intake_plate_selection.py` passes `None` to say so. The plate view is
     returned so a test can go on to invalidate the row it just made.
+
+    ``slots`` is how many AMS slots the bed calls for; the grams are split evenly
+    across them because nothing here asserts on the split, only on the count —
+    which is the one thing about the filament set a plate records.
+    ``has_content=False`` is the plate that is numbers with no file behind it, a
+    legitimate row and one the unattended path must not send to a machine.
     """
+    per_slot = grams / Decimal(slots)
     return await library.record(
         RecordPlate(
             model_hash=model_hash,
@@ -252,11 +278,11 @@ async def a_cached_plate(
             printer_profile=printer_profile,
             copies=copies,
             print_minutes=print_minutes,
-            filament_grams={"0": grams},
+            filament_grams={str(slot): per_slot for slot in range(slots)},
             filename="cube.3mf",
-            content_sha256="d" * 64,
-            storage_path="plates/cube.3mf",
-            size_bytes=1024,
+            content_sha256="d" * 64 if has_content else None,
+            storage_path="plates/cube.3mf" if has_content else None,
+            size_bytes=1024 if has_content else None,
         )
     )
 

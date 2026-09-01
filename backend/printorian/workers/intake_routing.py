@@ -12,9 +12,9 @@ The three destinations, and the order between them is the part worth reading:
 
 * **`PREP`** whenever any line still needs an engineer — a cache miss, a hit that
   could not be repriced honestly, or an order carrying a decision this pass has no
-  measurement for (more than one line, or a plate whose recorded layout does not
-  match what was ordered). It is the default, and it is exactly where every order
-  went before #58.
+  measurement for (more than one line, or any of the dimensions
+  `workers/plate_admission` enumerates). It is the default, and it is exactly
+  where every order went before #58.
 * **`PRICE_REVIEW`** when nothing needs slicing but a plate came in over the
   ADR-0013 band. It is second rather than first on purpose: from `PRICE_REVIEW` an
   order may only go to `QUEUED`, so an order that also had unsliced work would be
@@ -117,8 +117,16 @@ class OrderRouting:
         turned the feature off, since the plate's layout was unknown either way.
         So the number was recorded instead: `PreparedPlate.copies`, nullable so an
         unrecorded layout stays unrecorded, checked against `line.quantity` in
-        `workers/cached_plates.py` where both halves of the comparison are in hand.
-        A line of three is now attachable — to a plate that says it holds three.
+        `workers/plate_admission.py` where both halves of the comparison are in
+        hand.
+
+        **A line of three still does not attach unattended, for a different
+        reason.** The copy *count* now agrees, but nothing records the bed's own
+        footprint, and the planner judges a multi-up plate by the box of a single
+        part — so `plate_admission` refuses any plate holding more than one copy
+        and says what recording the footprint would cost. The guard here is about
+        the *price* being a per-line one; that one is about the *bed* being a
+        measurable one. They refuse different orders and neither replaces the other.
         """
         if len(lines) != 1:
             logger.info("intake.multi_line_order_not_repriceable", order_id=str(order.id))

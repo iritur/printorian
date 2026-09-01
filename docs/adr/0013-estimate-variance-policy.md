@@ -77,12 +77,26 @@ straddle, so the gap is a documented cost rather than a surprise.
 **Where it refuses.** No plate, more than one plate for the configuration, a
 plate in another material or at another scale, a plate an engineer has retired, no
 pinned snapshot, a stored payload that will not rebuild at all, a snapshot that
-rebuilds but no longer hashes to its own content, a material no longer in the
-catalogue, a plate with no minutes, a multi-line order, a plate whose recorded
-layout does not match what was ordered, or a plate that does not record its layout
-at all: each of those leaves the job `PENDING` and the order in `PREP`. None of
-them guesses. That list is the shape of this ADR's obligation — a variance nobody
-measured is worse than no variance, because it *looks* measured.
+rebuilds but no longer hashes to its own content, an order priced by an engine
+version this release is not, a material no longer in the catalogue, a plate with
+no minutes, a multi-line order, a plate whose recorded layout does not match what
+was ordered, a plate that does not record its layout at all, a plate whose
+filament count is not the line's, a plate holding more than one copy, a line whose
+part was never measured, or a plate that is numbers with no file behind it: each of
+those leaves the job `PENDING` and the order in `PREP`. None of them guesses. That
+list is the shape of this ADR's obligation — a variance nobody measured is worse
+than no variance, because it *looks* measured.
+
+> **The list itself is now a module, and that is the point of the fourth review.**
+> Three reviews of [#92](https://github.com/iritur/printorian/pull/92) each found
+> exactly one unguarded dimension, each because somebody went looking for that
+> particular one, because nothing named the set. `plate_key` answers "have we
+> sliced this before" and every term in it describes the *order*; nothing in the
+> schema describes the *bed*. `backend/printorian/workers/plate_admission.py` is
+> the enumeration — what must match, what is checked elsewhere, what is
+> deliberately absent (finishes cancel on both sides of the difference), and what
+> is still open with the cost of closing each. Add a refusal there, with its own
+> code and its own test, rather than a fourth branch in `_usable_plate`.
 
 **The layout refusal is the one worth explaining**, because its absence is
 invisible and because this ADR previously described it wrongly. A `PrintJob` is
@@ -106,6 +120,18 @@ a `1` written in for the plates already in the table would be an invented number
 that happens to be exactly the one that makes the common case attach. The
 unattended path attaches only when the plate's recorded `copies` equals the line's
 quantity, and never when the plate does not say.
+
+> **And a multi-up plate is refused anyway, for a second reason found later.**
+> Recording the count made a line of three attachable to a three-up plate; what is
+> recorded nowhere is the bed's own **footprint**. The only geometry the planner
+> ever sees is the job's — one part's box — so `fleet.can_take`'s single geometric
+> test judges a three-up bed by the size of one part, and a machine that cannot
+> hold the plate is eligible for it. Scaling the job's box by the copy count would
+> be an invented number in the other direction (a 2×2 layout of four parts is twice
+> the width, not four times), so the unattended path takes the cache miss. The
+> cost is stated where the guard is: recording the plate's bed extent — two
+> columns and a console field, exactly the shape `copies` took — turns the check
+> into "the recorded footprint fits the machine" and lifts the refusal.
 
 **`PRICE_REVIEW` is now reachable straight from `PAID`.** The band can be exceeded
 before any engineer has touched the order, so the order machine says so rather

@@ -7,12 +7,14 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-09-01 · **1 363 passed, 8 skipped, `exit=0` in 1052.37s
-(0:17:32)** on `feat/58-reprice-cache-hit` with `main` merged in, alongside the six
+**As of:** 2026-09-01 · **1 381 passed, 8 skipped, `exit=0` in 993.04s
+(0:16:33)** on `feat/58-reprice-cache-hit` with `main` merged in, alongside the six
 backend gates each run separately and each `exit=0`. Those are pytest's own
 trailing summary line this time, read out of the redirect rather than counted off
-the progress characters — the previous session's run lost that line and said so,
-and `-p no:cacheprovider --tb=short` is what brought it back. The
+the progress characters — a previous session's run lost that line and said so,
+and `-p no:cacheprovider --tb=short` is what brought it back. Eighteen of those
+tests are the fourth review's, and ten mutations were applied, run and reverted
+against them. The
 frontend was neither built nor tested: this worktree has no `node_modules`, so
 that half of the ten gates is CI's evidence and not this file's. **The three
 paragraphs below describe the tree #31 was measured on**, which is what `main`
@@ -29,12 +31,13 @@ copying either number up. Neither describes this tree anyway: 249 predates #88 a
 claimed. CI on this pull request is the frontend evidence.
 
 What ran locally on the merged tree: the six backend gates, each separately and
-each `exit=0` — `ruff check`, `ruff format --check` (369 files), `mypy --strict`
-(**217** source files, up one for `wait_list.py`), `lint-imports` (6 contracts
-kept, 0 broken), `check_context_isolation.py` and `check_file_length.py`. They
-were run with the interpreter from a sibling worktree, because a fresh worktree
-has no `.venv`; that mypy reports 217 files rather than 216 is the evidence it
-read *this* tree and not the one the interpreter lives in.
+each `exit=0` — `ruff check`, `ruff format --check` (**386** files), `mypy
+--strict` (**223** source files), `lint-imports` (6 contracts kept, 0 broken),
+`check_context_isolation.py` and `check_file_length.py`, run from this worktree's
+own `.venv`. The figures moved this session — 369 and 217 before — because the
+fourth review of #92 added `core/geometry.py`, `workers/plate_admission.py` and
+three test files; they are quoted because a gate whose file count nobody reads is
+a gate that can quietly stop covering a tree.
 
 **The full-suite figure this line used to carry was never about this branch.**
 1 333 passed / 7 skipped, `exit=0`, 24m43s was measured on
@@ -52,7 +55,10 @@ itself** ([#58](https://github.com/iritur/printorian/issues/58)). The intake swe
 attaches the cached `PreparedPlate` and applies ADR-0013's band with nobody in the
 loop, so ROADMAP Phase 4's exit criterion — payment to a machine starting the job
 with no human action — holds for the cached half instead of ending in an engineer
-clicking «attach» on work the farm already has.
+clicking «attach» on work the farm already has. **Read the reachability paragraph
+below before repeating that sentence anywhere else:** the mechanism is built,
+tested and correct, and nothing the storefront can place reaches it yet, because
+`OrderingService.place` never writes `OrderLine.model_asset_id`.
 
 > **The whole issue was one `NOT NULL` column.** `EstimateVariance.prepared_cost`
 > had no source: pricing happens once, at quote time, and nothing in the system
@@ -97,13 +103,22 @@ clicking «attach» on work the farm already has.
 > `PreparedPlate.copies` (migration `0023`) is the answer instead: **nullable,
 > never defaulted, never backfilled**, because a `1` written in for the plates
 > already in the table is an invented number that happens to be the one that makes
-> the common case attach. `CachedPlates` attaches only when the plate's recorded
-> copies equal the line's quantity, and the `quantity != 1` refusal is gone — a
-> line of three now attaches to a plate that says it holds three. The tripwires are
-> `test_a_two_up_plate_is_not_attached_to_a_line_of_one`,
+> the common case attach. The unattended path attaches only when the plate's
+> recorded copies equal the line's quantity, and the `quantity != 1` refusal is
+> gone. The tripwires are `test_a_two_up_plate_is_not_attached_to_a_line_of_one`,
 > `test_a_one_up_plate_is_not_attached_to_a_line_of_three` and
 > `test_a_plate_that_does_not_say_how_many_copies_it_holds_is_refused`, all in
 > `tests/unit/test_intake_plate_selection.py`.
+>
+> **A line of three still does not queue itself, and the reason is the fourth
+> review's.** The count now agrees; the bed's *footprint* is recorded nowhere, and
+> the only geometry the planner ever sees is the job's — one part's box. So a
+> three-up bed was being judged against the size of one part, and a machine too
+> small for the plate was eligible for it. `plate_admission` refuses any plate
+> holding more than one copy; what lifts it is recording the plate's own bed
+> extent, two columns and a console field, exactly the shape `copies` took. The
+> per-quantity arithmetic `copies` earned is still pinned, by
+> `tests/unit/test_reprice_quantity.py`, which is pure pricing and needed no sweep.
 >
 > **What that costs today, and it needs a person.** The console's plate upload
 > does not send `copies` — the field is a query parameter on
@@ -116,6 +131,64 @@ clicking «attach» on work the farm already has.
 > and a miscount there would not fail loudly — it would attach the wrong plate
 > quietly. Asking is the conservative half of that trade, and the frontend field
 > is the follow-up.
+>
+> **Three reviews found three unguarded dimensions one at a time, so the set is
+> now written down in one place.** `backend/printorian/workers/plate_admission.py`
+> is that place: one pure predicate, one refusal code per dimension, and a
+> docstring that says what must match, what is checked elsewhere, what is
+> deliberately absent (finishes cancel on both sides of the difference), and what
+> is still open with the cost of closing each. The cause it names is worth
+> repeating here: `plate_key` answers *"have we sliced this before"* and every
+> term in it — geometry, scale, priced material, a profile string, an opaque
+> layout — describes the **order**. Nothing in the schema describes the **bed**,
+> and every hole the reviews found was a bed-side property. `copies` was the first
+> bed-side column ever added.
+>
+> Four refusals were added there and each was mutation-proved: a plate whose
+> **filament count** is not the line's distinct colour count (round three's
+> blocking finding — colour is in no key term, and `line.material_code` is the
+> *dearest* chosen spec rather than the filament set); a plate holding **more than
+> one copy**, because the bed's footprint is unrecorded; a line whose **part was
+> never measured**, because a zero box reads as "fits every machine"; and a plate
+> that is **numbers with no file behind it**, which would otherwise reach `QUEUED`
+> and then be re-queued by dispatch for ever without ever returning to `PREP`.
+> `tests/unit/test_intake_bed_admission.py` is the file, and deleting any one
+> clause makes exactly its own test queue an order it should not.
+>
+> **A moved engine version now refuses too** (`_rates_for`, ADR-0020's amendment).
+> `prepared_cost` is `line_total` — priced by the engine of the day — plus a
+> difference priced by today's, so a changed formula makes that sum a hybrid
+> nobody quoted, recorded as measured. The third review offered "refuse or
+> document"; refusing costs a click.
+>
+> **The part's bounding box was being read at 1× everywhere.** `OrderLine.mesh`
+> holds the *unscaled* box — `_pricing_spec` writes `analysis.bounding_box`
+> verbatim while `estimate()` scales only volume, mass and time — and both readers
+> of it had forgotten the multiplication. A 40 mm mesh at scale 3 was handed to the
+> planner as 40 mm, whose only geometric test is `job.width_mm > printer.width_mm`,
+> and to `workers/packaging` as the carton size. `core.geometry.scaled_box` is the
+> one multiplication now, and `tests/unit/test_scaled_box.py` holds both readers to
+> it.
+>
+> **Two cheap ones from the third review, both now held by a test.**
+> `PlateLibrary.record` overwrites `copies` rather than merging, and the comment
+> saying that is load-bearing was true and untested — the merge passed thirty-nine
+> tests. And `POST /jobs/{id}/plate/file?copies=0` raised a bare pydantic error
+> *after* `storage.put`: a 500 with no code (ADR-0012) and an orphaned blob. The
+> query parameter carries `Query(ge=1)` now, which is the bound the model always
+> had.
+>
+> **The path is not reachable from the product at all, and that is the finding to
+> carry forward.** `OrderingService.place` is the only constructor of an
+> `OrderLine` and it never writes `model_asset_id` — the field is accepted by
+> `POST /orders` and dropped — so `model_hash` is `""` and the unattended path
+> declines at its first line on every order the storefront can place. The web
+> checkout sends no `mesh` either. So the guards on this branch have never been
+> exercised by a real order, the whole feature lives in the test suite, and the
+> two small changes that would switch it on are exactly the changes that would
+> make every open dimension in `plate_admission`'s docstring live at once. That is
+> a decision for a person, and it is why the pull request now says `Refs #58`
+> rather than `Closes #58`.
 >
 > **A payload that will not rebuild must cost one order, not the pass.**
 > `IntakeSweep.sweep` rescues `PrintorianError` per order and nothing else, and

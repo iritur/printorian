@@ -49,6 +49,7 @@ from printorian.contexts.ordering.models import Order, OrderLine
 from printorian.contexts.production import CreateJob, ProductionService
 from printorian.contexts.production.models import PrintJob
 from printorian.core.errors import DomainRuleViolationError, PrintorianError
+from printorian.core.geometry import scaled_box
 from printorian.core.ids import EntityId
 from printorian.workers.cached_plates import CachedPlates
 from printorian.workers.intake_routing import OrderRouting
@@ -224,24 +225,29 @@ class IntakeSweep:
 
 
 def _dimensions(line: OrderLine) -> dict[str, Decimal]:
-    """The part's bounding box, from the geometry the line was priced on.
+    """The part's bounding box, at the size it was ordered.
+
+    **At the size it was ordered** is the correction worth reading. The box stored
+    on the line is the box of the *unscaled* mesh — `_pricing_spec` writes
+    `analysis.bounding_box` verbatim while `estimate()` applies the scale only to
+    volume, mass and time — so this used to hand the planner a 100 mm part for a
+    100 mm mesh ordered at scale 3. `fleet.can_take`'s only geometric test is
+    `job.width_mm > printer.width_mm`, so every printer in the farm was judged
+    against a third of the real part. `core.geometry.scaled_box` is that
+    multiplication, shared with `workers/packaging`, which was reading the same
+    unscaled box for the shipping carton.
 
     Zero for geometry nobody measured, which is what the column already defaults
     to and what the planner reads as "no constraint" — an *invented* box would
     have the planner refuse machines that would have fitted it, or accept one that
-    would not.
+    would not. That default is safe only because a person releases the job:
+    `workers/plate_admission` refuses the unattended path outright rather than
+    letting a zero read as "fits every machine".
     """
-    box: Any = line.mesh.get("bounding_box_mm") if isinstance(line.mesh, dict) else None
-    if not isinstance(box, dict):
+    box = scaled_box(line.mesh, line.scale)
+    if box is None:
         return {"width_mm": Decimal(0), "depth_mm": Decimal(0), "height_mm": Decimal(0)}
-    try:
-        return {
-            "width_mm": Decimal(str(box["x"])),
-            "depth_mm": Decimal(str(box["y"])),
-            "height_mm": Decimal(str(box["z"])),
-        }
-    except (KeyError, ArithmeticError, TypeError, ValueError):
-        return {"width_mm": Decimal(0), "depth_mm": Decimal(0), "height_mm": Decimal(0)}
+    return {"width_mm": box.x, "depth_mm": box.y, "height_mm": box.z}
 
 
 async def run_forever(
