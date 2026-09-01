@@ -43,16 +43,30 @@ not #89's, which adds `tests/api/test_settings_api.py`, not its merge with #88,
 and not this one. **No full-suite pass is claimed here.** CI on the pull request
 is that evidence.
 
-> **Two local attempts, and what each one is worth saying.** The first ran ~290
-> tests and failed roughly 200 of them, across `tests/api` files this branch does
-> not touch; every one of those files passes on its own, seconds later. That is
-> the trap `backend/CLAUDE.md` names — two sessions sharing `printorian_test`
-> truncate each other's tables — and there are three other worktrees on this
-> machine. It is recorded because a run like that reads as "this branch is
-> broken" and is not, and the tell is that the failures are *everywhere except*
-> the change. The second attempt reached 19% with **no** failures and was killed
-> by a session restart, not by the code. Neither is a pass, so neither is quoted
-> as one.
+> **Four local attempts, no pass, and the diagnosis was wrong once.** Recorded in
+> full because the wrong diagnosis is the useful part.
+>
+> The first run failed ~200 tests across `tests/api` files this branch does not
+> touch, and each of those files passed on its own seconds later. That was written
+> down here as the concurrent-session trap `backend/CLAUDE.md` names — plausible,
+> three other worktrees are live on this machine, and **not measured**. The second
+> reached 19% clean and was killed by a session restart. The third was killed by a
+> merge committed into the working tree while it ran, which left `planning.py`
+> holding conflict markers; that one is nobody's fault but the author's.
+>
+> The fourth errored from 5% onward, and the cause turned out to be that
+> **PostgreSQL was gone**: nothing listening on 5433, `docker` unable to reach its
+> daemon, a direct `asyncpg.connect` refused. Docker Desktop had stopped. Which
+> makes a restarting container the better-supported explanation for run one as
+> well — the DB dying mid-run and coming back fits both the mass failures *and*
+> the single file passing immediately after, and no evidence was ever gathered for
+> the concurrency story that was written here first.
+>
+> The lesson worth keeping is not about Docker. A run whose failures land
+> everywhere *except* the change has an environmental cause, and there is more
+> than one candidate; `pg_stat_activity` or a bare `connect` settles it in one
+> command, and guessing costs a paragraph of confident prose that has to be
+> retracted. Check that the database is up **before** reading a failure list.
 
 **A wait-list row now ends when the wait does, and not one pass later.**
 `planning._refresh_wait_list` discarded rows only for the jobs in
