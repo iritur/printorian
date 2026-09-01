@@ -5,7 +5,7 @@ with no human action*. `test_intake_sweep.py` covers the half that makes the job
 this is the half that skips prep, and the half where money is involved. Every way
 the automatic path declines to act is in `test_intake_cache_refusals.py`.
 
-The assertions here divide in two, and both halves matter.
+The assertions here divide in three, and each part matters.
 
 **That it happens at all** — the order reaches `QUEUED` carrying the plate the
 farm already had, and nobody clicked.
@@ -20,6 +20,13 @@ cost is asserted against a figure `_intake_cache_support` computes for itself ou
 of the pricing engine, and then again by *moving* the plate and the order's pinned
 rates and watching it follow.
 
+**That it was written down where only a financial reader can reach it.** The same
+two figures went into the job's journal as well as onto the `EstimateVariance`
+row, and a `JobEvent`'s `details` is served by `GET /jobs/{job_id}` under
+`VIEW_PRODUCTION` alone. That was invisible while the console — which sends
+neither cost — was the only caller and the field read `"0"`; this sweep is what
+fills it, so the last test here is the one that keeps it empty.
+
 Both of the shapes #41 refused were then applied as mutations and run. Passing
 `Decimal(0)` failed four of the five tests here; passing `line.line_total` failed
 the same four. Returning a fresh `RateSnapshot()` from `CachedPlates._rates_for`
@@ -30,7 +37,7 @@ what that test is for, and why it is not folded into the one above it.
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 import pytest
 from sqlalchemy import select
@@ -39,7 +46,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from printorian.contexts.catalog import PlateLibrary
 from printorian.contexts.ordering import OrderStatus
 from printorian.contexts.production import JobStatus
-from printorian.contexts.production.models import PrintJob
+from printorian.contexts.production.models import JobEvent, PrintJob
 from printorian.core.clock import FixedClock
 from printorian.core.events import EventBus
 from printorian.workers.intake import IntakeSweep
@@ -71,6 +78,14 @@ def sweep(
     db_session: AsyncSession, clock: FixedClock, bus: EventBus, library: PlateLibrary
 ) -> IntakeSweep:
     return a_sweep(db_session, clock, bus, library)
+
+
+def _number(value: object) -> Decimal | None:
+    """The value as a figure, or `None` when it is a plate id or a filename."""
+    try:
+        return Decimal(str(value))
+    except InvalidOperation:
+        return None
 
 
 # ------------------------------------------------------- the hit reaches QUEUED
@@ -219,3 +234,42 @@ async def test_a_plate_over_the_band_is_held_rather_than_queued(
     assert variance is not None
     assert variance.within_tolerance is False
     assert variance.prepared_cost > variance.quoted_cost * (1 + TOLERANCE)
+
+
+async def test_the_sweeps_journal_entry_carries_no_money(
+    db_session: AsyncSession, library: PlateLibrary, sweep: IntakeSweep
+) -> None:
+    """The pair goes on the variance row and nowhere a production read can see it.
+
+    `EstimateVariance` is behind `VIEW_FINANCIALS`; a `JobEvent`'s `details` is
+    not — it rides out on `JobView.events`, which `GET /jobs/{job_id}` serves to
+    anyone with `VIEW_PRODUCTION`. `attach_plate` wrote both costs into both
+    places, and until this branch the second copy read `"0"` because the console
+    was the only caller and does not send the two query parameters. This sweep is
+    what fills it with the order's real total, so this is the test that has to
+    exist alongside the one above asserting the variance row *does* carry it.
+
+    The permission boundary itself is asserted end-to-end in
+    `tests/api/test_variance_api.py`; this one guards the write.
+    """
+    rates = some_rates()
+    await a_material(db_session)
+    asset_id = await an_asset(db_session)
+    await a_cached_plate(library)
+    order_id = await a_paid_order(db_session, number="HIT-5", asset_id=asset_id, rates=rates)
+
+    await sweep.sweep()
+
+    job = await the_job(db_session, order_id)
+    variance = await the_variance(db_session, order_id)
+    assert variance is not None
+    events = list(await db_session.scalars(select(JobEvent).where(JobEvent.job_id == job.id)))
+    [attached] = [event for event in events if event.reason == "plate.attached"]
+    assert attached.details["overrun_ratio"] != "0"
+    # Not "the keys are absent" but "the figures are not there under any name":
+    # what leaks is the number, and a rename would keep the leak. Compared as
+    # `Decimal` rather than as text, because `"3000"` and `"3000.00"` are the
+    # same rouble figure and a string test would pass on the wrong one.
+    written = {_number(value) for event in events for value in event.details.values()} - {None}
+    assert variance.quoted_cost not in written
+    assert variance.prepared_cost not in written

@@ -7,9 +7,12 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-09-01 · **1 360 backend tests collected** — **1 352 passed, 8
-skipped, `exit=0`, 15m49s** on `feat/58-reprice-cache-hit` with `main` merged in,
-alongside the six backend gates each run separately and each `exit=0`. The
+**As of:** 2026-09-01 · **1 362 backend tests collected** — **1 354 passed, 8
+skipped, `exit=0`** on `feat/58-reprice-cache-hit` with `main` merged in,
+alongside the six backend gates each run separately and each `exit=0`. No
+duration is given for that run: `-q`'s summary line did not reach the log, so the
+counts are the progress characters counted and the collected figure is
+`--collect-only`'s, and a time nobody captured is not a time to write down. The
 frontend was neither built nor tested: this worktree has no `node_modules`, so
 that half of the ten gates is CI's evidence and not this file's. **The three
 paragraphs below describe the tree #31 was measured on**, which is what `main`
@@ -114,9 +117,13 @@ clicking «attach» on work the farm already has.
 > the schema instead of six weeks later.
 >
 > **Measured, not asserted, and the draft was measured too.** All six backend
-> gates run separately on the final tree, each `exit=0`; the whole suite **1 352
-> passed / 8 skipped, `exit=0`, 15m49s**, of which fifteen tests are new. Every
-> claim above was mutation-proved: `prepared_cost=Decimal(0)` and
+> gates run separately on the final tree, each `exit=0`; the whole suite **1 354
+> passed / 8 skipped of 1 362 collected, `exit=0`**, of which seventeen tests are
+> new. (`-q`'s trailing summary line did not reach the redirect on the last run,
+> so the two figures are the progress characters counted and the collected total
+> is `--collect-only`'s own; the exit code is pytest's. No duration is claimed,
+> because none was captured.) Every claim above was mutation-proved:
+> `prepared_cost=Decimal(0)` and
 > `prepared_cost=line.line_total` each failed four of the five cache-hit tests;
 > a fresh `RateSnapshot()` in place of the pinned one failed the ADR-0020 test
 > alone; dropping the snapshot-id check, the `PRICE_REVIEW` branch, the
@@ -124,6 +131,22 @@ clicking «attach» on work the farm already has.
 > the test named for it; and forcing the routing back to `PREP` failed six. The
 > migration was upgraded, `alembic check`ed, downgraded and re-upgraded against
 > the **dev** database, which `alembic current` said was at `0020` beforehand.
+>
+> **The reprice also had to be told where it may not write the number.**
+> `attach_plate` put `quoted_cost` and `prepared_cost` into the job's *journal*
+> as well as onto the `EstimateVariance` row, and a `JobEvent`'s `details` rides
+> out on `JobView.events` — which `GET /jobs/{job_id}` serves under
+> `VIEW_PRODUCTION` alone, the permission an operator holds. `GET /jobs/variances`
+> gates the identical pair on `VIEW_FINANCIALS`, so the journal was a second,
+> ungated copy: CLAUDE.md §1's money split, defeated by the other door. It read
+> `"0"` for as long as the console's plate upload was the only caller, because
+> those two costs are query parameters the console does not send — so the leak
+> existed and was empty, and this branch is what fills it. The pair is out of
+> `details` now; `overrun_ratio` stays, because a ratio is not money and it is
+> what the floor reads an `ON_HOLD` against.
+> `test_the_job_journal_does_not_carry_money_to_the_floor` reads the job as an
+> **operator** and `test_the_sweeps_journal_entry_carries_no_money` guards the
+> write; putting the two costs back fails both, which was run.
 >
 > **One thing that is not covered.** `workers/passes.py` supplies `CachedPlates`
 > to the sweep and nothing tests that it does; deleting that argument returns the
