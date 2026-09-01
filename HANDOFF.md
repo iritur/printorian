@@ -9,12 +9,12 @@ status documents that described built features as missing.
 
 **As of:** 2026-08-31 · **1 347 backend tests collected**, and **not** all ten
 gates green on this branch in one place. The count and the six gates below were
-measured here, on the tree this branch actually is: it is stacked on
-[#89](https://github.com/iritur/printorian/pull/89) rather than on `main`, and
-that branch has `main` merged into it, so `main`'s design-kit conventions (#88)
-are underneath this too. 1 345 was #89's own merged tree; the two extra are the
-wait-list tests below, and the figure is re-measured rather than inherited
-because inheriting one is the mistake the next paragraph but one is about.
+measured here, on the tree this branch actually is. It was written stacked on
+[#89](https://github.com/iritur/printorian/pull/89), which has since merged, so
+`main` is merged in and #89's wait-list module and #88's design-kit conventions
+are both underneath. 1 345 was #89's own tree; the two extra are the wait-list
+tests below, and the figure is re-measured rather than inherited — inheriting one
+is the mistake the next paragraph but one is about.
 
 **The frontend count is deliberately absent rather than carried forward.** The
 line arrived on `main` saying 249 with the #37 entry directly beneath it saying
@@ -81,11 +81,12 @@ job it looks at — assigned or wait-listed, never neither.
 > failed with `assert 2 == 1`. The second test is the one worth keeping: a
 > per-job assertion cannot see a defect whose damage lands on somebody else's row.
 >
-> **This branch is stacked on
-> [#31](https://github.com/iritur/printorian/issues/31)'s**, not on `main`. The
-> fix goes through `wait_list.discard`, which that branch introduced; writing a
-> second delete here to avoid the dependency would have re-created exactly the
-> divergence #31 exists to prevent. Merge that one first.
+> **It was written against [#31](https://github.com/iritur/printorian/issues/31)'s
+> branch rather than `main`**, because the fix goes through `wait_list.discard`
+> and that branch introduced it; writing a second delete here to dodge the
+> dependency would have re-created exactly the divergence #31 exists to prevent.
+> #31 has since merged as #89 and `main` is merged in here, so the dependency is
+> now history rather than a merge order to remember.
 >
 > **`WaitListEntry`'s own docstring stated the invariant that was false** — "re-
 > planning replaces the row rather than appending" describes half a rule. It now
