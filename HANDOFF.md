@@ -7,59 +7,61 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-09-01 · **1 381 passed, 8 skipped, `exit=0` in 993.04s
-(0:16:33)** on `feat/58-reprice-cache-hit`, alongside the six backend gates each
-run separately and each `exit=0`. Those are pytest's own trailing summary line,
-read out of the redirect rather than counted off the progress characters — a
-previous session's run lost that line and said so, and `-p no:cacheprovider
---tb=short` is what brought it back. Eighteen of those tests are the fourth
-review's, and ten mutations were applied, run and reverted against them.
+**As of:** 2026-09-01 · **1 383 passed, 8 skipped, `exit=0` in 951.82s
+(0:15:51)** on `feat/58-reprice-cache-hit` with `main` merged in through
+[#91](https://github.com/iritur/printorian/pull/91), alongside the six backend
+gates each run separately and each `exit=0`. That is pytest's own trailing
+summary line, read out of the redirect rather than counted off the progress
+characters — a previous session's run lost that line and said so, and `-p
+no:cacheprovider --tb=short` is what brought it back. Eighteen of those tests are
+the fourth review's, and ten mutations were applied, run and reverted against
+them.
 
-**That suite figure was measured against this branch merged with `main` at
-[#89](https://github.com/iritur/printorian/pull/89), and `main` has since moved.**
-[#90](https://github.com/iritur/printorian/pull/90) landed while the pull request
-sat open and is merged in below; it changes `production/planning.py`,
-`production/models.py` and `tests/unit/test_queue_position.py`, so the suite it
-composes is not the suite that produced 1 381. The six gates *were* re-run after
-that merge and are current. The suite was not, and CI on the pull request is its
-evidence. The number is kept with its referent named rather than quietly
-re-pointed at a tree it never saw — that substitution is the error the paragraph
-three below exists to record, and it is no more permissible when the newer tree
-is likely to agree.
+**The figure was re-measured across the merge rather than carried over it, and
+the two extra tests are what makes that checkable.** 1 381 was this branch over
+`main` at [#89](https://github.com/iritur/printorian/pull/89).
+[#90](https://github.com/iritur/printorian/pull/90) then landed and added exactly
+two tests to `tests/unit/test_queue_position.py`, and the count moved by exactly
+two. Had the old number been carried forward instead, that arithmetic would have
+proved nothing — a number copied over a merge agrees with every tree, including
+the ones it never saw. This is the paragraph three below in its answered form:
+the referent changed, so the measurement was taken again rather than re-pointed.
 
-The frontend was neither built nor tested: this worktree has no `node_modules`,
-so that half of the ten gates is CI's evidence and not this file's.
+**The frontend figures here are `main`'s, not this branch's.**
+[#91](https://github.com/iritur/printorian/pull/91) measured **283 tests across
+29 files** with all four frontend gates `exit=0`, and that is what `main` now is.
+This worktree has no `node_modules`, and nothing under `frontend/` changed on
+this branch, so the number is repeated with its owner named rather than
+re-claimed. The sentence #91 left on this line — "no backend suite or gate run on
+this branch at all" — was true of #91 and is false of this one. It is the same
+referent moving under a pronoun as everything else on this page, arriving by a
+merge this time instead of by a copy, which is why the merge that brought it here
+had to be read rather than accepted.
 
-**The frontend count is deliberately absent rather than carried forward.** The
-line arrived on `main` saying 249 with the #37 entry directly beneath it saying
-**276 across 28 files** — a paragraph disagreeing with the paragraph under it,
-which is exactly the drift CLAUDE.md §4 warns about, and it is not repaired by
-copying either number up. Neither describes this tree anyway: 249 predates #88,
-and 276 predates the `SettingsPage` tests #89 adds underneath this branch. This
-worktree has no `node_modules`, so the figure was not measured and is therefore
-not claimed — and nothing under `frontend/` changed on this branch, so there was
-nothing here to measure it for. CI is the frontend evidence.
+What ran locally on the merged tree: the six backend gates, each separately and
+each `exit=0` — `ruff check`, `ruff format --check` (**386** files), `mypy
+--strict` (**223** source files), `lint-imports` (6 contracts kept, 0 broken),
+`check_context_isolation.py` and `check_file_length.py`, run from this worktree's
+own `.venv`. The figures moved this session — 369 and 217 before — because the
+fourth review of #92 added `core/geometry.py`, `workers/plate_admission.py` and
+three test files; neither #90 nor #91 added a backend source file, so neither
+moved either count. They are quoted because a gate whose file count nobody reads
+is a gate that can quietly stop covering a tree.
 
-What ran locally on the merged tree, after `main` was brought up to #90: the six
-backend gates, each separately and each `exit=0` — `ruff check`, `ruff format
---check` (**386** files), `mypy --strict` (**223** source files), `lint-imports`
-(6 contracts kept, 0 broken), `check_context_isolation.py` and
-`check_file_length.py`, run from this worktree's own `.venv`. The figures moved
-this session — 369 and 217 before — because the fourth review of #92 added
-`core/geometry.py`, `workers/plate_admission.py` and three test files; #90 added
-no file, so it moved neither count. They are quoted because a gate whose file
-count nobody reads is a gate that can quietly stop covering a tree.
+`alembic heads` reports a single head, `0023_prepared_plate_copies`. Two branches
+merging is the way ADR-0008's one-head rule usually breaks, so it is checked here
+rather than left to CI to discover.
 
-**The full-suite figure this line used to carry was never about this branch.**
-1 333 passed / 7 skipped, `exit=0`, 24m43s was measured on
-[#87](https://github.com/iritur/printorian/pull/87)'s branch, said "on this
-branch", and travelled onto `main` and then onto this one unchanged — which is
-the pronoun quietly changing referent under a number, and is why "the suite
+**The full-suite figure this line used to carry was never about this branch, and
+that is why this one names its tree.** 1 333 passed / 7 skipped, `exit=0`, 24m43s
+was measured on [#87](https://github.com/iritur/printorian/pull/87)'s branch, said
+"on this branch", and travelled onto `main` and then onto this one unchanged —
+the pronoun quietly changing referent under a number, and the reason "the suite
 passed" and "the suite passed on *this* tree" are the two claims this file has
-already been corrected for confusing once. It describes none of the trees since:
-not #89's, which adds `tests/api/test_settings_api.py`, not its merge with #88,
-and not this one. **No full-suite pass is claimed here.** CI on the pull request
-is that evidence.
+already been corrected for confusing once. The 1 383 above is the second claim:
+this worktree, this commit, `main` merged in, `.venv` here, log kept. It replaces
+the "no full-suite pass is claimed here" that stood in this slot while the run
+was still owed.
 
 > **Four local attempts, no pass, and the diagnosis was wrong once.** Recorded in
 > full because the wrong diagnosis is the useful part.
@@ -354,6 +356,52 @@ tested and correct, and nothing the storefront can place reaches it yet, because
 > `cached` from `passes.py` now fails it. It is still the only worker pass in this
 > tree with a wiring test.
 
+**The masthead no longer tells a signed-in customer they are signed out, and the
+journal's «—» is now proved at the screen rather than at the component**
+(follow-up to [#88](https://github.com/iritur/printorian/pull/88), whose second
+review round landed after it had merged). `AppShell` destructured only `actor`
+from `useSession`, so for the whole `/auth/me` round trip the storefront masthead
+drew «Войти» at someone who was already signed in — and a visitor who believed it
+and started typing lost their input, because the answer arriving turns `actor`
+non-null and `AuthDialog` stands itself down the moment there is a session. The
+right-hand group is empty again until there is an answer, which is what it was
+before #88 gave it an opener. `apps/console/src/App.tsx` and the `Session` type's
+own docstring had each written the rule down already; the shell was the one place
+that had not read it.
+
+> **The headline ADR-0007 fix had no screen-level test, and that gap was
+> measured, not argued.** #88 stopped `JournalPage` printing `0` for a section
+> the server had not counted — and its `counted` memo reverted to the pre-#88
+> `index?.counts` form left the entire suite green. `FilterChips.test.tsx` proves
+> the *component* honours `count: null`; nothing proved the *page* hands it one.
+> `apps/web/src/JournalPage.test.tsx` now pins both halves — «—» while `/journal`
+> is still in flight, `0` once the server has answered with none — because the
+> defect is the two facts collapsing into each other, not either one alone.
+>
+> **The catch one branch above it invents the same number, and is deliberately
+> left alone.** `JournalPage.tsx`'s `.catch(() => setIndex({ rows: [], counts:
+> [], total: 0, … }))` renders a backend outage as «Все 0» and «0 ВЫПУСКОВ». It
+> predates #88 and is a decision about what a *failed* load should say, not what
+> a *pending* one should; pinning it from a branch about the pending state would
+> pin the wrong behaviour. Written down here rather than fixed quietly or filed —
+> whether it becomes an issue is a person's call.
+>
+> **Three mutations applied, run and reverted.** Dropping the `ready` guard put
+> «Войти» back into the not-yet-asked masthead and the new shell test failed on
+> the button it found. Restoring `index?.counts` at the journal's memo rendered
+> «Себестоимость0» — the defect verbatim — and the pending-index test failed.
+> Making that same memo answer `null` for a section the server counted at zero
+> failed the other two tests, which is the evidence the page keeps the two facts
+> apart rather than merely preferring one of them.
+>
+> **`Tabs` has one tabbed detail view behind it in the kit, not three**, and the
+> #37 entry below is corrected to say so. It claimed, in the present tense, that
+> the strip is what the purchase order and the shipment "are drawn with in the
+> kit"; `grep -c data-tabs design/*.html` gives `purchasing.html:0` and
+> `logistics.html:0`. That was a claim about a file written without reading the
+> file, inside the entry for the pull request whose whole thesis was that a claim
+> about a file had been carried forward without reading it.
+
 **The third irreversible operation exists, and it shares its delete with the
 planner** ([#31](https://github.com/iritur/printorian/issues/31)).
 `POST /settings/clear-wait-list` empties the wait list, audited per row into each
@@ -403,11 +451,15 @@ depending on where you met it. The rule is settled in the component now, and the
 count is `number | null`: the journal's row had been printing «—» for the total it
 had not received and `0` for every section beside it, in the same line of pixels.
 
-> **`Tabs` is built with no caller, deliberately.** The strip is what the purchase
-> order, the shipment and every detail popup after them are drawn with in the kit,
-> and the argument for porting it before those screens exist is that otherwise each
-> of the four invents its own — the failure ROADMAP names under "Management tables
-> are not a phase". It shares `shell/tablist.ts` with the existing `TabRail` so a
+> **`Tabs` is built with no caller, deliberately.** The kit draws the strip on
+> exactly one real screen — `design/fleet.html`'s printer popup, «Сейчас ·
+> Параметры · Обслуживание · Слоты AMS» — plus `design/index.html`'s own
+> component gallery. `design/purchasing.html` and `design/logistics.html` carry
+> no `hv-tabs` and no `data-tabs` at all: the purchase order and the shipment are
+> screens the strip is *for* **when those are built**, which is how
+> `docs/DESIGN-KIT.md` words it and how this line should have. The argument for
+> porting it before they exist is that otherwise each of them invents its own —
+> the failure ROADMAP names under "Management tables are not a phase". It shares `shell/tablist.ts` with the existing `TabRail` so a
 > rail and a strip cannot drift into two controls: one stop in the page's tab order
 > for the whole list, arrow keys on the axis it is drawn on, and selection following
 > focus. Fourteen settings sections used to be fourteen Tab presses.

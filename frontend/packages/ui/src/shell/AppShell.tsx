@@ -76,7 +76,15 @@ export function AppShell({
   statusNote,
   children,
 }: AppShellProps) {
-  const { actor, signOut } = useSession()
+  /*
+    `ready` is read here for the same reason `apps/console/src/App.tsx` reads it:
+    it distinguishes "not signed in" from "we have not asked yet". The provider
+    starts at `actor = null, ready = false` and only then asks `/auth/me`, so a
+    masthead that branches on `actor` alone tells a signed-in customer they are
+    signed out for the whole round trip — a default rendered as though it were a
+    measurement, which is CLAUDE.md §1 in different clothes.
+  */
+  const { actor, ready, signOut } = useSession()
   const health = useHealth()
 
   /*
@@ -234,13 +242,24 @@ export function AppShell({
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              className="hv-btn hv-btn--sm"
-              onClick={() => setSigningIn(true)}
-            >
-              {t('checkout.sign_in')}
-            </button>
+            /*
+              «Войти» only once `/auth/me` has answered. Before that the group is
+              empty — which is what it was before the opener existed, and it was
+              correct: asserting "signed out" while the question is still in
+              flight is not a smaller error for being brief. It also costs the
+              visitor their typing, because pressing «Войти» and starting to type
+              puts the answer's arrival in the middle of a form `AuthDialog`
+              closes as soon as there is an actor.
+            */
+            ready && (
+              <button
+                type="button"
+                className="hv-btn hv-btn--sm"
+                onClick={() => setSigningIn(true)}
+              >
+                {t('checkout.sign_in')}
+              </button>
+            )
           )}
 
           <ThemeSwitch locale={locale} />

@@ -12,14 +12,23 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const session = vi.hoisted(() => ({ actor: null as { email: string; permissions: string[] } | null }))
+/*
+  `ready` is part of the fixture, not a constant, because the state this shell
+  got wrong is the one the real provider *starts* in: `actor = null` with
+  `ready = false`, before `/auth/me` has answered. A mock that is always ready
+  can never reach it.
+*/
+const session = vi.hoisted(() => ({
+  actor: null as { email: string; permissions: string[] } | null,
+  ready: true,
+}))
 
 vi.mock('../session/session', async () => {
   const actual = await vi.importActual<Record<string, unknown>>('../session/session')
   return {
     ...actual,
     useSession: () => ({
-      ready: true,
+      ready: session.ready,
       actor: session.actor,
       signIn: vi.fn(),
       register: vi.fn(),
@@ -55,6 +64,42 @@ function shell(children: React.ReactNode = <p>Каталог</p>) {
 
 beforeEach(() => {
   session.actor = null
+  session.ready = true
+})
+
+/**
+ * The state the provider is in for the length of one round trip.
+ *
+ * `SessionProvider` mounts at `actor = null, ready = false` and only then asks
+ * `/auth/me`. Branching on `actor` alone therefore tells a signed-in customer
+ * they are signed out until the answer lands — and if they believe it, press
+ * «Войти» and start typing, the answer arrives, `actor` turns non-null and
+ * `AuthDialog` stands itself down with their input in it. The masthead's
+ * right-hand group was empty before there was an answer, and that was right.
+ */
+describe('before /auth/me has answered', () => {
+  it('does not offer a way in it has not established is needed', () => {
+    session.ready = false
+    shell()
+
+    expect(screen.queryByRole('button', { name: 'Войти' })).not.toBeInTheDocument()
+    // Nor the other half: "we have not asked yet" is neither of the two states
+    // the masthead draws, and drawing either of them is the invented answer.
+    expect(screen.queryByRole('button', { name: 'Выйти' })).not.toBeInTheDocument()
+  })
+
+  /*
+    The rest of the chrome is not waiting on the session — the shell renders the
+    screen underneath it either way, and a masthead that blanked itself for a
+    round trip would trade one wrong answer for a flicker.
+  */
+  it('draws the screen and the chrome regardless', () => {
+    session.ready = false
+    shell()
+
+    expect(screen.getByText('Каталог')).toBeInTheDocument()
+    expect(screen.getByRole('navigation')).toBeInTheDocument()
+  })
 })
 
 describe('signed out', () => {
