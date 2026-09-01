@@ -44,36 +44,79 @@ prepared_cost = line_total + ( price(spec with the plate's minutes and grams)
 both priced under the order's **own pinned `RateSnapshot`** (ADR-0020), by
 `pricing.reprice.prepared_cost`.
 
-**Why a difference and not a fresh total.** Two inputs of the original quote
-cannot be recovered from the order, and each would land on the money column this
-ADR exists to make trustworthy. The **customer tier**: it is resolved from spend
-at checkout, and no column on the order holds it — only its *effect* survives, as
-a rendered discount line inside `price_breakdown`, and rebuilding a `CustomerTier`
-out of that is a second implementation of the loyalty ladder. And the **per-line
-quote**, which does not exist at all — `OrderingService.place` prices the order and
-apportions the total across lines by quantity. A difference cancels everything the
-two prices share, including both of those, and leaves only what actually changed.
-The residual error is a percentage of the delta rather than of the total, and it
-is in the direction that holds a job for a person.
+**Why a difference and not a fresh total.** The **per-line quote does not exist**
+— `OrderingService.place` prices the order and then apportions the total across
+lines by quantity, so there is no stored number a fresh total could be compared
+against. That alone settles it. The **customer tier** is the second input that no
+column on the order holds; it is resolved from spend at checkout and only its
+*effect* survives, inside `price_breakdown`. A difference cancels both, along with
+the shipping choice, procurement, the finishes and the AMS purge, and leaves only
+what actually changed.
 
-**Where it refuses.** No plate, more than one plate for the configuration, no
+> **Correction (round two of #92's review).** This paragraph used to say that
+> rebuilding the tier from `price_breakdown` "is a second implementation of the
+> loyalty ladder". That is not true and should not be relied on:
+> `engine._adjustment_lines` writes the *applied* `tier.discount_percent` onto
+> the ADJUSTMENT_CUSTOMER_DISCOUNT line's `Basis.percent`, `_margin_line` writes the
+> effective margin — override included — onto the MARGIN line's, and
+> `breakdown_from_dict` reads both back. Reading two numbers off a stored
+> breakdown is not the ladder. The argument for the difference is the per-line
+> quote above, which really is unrecoverable.
+
+**Where the residual error is not conservative.** Cancelling the tier makes the
+delta *larger* than the truth for every tier that discounts, and ADR-0013's band
+is one-sided, so that error can only hold a job for a person. The exception is a
+tier whose `margin_percent_override` is **above** the snapshot's `margin_percent`:
+the change is then marked up less than the customer's own book would, the overrun
+is understated, and one that should have gone to `PRICE_REVIEW` can land inside
+the band. On the farm's defaults — 45% against 30%, on a plate a quarter longer
+and heavier than the mesh guessed — the true overrun is 15.48% and the recorded
+one is 13.88%. `tests/unit/test_reprice_tier.py` pins both the sign and that
+straddle, so the gap is a documented cost rather than a surprise.
+
+**Where it refuses.** No plate, more than one plate for the configuration, a
+plate in another material or at another scale, a plate an engineer has retired, no
 pinned snapshot, a stored payload that will not rebuild at all, a snapshot that
 rebuilds but no longer hashes to its own content, a material no longer in the
-catalogue, a plate with no minutes, a multi-line order, or a line of more than one
-unit: each of those leaves the job `PENDING` and the order in `PREP`. None of them
-guesses. That list is the shape of this ADR's obligation — a variance nobody
+catalogue, a plate with no minutes, a multi-line order, a plate whose recorded
+layout does not match what was ordered, or a plate that does not record its layout
+at all: each of those leaves the job `PENDING` and the order in `PREP`. None of
+them guesses. That list is the shape of this ADR's obligation — a variance nobody
 measured is worse than no variance, because it *looks* measured.
 
-**The quantity refusal is the one worth explaining**, because its absence is
-invisible. A `PreparedPlate` records minutes, grams and an opaque `layout_hash`,
-and nowhere records how many copies are on the plate — that is the engineer's
-decision at prep. Attach a one-up plate to a line of three and the job takes the
-plate's minutes and grams as its whole work, so the machine prints a third of what
-was sold; and the reprice divides the plate's totals by the quantity, so the line
-comes out at a third of the quoted work and sits comfortably *inside* the band. It
-dispatches, underpriced and under-printed, and the variance table records that the
-estimate was excellent.
+**The layout refusal is the one worth explaining**, because its absence is
+invisible and because this ADR previously described it wrongly. A `PrintJob` is
+one plate holding a whole line's work, so how many copies fit on the bed is the
+engineer's decision at prep — and two things depend on it: `attach_plate` writes
+the plate's minutes and grams onto the job as its total work, and the reprice
+divides those same totals by the line's quantity.
+
+Get the count wrong in either direction and both go wrong quietly. A one-up plate
+on a line of three prints a third of what was sold and reprices at a third of the
+work — inside the band, flattering. A **multi-up plate on a line of one** does the
+mirror image, and that is the *normal* cache entry, because the first order for
+two is what leaves a two-up plate behind: measured on a 20 min / 8 g plate against
+a 10 min / 4 g quote, the overrun comes out at 4.26%, well inside the band. The
+farm prints two, ships one, and records an accurate estimate.
+
+The first attempt at this guard refused only the first direction — any line whose
+quantity was not one — which left the second wide open. `PreparedPlate.copies`
+(migration `0023`) is the fix: nullable, never defaulted, never backfilled, because
+a `1` written in for the plates already in the table would be an invented number
+that happens to be exactly the one that makes the common case attach. The
+unattended path attaches only when the plate's recorded `copies` equals the line's
+quantity, and never when the plate does not say.
 
 **`PRICE_REVIEW` is now reachable straight from `PAID`.** The band can be exceeded
 before any engineer has touched the order, so the order machine says so rather
 than recording a `PREP` the order never entered.
+
+**One input is live rather than pinned, and it is not in the snapshot.**
+`MaterialSpec.sell_price_per_gram` is a mutable catalogue column, and
+`workers/cached_plates.py` reads today's value for *both* sides of the difference.
+The residual is therefore `(plate_grams − quoted_grams) × (price_today −
+price_when_quoted)` — bounded by the mass difference rather than by the total, and
+zero whenever the filament has not moved — but it is a live number entering a
+figure ADR-0020's amendment otherwise describes as computed under the order's own
+pinned rates. Removing it means carrying the line's price per gram onto `OrderLine`
+at `place()` time, which is a change on the checkout path and has not been made.

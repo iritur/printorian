@@ -161,6 +161,10 @@ class PreparedPlate(Entity):
         CheckConstraint("print_minutes >= 0", name="print_minutes_non_negative"),
         CheckConstraint("scale > 0", name="scale_positive"),
         CheckConstraint("size_bytes IS NULL OR size_bytes >= 0", name="size_non_negative"),
+        # `copies` is nullable on purpose (see the column), so the constraint has
+        # to admit NULL explicitly: "not measured" is a legal state and zero
+        # copies is not.
+        CheckConstraint("copies IS NULL OR copies >= 1", name="copies_positive"),
     )
 
     #: Content-addressed over the ADR-0006 key tuple. See `plate_key.py`.
@@ -193,6 +197,31 @@ class PreparedPlate(Entity):
     material_code: Mapped[str] = mapped_column(String(80), nullable=False, default="")
     printer_profile: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     layout_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+
+    # -- the layout, which the key can only hash ------------------------
+    # `layout_hash` above is part of the key and is opaque; this is the one thing
+    # about the arrangement that a reader, and a caller, can act on. Denormalised
+    # from it exactly as `model_name` is from `model_hash`.
+
+    #: How many copies of the model this plate holds, or `None` when nobody wrote
+    #: it down.
+    #:
+    #: **The one number a plate needed and did not have.** A `PrintJob` is one
+    #: plate and one line's whole work, so `attach_plate` takes the plate's minutes
+    #: and grams as the job's totals and `reprice.prepared_cost` divides them by the
+    #: line's quantity. Both of those are claims about how many parts are on the
+    #: bed, and until this column there was nowhere to check them: `layout_hash` is
+    #: opaque and nothing else counts parts. A cached two-up plate therefore
+    #: attached itself to a repeat order for *one* — 4.26% over the quote on the
+    #: measured pair, comfortably inside ADR-0013's band — and the farm printed two,
+    #: shipped one, and recorded the estimate as accurate.
+    #:
+    #: **Nullable, and no default.** A `1` filled in for the plates already in the
+    #: table would be a number the farm never measured reading as one it did
+    #: (CLAUDE.md §1), and it is exactly the value that makes the common case attach.
+    #: NULL is "not measured", and `CachedPlates` refuses it — the plate
+    #: still serves every manual path, where a person can see the bed.
+    copies: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # -- what slicing actually found -------------------------------------
     #: Exact, from the slicer — not the mesh heuristic that priced the order.

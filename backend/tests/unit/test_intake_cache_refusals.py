@@ -1,16 +1,20 @@
-"""Every way the automatic cache-hit path declines to act, and why each is right.
+"""Every way the automatic cache-hit path declines to *price* what it found.
 
-`test_intake_cache_hit.py` is the half that proves the loop closes. This is the
-half that proves it closes *only* when the farm actually measured what it needs —
-and it is the longer half on purpose, because the failure this whole path risks is
-not "the order stayed in prep". It is a variance written from a number nobody
-took, which looks exactly like a measured one for ever afterwards (CLAUDE.md §1).
+`test_intake_cache_hit.py` is the half that proves the loop closes.
+`test_intake_plate_selection.py` is the half that proves the farm attaches the
+right plate or none. This file is the third: the plate is the right one, and the
+money still cannot be worked out without inventing something.
 
-So: no plate, two plates, no pinned rates, rates that no longer rebuild to their
-own hash, a material gone from the catalogue, a plate with no minutes, a
-multi-line order, a line of more than one unit, a payload that will not rebuild at
-all, and a sweep wired without a plate library. Each leaves the job `PENDING` and
-the order in `PREP` — which is exactly where every order went before
+That failure is the one worth the length. It is not "the order stayed in prep" —
+it is a variance written from a number nobody took, which looks exactly like a
+measured one for ever afterwards (CLAUDE.md §1), on the table ADR-0013 exists to
+make trustworthy.
+
+So: no pinned rates, rates that no longer rebuild to their own hash, a payload that
+will not rebuild at all, a material gone from the catalogue, a plate with no
+minutes, a multi-line order whose `line_total` was never a quote, and a sweep wired
+without a plate library. Each leaves the job `PENDING` and the order in `PREP` —
+which is exactly where every order went before
 [#58](https://github.com/iritur/printorian/issues/58), so the fallback is the
 behaviour #41 shipped rather than a new one.
 """
@@ -63,42 +67,7 @@ def blind_sweep(db_session: AsyncSession, clock: FixedClock, bus: EventBus) -> I
     return a_blind_sweep(db_session, clock, bus)
 
 
-# ------------------------------------------------ everything that declines to act
-
-
-async def test_a_miss_still_routes_to_prep(db_session: AsyncSession, sweep: IntakeSweep) -> None:
-    """The first order of a configuration. Unchanged, and it has to stay so."""
-    await a_material(db_session)
-    asset_id = await an_asset(db_session)
-    order_id = await a_paid_order(db_session, number="MISS-1", asset_id=asset_id)
-
-    await sweep.sweep()
-
-    job = await the_job(db_session, order_id)
-    assert job.status is JobStatus.PENDING
-    assert job.prepared_plate_id is None
-    assert await status_of(db_session, order_id) is OrderStatus.PREP
-    assert await the_variance(db_session, order_id) is None
-
-
-async def test_two_plates_for_one_configuration_are_not_chosen_between(
-    db_session: AsyncSession, library: PlateLibrary, sweep: IntakeSweep
-) -> None:
-    """The same geometry sliced for two machines is a decision, not a lookup.
-
-    Picking one would send a plate sliced for an X1C to a P1S, which prints and
-    produces rubbish. The engineer is the one who knows.
-    """
-    await a_material(db_session)
-    asset_id = await an_asset(db_session)
-    await a_cached_plate(library, printer_profile="p1s-0.4-pla")
-    await a_cached_plate(library, printer_profile="x1c-0.4-pla")
-    order_id = await a_paid_order(db_session, number="AMBIG-1", asset_id=asset_id)
-
-    await sweep.sweep()
-
-    assert (await the_job(db_session, order_id)).status is JobStatus.PENDING
-    assert await status_of(db_session, order_id) is OrderStatus.PREP
+# ------------------------------------------ the plate is right, the money is not
 
 
 async def test_an_order_that_pinned_no_rates_is_not_repriced(
@@ -276,33 +245,3 @@ async def test_a_sweep_with_no_plate_library_behaves_as_it_did_before(
 
     assert (await the_job(db_session, order_id)).status is JobStatus.PENDING
     assert await status_of(db_session, order_id) is OrderStatus.PREP
-
-
-async def test_a_line_of_three_is_not_attached_to_a_plate_of_unknown_copies(
-    db_session: AsyncSession, library: PlateLibrary, sweep: IntakeSweep
-) -> None:
-    """The one refusal whose absence both under-prints *and* under-prices.
-
-    Nothing on `PreparedPlate` counts copies — `layout_hash` is opaque — so the
-    sweep cannot tell a plate holding three cubes from a plate holding one. Attach
-    the one-up plate to a line of three and two things go wrong at once, both
-    quietly: `attach_plate` overwrites the job's minutes and grams with the
-    plate's, so the machine prints a third of what was sold; and the reprice
-    divides the plate's totals by the quantity, so the line comes out at a third
-    of the quoted work and sits comfortably *inside* the band. It dispatches.
-
-    This is not hypothetical — it is what this path did before the guard, and
-    removing the `quantity != 1` branch in
-    `intake_routing.OrderRouting._may_attach_automatically` puts the order back in
-    `QUEUED` with a `READY` job.
-    """
-    await a_material(db_session)
-    asset_id = await an_asset(db_session)
-    await a_cached_plate(library)
-    order_id = await a_paid_order(db_session, number="QTY-1", asset_id=asset_id, quantity=3)
-
-    await sweep.sweep()
-
-    assert (await the_job(db_session, order_id)).status is JobStatus.PENDING
-    assert await status_of(db_session, order_id) is OrderStatus.PREP
-    assert await the_variance(db_session, order_id) is None

@@ -12,8 +12,9 @@ The three destinations, and the order between them is the part worth reading:
 
 * **`PREP`** whenever any line still needs an engineer — a cache miss, a hit that
   could not be repriced honestly, or an order carrying a decision this pass has no
-  measurement for (more than one line, or more than one unit on the line). It is
-  the default, and it is exactly where every order went before #58.
+  measurement for (more than one line, or a plate whose recorded layout does not
+  match what was ordered). It is the default, and it is exactly where every order
+  went before #58.
 * **`PRICE_REVIEW`** when nothing needs slicing but a plate came in over the
   ADR-0013 band. It is second rather than first on purpose: from `PRICE_REVIEW` an
   order may only go to `QUEUED`, so an order that also had unsliced work would be
@@ -92,43 +93,35 @@ class OrderRouting:
     def _may_attach_automatically(self, order: Order, lines: list[OrderLine]) -> bool:
         """Whether this order is one the farm may attach a plate to unattended.
 
-        Two conditions, and both are about a number the farm never wrote down.
+        One condition, and it is about a number the order does not carry.
+        `OrderingService.place` prices the order from `lines[0]` and then
+        **apportions** the total across the lines by quantity, so on a multi-line
+        order `line_total` is a share and was never a quote for that line's work.
+        Feeding it to `assess_variance` would produce a variance against a number
+        nobody was ever quoted — a measured-looking figure on the table ADR-0013
+        exists to make trustworthy, which is the failure this whole path was
+        written to avoid. Widening this means giving `ordering` a real per-line
+        price, and that is a change to what an order *is*.
 
-        **One line.** `OrderingService.place` prices the order from `lines[0]` and
-        then **apportions** the total across the lines by quantity, so on a
-        multi-line order `line_total` is a share and was never a quote for that
-        line's work. Feeding it to `assess_variance` would produce a variance
-        against a number nobody was ever quoted — a measured-looking figure on the
-        table ADR-0013 exists to make trustworthy, which is the failure this whole
-        path was written to avoid. Widening this means giving `ordering` a real
-        per-line price, and that is a change to what an order *is*.
+        **Quantity used to be the second condition here, and it was the wrong
+        guard in the wrong place.** It refused a line of three against a plate of
+        unknown layout, and then let a plate of three copies attach to a line of
+        one — which is not the exotic case but the *normal* one, because a
+        `PrintJob` is one plate holding a whole line's work, so the first order for
+        three cubes is exactly what leaves a three-up plate in the library. The
+        repeat order for one then took that whole bed as a single unit's work,
+        landed inside the band anyway — the band is a percentage of the line total,
+        and the extra work is a fraction of it — printed three and shipped one.
 
-        **One unit.** A `PrintJob` is one plate, and *how many copies fit on a
-        plate is the engineer's decision at prep* — `intake._job_for` says so, and
-        `PreparedPlate` proves it by having nowhere to record the answer:
-        `layout_hash` is opaque, and nothing else on the row counts parts. So for a
-        line of three this pass cannot tell a plate holding three cubes from a
-        plate holding one, and the two are cached under keys that differ only by
-        that layout digest — which is not something an order carries either.
-
-        Attaching the wrong one is the expensive direction twice over. The job
-        takes the plate's minutes and grams as its whole work (`attach_plate`
-        overwrites both), so a one-up plate prints a third of what was sold; and
-        `reprice.prepared_cost` divides the plate's totals by the quantity to get a
-        per-unit figure, so a one-up plate reprices at a third of the work and
-        lands *comfortably inside* the band. Silent, flattering, and it dispatches
-        — exactly the shape CLAUDE.md §1 is written about. A line of more than one
-        therefore goes to an engineer, who can see the layout and count.
+        Refusing the other direction as well would have been safe and would have
+        turned the feature off, since the plate's layout was unknown either way.
+        So the number was recorded instead: `PreparedPlate.copies`, nullable so an
+        unrecorded layout stays unrecorded, checked against `line.quantity` in
+        `workers/cached_plates.py` where both halves of the comparison are in hand.
+        A line of three is now attachable — to a plate that says it holds three.
         """
         if len(lines) != 1:
             logger.info("intake.multi_line_order_not_repriceable", order_id=str(order.id))
-            return False
-        if lines[0].quantity != 1:
-            logger.info(
-                "intake.quantity_needs_a_layout_decision",
-                order_id=str(order.id),
-                quantity=lines[0].quantity,
-            )
             return False
         return True
 

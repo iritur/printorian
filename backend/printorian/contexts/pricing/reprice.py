@@ -35,11 +35,24 @@ A difference cancels everything the two prices have in common: the tier, the
 shipping choice, procurement, the finishes, the purge the AMS charges for extra
 colours. What survives is what actually changed — print minutes and filament
 grams — carried onto whatever the line was really quoted. The residual error is a
-percentage of the *delta* rather than of the total, and it is in the direction
-that holds a job for a person rather than the direction that dispatches
-underpriced work.
+percentage of the *delta* rather than of the total.
+
+**It is not conservative in every direction, and this is the exception.** Pricing
+the delta without the tier understates it whenever the tier's
+`margin_percent_override` is *above* the snapshot's `margin_percent` — the change
+is marked up at 30% where the customer's book says 45 — so an overrun that the
+band should have caught can land inside it. Every other direction overstates the
+delta and holds the job for a person, which is the safe way round.
+`test_reprice_tier.py` pins the size of that gap. Reconstructing the tier from the
+stored `price_breakdown` would close it: the applied percents really are on
+`Basis.percent` and `breakdown_from_dict` reads them back. What it would not
+recover is the per-line apportionment, which does not exist on the order at all —
+and that is the argument for the difference, not the tier.
 
 Pure, like everything else in this package: rates are given, nothing is looked up.
+The one input that is *neither* given here nor pinned by ADR-0020 is the material's
+price per gram: `workers/cached_plates.py` reads it live from `inventory` for both
+sides of the difference. See that module for what that costs.
 """
 
 from __future__ import annotations
@@ -70,13 +83,13 @@ def prepared_cost(
     site: dividing in two places is how the two would eventually disagree.
 
     **That division is a claim the caller has to have earned.** Dividing by
-    ``quoted.quantity`` says the plate holds that many copies, and nothing on a
-    `PreparedPlate` records how many it holds. Hand this a one-up plate for a line
-    of three and it reprices at a third of the work — inside the band, in the
-    flattering direction, on the table ADR-0013 exists to make trustworthy. The
-    automatic caller (`workers/intake_routing.py`) therefore refuses any line whose
-    quantity is not one; a caller that knows better because a person counted may
-    pass a larger one.
+    ``quoted.quantity`` says the plate holds that many copies. Hand this a one-up
+    plate for a line of three and it reprices at a third of the work; hand it a
+    three-up plate for a line of one and it reprices at three times — both inside
+    the band for the small parts this farm mostly makes, both flattering, both on
+    the table ADR-0013 exists to make trustworthy. The automatic caller
+    (`workers/cached_plates.py`) therefore attaches only a plate whose recorded
+    `copies` equals the line's quantity, and refuses a plate that does not say.
 
     Raises `ValidationError` (`error.pricing.print_time` / `error.pricing.material_mass`)
     when the plate carries no minutes or no grams. That is not a plate to price

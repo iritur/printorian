@@ -3,7 +3,9 @@
 ROADMAP Phase 4's exit criterion in full: *payment to a machine starting the job
 with no human action*. `test_intake_sweep.py` covers the half that makes the jobs;
 this is the half that skips prep, and the half where money is involved. Every way
-the automatic path declines to act is in `test_intake_cache_refusals.py`.
+the automatic path declines to act is in `test_intake_plate_selection.py` (no plate
+it may use) and `test_intake_cache_refusals.py` (a plate it may use and no honest
+way to price it).
 
 The assertions here divide in three, and each part matters.
 
@@ -28,9 +30,9 @@ neither cost — was the only caller and the field read `"0"`; this sweep is wha
 fills it, so the last test here is the one that keeps it empty.
 
 Both of the shapes #41 refused were then applied as mutations and run. Passing
-`Decimal(0)` failed four of the five tests here; passing `line.line_total` failed
-the same four. Returning a fresh `RateSnapshot()` from `CachedPlates._rates_for`
-instead of the pinned one failed
+`Decimal(0)` failed five of the seven tests here; passing `line.line_total` failed
+those five and the journal one as well. Returning a fresh `RateSnapshot()` from
+`CachedPlates._rates_for` instead of the pinned one failed
 `test_the_orders_own_rates_are_used_and_not_todays` and nothing else — which is
 what that test is for, and why it is not folded into the one above it.
 """
@@ -115,6 +117,51 @@ async def test_a_cache_hit_reaches_queued_with_no_human_action(
     assert (
         await db_session.scalar(select(PrintJob).where(PrintJob.status == JobStatus.PENDING))
         is None
+    )
+
+
+async def test_a_line_of_three_attaches_to_a_plate_that_says_it_holds_three(
+    db_session: AsyncSession, library: PlateLibrary, sweep: IntakeSweep
+) -> None:
+    """The refusal that was lifted, and the thing that replaced it.
+
+    Until the second review this path declined every line whose quantity was not
+    one, because nothing on a `PreparedPlate` said how many copies were on the bed.
+    That guard was one-sided — it let a two-up plate attach to a line of *one* — so
+    the number was recorded instead, and with it recorded a line of three is
+    perfectly attachable to a three-up plate.
+
+    The plate is exactly three times the one-up plate the other tests use, so the
+    per-unit work is identical and the expected cost is `expected_prepared_cost`'s
+    own arithmetic at `quantity=3`: proof that `prepared_cost` divided by three
+    rather than by one, which is the division `copies` is what earns.
+    """
+    rates = some_rates()
+    await a_material(db_session)
+    asset_id = await an_asset(db_session)
+    await a_cached_plate(library, print_minutes=PLATE_MINUTES * 3, grams=PLATE_GRAMS * 3, copies=3)
+    order_id = await a_paid_order(
+        db_session, number="HIT-3UP", asset_id=asset_id, rates=rates, quantity=3
+    )
+
+    await sweep.sweep()
+
+    job = await the_job(db_session, order_id)
+    assert job.status is JobStatus.READY
+    assert job.prepared_plate_id is not None
+    # The whole bed, because a `PrintJob` is one plate and one line's whole work.
+    assert job.estimated_minutes == PLATE_MINUTES * 3
+    assert job.grams_required == PLATE_GRAMS * 3
+    assert await status_of(db_session, order_id) is OrderStatus.QUEUED
+
+    variance = await the_variance(db_session, order_id)
+    assert variance is not None
+    assert variance.prepared_cost == expected_prepared_cost(
+        rates,
+        line_total=Decimal(3000),
+        plate_minutes=PLATE_MINUTES * 3,
+        plate_grams=PLATE_GRAMS * 3,
+        quantity=3,
     )
 
 

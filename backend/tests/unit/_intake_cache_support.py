@@ -1,11 +1,14 @@
 """The order, the plate and the rates the intake cache-hit tests are built on.
 
 Shared by `test_intake_cache_hit.py`, which asserts that the automatic path
-happens and that the number it writes down was measured, and
-`test_intake_cache_refusals.py`, which asserts every way it declines. One set of
-rows, because the two files are about the same order arriving in different states
-of the world — a second, subtly different order builder is how the two suites
-would drift into disagreeing about what a cache hit even is.
+happens and that the number it writes down was measured;
+`test_intake_plate_selection.py`, which asserts every plate it refuses to choose;
+`test_intake_cache_refusals.py`, which asserts every way a chosen plate cannot be
+priced honestly; and `test_intake_pass_wiring.py`, which asserts the pass the
+worker runs is built to do any of it. One set of rows, because all four are about
+the same order arriving in different states of the world — a second, subtly
+different order builder is how they would drift into disagreeing about what a
+cache hit even is.
 
 Separate from `conftest.py` for the reason `tests/factories.py` gives: that file
 is at the 400-line gate, and these are called from a test body rather than
@@ -25,7 +28,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.catalog import PlateLibrary, RecordPlate
+from printorian.contexts.catalog import PlateLibrary, PreparedPlateView, RecordPlate
 from printorian.contexts.catalog.models import ModelAsset
 from printorian.contexts.inventory.models import MaterialSpec
 from printorian.contexts.ordering import OrderingService, OrderStatus
@@ -229,15 +232,25 @@ async def a_cached_plate(
     print_minutes: Decimal = PLATE_MINUTES,
     grams: Decimal = PLATE_GRAMS,
     model_hash: str = CUBE_SHA,
-) -> None:
-    """What an engineer's slicing left behind for the *previous* order."""
-    await library.record(
+    material_code: str = MATERIAL,
+    copies: int | None = 1,
+) -> PreparedPlateView:
+    """What an engineer's slicing left behind for the *previous* order.
+
+    ``copies`` defaults to one because that is what the orders in these files are
+    for, not because one is a safe assumption anywhere else — `PreparedPlate.copies`
+    is nullable precisely so an unrecorded layout stays unrecorded, and
+    `test_intake_plate_selection.py` passes `None` to say so. The plate view is
+    returned so a test can go on to invalidate the row it just made.
+    """
+    return await library.record(
         RecordPlate(
             model_hash=model_hash,
             model_name="cube.stl",
             scale=Decimal(1),
-            material_code=MATERIAL,
+            material_code=material_code,
             printer_profile=printer_profile,
+            copies=copies,
             print_minutes=print_minutes,
             filament_grams={"0": grams},
             filename="cube.3mf",

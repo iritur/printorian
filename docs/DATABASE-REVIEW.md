@@ -13,7 +13,7 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 ## 1. Shape
 
 One PostgreSQL database (ADR-0001, D1). **43 tables** across twelve contexts, built
-by twenty-four Alembic migrations on a single linear head.
+by twenty-five Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
@@ -89,6 +89,13 @@ over `(model, scale, material, printer profile, layout)` and carries a unique
 constraint, so two engineers slicing the same configuration collapse to one row
 rather than racing. That constraint is what stops human-gated slicing from scaling
 linearly with orders.
+
+`copies` is the one column here that is deliberately **nullable with no default and
+no backfill**: how many parts an engineer put on the bed was never recorded before
+`0023`, and a `1` written in for the existing rows would be an invented number that
+happens to be exactly the one that makes the unattended intake path attach. NULL
+reads as "not measured" and is refused there (CLAUDE.md §1); every manual path,
+where a person can look at the bed, is unaffected.
 
 **`rate_snapshots`** is what makes ADR-0002's reproducibility claim true. The order
 stores the pinned `Breakdown`, the `engine_version`, and a `RESTRICT` foreign key to

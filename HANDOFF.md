@@ -7,12 +7,12 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-09-01 · **1 362 backend tests collected** — **1 354 passed, 8
-skipped, `exit=0`** on `feat/58-reprice-cache-hit` with `main` merged in,
-alongside the six backend gates each run separately and each `exit=0`. No
-duration is given for that run: `-q`'s summary line did not reach the log, so the
-counts are the progress characters counted and the collected figure is
-`--collect-only`'s, and a time nobody captured is not a time to write down. The
+**As of:** 2026-09-01 · **1 363 passed, 8 skipped, `exit=0` in 1052.37s
+(0:17:32)** on `feat/58-reprice-cache-hit` with `main` merged in, alongside the six
+backend gates each run separately and each `exit=0`. Those are pytest's own
+trailing summary line this time, read out of the redirect rather than counted off
+the progress characters — the previous session's run lost that line and said so,
+and `-p no:cacheprovider --tb=short` is what brought it back. The
 frontend was neither built nor tested: this worktree has no `node_modules`, so
 that half of the ten gates is CI's evidence and not this file's. **The three
 paragraphs below describe the tree #31 was measured on**, which is what `main`
@@ -62,24 +62,60 @@ clicking «attach» on work the farm already has.
 > numbers that were quoted)`, both under the order's own pinned `RateSnapshot`.
 > Two inputs of the original quote cannot be recovered from the order and each
 > would land on the money column: the **customer tier**, resolved from spend at
-> checkout and held by no column — only its effect survives, as a discount line
-> inside `price_breakdown`, and rebuilding the tier from that is a second loyalty
-> ladder — and the **per-line quote**, which does not exist at all, because
-> `place` prices the order and apportions the total by quantity. A difference
-> cancels both. Do not "simplify" it into `price(spec).total`.
+> checkout and held by no column, and the **per-line quote**, which does not exist
+> at all, because `place` prices the order and apportions the total by quantity. A
+> difference cancels both. Do not "simplify" it into `price(spec).total`.
 >
-> **The draft this branch inherited attached a one-up plate to a line of three,
-> and that is the part to remember.** Nothing on a `PreparedPlate` records how
-> many copies are on it — `layout_hash` is opaque — so the sweep cannot tell three
-> cubes from one. `attach_plate` then takes the plate's minutes and grams as the
-> job's *whole* work, and the reprice divides those same totals by the quantity,
-> so the line comes out at a third of what was quoted and sits comfortably
-> **inside** the band. Under-printed, underpriced, dispatched, and written down as
-> an excellent estimate — CLAUDE.md §1 in both directions at once. The sweep now
-> refuses any line whose quantity is not one, for the same reason it refuses a
-> multi-line order: the number it would need was never measured.
-> `test_a_line_of_three_is_not_attached_to_a_plate_of_unknown_copies` is the
-> tripwire, and it was watched failing before the guard was written.
+> **The tier half of that argument was overstated and has been corrected.** This
+> file, `reprice.py` and ADR-0013 all used to say that rebuilding the tier from
+> `price_breakdown` "is a second loyalty ladder". It is not: the *applied*
+> percents land on `Basis.percent` — `tier.discount_percent` on the discount line,
+> the effective margin on the margin line — and `breakdown_from_dict` reads them
+> back. The per-line quote is the input that really is unrecoverable, and it is
+> the whole argument on its own. The difference stays; the sentence defending it
+> is now the true one. Its cost is recorded too: a tier whose
+> `margin_percent_override` is *above* the snapshot margin makes the difference
+> **understate** an overrun, so one that should have gone to `PRICE_REVIEW` can
+> land inside the band — 15.48% true against 13.88% recorded on the farm's own
+> defaults. `tests/unit/test_reprice_tier.py` pins the sign and that straddle.
+>
+> **How many copies are on the plate is now a column, and the guard that stood in
+> for it was one-sided.** Nothing on a `PreparedPlate` recorded it —
+> `layout_hash` is opaque — and two things depend on it: `attach_plate` takes the
+> plate's minutes and grams as the job's *whole* work, and the reprice divides
+> those same totals by the line's quantity. A one-up plate on a line of three
+> therefore under-prints and underprices at once, comfortably **inside** the band.
+>
+> The first answer was to refuse any line whose quantity was not one. That covered
+> one direction and left the other wide open, and the other is the *normal* one: a
+> `PrintJob` is one plate holding a whole line's work, so the first order for two
+> keychains leaves a **two-up plate** in the library, and the repeat order for one
+> attached it, repriced against the whole bed, came out 4.26% over — inside the
+> band — printed two, shipped one, and recorded an accurate estimate. Reviewed and
+> reproduced end to end against real PostgreSQL before it was fixed.
+>
+> `PreparedPlate.copies` (migration `0023`) is the answer instead: **nullable,
+> never defaulted, never backfilled**, because a `1` written in for the plates
+> already in the table is an invented number that happens to be the one that makes
+> the common case attach. `CachedPlates` attaches only when the plate's recorded
+> copies equal the line's quantity, and the `quantity != 1` refusal is gone — a
+> line of three now attaches to a plate that says it holds three. The tripwires are
+> `test_a_two_up_plate_is_not_attached_to_a_line_of_one`,
+> `test_a_one_up_plate_is_not_attached_to_a_line_of_three` and
+> `test_a_plate_that_does_not_say_how_many_copies_it_holds_is_refused`, all in
+> `tests/unit/test_intake_plate_selection.py`.
+>
+> **What that costs today, and it needs a person.** The console's plate upload
+> does not send `copies` — the field is a query parameter on
+> `POST /jobs/{id}/plate/file` and a body field on `POST /jobs/{id}/plate`, and
+> nothing in `frontend/` fills either. Until it does, plates recorded through the
+> console carry NULL and the unattended path declines them, which is last week's
+> behaviour rather than a regression. It was **not** parsed out of the 3MF:
+> `plate_file.py` says in its own docstring that the sliced `<plate>` element is
+> implemented from documentation and has never been seen from this farm's slicer,
+> and a miscount there would not fail loudly — it would attach the wrong plate
+> quietly. Asking is the conservative half of that trade, and the frontend field
+> is the follow-up.
 >
 > **A payload that will not rebuild must cost one order, not the pass.**
 > `IntakeSweep.sweep` rescues `PrintorianError` per order and nothing else, and
@@ -103,34 +139,46 @@ clicking «attach» on work the farm already has.
 > need" — #41's question, and the one that runs whether or not the farm has a
 > plate library. `intake_routing.py` answers the one #58 added: the jobs exist,
 > may the farm start them itself? That is the seam, not the line the counter
-> tripped on, and it is the same cut `runner.py` took.
+> tripped on, and it is the same cut `runner.py` took. The second review's tests
+> pushed `test_intake_cache_refusals.py` over the same gate, and it took the same
+> kind of cut: `test_intake_plate_selection.py` is "which plate, if any", and what
+> stayed is "the plate is right and the money cannot be worked out honestly".
 >
 > **`CachedPlates` is an optional collaborator of `IntakeSweep`, wired in
 > `workers/passes.py`.** Withheld, every order goes to prep exactly as before — so
-> deleting that one line returns the farm to clicking, silently, which is why a
-> test pins that the fallback is at least the safe one.
+> deleting that one line returns the farm to clicking, silently, which is why one
+> test pins that the fallback is the safe one and another pins that the
+> collaborator is actually supplied.
 >
-> **`DATABASE-REVIEW.md` §1 now says twenty-four migrations**, because
-> `0022_plate_model_hash_index` made it twenty-four and
+> **`DATABASE-REVIEW.md` §1 now says twenty-five migrations**, because
+> `0022_plate_model_hash_index` and then `0023_prepared_plate_copies` moved it and
 > `test_the_migration_count_matches_the_versions_directory` failed the whole suite
 > until it did. That test is the reason a doc figure moved on the same commit as
 > the schema instead of six weeks later.
 >
-> **Measured, not asserted, and the draft was measured too.** All six backend
-> gates run separately on the final tree, each `exit=0`; the whole suite **1 354
-> passed / 8 skipped of 1 362 collected, `exit=0`**, of which seventeen tests are
-> new. (`-q`'s trailing summary line did not reach the redirect on the last run,
-> so the two figures are the progress characters counted and the collected total
-> is `--collect-only`'s own; the exit code is pytest's. No duration is claimed,
-> because none was captured.) Every claim above was mutation-proved:
-> `prepared_cost=Decimal(0)` and
-> `prepared_cost=line.line_total` each failed four of the five cache-hit tests;
-> a fresh `RateSnapshot()` in place of the pinned one failed the ADR-0020 test
-> alone; dropping the snapshot-id check, the `PRICE_REVIEW` branch, the
-> "never picks between two plates" rule and the rebuild guard each failed exactly
-> the test named for it; and forcing the routing back to `PREP` failed six. The
-> migration was upgraded, `alembic check`ed, downgraded and re-upgraded against
-> the **dev** database, which `alembic current` said was at `0020` beforehand.
+> **Measured, not asserted, and every round was measured.** All six backend gates
+> run separately on the final tree, each `exit=0`; the whole suite **1 363 passed
+> / 8 skipped, `exit=0`, in 1052.37s (0:17:32)** — pytest's own summary line, which
+> reached the redirect this time. Every claim above was mutation-proved, each
+> mutation applied, run and reverted.
+>
+> Re-measured on this tree: `prepared_cost=Decimal(0)` fails five of the seven
+> cache-hit tests and `prepared_cost=line.line_total` fails those five and the
+> journal one; a fresh `RateSnapshot()` in place of the pinned one fails the
+> ADR-0020 test alone. Measured earlier and not re-run: dropping the snapshot-id
+> check, the `PRICE_REVIEW` branch, the "never picks between two plates" rule and
+> the rebuild guard each failed exactly the test named for it, and forcing the
+> routing back to `PREP` failed six.
+>
+> This round's own six: dropping the `copies` guard fails three selection tests;
+> defaulting `copies` to one fails the plate-that-does-not-say test; dropping
+> `status == VALID` fails the retired-plate test; replacing the plate_key
+> comparison with `list(rows)` fails the wrong-material test; removing `cached`
+> from `passes.py` fails the wiring test; and setting the tier's margin override
+> equal to the snapshot margin fails two of the three tier tests. Both migrations
+> were upgraded, `alembic check`ed, downgraded and re-upgraded against the **dev**
+> database; `alembic current` said `0022_plate_model_hash_index` beforehand this
+> round.
 >
 > **The reprice also had to be told where it may not write the number.**
 > `attach_plate` put `quoted_cost` and `prepared_cost` into the job's *journal*
@@ -148,11 +196,15 @@ clicking «attach» on work the farm already has.
 > **operator** and `test_the_sweeps_journal_entry_carries_no_money` guards the
 > write; putting the two costs back fails both, which was run.
 >
-> **One thing that is not covered.** `workers/passes.py` supplies `CachedPlates`
-> to the sweep and nothing tests that it does; deleting that argument returns the
-> farm to clicking with every test still green. No worker pass in this tree has a
-> wiring test, so it is a gap in the shape of the suite rather than one carved for
-> this change — but it is the gap, and it is written here rather than nowhere.
+> **The wiring is covered now, and it was the one hole between "the code exists"
+> and "the farm uses it".** `workers/passes.py` supplies `CachedPlates` to the
+> sweep, and deleting that argument returned the farm to clicking with every test
+> still green — the two cache-hit files build the sweep themselves, and the one
+> test that goes near it asserts the *fallback* is safe, which is the opposite
+> claim. `tests/unit/test_intake_pass_wiring.py` drives `IntakePass` itself against
+> a stand-in runtime (the real one opens three Redis connections), and removing
+> `cached` from `passes.py` now fails it. It is still the only worker pass in this
+> tree with a wiring test.
 
 **The third irreversible operation exists, and it shares its delete with the
 planner** ([#31](https://github.com/iritur/printorian/issues/31)).

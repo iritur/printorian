@@ -135,6 +135,11 @@ class PlateLibrary:
         plate.material_code = data.material_code
         plate.printer_profile = data.printer_profile
         plate.layout_hash = data.layout_hash
+        # Overwritten rather than merged, like every other field here: re-slicing a
+        # configuration replaces the truth on the row, and a stale copy count left
+        # behind from the previous layout is the one field on this row that decides
+        # whether a later order attaches unattended.
+        plate.copies = data.copies
         plate.print_minutes = data.print_minutes
         plate.filament_grams = {str(k): str(v) for k, v in data.filament_grams.items()}
         plate.layer_count = data.layer_count

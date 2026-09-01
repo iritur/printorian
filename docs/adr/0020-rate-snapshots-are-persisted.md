@@ -72,3 +72,15 @@ The order then goes to prep and an engineer prices it. Without that check, addin
 one rate to `RateSnapshot` would silently re-rate every older order this path
 touches, and nothing in the result would say so — which would undo this ADR by the
 exact mechanism it was written to prevent, one release later.
+
+**And one input of that reprice is not pinned, because it was never in the
+snapshot.** `RateSnapshot` carries no material price;
+`MaterialSpec.sell_price_per_gram` is a mutable catalogue column, and
+`workers/cached_plates.py` reads today's value for both sides of the difference it
+computes. Since ADR-0013's `prepared_cost` is a difference, what survives is
+`(plate_grams − quoted_grams) × (price_today − price_when_quoted)`: bounded by the
+mass difference rather than by the total, and zero whenever the filament has not
+moved. It is written down here because the sentence above — "at the rates the order
+was sold under, not at today's" — is otherwise read as covering every input, and it
+does not cover this one. Closing it means carrying the line's price per gram onto
+`OrderLine` at `place()` time, a change on the checkout path rather than this one.

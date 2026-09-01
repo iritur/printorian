@@ -21,10 +21,22 @@ whose plate carries no minutes — each of those is a job for an engineer, and e
 would otherwise be a fabricated variance on the one table ADR-0013 exists to make
 trustworthy.
 
-The refusal that is *not* here is quantity, and it is the caller's because it is
-about the order rather than the plate: nothing records how many copies a plate
-holds, so `workers/intake_routing.py` declines any line of more than one before it
-ever asks. `pricing.reprice.prepared_cost` says what that division assumes.
+The refusal about **layout** used to live in the caller and be one-sided, and that
+was wrong in the expensive direction. `workers/intake_routing.py` declined any line
+of more than one because nothing recorded how many copies a plate held — and then
+attached a plate holding two copies to a line of one, which is the *normal* cache
+entry here: one `PrintJob` is one plate, and `intake._job_for` sets the job's
+minutes and grams to the line's per-unit figures times its quantity, so the first
+order for two keychains leaves a two-up plate behind. The repeat order for one
+then divided that whole bed by a quantity of one and priced it as a single unit's
+work: 4.26% over the quote — inside ADR-0013's band — so it queued, printed two,
+shipped one, and recorded the estimate as accurate.
+
+`PreparedPlate.copies` is where the number lives now, and the refusal is here
+rather than in the caller because both halves of the comparison are here: the
+plate's recorded layout and the line's quantity must agree, and a plate whose
+copies nobody wrote down is refused whatever the line says.
+`pricing.reprice.prepared_cost` is what that division would otherwise assume.
 """
 
 from __future__ import annotations
@@ -61,7 +73,9 @@ class PricedPlate:
 
     plate: PreparedPlateView
     #: Derived from the plate's own minutes and grams under the order's pinned
-    #: rates — never a constant, and never the quote copied across.
+    #: rates — never a constant, and never the quote copied across. "Pinned" is
+    #: true of the `RateSnapshot` and not of the material's price per gram, which
+    #: `_quoted_spec` reads live; that exception is argued there.
     prepared_cost: Decimal
 
 
@@ -81,17 +95,7 @@ class CachedPlates:
         every line's digest in one query, and this is on the path of every paid
         order.
         """
-        if not model_hash:
-            # A line with no geometry on file — the manual order desk — can never
-            # hit the cache: `plate_key` is built on the digest. Not an error, and
-            # not worth a log line on every sweep.
-            return None
-
-        plate = await self._plates.find_unambiguous(
-            model_hash=model_hash,
-            scale=line.scale,
-            material_code=line.material_code,
-        )
+        plate = await self._usable_plate(order, line, model_hash=model_hash)
         if plate is None:
             return None
 
@@ -124,6 +128,51 @@ class CachedPlates:
             return None
 
         return PricedPlate(plate=plate, prepared_cost=cost)
+
+    async def _usable_plate(
+        self, order: Order, line: OrderLine, *, model_hash: str
+    ) -> PreparedPlateView | None:
+        """The cached plate this line may be attached to, if the farm has one.
+
+        Split from `for_line` above because the two questions are different sizes:
+        this one is "does a plate exist that is *this line's* plate", and what
+        follows it is "can that plate be priced without inventing anything". Every
+        refusal here is about the plate; every refusal there is about the money.
+        """
+        if not model_hash:
+            # A line with no geometry on file — the manual order desk — can never
+            # hit the cache: `plate_key` is built on the digest. Not an error, and
+            # not worth a log line on every sweep.
+            return None
+
+        plate = await self._plates.find_unambiguous(
+            model_hash=model_hash,
+            scale=line.scale,
+            material_code=line.material_code,
+        )
+        if plate is None:
+            return None
+        if plate.copies is None or plate.copies != line.quantity:
+            # The plate's minutes and grams are the whole bed's. `attach_plate`
+            # writes them onto the job as its total work and `prepared_cost`
+            # divides them by `line.quantity` to get a per-unit figure, so both
+            # steps are asserting how many parts are on that bed. Agreeing counts
+            # is the only thing that makes either true.
+            #
+            # `None` — a plate recorded before this column existed, or by an
+            # engineer who did not say — is refused rather than assumed to be one.
+            # One is the value that makes the common case attach, so guessing it
+            # would reinstate exactly the failure this guard exists for.
+            logger.info(
+                "intake.plate_layout_does_not_match_line",
+                order_id=str(order.id),
+                line_id=str(line.id),
+                plate_id=str(plate.id),
+                plate_copies=plate.copies,
+                line_quantity=line.quantity,
+            )
+            return None
+        return plate
 
     async def _rates_for(self, order: Order) -> RateSnapshot | None:
         """The rates this order was sold under, rebuilt and checked against its id.
@@ -187,6 +236,19 @@ class CachedPlates:
 
         The estimate is the *mesh* one the line recorded, not the plate's: this is
         the "before" of the comparison, and `pricing.reprice` supplies the "after".
+
+        **One input here is live, and it is the only one.** ADR-0020 pins the
+        `RateSnapshot` and `_rates_for` above checks it hash for hash, but
+        `sell_price_per_gram` is not in the snapshot — it is a mutable catalogue
+        column, and it is read from today's `inventory` for *both* sides of the
+        difference. So the residual is
+        `(plate_grams - quoted_grams) x (price_today - price_when_quoted)`: bounded
+        by the mass difference rather than by the total, and zero whenever the
+        filament has not moved. It is nevertheless a live number entering a figure
+        this branch's documentation otherwise describes as computed under the
+        order's own pinned rates, so it is said here rather than left implied.
+        Removing it means carrying the line's price per gram onto `OrderLine` at
+        `place()` time — a schema change on the checkout path, not on this one.
         """
         try:
             material = await InventoryService(self._db).get_by_code(line.material_code)
