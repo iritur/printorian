@@ -26,12 +26,8 @@ from printorian.api.deps import (
 )
 from printorian.api.routers._loyalty import tier_for
 from printorian.api.routers._pricing_render import _render, _render_delta
-from printorian.api.routers._pricing_spec import (
-    FINISH_CATALOGUE,
-    _build_spec,
-    _material_price,
-)
-from printorian.contexts.pricing import diff, price
+from printorian.api.routers._pricing_spec import _build_spec, _material_price
+from printorian.contexts.pricing import FINISH_CATALOGUE, diff, price
 from printorian.core.errors import ValidationError
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])

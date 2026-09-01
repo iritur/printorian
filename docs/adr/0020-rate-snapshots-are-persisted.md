@@ -44,3 +44,31 @@ reference. `pricing` may not import SQLAlchemy and does not.
 * Round-tripping is asserted by the snapshot id, so a rate whose *type* the
   serializer cannot carry fails the test suite rather than silently degrading a
   stored quote.
+
+## Amendment — the first thing that reprices from a snapshot (2026-08-31)
+
+Until now the persisted payload had exactly one consumer, and it was a *read*:
+`GET /orders/{id}/rates` serves the row verbatim so a person can look at it.
+`rates_from_dict` existed and nothing in the product called it.
+
+[#58](https://github.com/iritur/printorian/issues/58) is the first path that
+actually **runs the engine against a stored snapshot**: the intake sweep reprices
+a paid line from a cached plate's minutes and grams to get ADR-0013's
+`prepared_cost`, and it must do so at the rates the order was sold under, not at
+today's. That is the guarantee this ADR was written for, finally being spent.
+
+It comes with one guard, and it belongs here because the trap is this document's.
+`ordering/snapshots.py` is explicit that `rates_from_dict` is the wrong tool for
+*serving* a row: it skips fields the row does not carry, and `RateSnapshot` then
+supplies today's default for them, so an old snapshot comes back holding a number
+that was never in force. Repricing has no alternative tool — the engine takes a
+`RateSnapshot`, not a dict — so the rebuilt object is checked against its own key:
+
+> **The id is the content hash of the values. A snapshot rebuilt from a stored row
+> whose hash does not match that row was completed from today's defaults, and is
+> refused.**
+
+The order then goes to prep and an engineer prices it. Without that check, adding
+one rate to `RateSnapshot` would silently re-rate every older order this path
+touches, and nothing in the result would say so — which would undo this ADR by the
+exact mechanism it was written to prevent, one release later.

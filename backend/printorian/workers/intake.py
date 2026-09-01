@@ -16,16 +16,26 @@ makes the missing ones, so a missed tick costs latency and never an order.
 It composes two contexts — `ordering` owns the order and its lines, `production`
 owns the job — which is why it lives here and not in either of them.
 
-**What it deliberately does not do.** Every order it raises goes to `PREP`, even
-when the configuration has been sliced before. Routing a cache hit straight to
-`QUEUED` means attaching the plate, and attaching a plate writes an
-`EstimateVariance` whose `prepared_cost` is `NOT NULL` (ADR-0013) — and nothing in
-the system prices a plate. Passing a zero there, or copying the quote, would
-record "the estimate was perfect" for a variance nobody measured, which is exactly
-the invented number CLAUDE.md §1 forbids and in the flattering direction. So the
-hit still reaches an engineer, who sees from `GET /jobs/plates/find` that the work
-is already done and attaches it in a click rather than a slice. Closing that last
-gap is repricing a line from slicer truth, and it is its own issue.
+**A cache hit now skips prep entirely.** This pass used to send every order to
+`PREP`, sliced before or not, because attaching a plate writes an
+`EstimateVariance` whose `prepared_cost` is `NOT NULL` (ADR-0013) and nothing in
+the system priced a plate; a zero there, or the quote copied across, would have
+recorded "the estimate was perfect" for a variance nobody measured.
+`workers/cached_plates.py` is the answer to that — the plate's own minutes and
+grams, repriced under the order's *own* pinned rates (ADR-0020) — and with a real
+`prepared_cost` in hand this pass can do what ROADMAP Phase 4 asks: payment to
+`QUEUED`, no human anywhere in it.
+
+The three destinations, and the order between them is the part worth reading:
+
+* **`PREP`** whenever any line still needs an engineer — a cache miss, or a hit
+  that could not be repriced honestly. Unchanged, and it stays the default.
+* **`PRICE_REVIEW`** when nothing needs slicing but a plate came in over the
+  ADR-0013 band. It is second rather than first on purpose: from `PRICE_REVIEW`
+  an order may only go to `QUEUED`, so an order that also had unsliced work would
+  be approved straight past it.
+* **`QUEUED`** only when every line is attached and every variance is inside the
+  band.
 """
 
 from __future__ import annotations
@@ -43,10 +53,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from printorian.contexts.catalog.models import ModelAsset
 from printorian.contexts.ordering import OrderingService, OrderStatus
 from printorian.contexts.ordering.models import Order, OrderLine
-from printorian.contexts.production import CreateJob, ProductionService
+from printorian.contexts.production import CreateJob, JobStatus, JobView, ProductionService
 from printorian.contexts.production.models import PrintJob
 from printorian.core.errors import DomainRuleViolationError, PrintorianError
 from printorian.core.ids import EntityId
+from printorian.workers.cached_plates import CachedPlates
 
 logger = structlog.get_logger(__name__)
 
@@ -70,10 +81,29 @@ class SweepOutcome:
 class IntakeSweep:
     """One reconciling pass over paid orders that have no jobs."""
 
-    def __init__(self, db: AsyncSession, production: ProductionService, ordering: OrderingService):
+    def __init__(
+        self,
+        db: AsyncSession,
+        production: ProductionService,
+        ordering: OrderingService,
+        cached: CachedPlates | None = None,
+        *,
+        tolerance: Decimal = Decimal(0),
+    ):
         self._db = db
         self._production = production
         self._ordering = ordering
+        #: Given, the pass closes ADR-0006's loop itself. Withheld, every order
+        #: goes to `PREP` exactly as it did before — which is what the sweep can
+        #: honestly do without a plate library to ask and a configured band to
+        #: judge against. `workers/passes.py` supplies both; a caller that does
+        #: not is choosing the manual path, not silently losing money.
+        self._cached = cached
+        #: ADR-0013's band is configuration and never a constant here, so there is
+        #: no default worth having: a tolerance of zero holds every plate that
+        #: costs a rouble more than quoted, which is a visible, conservative
+        #: failure rather than a silent generous one.
+        self._tolerance = tolerance
 
     async def sweep(self) -> SweepOutcome:
         raised = jobs = failed = 0
@@ -136,11 +166,97 @@ class IntakeSweep:
             return 0
 
         hashes = await self._model_hashes(lines)
-        for line in lines:
-            await self._production.create_job(self._job_for(line, order, hashes))
+        jobs = [
+            await self._production.create_job(self._job_for(line, order, hashes)) for line in lines
+        ]
 
-        await self._ordering.advance(order.id, OrderStatus.PREP, reason="order.intake")
+        target = await self._route(order, lines, jobs, hashes)
+        await self._ordering.advance(order.id, target, reason="order.intake")
         return len(lines)
+
+    async def _route(
+        self,
+        order: Order,
+        lines: list[OrderLine],
+        jobs: list[JobView],
+        hashes: dict[EntityId, str],
+    ) -> OrderStatus:
+        """Where the order goes now that its jobs exist.
+
+        The three destinations are argued in the module docstring; this is the
+        arithmetic behind them. Note that a line whose plate could not be attached
+        contributes a `PENDING` job, which is what puts the order in `PREP` — so
+        every refusal inside `cached_plates` lands as "an engineer looks at it",
+        never as "it went out anyway".
+        """
+        cached = self._cached
+        if cached is None or not self._is_repriceable(order, lines):
+            return OrderStatus.PREP
+
+        statuses = [
+            await self._attach_cached(cached, order, line, job, hashes)
+            for line, job in zip(lines, jobs, strict=True)
+        ]
+        if any(status is JobStatus.PENDING for status in statuses):
+            return OrderStatus.PREP
+        if any(status is JobStatus.ON_HOLD for status in statuses):
+            return OrderStatus.PRICE_REVIEW
+        return OrderStatus.QUEUED
+
+    def _is_repriceable(self, order: Order, lines: list[OrderLine]) -> bool:
+        """Whether this order's lines carry a *price* to compare a plate against.
+
+        Only a single-line order does. `OrderingService.place` prices the order
+        from `lines[0]` and then **apportions** the total across the lines by
+        quantity, so on a multi-line order `line_total` is a share and was never a
+        quote for that line's work. Feeding it to `assess_variance` would produce a
+        variance against a number nobody ever quoted — a measured-looking figure on
+        the table ADR-0013 exists to make trustworthy, which is the failure this
+        whole path was written to avoid.
+
+        So a multi-line order takes exactly the route it took before: an engineer,
+        who can see the whole order. Widening this means giving `ordering` a real
+        per-line price, and that is a change to what an order *is*.
+        """
+        if len(lines) == 1:
+            return True
+        logger.info("intake.multi_line_order_not_repriceable", order_id=str(order.id))
+        return False
+
+    async def _attach_cached(
+        self,
+        cached: CachedPlates,
+        order: Order,
+        line: OrderLine,
+        job: JobView,
+        hashes: dict[EntityId, str],
+    ) -> JobStatus:
+        """Attach this line's cached plate, if the farm has one it can price.
+
+        Returns the status the job is now in. `PENDING` means the automatic path
+        declined — no plate, or nothing that could be priced without inventing a
+        number — and the job is still an engineer's.
+        """
+        model_hash = hashes.get(line.model_asset_id, "") if line.model_asset_id else ""
+        priced = await cached.for_line(order, line, model_hash=model_hash)
+        if priced is None:
+            return JobStatus.PENDING
+
+        updated = await self._production.attach_prepared_plate(
+            job.id,
+            plate_id=priced.plate.id,
+            filename=priced.plate.filename,
+            print_minutes=priced.plate.print_minutes,
+            total_grams=priced.plate.total_grams,
+            # What the customer agreed to, against what the slicer says the work
+            # is. `attach_prepared_plate` records both either way — ADR-0013 wants
+            # the variances inside the band as much as the ones outside it, since
+            # those are what calibrate the estimator.
+            quoted_cost=line.line_total,
+            prepared_cost=priced.prepared_cost,
+            tolerance=self._tolerance,
+        )
+        return updated.status
 
     async def _model_hashes(self, lines: list[OrderLine]) -> dict[EntityId, str]:
         """The content digest of every asset these lines were priced from.

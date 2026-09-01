@@ -2,6 +2,16 @@
 
 Where ADR-0006 (cached slicer output) meets ADR-0013 (the quote is binding within
 a band). Kept out of the service so the money rule can be read on its own.
+
+**Both costs arrive as arguments and neither is computed here**, which is not
+squeamishness about arithmetic: production owns what to do about a difference,
+pricing owns what a thing costs, and this file is the first of those. The caller
+that used to supply them was always a person at the console; since #58 it is also
+`workers/intake.py`, which derives `prepared_cost` from the plate's own minutes
+and grams under the order's pinned rates (`pricing.reprice`). Whichever caller it
+is, the rule below is the same, and the one thing it must never be handed is a
+number nobody measured — a zero or the quote copied across records "the estimate
+was perfect" on the table this whole mechanism exists to make trustworthy.
 """
 
 from __future__ import annotations

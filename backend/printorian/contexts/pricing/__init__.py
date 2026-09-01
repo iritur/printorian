@@ -46,6 +46,7 @@ from printorian.contexts.pricing.codes import (
 )
 from printorian.contexts.pricing.delta import diff, preview
 from printorian.contexts.pricing.engine import price
+from printorian.contexts.pricing.finishes import FINISH_CATALOGUE
 from printorian.contexts.pricing.loyalty import (
     LOYALTY_LADDER,
     LoyaltyStep,
@@ -60,6 +61,7 @@ from printorian.contexts.pricing.rates import (
     DiscountTier,
     RateSnapshot,
 )
+from printorian.contexts.pricing.reprice import prepared_cost
 from printorian.contexts.pricing.serialization import (
     breakdown_from_dict,
     breakdown_to_dict,
@@ -82,6 +84,7 @@ __all__ = [
     "ADJUSTMENT_RUSH",
     "ADJUSTMENT_VOLUME_DISCOUNT",
     "ENGINE_VERSION",
+    "FINISH_CATALOGUE",
     "LABOR_ENGINEERING",
     "LABOR_SETUP",
     "LABOR_SUPERVISION",
@@ -121,6 +124,7 @@ __all__ = [
     "delta_to_dict",
     "diff",
     "next_step",
+    "prepared_cost",
     "preview",
     "price",
     "rates_from_dict",

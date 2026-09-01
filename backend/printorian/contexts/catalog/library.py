@@ -56,6 +56,58 @@ class PlateLibrary:
         )
         return PreparedPlateView.model_validate(plate) if plate else None
 
+    async def find_unambiguous(
+        self,
+        *,
+        model_hash: str,
+        scale: Decimal,
+        material_code: str,
+    ) -> PreparedPlateView | None:
+        """The one usable plate for this configuration, when there is exactly one.
+
+        `find` above needs a printer profile, because the profile is part of
+        ADR-0006's key: the same geometry sliced for a P1S and for an X1C are two
+        different plates. An order does not carry one — the profile is the
+        engineer's choice at the slicer, and nothing upstream of prep has made it.
+        So the automatic intake path (`workers/intake.py`) cannot ask `find`
+        anything, and this is what it asks instead.
+
+        **It never picks.** Two valid plates for the same geometry and material
+        mean the farm has sliced it for two profiles, and choosing between them is
+        exactly the decision the engineer is there to make — an arbitrary one would
+        send a plate sliced for one machine to another, which prints and produces
+        rubbish. `None` therefore means both "nothing is cached" and "more than one
+        thing is, and it is not this function's call"; both leave the job in the
+        prep queue, which is where a person can see it.
+
+        The key is still the authority. A row qualifies when *its own* profile and
+        layout, fed back through `plate_key` with this configuration's geometry,
+        material and scale, reproduce the key it is stored under — so the
+        normalisation that decides whether "PLA " and "pla" are one material has
+        one implementation here as everywhere else.
+        """
+        rows = await self._db.scalars(
+            select(PreparedPlate).where(
+                PreparedPlate.model_hash == model_hash,
+                PreparedPlate.status == PlateStatus.VALID,
+            )
+        )
+        matches = [
+            plate
+            for plate in rows
+            if plate_key(
+                model_hash=model_hash,
+                scale=scale,
+                material_code=material_code,
+                printer_profile=plate.printer_profile,
+                layout_hash=plate.layout_hash,
+            )
+            == plate.plate_key
+        ]
+        if len(matches) != 1:
+            return None
+        return PreparedPlateView.model_validate(matches[0])
+
     async def record(self, data: RecordPlate) -> PreparedPlateView:
         """Store what an engineer sliced.
 

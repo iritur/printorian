@@ -27,6 +27,56 @@ tree as it now stands, and the distinction is recorded rather than smoothed over
 because "the suite passed" and "the suite passed on *this* tree" are the two
 claims this file has already been corrected for confusing once.
 
+**A paid order whose configuration is already sliced now reaches `QUEUED` on its
+own** ([#58](https://github.com/iritur/printorian/issues/58)). The intake sweep
+attaches the cached `PreparedPlate` and applies ADR-0013's band itself, so ROADMAP
+Phase 4's exit criterion — payment to a machine starting the job with no human
+action — holds for the cached half without an engineer clicking «attach» on work
+the farm already has.
+
+> **The whole issue was one `NOT NULL` column.** `EstimateVariance.prepared_cost`
+> has no source: pricing happens once, at quote time, and nothing in the system
+> prices a plate. #41 stopped here rather than pass a zero. What unblocks it is
+> `pricing/reprice.py`, and it is deliberately a **difference** rather than a
+> fresh total — `line_total + (price with the plate's minutes and grams − price
+> with the numbers that were quoted)`, both under the order's own pinned
+> `RateSnapshot`. Two inputs of the original quote are not recoverable from the
+> order and both would land on the money column: the **customer tier**, resolved
+> from spend at checkout and never stored, and the **per-line quote**, which does
+> not exist — `place` prices the order and apportions the total by quantity. A
+> difference cancels both. Do not "simplify" it into `price(spec).total`.
+>
+> **Seven ways it declines, and each one is the point.** No plate; more than one
+> plate for the configuration; no pinned snapshot; a stored snapshot that no
+> longer rebuilds to its own content hash; a material gone from the catalogue; a
+> plate with no minutes; a multi-line order. Every one leaves the job `PENDING`
+> and the order in `PREP`, which is exactly where it went before. A variance
+> nobody measured is worse than none, because it looks measured.
+>
+> **The multi-line refusal is a real limitation, not caution.**
+> `OrderingService.place` prices the order from `lines[0]` and apportions the
+> total across lines by quantity, so `line_total` on a multi-line order is a share
+> and was never a quote for that line's work. Widening this means giving
+> `ordering` a per-line price, which is a change to what an order *is*.
+>
+> **The snapshot-id check is what keeps ADR-0020 true.** `rates_from_dict` fills
+> a field a stored row lacks with today's default, so a rebuilt snapshot whose
+> hash no longer matches its row was completed from numbers that were never in
+> force, and is refused. Without it, adding one rate would silently re-rate every
+> older order this path touches. Mutated and measured: replacing the pinned
+> snapshot with a fresh `RateSnapshot()` failed the "own rates, not today's" test
+> and the drift test; returning `line.line_total` as the prepared cost failed four
+> tests, including the `ON_HOLD` branch.
+>
+> **`PAID → PRICE_REVIEW` is now a legal transition**, because a cache hit can
+> exceed the band before any engineer has touched the order. The alternative was
+> recording a `PREP` the order never entered.
+>
+> **`CachedPlates` is an optional collaborator of `IntakeSweep`, wired in
+> `workers/passes.py`.** Withheld, every order goes to prep exactly as before —
+> so dropping that line returns the farm to clicking, silently. There is a test
+> pinning that the fallback is at least the safe one.
+
 **The delete rules are held to a test, and one way this suite can lie is now
 written down** ([#47](https://github.com/iritur/printorian/issues/47)).
 `backend/tests/test_referential_integrity.py` is the inventory — all forty-eight

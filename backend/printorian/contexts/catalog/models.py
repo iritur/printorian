@@ -149,6 +149,12 @@ class PreparedPlate(Entity):
         # becomes a race.
         UniqueConstraint("plate_key", name="uq_prepared_plates_key"),
         Index("ix_prepared_plates_sliced_by", "sliced_by"),
+        # "Which plates exist for this geometry, whatever they were sliced for?" —
+        # the question `find_unambiguous` asks on **every line of every paid
+        # order**, because intake has no printer profile to build the unique key
+        # from. Without it that is a sequential scan of every plate the farm has
+        # ever produced, thirty seconds apart, for ever.
+        Index("ix_prepared_plates_model_hash", "model_hash"),
         # "Which plates were sliced from this model?" — the question asked when a
         # model is superseded and its plates have to be marked stale.
         Index("ix_prepared_plates_model_asset_id", "model_asset_id"),

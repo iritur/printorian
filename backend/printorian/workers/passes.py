@@ -19,7 +19,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.catalog import ModelLibrary
+from printorian.contexts.catalog import ModelLibrary, PlateLibrary
 from printorian.contexts.fleet import FleetService
 from printorian.contexts.fleet.models import Printer
 from printorian.contexts.identity import IdentityService
@@ -38,6 +38,7 @@ from printorian.workers import (
     sla,
     telemetry,
 )
+from printorian.workers.cached_plates import CachedPlates
 from printorian.workers.drivers import DriverPool
 from printorian.workers.runtime import WorkerRuntime
 
@@ -75,7 +76,19 @@ class IntakePass:
         async with self._runtime.session() as session:
             production = ProductionService(session, self._runtime.clock, self._runtime.bus)
             ordering = OrderingService(session, self._runtime.clock, self._runtime.bus)
-            outcome = await intake.IntakeSweep(session, production, ordering).sweep()
+            # The two things the sweep needs before it may close ADR-0006's loop
+            # by itself: a plate library to ask, and ADR-0013's band, which is
+            # configuration and never a constant in the sweep. Without them every
+            # order goes to prep, which is the behaviour that predates #58 — so
+            # dropping this line would silently return the farm to clicking.
+            cached = CachedPlates(session, PlateLibrary(session, self._runtime.clock))
+            outcome = await intake.IntakeSweep(
+                session,
+                production,
+                ordering,
+                cached,
+                tolerance=self._runtime.settings.price_variance_tolerance,
+            ).sweep()
         await self._runtime.record_beat("intake", self._runtime.settings.intake_sweep_seconds)
         return outcome
 

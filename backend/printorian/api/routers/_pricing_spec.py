@@ -32,7 +32,7 @@ from printorian.contexts.catalog import (
 from printorian.contexts.inventory import InventoryService, MaterialStatus
 from printorian.contexts.ordering import PromisePolicy, promised_hours
 from printorian.contexts.pricing import (
-    FinishOption,
+    FINISH_CATALOGUE,
     MaterialPrice,
     PriceSpec,
     PrintEstimate,
@@ -41,17 +41,6 @@ from printorian.core.cpu import CpuGate
 from printorian.core.errors import PayloadTooLargeError, ValidationError
 from printorian.core.ids import EntityId
 from printorian.core.storage import digest_of
-
-#: Finishes offered to customers (scenario option 2e). Phase 2 moves these into a
-#: managed catalogue; the shape is already what the engine consumes.
-FINISH_CATALOGUE: dict[str, FinishOption] = {
-    "raw": FinishOption(code="raw"),
-    "sanded": FinishOption(code="sanded", labor_hours=Decimal("0.4")),
-    "primed": FinishOption(code="primed", labor_hours=Decimal("0.6"), flat_fee=Decimal(150)),
-    "painted": FinishOption(
-        code="painted", labor_hours=Decimal("1.5"), flat_fee=Decimal(400), extra_days=2
-    ),
-}
 
 _MAX_UPLOAD_BYTES = 80 * 1024 * 1024
 
