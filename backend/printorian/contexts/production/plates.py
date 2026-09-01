@@ -2,6 +2,16 @@
 
 Where ADR-0006 (cached slicer output) meets ADR-0013 (the quote is binding within
 a band). Kept out of the service so the money rule can be read on its own.
+
+**Both costs arrive as arguments and neither is computed here**, which is not
+squeamishness about arithmetic: production owns what to do about a difference,
+pricing owns what a thing costs, and this file is the first of those. The caller
+that used to supply them was always a person at the console; since #58 it is also
+`workers/intake.py`, which derives `prepared_cost` from the plate's own minutes
+and grams under the order's pinned rates (`pricing.reprice`). Whichever caller it
+is, the rule below is the same, and the one thing it must never be handed is a
+number nobody measured — a zero or the quote copied across records "the estimate
+was perfect" on the table this whole mechanism exists to make trustworthy.
 """
 
 from __future__ import annotations
@@ -77,12 +87,26 @@ async def attach_plate(
         target,
         reason="plate.attached" if verdict.within_tolerance else "plate.variance_exceeded",
         previous=previous,
-        details={
-            "plate_id": str(plate_id),
-            "quoted_cost": str(verdict.quoted_cost),
-            "prepared_cost": str(verdict.prepared_cost),
-            "overrun_ratio": str(verdict.ratio),
-        },
+        # **No rubles here.** A `JobEvent`'s details ride out on `JobView.events`,
+        # which `GET /jobs/{job_id}` serves under `VIEW_PRODUCTION` alone — the
+        # permission an operator on the floor holds. The two costs live on the
+        # `EstimateVariance` row written above, and `GET /jobs/variances` gates
+        # that on `VIEW_FINANCIALS` for exactly the reason CLAUDE.md §1 gives: a
+        # response about seconds must not quietly start carrying money. Putting
+        # them here too would be a second, ungated copy of the same two figures.
+        #
+        # It was harmless only by accident until #58: the sole caller was the
+        # console's plate upload, whose costs are query parameters the console
+        # never sends, so the field read `"0"`. The intake sweep now supplies the
+        # order's real total and its repriced one, which is what turned a latent
+        # leak into a live one, and which is why this branch is the one that
+        # drops them.
+        #
+        # `overrun_ratio` stays. It is dimensionless, it is what the floor needs
+        # to read an `ON_HOLD` against, and no amount of it recovers a rouble
+        # figure without one of the two costs to scale it by — which is the thing
+        # a caller without `VIEW_FINANCIALS` cannot get.
+        details={"plate_id": str(plate_id), "overrun_ratio": str(verdict.ratio)},
     )
 
     if verdict.within_tolerance:

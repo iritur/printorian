@@ -9,12 +9,18 @@ The cases here are the four rules that make the read honest rather than merely
 present: money is behind `VIEW_FINANCIALS`, an unknown order is a 404 and not an
 empty grid, the in-band rows are served too, and the route is not swallowed by
 `GET /jobs/{job_id}` — which is silent when it breaks.
+
+And one rule about the *other* door into the same two figures. Gating a route is
+only worth as much as the places the same numbers are not served from, so the
+last test here reads the job itself as an operator and insists its journal is
+free of roubles.
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -73,6 +79,10 @@ async def client(
         for email, role in (
             ("boss@example.com", Role.OWNER),
             ("eng@example.com", Role.ENGINEER),
+            # The floor: `VIEW_PRODUCTION` and four permissions about machines,
+            # and no `VIEW_FINANCIALS`. Present so the money split can be read
+            # from the role that actually watches the job desk all day.
+            ("floor@example.com", Role.OPERATOR),
         ):
             await identity.create_user(
                 CreateUser(email=email, display_name=email, password=PASSWORD, role=role)
@@ -154,6 +164,19 @@ async def record_plate(
         headers=eng,
     )
     return client
+
+
+def _money_in(events: list[dict[str, Any]]) -> set[Decimal]:
+    """Every detail value across these events that is a number at all."""
+    found: set[Decimal] = set()
+    for event in events:
+        for value in event["details"].values():
+            try:
+                found.add(Decimal(str(value)))
+            except InvalidOperation:
+                # A plate id, a filename, a status code: not a figure, not money.
+                continue
+    return found
 
 
 async def test_a_recorded_variance_is_served_to_the_desk(
@@ -262,3 +285,44 @@ async def test_a_variance_inside_the_band_is_served_too(
 
     assert [row["within_tolerance"] for row in everything.json()] == [True]
     assert exceeded.json() == []
+
+
+async def test_the_job_journal_does_not_carry_money_to_the_floor(
+    client: AsyncClient, settings: Settings, clock: FixedClock, bus: EventBus
+) -> None:
+    """The same two figures, through the door nobody gated.
+
+    `GET /jobs/{job_id}` carries the router's `VIEW_PRODUCTION` and nothing else,
+    and it returns every `JobEvent` with its `details` dict. `attach_plate` used
+    to write `quoted_cost` and `prepared_cost` into that dict, so an operator —
+    who may run a printer and may not read a price — was one job read away from
+    the pair `/jobs/variances` refuses him above.
+
+    It was invisible while the only caller was the console's plate upload, whose
+    two costs are query parameters the console does not send: the field held
+    `"0"`, so the leak was real and empty. The #58 intake sweep attaches plates
+    with the order's real total and its repriced one, which fills it. Hence a
+    test on this branch and not a later one.
+
+    `overrun_ratio` is deliberately still there and deliberately still asserted:
+    a ratio is not money, the floor needs it to read a held job, and dropping it
+    to be safe would cost the operator the one number that explains the hold.
+    """
+    _order_id, job_id = await a_job(settings, clock, bus)
+    await record_plate(client, job_id, quoted="1000", prepared="1400")
+
+    response = await client.get(f"/jobs/{job_id}", headers=await auth(client, "floor@example.com"))
+
+    assert response.status_code == 200
+    events = response.json()["events"]
+    [attached] = [event for event in events if event["reason"] == "plate.variance_exceeded"]
+    assert attached["details"]["overrun_ratio"] == "0.4"
+    assert "quoted_cost" not in attached["details"]
+    assert "prepared_cost" not in attached["details"]
+    # Blunter than the two lines above, and the one that survives somebody
+    # re-adding the pair under different key names: no detail value anywhere on
+    # this job may *be* either figure. Compared as numbers rather than as
+    # substrings of the serialized response, because a job's own UUIDs and
+    # timestamps contain digits and a substring test would fail on a coin toss
+    # rather than on a regression.
+    assert _money_in(events).isdisjoint({Decimal(1000), Decimal(1400)})

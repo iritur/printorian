@@ -40,6 +40,7 @@ from printorian.contexts.packaging import (
 from printorian.contexts.postproduction import Task, TaskStatus
 from printorian.core.clock import Clock
 from printorian.core.errors import PrintorianError
+from printorian.core.geometry import scaled_box
 from printorian.core.ids import EntityId
 
 logger = structlog.get_logger(__name__)
@@ -180,19 +181,20 @@ def _dimensions(lines: list[OrderLine]) -> dict[str, Decimal]:
 
 
 def _line_dims(line: OrderLine) -> Dims | None:
-    """One part's bounding box, or ``None`` for geometry nobody measured.
+    """One part's bounding box **at the size it was ordered**, or ``None``.
+
+    The box stored on the line is the box of the *unscaled* mesh, and this read it
+    verbatim: a 100 mm part ordered at scale 3 was getting a carton recommended
+    for 100 mm, which is exactly the failure the docstring below says a
+    recommendation must not have. `core.geometry.scaled_box` is the multiplication,
+    and it is shared with `workers/intake` rather than written twice — the second
+    reader of an unscaled box was how this went unnoticed in the first place.
 
     An unmeasured line contributes nothing rather than a zero: a zero would shrink
-    the batch and get a box recommended that the parcel does not fit in, which is
-    the one failure mode a recommendation must not have.
+    the batch and get a box recommended that the parcel does not fit in.
     """
-    box = line.mesh.get("bounding_box_mm") if isinstance(line.mesh, dict) else None
-    if not isinstance(box, dict):
-        return None
-    try:
-        return Dims(Decimal(str(box["x"])), Decimal(str(box["y"])), Decimal(str(box["z"])))
-    except (KeyError, ArithmeticError, TypeError, ValueError):
-        return None
+    box = scaled_box(line.mesh, line.scale)
+    return None if box is None else Dims(box.x, box.y, box.z)
 
 
 def _is_thin(line: OrderLine) -> bool:

@@ -7,43 +7,61 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-09-01 · **283 frontend tests across 29 files**, all four frontend
-gates `exit=0`, and **no backend suite or gate run on this branch at all**.
+**As of:** 2026-09-01 · **1 383 passed, 8 skipped, `exit=0` in 951.82s
+(0:15:51)** on `feat/58-reprice-cache-hit` with `main` merged in through
+[#91](https://github.com/iritur/printorian/pull/91), alongside the six backend
+gates each run separately and each `exit=0`. That is pytest's own trailing
+summary line, read out of the redirect rather than counted off the progress
+characters — a previous session's run lost that line and said so, and `-p
+no:cacheprovider --tb=short` is what brought it back. Eighteen of those tests are
+the fourth review's, and ten mutations were applied, run and reverted against
+them.
 
-**The frontend figure was measured twice on purpose, so the difference is the
-evidence.** `npm run test` at this branch's tip gives 283 across 29 files; the
-same command with this branch's changes stashed — that is, `main` — gives **278
-across 28**, and the five between them are the tests this branch adds. The line
-arrived here saying the count was "deliberately absent" because that worktree had
-no `node_modules`; this one has them, so the figure is stated rather than
-deferred to CI. It also settles the older disagreement: neither 249 nor 276
-described any tree that still exists.
+**The figure was re-measured across the merge rather than carried over it, and
+the two extra tests are what makes that checkable.** 1 381 was this branch over
+`main` at [#89](https://github.com/iritur/printorian/pull/89).
+[#90](https://github.com/iritur/printorian/pull/90) then landed and added exactly
+two tests to `tests/unit/test_queue_position.py`, and the count moved by exactly
+two. Had the old number been carried forward instead, that arithmetic would have
+proved nothing — a number copied over a merge agrees with every tree, including
+the ones it never saw. This is the paragraph three below in its answered form:
+the referent changed, so the measurement was taken again rather than re-pointed.
 
-**No backend claim is made for this branch.** This worktree has no `.venv`, so
-neither the six backend gates nor the suite were executed here, and no collected
-count is carried up — a number nobody re-ran is exactly the drift CLAUDE.md §4
-warns about. Nothing on this branch touches `backend/`.
+**The frontend figures here are `main`'s, not this branch's.**
+[#91](https://github.com/iritur/printorian/pull/91) measured **283 tests across
+29 files** with all four frontend gates `exit=0`, and that is what `main` now is.
+This worktree has no `node_modules`, and nothing under `frontend/` changed on
+this branch, so the number is repeated with its owner named rather than
+re-claimed. The sentence #91 left on this line — "no backend suite or gate run on
+this branch at all" — was true of #91 and is false of this one. It is the same
+referent moving under a pronoun as everything else on this page, arriving by a
+merge this time instead of by a copy, which is why the merge that brought it here
+had to be read rather than accepted.
 
-**The backend figures below belong to `main`, not to this branch.** They were
-measured on the trees [#89](https://github.com/iritur/printorian/pull/89) and
-[#90](https://github.com/iritur/printorian/pull/90) were merged from, both of
-which are underneath this branch now, and they are left as those branches
-measured them rather than restated as though this session had re-run them: the
-six backend gates each invoked separately and each `exit=0` — `ruff check`,
-`ruff format --check` (369 files), `mypy --strict` (**217** source files),
-`lint-imports` (6 contracts kept, 0 broken), `check_context_isolation.py`,
-`check_file_length.py` — and **1 347 backend tests collected** on #90's tree.
+What ran locally on the merged tree: the six backend gates, each separately and
+each `exit=0` — `ruff check`, `ruff format --check` (**386** files), `mypy
+--strict` (**223** source files), `lint-imports` (6 contracts kept, 0 broken),
+`check_context_isolation.py` and `check_file_length.py`, run from this worktree's
+own `.venv`. The figures moved this session — 369 and 217 before — because the
+fourth review of #92 added `core/geometry.py`, `workers/plate_admission.py` and
+three test files; neither #90 nor #91 added a backend source file, so neither
+moved either count. They are quoted because a gate whose file count nobody reads
+is a gate that can quietly stop covering a tree.
 
-**The full-suite figure this line used to carry was never about this branch.**
-1 333 passed / 7 skipped, `exit=0`, 24m43s was measured on
-[#87](https://github.com/iritur/printorian/pull/87)'s branch, said "on this
-branch", and travelled onto `main` and then onto this one unchanged — which is
-the pronoun quietly changing referent under a number, and is why "the suite
+`alembic heads` reports a single head, `0023_prepared_plate_copies`. Two branches
+merging is the way ADR-0008's one-head rule usually breaks, so it is checked here
+rather than left to CI to discover.
+
+**The full-suite figure this line used to carry was never about this branch, and
+that is why this one names its tree.** 1 333 passed / 7 skipped, `exit=0`, 24m43s
+was measured on [#87](https://github.com/iritur/printorian/pull/87)'s branch, said
+"on this branch", and travelled onto `main` and then onto this one unchanged —
+the pronoun quietly changing referent under a number, and the reason "the suite
 passed" and "the suite passed on *this* tree" are the two claims this file has
-already been corrected for confusing once. It describes none of the trees since:
-not #89's, which adds `tests/api/test_settings_api.py`, not its merge with #88,
-and not this one. **No full-suite pass is claimed here.** CI on the pull request
-is that evidence.
+already been corrected for confusing once. The 1 383 above is the second claim:
+this worktree, this commit, `main` merged in, `.venv` here, log kept. It replaces
+the "no full-suite pass is claimed here" that stood in this slot while the run
+was still owed.
 
 > **Four local attempts, no pass, and the diagnosis was wrong once.** Recorded in
 > full because the wrong diagnosis is the useful part.
@@ -108,6 +126,235 @@ job it looks at — assigned or wait-listed, never neither.
 > planning replaces the row rather than appending" describes half a rule. It now
 > says the other half, next to the column definitions, because that is where the
 > next person adding a reader of this table will be standing.
+
+**A paid order whose configuration is already sliced now reaches `QUEUED` by
+itself** ([#58](https://github.com/iritur/printorian/issues/58)). The intake sweep
+attaches the cached `PreparedPlate` and applies ADR-0013's band with nobody in the
+loop, so ROADMAP Phase 4's exit criterion — payment to a machine starting the job
+with no human action — holds for the cached half instead of ending in an engineer
+clicking «attach» on work the farm already has. **Read the reachability paragraph
+below before repeating that sentence anywhere else:** the mechanism is built,
+tested and correct, and nothing the storefront can place reaches it yet, because
+`OrderingService.place` never writes `OrderLine.model_asset_id`.
+
+> **The whole issue was one `NOT NULL` column.** `EstimateVariance.prepared_cost`
+> had no source: pricing happens once, at quote time, and nothing in the system
+> prices a plate. #41 stopped here rather than pass a zero. `pricing/reprice.py`
+> is that source, and it is deliberately a **difference** rather than a fresh
+> total — `line_total + (price with the plate's minutes and grams − price with the
+> numbers that were quoted)`, both under the order's own pinned `RateSnapshot`.
+> Two inputs of the original quote cannot be recovered from the order and each
+> would land on the money column: the **customer tier**, resolved from spend at
+> checkout and held by no column, and the **per-line quote**, which does not exist
+> at all, because `place` prices the order and apportions the total by quantity. A
+> difference cancels both. Do not "simplify" it into `price(spec).total`.
+>
+> **The tier half of that argument was overstated and has been corrected.** This
+> file, `reprice.py` and ADR-0013 all used to say that rebuilding the tier from
+> `price_breakdown` "is a second loyalty ladder". It is not: the *applied*
+> percents land on `Basis.percent` — `tier.discount_percent` on the discount line,
+> the effective margin on the margin line — and `breakdown_from_dict` reads them
+> back. The per-line quote is the input that really is unrecoverable, and it is
+> the whole argument on its own. The difference stays; the sentence defending it
+> is now the true one. Its cost is recorded too: a tier whose
+> `margin_percent_override` is *above* the snapshot margin makes the difference
+> **understate** an overrun, so one that should have gone to `PRICE_REVIEW` can
+> land inside the band — 15.48% true against 13.88% recorded on the farm's own
+> defaults. `tests/unit/test_reprice_tier.py` pins the sign and that straddle.
+>
+> **How many copies are on the plate is now a column, and the guard that stood in
+> for it was one-sided.** Nothing on a `PreparedPlate` recorded it —
+> `layout_hash` is opaque — and two things depend on it: `attach_plate` takes the
+> plate's minutes and grams as the job's *whole* work, and the reprice divides
+> those same totals by the line's quantity. A one-up plate on a line of three
+> therefore under-prints and underprices at once, comfortably **inside** the band.
+>
+> The first answer was to refuse any line whose quantity was not one. That covered
+> one direction and left the other wide open, and the other is the *normal* one: a
+> `PrintJob` is one plate holding a whole line's work, so the first order for two
+> keychains leaves a **two-up plate** in the library, and the repeat order for one
+> attached it, repriced against the whole bed, came out 4.26% over — inside the
+> band — printed two, shipped one, and recorded an accurate estimate. Reviewed and
+> reproduced end to end against real PostgreSQL before it was fixed.
+>
+> `PreparedPlate.copies` (migration `0023`) is the answer instead: **nullable,
+> never defaulted, never backfilled**, because a `1` written in for the plates
+> already in the table is an invented number that happens to be the one that makes
+> the common case attach. The unattended path attaches only when the plate's
+> recorded copies equal the line's quantity, and the `quantity != 1` refusal is
+> gone. The tripwires are `test_a_two_up_plate_is_not_attached_to_a_line_of_one`,
+> `test_a_one_up_plate_is_not_attached_to_a_line_of_three` and
+> `test_a_plate_that_does_not_say_how_many_copies_it_holds_is_refused`, all in
+> `tests/unit/test_intake_plate_selection.py`.
+>
+> **A line of three still does not queue itself, and the reason is the fourth
+> review's.** The count now agrees; the bed's *footprint* is recorded nowhere, and
+> the only geometry the planner ever sees is the job's — one part's box. So a
+> three-up bed was being judged against the size of one part, and a machine too
+> small for the plate was eligible for it. `plate_admission` refuses any plate
+> holding more than one copy; what lifts it is recording the plate's own bed
+> extent, two columns and a console field, exactly the shape `copies` took. The
+> per-quantity arithmetic `copies` earned is still pinned, by
+> `tests/unit/test_reprice_quantity.py`, which is pure pricing and needed no sweep.
+>
+> **What that costs today, and it needs a person.** The console's plate upload
+> does not send `copies` — the field is a query parameter on
+> `POST /jobs/{id}/plate/file` and a body field on `POST /jobs/{id}/plate`, and
+> nothing in `frontend/` fills either. Until it does, plates recorded through the
+> console carry NULL and the unattended path declines them, which is last week's
+> behaviour rather than a regression. It was **not** parsed out of the 3MF:
+> `plate_file.py` says in its own docstring that the sliced `<plate>` element is
+> implemented from documentation and has never been seen from this farm's slicer,
+> and a miscount there would not fail loudly — it would attach the wrong plate
+> quietly. Asking is the conservative half of that trade, and the frontend field
+> is the follow-up.
+>
+> **Three reviews found three unguarded dimensions one at a time, so the set is
+> now written down in one place.** `backend/printorian/workers/plate_admission.py`
+> is that place: one pure predicate, one refusal code per dimension, and a
+> docstring that says what must match, what is checked elsewhere, what is
+> deliberately absent (finishes cancel on both sides of the difference), and what
+> is still open with the cost of closing each. The cause it names is worth
+> repeating here: `plate_key` answers *"have we sliced this before"* and every
+> term in it — geometry, scale, priced material, a profile string, an opaque
+> layout — describes the **order**. Nothing in the schema describes the **bed**,
+> and every hole the reviews found was a bed-side property. `copies` was the first
+> bed-side column ever added.
+>
+> Four refusals were added there and each was mutation-proved: a plate whose
+> **filament count** is not the line's distinct colour count (round three's
+> blocking finding — colour is in no key term, and `line.material_code` is the
+> *dearest* chosen spec rather than the filament set); a plate holding **more than
+> one copy**, because the bed's footprint is unrecorded; a line whose **part was
+> never measured**, because a zero box reads as "fits every machine"; and a plate
+> that is **numbers with no file behind it**, which would otherwise reach `QUEUED`
+> and then be re-queued by dispatch for ever without ever returning to `PREP`.
+> `tests/unit/test_intake_bed_admission.py` is the file, and deleting any one
+> clause makes exactly its own test queue an order it should not.
+>
+> **A moved engine version now refuses too** (`_rates_for`, ADR-0020's amendment).
+> `prepared_cost` is `line_total` — priced by the engine of the day — plus a
+> difference priced by today's, so a changed formula makes that sum a hybrid
+> nobody quoted, recorded as measured. The third review offered "refuse or
+> document"; refusing costs a click.
+>
+> **The part's bounding box was being read at 1× everywhere.** `OrderLine.mesh`
+> holds the *unscaled* box — `_pricing_spec` writes `analysis.bounding_box`
+> verbatim while `estimate()` scales only volume, mass and time — and both readers
+> of it had forgotten the multiplication. A 40 mm mesh at scale 3 was handed to the
+> planner as 40 mm, whose only geometric test is `job.width_mm > printer.width_mm`,
+> and to `workers/packaging` as the carton size. `core.geometry.scaled_box` is the
+> one multiplication now, and `tests/unit/test_scaled_box.py` holds both readers to
+> it.
+>
+> **Two cheap ones from the third review, both now held by a test.**
+> `PlateLibrary.record` overwrites `copies` rather than merging, and the comment
+> saying that is load-bearing was true and untested — the merge passed thirty-nine
+> tests. And `POST /jobs/{id}/plate/file?copies=0` raised a bare pydantic error
+> *after* `storage.put`: a 500 with no code (ADR-0012) and an orphaned blob. The
+> query parameter carries `Query(ge=1)` now, which is the bound the model always
+> had.
+>
+> **The path is not reachable from the product at all, and that is the finding to
+> carry forward.** `OrderingService.place` is the only constructor of an
+> `OrderLine` and it never writes `model_asset_id` — the field is accepted by
+> `POST /orders` and dropped — so `model_hash` is `""` and the unattended path
+> declines at its first line on every order the storefront can place. The web
+> checkout sends no `mesh` either. So the guards on this branch have never been
+> exercised by a real order, the whole feature lives in the test suite, and the
+> two small changes that would switch it on are exactly the changes that would
+> make every open dimension in `plate_admission`'s docstring live at once. That is
+> a decision for a person, and it is why the pull request now says `Refs #58`
+> rather than `Closes #58`.
+>
+> **A payload that will not rebuild must cost one order, not the pass.**
+> `IntakeSweep.sweep` rescues `PrintorianError` per order and nothing else, and
+> `Decimal("no longer a number")` raises `InvalidOperation`, which is not one — so
+> a single unreadable `RateSnapshotRecord` escaped the whole pass and left every
+> *other* paid order in the batch jobless. It is caught where it happens now, and
+> the test asserts on the healthy order standing beside the broken one.
+>
+> **The snapshot-id check is what keeps ADR-0020 true.** `rates_from_dict` fills a
+> field a stored row lacks with today's default, so a rebuilt snapshot whose hash
+> no longer matches its row was completed from numbers that were never in force,
+> and is refused. Without it, adding one rate to `RateSnapshot` would silently
+> re-rate every older order this path touches, and nothing would say so.
+>
+> **`PAID → PRICE_REVIEW` is a legal transition now**, because a cache hit can
+> exceed the band before any engineer has touched the order. The alternative was
+> recording a `PREP` the order never entered.
+>
+> **`intake.py` hit the 400-line gate and split into two files.**
+> `intake.py` still answers "which paid orders have no jobs, and what jobs do they
+> need" — #41's question, and the one that runs whether or not the farm has a
+> plate library. `intake_routing.py` answers the one #58 added: the jobs exist,
+> may the farm start them itself? That is the seam, not the line the counter
+> tripped on, and it is the same cut `runner.py` took. The second review's tests
+> pushed `test_intake_cache_refusals.py` over the same gate, and it took the same
+> kind of cut: `test_intake_plate_selection.py` is "which plate, if any", and what
+> stayed is "the plate is right and the money cannot be worked out honestly".
+>
+> **`CachedPlates` is an optional collaborator of `IntakeSweep`, wired in
+> `workers/passes.py`.** Withheld, every order goes to prep exactly as before — so
+> deleting that one line returns the farm to clicking, silently, which is why one
+> test pins that the fallback is the safe one and another pins that the
+> collaborator is actually supplied.
+>
+> **`DATABASE-REVIEW.md` §1 now says twenty-five migrations**, because
+> `0022_plate_model_hash_index` and then `0023_prepared_plate_copies` moved it and
+> `test_the_migration_count_matches_the_versions_directory` failed the whole suite
+> until it did. That test is the reason a doc figure moved on the same commit as
+> the schema instead of six weeks later.
+>
+> **Measured, not asserted, and every round was measured.** All six backend gates
+> run separately on the final tree, each `exit=0`; the whole suite **1 363 passed
+> / 8 skipped, `exit=0`, in 1052.37s (0:17:32)** — pytest's own summary line, which
+> reached the redirect this time. Every claim above was mutation-proved, each
+> mutation applied, run and reverted.
+>
+> Re-measured on this tree: `prepared_cost=Decimal(0)` fails five of the seven
+> cache-hit tests and `prepared_cost=line.line_total` fails those five and the
+> journal one; a fresh `RateSnapshot()` in place of the pinned one fails the
+> ADR-0020 test alone. Measured earlier and not re-run: dropping the snapshot-id
+> check, the `PRICE_REVIEW` branch, the "never picks between two plates" rule and
+> the rebuild guard each failed exactly the test named for it, and forcing the
+> routing back to `PREP` failed six.
+>
+> This round's own six: dropping the `copies` guard fails three selection tests;
+> defaulting `copies` to one fails the plate-that-does-not-say test; dropping
+> `status == VALID` fails the retired-plate test; replacing the plate_key
+> comparison with `list(rows)` fails the wrong-material test; removing `cached`
+> from `passes.py` fails the wiring test; and setting the tier's margin override
+> equal to the snapshot margin fails two of the three tier tests. Both migrations
+> were upgraded, `alembic check`ed, downgraded and re-upgraded against the **dev**
+> database; `alembic current` said `0022_plate_model_hash_index` beforehand this
+> round.
+>
+> **The reprice also had to be told where it may not write the number.**
+> `attach_plate` put `quoted_cost` and `prepared_cost` into the job's *journal*
+> as well as onto the `EstimateVariance` row, and a `JobEvent`'s `details` rides
+> out on `JobView.events` — which `GET /jobs/{job_id}` serves under
+> `VIEW_PRODUCTION` alone, the permission an operator holds. `GET /jobs/variances`
+> gates the identical pair on `VIEW_FINANCIALS`, so the journal was a second,
+> ungated copy: CLAUDE.md §1's money split, defeated by the other door. It read
+> `"0"` for as long as the console's plate upload was the only caller, because
+> those two costs are query parameters the console does not send — so the leak
+> existed and was empty, and this branch is what fills it. The pair is out of
+> `details` now; `overrun_ratio` stays, because a ratio is not money and it is
+> what the floor reads an `ON_HOLD` against.
+> `test_the_job_journal_does_not_carry_money_to_the_floor` reads the job as an
+> **operator** and `test_the_sweeps_journal_entry_carries_no_money` guards the
+> write; putting the two costs back fails both, which was run.
+>
+> **The wiring is covered now, and it was the one hole between "the code exists"
+> and "the farm uses it".** `workers/passes.py` supplies `CachedPlates` to the
+> sweep, and deleting that argument returned the farm to clicking with every test
+> still green — the two cache-hit files build the sweep themselves, and the one
+> test that goes near it asserts the *fallback* is safe, which is the opposite
+> claim. `tests/unit/test_intake_pass_wiring.py` drives `IntakePass` itself against
+> a stand-in runtime (the real one opens three Redis connections), and removing
+> `cached` from `passes.py` now fails it. It is still the only worker pass in this
+> tree with a wiring test.
 
 **The masthead no longer tells a signed-in customer they are signed out, and the
 journal's «—» is now proved at the screen rather than at the component**
@@ -732,11 +979,12 @@ order.
 > whose `prepared_cost` is `NOT NULL`, and nothing prices a plate — a zero there
 > would record "the estimate was perfect" for a variance nobody measured, which is
 > §1 of CLAUDE.md in the flattering direction. Repricing from slicer truth is
-> [#58](https://github.com/iritur/printorian/issues/58). And a line carrying an
-> asset whose digest will not resolve **refuses the whole order** instead of making
-> the job: a job with an asset but no `model_hash` slices, prints and ships
-> correctly, and quietly sends every repeat of that configuration back through an
-> engineer for ever, because `plate_key` can never match it.
+> [#58](https://github.com/iritur/printorian/issues/58) — **and that half is no
+> longer true; the entry at the top of this section is what replaced it.** And a
+> line carrying an asset whose digest will not resolve **refuses the whole order**
+> instead of making the job: a job with an asset but no `model_hash` slices, prints
+> and ships correctly, and quietly sends every repeat of that configuration back
+> through an engineer for ever, because `plate_key` can never match it.
 
 **Open work has moved into GitHub issues, and this changes where to look first.**
 Forty-seven issues across twelve milestones, with the labels and the process in

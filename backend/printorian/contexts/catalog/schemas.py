@@ -63,6 +63,11 @@ class PreparedPlateView(BaseModel):
     printer_profile: str = ""
     layout_hash: str = ""
 
+    #: How many copies of the model are on the plate, or `None` when nobody wrote
+    #: it down. `None` is what stops the unattended intake path attaching it: the
+    #: plate's minutes and grams are the *whole* bed's, and dividing them by an
+    #: assumed layout is how a two-up plate priced itself as a one-up one.
+    copies: int | None = None
     #: Exact, from the slicer — not the mesh heuristic the order was priced from.
     print_minutes: Decimal = Decimal(0)
     #: Grams per slot, as strings so no decimal precision is lost through JSON.
@@ -95,6 +100,19 @@ class RecordPlate(BaseModel):
     printer_profile: str = Field(min_length=1, max_length=120)
     layout_hash: str = Field(default="", max_length=64)
 
+    #: How many copies of the model this slice put on the bed.
+    #:
+    #: Optional, and **not** defaulted to one: an engineer who does not say leaves
+    #: the plate usable by every path where a person can look at the bed, and
+    #: unusable by the unattended one (`workers/cached_plates.py`). Defaulting it
+    #: would be the automatic path acting on a layout nobody recorded.
+    #:
+    #: Not parsed from the 3MF either, though the container is already read for
+    #: minutes and grams. `plate_file.py` says in its own docstring that the sliced
+    #: `<plate>` shape is implemented from documentation and has never been seen
+    #: from this farm's slicer — and a *miscount* here does not fail loudly, it
+    #: attaches the wrong plate quietly. The number is asked for instead.
+    copies: int | None = Field(default=None, ge=1)
     print_minutes: Decimal = Field(ge=0)
     #: Per AMS slot. A total would hide that one spool is nearly out.
     filament_grams: dict[str, Decimal] = Field(default_factory=dict)

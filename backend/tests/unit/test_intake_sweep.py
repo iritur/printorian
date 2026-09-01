@@ -66,6 +66,8 @@ async def a_paid_order(
     asset_id: EntityId | None,
     quantity: int = 1,
     status: OrderStatus = OrderStatus.PAID,
+    scale: Decimal = Decimal(1),
+    mesh: dict[str, object] | None = None,
 ) -> EntityId:
     """An order sitting where `payments` leaves it, with one line on it."""
     order = Order(id=new_id(), number=number, status=status)
@@ -78,7 +80,8 @@ async def a_paid_order(
             model_asset_id=asset_id,
             material_code="pla-white",
             quantity=quantity,
-            scale=Decimal(1),
+            scale=scale,
+            mesh=dict(mesh) if mesh is not None else {},
             colors=["white"],
             estimated_minutes=Decimal(120),
             estimated_grams=Decimal(50),
@@ -135,6 +138,59 @@ async def test_the_line_quantity_reaches_the_job(
     (job,) = await jobs_for(db_session, order_id)
     assert job.grams_required == Decimal(150)
     assert job.estimated_minutes == Decimal(360)
+
+
+async def test_the_job_carries_the_part_at_the_size_it_was_ordered(
+    db_session: AsyncSession, sweep: IntakeSweep
+) -> None:
+    """A 40 mm mesh at scale 3 is a 120 mm part, and the planner has to be told so.
+
+    The bounding box stored on the line is the box of the **unscaled** mesh —
+    `_pricing_spec` writes `analysis.bounding_box` verbatim while `estimate()`
+    applies the scale only to volume, mass and time. `_dimensions` used to copy it
+    across untouched, so `fleet.can_take`'s only geometric test
+    (`job.width_mm > printer.width_mm`) judged every machine in the farm against a
+    third of the real part, and the correctly-scaled plate went to a printer that
+    could not hold it.
+
+    Drop the multiplication in `core.geometry.scaled_box` and this asserts 40.
+    """
+    asset_id = await an_asset(db_session)
+    order_id = await a_paid_order(
+        db_session,
+        number="INTAKE-SCALE",
+        asset_id=asset_id,
+        scale=Decimal(3),
+        mesh={"bounding_box_mm": {"x": "40", "y": "30", "z": "20"}},
+    )
+
+    await sweep.sweep()
+
+    (job,) = await jobs_for(db_session, order_id)
+    assert job.width_mm == Decimal(120)
+    assert job.depth_mm == Decimal(90)
+    assert job.height_mm == Decimal(60)
+
+
+async def test_a_job_whose_part_was_never_measured_carries_no_box(
+    db_session: AsyncSession, sweep: IntakeSweep
+) -> None:
+    """Zero, not a guess — and the reason it is safe only on this path.
+
+    An invented box would have the planner refuse machines that would have fitted,
+    or accept one that would not. Zero means "no constraint", which is right while
+    a person releases the job; `workers/plate_admission` refuses the *unattended*
+    path outright rather than letting the same zero read as "fits everything".
+    """
+    asset_id = await an_asset(db_session)
+    order_id = await a_paid_order(db_session, number="INTAKE-NOBOX", asset_id=asset_id, mesh={})
+
+    await sweep.sweep()
+
+    (job,) = await jobs_for(db_session, order_id)
+    assert job.width_mm == Decimal(0)
+    assert job.depth_mm == Decimal(0)
+    assert job.height_mm == Decimal(0)
 
 
 async def test_a_line_with_no_asset_still_becomes_a_job(

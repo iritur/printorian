@@ -14,7 +14,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 
 from printorian.api.deps import (
     AppSettings,
@@ -191,6 +191,13 @@ async def upload_plate_file(
     settings: AppSettings,
     actor: CurrentActor,
     printer_profile: str = "default",
+    # The same bound `RecordPlate.copies` carries, declared here because a query
+    # parameter is validated *before* the handler runs and the model is validated
+    # after `storage.put`. Without it `?copies=0` raised a bare pydantic
+    # `ValidationError` out of the handler — unhandled by `api/errors.py`, so a 500
+    # with no machine-readable code (ADR-0012) and an uploaded blob orphaned in the
+    # object store with no row referencing it.
+    copies: Annotated[int | None, Query(ge=1)] = None,
     quoted_cost: Decimal = Decimal(0),
 ) -> JobView:
     """Take the sliced plate an engineer produced, and read the truth out of it.
@@ -204,6 +211,16 @@ async def upload_plate_file(
     rather than a guess when the file does not say, and the caller is then told to
     record them by hand — an invented print time would be repriced against as
     though it were the truth (ADR-0013).
+
+    ``copies`` is the exception, and it is asked for because it is *not* parsed.
+    How many copies of the model are on the bed is what decides whether a later
+    order of this configuration may attach this plate unattended
+    (`PreparedPlate.copies`), and `plate_file.py` says plainly that the sliced
+    `<plate>` element it would have to be counted out of has never been seen from
+    this farm's slicer. A miscount there would not fail loudly; it would attach the
+    wrong plate quietly. Omitted, the plate is recorded with no copy count and
+    stays usable by every path where a person can look at the bed — the automatic
+    one simply declines it.
     """
     content = await plate.read()
     if len(content) > settings.max_upload_bytes:
@@ -230,6 +247,7 @@ async def upload_plate_file(
             # job: the same geometry sliced for a P1S and for an X1C are two
             # plates, and the key has to tell them apart.
             printer_profile=printer_profile,
+            copies=copies,
             print_minutes=Decimal(numbers.print_minutes or 0),
             filament_grams=dict(numbers.filament_grams),
             filename=plate.filename or "plate.3mf",

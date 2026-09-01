@@ -16,16 +16,19 @@ makes the missing ones, so a missed tick costs latency and never an order.
 It composes two contexts — `ordering` owns the order and its lines, `production`
 owns the job — which is why it lives here and not in either of them.
 
-**What it deliberately does not do.** Every order it raises goes to `PREP`, even
-when the configuration has been sliced before. Routing a cache hit straight to
-`QUEUED` means attaching the plate, and attaching a plate writes an
-`EstimateVariance` whose `prepared_cost` is `NOT NULL` (ADR-0013) — and nothing in
-the system prices a plate. Passing a zero there, or copying the quote, would
-record "the estimate was perfect" for a variance nobody measured, which is exactly
-the invented number CLAUDE.md §1 forbids and in the flattering direction. So the
-hit still reaches an engineer, who sees from `GET /jobs/plates/find` that the work
-is already done and attaches it in a click rather than a slice. Closing that last
-gap is repricing a line from slicer truth, and it is its own issue.
+**A cache hit now skips prep entirely.** This pass used to send every order to
+`PREP`, sliced before or not, because attaching a plate writes an
+`EstimateVariance` whose `prepared_cost` is `NOT NULL` (ADR-0013) and nothing in
+the system priced a plate; a zero there, or the quote copied across, would have
+recorded "the estimate was perfect" for a variance nobody measured.
+`workers/cached_plates.py` is the answer to that — the plate's own minutes and
+grams, repriced under the order's *own* pinned rates (ADR-0020) — and with a real
+`prepared_cost` in hand a paid order can do what ROADMAP Phase 4 asks: payment to
+`QUEUED`, no human anywhere in it.
+
+Which of the three destinations an order actually reaches, and why the order
+between them matters, is `workers/intake_routing.py`. This file stops at "the jobs
+exist"; that one decides whether the farm may start them itself.
 """
 
 from __future__ import annotations
@@ -46,7 +49,10 @@ from printorian.contexts.ordering.models import Order, OrderLine
 from printorian.contexts.production import CreateJob, ProductionService
 from printorian.contexts.production.models import PrintJob
 from printorian.core.errors import DomainRuleViolationError, PrintorianError
+from printorian.core.geometry import scaled_box
 from printorian.core.ids import EntityId
+from printorian.workers.cached_plates import CachedPlates
+from printorian.workers.intake_routing import OrderRouting
 
 logger = structlog.get_logger(__name__)
 
@@ -70,10 +76,23 @@ class SweepOutcome:
 class IntakeSweep:
     """One reconciling pass over paid orders that have no jobs."""
 
-    def __init__(self, db: AsyncSession, production: ProductionService, ordering: OrderingService):
+    def __init__(
+        self,
+        db: AsyncSession,
+        production: ProductionService,
+        ordering: OrderingService,
+        cached: CachedPlates | None = None,
+        *,
+        tolerance: Decimal = Decimal(0),
+    ):
         self._db = db
         self._production = production
         self._ordering = ordering
+        #: `cached` and `tolerance` are this pass's arguments rather than the
+        #: routing's, because they are what a *caller* chooses — `workers/passes.py`
+        #: supplies both, and a caller that supplies neither is choosing the manual
+        #: path. What they mean once chosen is argued in `intake_routing.py`.
+        self._routing = OrderRouting(production, cached, tolerance=tolerance)
 
     async def sweep(self) -> SweepOutcome:
         raised = jobs = failed = 0
@@ -116,7 +135,10 @@ class IntakeSweep:
         return list(await self._db.scalars(query))
 
     async def _raise_for(self, order_id: EntityId) -> int:
-        """Make one job per line, then move the order on to prep.
+        """Make one job per line, then move the order on to wherever it belongs.
+
+        Where that is, is `intake_routing.py`'s answer — `PREP` unless the farm
+        can attach and price every plate itself.
 
         Returns how many jobs were made. Zero means the order was skipped rather
         than converted, and it keeps its status so somebody can find it.
@@ -136,10 +158,12 @@ class IntakeSweep:
             return 0
 
         hashes = await self._model_hashes(lines)
-        for line in lines:
-            await self._production.create_job(self._job_for(line, order, hashes))
+        jobs = [
+            await self._production.create_job(self._job_for(line, order, hashes)) for line in lines
+        ]
 
-        await self._ordering.advance(order.id, OrderStatus.PREP, reason="order.intake")
+        target = await self._routing.route(order, lines, jobs, hashes)
+        await self._ordering.advance(order.id, target, reason="order.intake")
         return len(lines)
 
     async def _model_hashes(self, lines: list[OrderLine]) -> dict[EntityId, str]:
@@ -201,24 +225,29 @@ class IntakeSweep:
 
 
 def _dimensions(line: OrderLine) -> dict[str, Decimal]:
-    """The part's bounding box, from the geometry the line was priced on.
+    """The part's bounding box, at the size it was ordered.
+
+    **At the size it was ordered** is the correction worth reading. The box stored
+    on the line is the box of the *unscaled* mesh — `_pricing_spec` writes
+    `analysis.bounding_box` verbatim while `estimate()` applies the scale only to
+    volume, mass and time — so this used to hand the planner a 100 mm part for a
+    100 mm mesh ordered at scale 3. `fleet.can_take`'s only geometric test is
+    `job.width_mm > printer.width_mm`, so every printer in the farm was judged
+    against a third of the real part. `core.geometry.scaled_box` is that
+    multiplication, shared with `workers/packaging`, which was reading the same
+    unscaled box for the shipping carton.
 
     Zero for geometry nobody measured, which is what the column already defaults
     to and what the planner reads as "no constraint" — an *invented* box would
     have the planner refuse machines that would have fitted it, or accept one that
-    would not.
+    would not. That default is safe only because a person releases the job:
+    `workers/plate_admission` refuses the unattended path outright rather than
+    letting a zero read as "fits every machine".
     """
-    box: Any = line.mesh.get("bounding_box_mm") if isinstance(line.mesh, dict) else None
-    if not isinstance(box, dict):
+    box = scaled_box(line.mesh, line.scale)
+    if box is None:
         return {"width_mm": Decimal(0), "depth_mm": Decimal(0), "height_mm": Decimal(0)}
-    try:
-        return {
-            "width_mm": Decimal(str(box["x"])),
-            "depth_mm": Decimal(str(box["y"])),
-            "height_mm": Decimal(str(box["z"])),
-        }
-    except (KeyError, ArithmeticError, TypeError, ValueError):
-        return {"width_mm": Decimal(0), "depth_mm": Decimal(0), "height_mm": Decimal(0)}
+    return {"width_mm": box.x, "depth_mm": box.y, "height_mm": box.z}
 
 
 async def run_forever(

@@ -88,7 +88,19 @@ class OrderStatus(StrEnum):
 TRANSITIONS: dict[OrderStatus, frozenset[OrderStatus]] = {
     OrderStatus.DRAFT: frozenset({OrderStatus.AWAITING_PAYMENT, OrderStatus.CANCELLED}),
     OrderStatus.AWAITING_PAYMENT: frozenset({OrderStatus.PAID, OrderStatus.CANCELLED}),
-    OrderStatus.PAID: frozenset({OrderStatus.PREP, OrderStatus.QUEUED, OrderStatus.REFUNDED}),
+    # `PRICE_REVIEW` straight from `PAID` because prep is now skippable. The
+    # intake sweep attaches a cached plate itself and applies ADR-0013's band, so
+    # the sliced truth can exceed the quote before any engineer has touched the
+    # order. The alternative was recording a `PREP` the order never entered, to
+    # keep a path that was only ever an artefact of who noticed first.
+    OrderStatus.PAID: frozenset(
+        {
+            OrderStatus.PREP,
+            OrderStatus.PRICE_REVIEW,
+            OrderStatus.QUEUED,
+            OrderStatus.REFUNDED,
+        }
+    ),
     OrderStatus.PREP: frozenset(
         {OrderStatus.QUEUED, OrderStatus.PRICE_REVIEW, OrderStatus.REFUNDED}
     ),

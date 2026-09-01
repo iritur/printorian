@@ -153,6 +153,42 @@ async def test_re_slicing_replaces_the_truth_rather_than_adding_a_row(
     assert found.print_minutes == Decimal(80)
 
 
+async def test_re_slicing_clears_a_copy_count_the_new_slice_did_not_state(
+    library: PlateLibrary,
+) -> None:
+    """The one field on this row that decides whether a later order attaches alone.
+
+    `record` overwrites every field rather than merging, and the comment above
+    `plate.copies` says that is deliberate — but nothing held it. The natural
+    refactor ("do not clobber what the caller did not send") passes thirty-nine
+    tests, and this is what it costs: a three-up plate is recorded with `copies=3`;
+    the configuration is later re-sliced **one-up** and re-recorded through
+    `POST /jobs/{id}/plate/file`, which sends no `copies` at all — that is what the
+    console does today — so the minutes and grams become the one-up figures while
+    `copies` stays 3. The next order for three then attaches a one-up plate,
+    `attach_plate` writes a third of the work onto the job, the reprice divides
+    that third by three and lands well inside ADR-0013's band, and the farm prints
+    one, ships three short, and records an accurate estimate.
+
+    Which is the defect `PreparedPlate.copies` exists to prevent, reintroduced
+    through the single line that prevents it.
+    """
+    await library.record(a_plate(copies=3, print_minutes=Decimal(240)))
+    await library.record(a_plate(print_minutes=Decimal(80)))
+
+    found = await library.find(
+        model_hash="abc123",
+        scale=Decimal(1),
+        material_code="pla-white",
+        printer_profile="p1s-0.4-pla",
+    )
+    assert found is not None
+    assert found.print_minutes == Decimal(80)
+    # Not 3. A stale count beside fresh minutes is worse than no count at all:
+    # `workers/plate_admission` refuses a NULL and would have trusted the 3.
+    assert found.copies is None
+
+
 async def test_provenance_is_kept(
     library: PlateLibrary, clock: FixedClock, db_session: AsyncSession
 ) -> None:

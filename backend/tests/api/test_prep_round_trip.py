@@ -28,7 +28,7 @@ from printorian.core.config import Settings
 from printorian.core.db import Base
 from printorian.core.events import EventBus
 from printorian.core.ids import new_id
-from printorian.core.storage import InMemoryObjectStore
+from printorian.core.storage import InMemoryObjectStore, ObjectNotFoundError, digest_of
 from tests.conftest import ensure_order, wire_app
 
 PASSWORD = "correct-horse-battery"
@@ -286,6 +286,44 @@ async def test_a_plate_that_does_not_state_its_numbers_is_refused(
 
     assert response.status_code == 422
     assert response.json()["code"] == "error.catalog.plate_not_parsed"
+    # Still in the queue: nothing was recorded, so there is still work to do.
+    assert len((await client.get("/jobs/prep-queue", headers=eng)).json()) == 1
+
+
+async def test_a_copy_count_below_one_is_refused_before_anything_is_stored(
+    client: AsyncClient,
+    settings: Settings,
+    clock: FixedClock,
+    bus: EventBus,
+    object_store: InMemoryObjectStore,
+) -> None:
+    """`?copies=0` used to be a 500 with an orphaned blob behind it.
+
+    `RecordPlate.copies` carries `ge=1`; the query parameter carried nothing, so
+    FastAPI let a zero through and the handler read the upload, parsed it and
+    called `storage.put` **before** constructing the model — which then raised a
+    bare pydantic `ValidationError`. `api/errors.py` registers handlers for
+    `PrintorianError` and `RequestValidationError` only, so the caller got a 500
+    with no machine-readable code (ADR-0012) and the bytes stayed in the object
+    store with no row referencing them.
+
+    The bound on the parameter is what makes it a 422 from FastAPI's own
+    validation, before the handler runs at all — which is why the store is
+    asserted empty rather than merely the status code checked.
+    """
+    job_id, _ = await a_job_with_a_model(settings, clock, bus, object_store)
+    eng = await auth(client, "eng@example.com")
+    plate = a_sliced_3mf()
+
+    response = await client.post(
+        f"/jobs/{job_id}/plate/file?copies=0",
+        files={"plate": ("cube.3mf", plate, "application/octet-stream")},
+        headers=eng,
+    )
+
+    assert response.status_code == 422, response.text
+    with pytest.raises(ObjectNotFoundError):
+        await object_store.get(digest_of(plate))
     # Still in the queue: nothing was recorded, so there is still work to do.
     assert len((await client.get("/jobs/prep-queue", headers=eng)).json()) == 1
 
