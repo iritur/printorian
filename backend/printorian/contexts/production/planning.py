@@ -180,17 +180,36 @@ async def persist_plan(
 async def _refresh_wait_list(
     db: AsyncSession, bus: EventBus, result: Plan, by_id: dict[str, PrintJob]
 ) -> None:
-    """Replace each waiting job's row rather than appending to it.
+    """Rewrite the wait list for every job this pass touched, not just the waiting ones.
 
-    A job is either waiting or it is not. Appending would let the cabinet show a
-    customer a stale reason beside a current one.
+    A job is either waiting or it is not, so the row is replaced rather than
+    appended to — otherwise the cabinet shows a customer a stale reason beside a
+    current one.
+
+    **The batch, not `result.wait_list`.** Discarding only the rows of jobs that
+    are *still* waiting is the same fault one pass later. A job wait-listed on one
+    pass and assigned on the next is absent from `result.wait_list` — it is not
+    waiting any more — and nothing else ever deleted its row: the farm-wide
+    `wait_list.clear_wait_list` is a person pressing a button, and the foreign keys
+    cascade only when the job or its order is destroyed.
+
+    So the row outlived the wait, and three readers took it for current.
+    `queue.queue_position` told that customer why their work was stuck while it
+    was already on a machine; because a position is counted by comparing predicted
+    starts across the whole table, that phantom also pushed everyone behind them
+    one place further back; and `reads.wait_list` and `schedule.wait_list_size`
+    count the same rows, so the floor and the dashboard chip saw it too.
+
+    Every job in the batch had its wait decided by this pass — the planner assigns
+    it or wait-lists it, never neither — which is what makes the whole batch the
+    honest set to clear. The ones still waiting are written back immediately below.
 
     The delete goes through `wait_list.discard` rather than being written out
     here, because the settings screen's «Очистить лист ожидания» removes rows from
     this same table and two hand-written deletes to one irreversible act are how
     the two stop agreeing about what removing a row means.
     """
-    await wait_list.discard(db, job_ids=[by_id[entry.job_id].id for entry in result.wait_list])
+    await wait_list.discard(db, job_ids=[job.id for job in by_id.values()])
 
     for entry in result.wait_list:
         job = by_id[entry.job_id]
