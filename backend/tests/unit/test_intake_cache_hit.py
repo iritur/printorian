@@ -18,8 +18,14 @@ that nothing priced a plate: a zero there, or the quote copied across, records
 flattering direction, on the table ADR-0013 exists to make trustworthy. So the
 cost is asserted against a figure `_intake_cache_support` computes for itself out
 of the pricing engine, and then again by *moving* the plate and the order's pinned
-rates and watching it follow. A constant and a copied quote each fail at least two
-of these; both mutations were run.
+rates and watching it follow.
+
+Both of the shapes #41 refused were then applied as mutations and run. Passing
+`Decimal(0)` failed four of the five tests here; passing `line.line_total` failed
+the same four. Returning a fresh `RateSnapshot()` from `CachedPlates._rates_for`
+instead of the pinned one failed
+`test_the_orders_own_rates_are_used_and_not_todays` and nothing else — which is
+what that test is for, and why it is not folded into the one above it.
 """
 
 from __future__ import annotations

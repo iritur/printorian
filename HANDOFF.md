@@ -7,10 +7,14 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
-**As of:** 2026-08-31 · **1 345 backend tests collected**, and **not** all ten
-gates green on this branch in one place. The count and the six gates below were
-measured on the tree with `main` merged in, which is what this branch now is:
-`main` gained the design-kit conventions (#88) while this was in review.
+**As of:** 2026-09-01 · **1 360 backend tests collected** — **1 352 passed, 8
+skipped, `exit=0`, 15m49s** on `feat/58-reprice-cache-hit` with `main` merged in,
+alongside the six backend gates each run separately and each `exit=0`. The
+frontend was neither built nor tested: this worktree has no `node_modules`, so
+that half of the ten gates is CI's evidence and not this file's. **The three
+paragraphs below describe the tree #31 was measured on**, which is what `main`
+then became; they are kept because what they say about *why* a number was withheld
+still holds.
 
 **The frontend count is deliberately absent rather than carried forward.** The
 line arrived on `main` saying 249 with the #37 entry directly beneath it saying
@@ -39,6 +43,93 @@ already been corrected for confusing once. It describes neither this branch,
 which adds `tests/api/test_settings_api.py`, nor the merge with #88 on top of it.
 No full-suite run on the merged tree is claimed here; CI on this pull request is
 that evidence.
+
+**A paid order whose configuration is already sliced now reaches `QUEUED` by
+itself** ([#58](https://github.com/iritur/printorian/issues/58)). The intake sweep
+attaches the cached `PreparedPlate` and applies ADR-0013's band with nobody in the
+loop, so ROADMAP Phase 4's exit criterion — payment to a machine starting the job
+with no human action — holds for the cached half instead of ending in an engineer
+clicking «attach» on work the farm already has.
+
+> **The whole issue was one `NOT NULL` column.** `EstimateVariance.prepared_cost`
+> had no source: pricing happens once, at quote time, and nothing in the system
+> prices a plate. #41 stopped here rather than pass a zero. `pricing/reprice.py`
+> is that source, and it is deliberately a **difference** rather than a fresh
+> total — `line_total + (price with the plate's minutes and grams − price with the
+> numbers that were quoted)`, both under the order's own pinned `RateSnapshot`.
+> Two inputs of the original quote cannot be recovered from the order and each
+> would land on the money column: the **customer tier**, resolved from spend at
+> checkout and held by no column — only its effect survives, as a discount line
+> inside `price_breakdown`, and rebuilding the tier from that is a second loyalty
+> ladder — and the **per-line quote**, which does not exist at all, because
+> `place` prices the order and apportions the total by quantity. A difference
+> cancels both. Do not "simplify" it into `price(spec).total`.
+>
+> **The draft this branch inherited attached a one-up plate to a line of three,
+> and that is the part to remember.** Nothing on a `PreparedPlate` records how
+> many copies are on it — `layout_hash` is opaque — so the sweep cannot tell three
+> cubes from one. `attach_plate` then takes the plate's minutes and grams as the
+> job's *whole* work, and the reprice divides those same totals by the quantity,
+> so the line comes out at a third of what was quoted and sits comfortably
+> **inside** the band. Under-printed, underpriced, dispatched, and written down as
+> an excellent estimate — CLAUDE.md §1 in both directions at once. The sweep now
+> refuses any line whose quantity is not one, for the same reason it refuses a
+> multi-line order: the number it would need was never measured.
+> `test_a_line_of_three_is_not_attached_to_a_plate_of_unknown_copies` is the
+> tripwire, and it was watched failing before the guard was written.
+>
+> **A payload that will not rebuild must cost one order, not the pass.**
+> `IntakeSweep.sweep` rescues `PrintorianError` per order and nothing else, and
+> `Decimal("no longer a number")` raises `InvalidOperation`, which is not one — so
+> a single unreadable `RateSnapshotRecord` escaped the whole pass and left every
+> *other* paid order in the batch jobless. It is caught where it happens now, and
+> the test asserts on the healthy order standing beside the broken one.
+>
+> **The snapshot-id check is what keeps ADR-0020 true.** `rates_from_dict` fills a
+> field a stored row lacks with today's default, so a rebuilt snapshot whose hash
+> no longer matches its row was completed from numbers that were never in force,
+> and is refused. Without it, adding one rate to `RateSnapshot` would silently
+> re-rate every older order this path touches, and nothing would say so.
+>
+> **`PAID → PRICE_REVIEW` is a legal transition now**, because a cache hit can
+> exceed the band before any engineer has touched the order. The alternative was
+> recording a `PREP` the order never entered.
+>
+> **`intake.py` hit the 400-line gate and split into two files.**
+> `intake.py` still answers "which paid orders have no jobs, and what jobs do they
+> need" — #41's question, and the one that runs whether or not the farm has a
+> plate library. `intake_routing.py` answers the one #58 added: the jobs exist,
+> may the farm start them itself? That is the seam, not the line the counter
+> tripped on, and it is the same cut `runner.py` took.
+>
+> **`CachedPlates` is an optional collaborator of `IntakeSweep`, wired in
+> `workers/passes.py`.** Withheld, every order goes to prep exactly as before — so
+> deleting that one line returns the farm to clicking, silently, which is why a
+> test pins that the fallback is at least the safe one.
+>
+> **`DATABASE-REVIEW.md` §1 now says twenty-four migrations**, because
+> `0022_plate_model_hash_index` made it twenty-four and
+> `test_the_migration_count_matches_the_versions_directory` failed the whole suite
+> until it did. That test is the reason a doc figure moved on the same commit as
+> the schema instead of six weeks later.
+>
+> **Measured, not asserted, and the draft was measured too.** All six backend
+> gates run separately on the final tree, each `exit=0`; the whole suite **1 352
+> passed / 8 skipped, `exit=0`, 15m49s**, of which fifteen tests are new. Every
+> claim above was mutation-proved: `prepared_cost=Decimal(0)` and
+> `prepared_cost=line.line_total` each failed four of the five cache-hit tests;
+> a fresh `RateSnapshot()` in place of the pinned one failed the ADR-0020 test
+> alone; dropping the snapshot-id check, the `PRICE_REVIEW` branch, the
+> "never picks between two plates" rule and the rebuild guard each failed exactly
+> the test named for it; and forcing the routing back to `PREP` failed six. The
+> migration was upgraded, `alembic check`ed, downgraded and re-upgraded against
+> the **dev** database, which `alembic current` said was at `0020` beforehand.
+>
+> **One thing that is not covered.** `workers/passes.py` supplies `CachedPlates`
+> to the sweep and nothing tests that it does; deleting that argument returns the
+> farm to clicking with every test still green. No worker pass in this tree has a
+> wiring test, so it is a gap in the shape of the suite rather than one carved for
+> this change — but it is the gap, and it is written here rather than nowhere.
 
 **The third irreversible operation exists, and it shares its delete with the
 planner** ([#31](https://github.com/iritur/printorian/issues/31)).
@@ -145,56 +236,6 @@ had not received and `0` for every section beside it, in the same line of pixels
 > grepped: `hv-tabs__btn` appears **zero** times in either `apps/*/dist/assets/*.js`,
 > which is what "no caller yet" means, and `hv-tags` appears exactly once in each,
 > which is what "one chip row" means.
-
-**A paid order whose configuration is already sliced now reaches `QUEUED` on its
-own** ([#58](https://github.com/iritur/printorian/issues/58)). The intake sweep
-attaches the cached `PreparedPlate` and applies ADR-0013's band itself, so ROADMAP
-Phase 4's exit criterion — payment to a machine starting the job with no human
-action — holds for the cached half without an engineer clicking «attach» on work
-the farm already has.
-
-> **The whole issue was one `NOT NULL` column.** `EstimateVariance.prepared_cost`
-> has no source: pricing happens once, at quote time, and nothing in the system
-> prices a plate. #41 stopped here rather than pass a zero. What unblocks it is
-> `pricing/reprice.py`, and it is deliberately a **difference** rather than a
-> fresh total — `line_total + (price with the plate's minutes and grams − price
-> with the numbers that were quoted)`, both under the order's own pinned
-> `RateSnapshot`. Two inputs of the original quote are not recoverable from the
-> order and both would land on the money column: the **customer tier**, resolved
-> from spend at checkout and never stored, and the **per-line quote**, which does
-> not exist — `place` prices the order and apportions the total by quantity. A
-> difference cancels both. Do not "simplify" it into `price(spec).total`.
->
-> **Seven ways it declines, and each one is the point.** No plate; more than one
-> plate for the configuration; no pinned snapshot; a stored snapshot that no
-> longer rebuilds to its own content hash; a material gone from the catalogue; a
-> plate with no minutes; a multi-line order. Every one leaves the job `PENDING`
-> and the order in `PREP`, which is exactly where it went before. A variance
-> nobody measured is worse than none, because it looks measured.
->
-> **The multi-line refusal is a real limitation, not caution.**
-> `OrderingService.place` prices the order from `lines[0]` and apportions the
-> total across lines by quantity, so `line_total` on a multi-line order is a share
-> and was never a quote for that line's work. Widening this means giving
-> `ordering` a per-line price, which is a change to what an order *is*.
->
-> **The snapshot-id check is what keeps ADR-0020 true.** `rates_from_dict` fills
-> a field a stored row lacks with today's default, so a rebuilt snapshot whose
-> hash no longer matches its row was completed from numbers that were never in
-> force, and is refused. Without it, adding one rate would silently re-rate every
-> older order this path touches. Mutated and measured: replacing the pinned
-> snapshot with a fresh `RateSnapshot()` failed the "own rates, not today's" test
-> and the drift test; returning `line.line_total` as the prepared cost failed four
-> tests, including the `ON_HOLD` branch.
->
-> **`PAID → PRICE_REVIEW` is now a legal transition**, because a cache hit can
-> exceed the band before any engineer has touched the order. The alternative was
-> recording a `PREP` the order never entered.
->
-> **`CachedPlates` is an optional collaborator of `IntakeSweep`, wired in
-> `workers/passes.py`.** Withheld, every order goes to prep exactly as before —
-> so dropping that line returns the farm to clicking, silently. There is a test
-> pinning that the fallback is at least the safe one.
 
 **The delete rules are held to a test, and one way this suite can lie is now
 written down** ([#47](https://github.com/iritur/printorian/issues/47)).
@@ -663,11 +704,12 @@ order.
 > whose `prepared_cost` is `NOT NULL`, and nothing prices a plate — a zero there
 > would record "the estimate was perfect" for a variance nobody measured, which is
 > §1 of CLAUDE.md in the flattering direction. Repricing from slicer truth is
-> [#58](https://github.com/iritur/printorian/issues/58). And a line carrying an
-> asset whose digest will not resolve **refuses the whole order** instead of making
-> the job: a job with an asset but no `model_hash` slices, prints and ships
-> correctly, and quietly sends every repeat of that configuration back through an
-> engineer for ever, because `plate_key` can never match it.
+> [#58](https://github.com/iritur/printorian/issues/58) — **and that half is no
+> longer true; the entry at the top of this section is what replaced it.** And a
+> line carrying an asset whose digest will not resolve **refuses the whole order**
+> instead of making the job: a job with an asset but no `model_hash` slices, prints
+> and ships correctly, and quietly sends every repeat of that configuration back
+> through an engineer for ever, because `plate_key` can never match it.
 
 **Open work has moved into GitHub issues, and this changes where to look first.**
 Forty-seven issues across twelve milestones, with the labels and the process in

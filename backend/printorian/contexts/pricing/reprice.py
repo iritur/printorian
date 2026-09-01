@@ -21,10 +21,12 @@ kept precisely so work already sold can be re-derived without being re-rated.
 original quote are not recoverable from the order, and both would land on the
 money column:
 
-* the **customer tier** — the loyalty discount is resolved from what the customer
-  had spent at checkout and is never stored, so re-deriving it today would apply a
-  different discount, and omitting it would overstate the prepared cost by the
-  whole of it;
+* the **customer tier** — resolved from what the customer had spent at checkout,
+  and held by no column on the order; only its *effect* survives, as a rendered
+  discount line inside `price_breakdown`, and rebuilding a tier out of that is a
+  second implementation of the loyalty ladder. Re-deriving it from today's spend
+  would apply a different discount, and omitting it would overstate the prepared
+  cost by the whole of it;
 * the **per-line quote** — `OrderingService.place` prices the order and then
   *apportions* the total across lines by quantity, so `line_total` on a multi-line
   order is a share and not a price.
@@ -66,6 +68,15 @@ def prepared_cost(
     `estimated_minutes` and `grams_required`. The engine wants per-unit figures
     and multiplies by quantity, so they are divided here rather than at the call
     site: dividing in two places is how the two would eventually disagree.
+
+    **That division is a claim the caller has to have earned.** Dividing by
+    ``quoted.quantity`` says the plate holds that many copies, and nothing on a
+    `PreparedPlate` records how many it holds. Hand this a one-up plate for a line
+    of three and it reprices at a third of the work — inside the band, in the
+    flattering direction, on the table ADR-0013 exists to make trustworthy. The
+    automatic caller (`workers/intake_routing.py`) therefore refuses any line whose
+    quantity is not one; a caller that knows better because a person counted may
+    pass a larger one.
 
     Raises `ValidationError` (`error.pricing.print_time` / `error.pricing.material_mass`)
     when the plate carries no minutes or no grams. That is not a plate to price

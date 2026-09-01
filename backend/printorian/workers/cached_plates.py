@@ -14,11 +14,17 @@ same reasoning `workers/intake.py` gives for owning the order/job composition:
 the caller composes, the contexts do not.
 
 Every way this can decline to answer returns `None` and is logged with its own
-code, and none of them guesses. A line whose plate is missing, whose order pinned
-no rates, whose stored rates no longer rebuild to their own hash, whose material
-has left the catalogue, or whose plate carries no minutes — each of those is a
-job for an engineer, and each would otherwise be a fabricated variance on the one
-table ADR-0013 exists to make trustworthy.
+code, and none of them guesses. A line whose plate is missing or ambiguous, whose
+order pinned no rates, whose stored payload will not rebuild at all, whose rebuilt
+rates no longer hash to their own row, whose material has left the catalogue, or
+whose plate carries no minutes — each of those is a job for an engineer, and each
+would otherwise be a fabricated variance on the one table ADR-0013 exists to make
+trustworthy.
+
+The refusal that is *not* here is quantity, and it is the caller's because it is
+about the order rather than the plate: nothing records how many copies a plate
+holds, so `workers/intake_routing.py` declines any line of more than one before it
+ever asks. `pricing.reprice.prepared_cost` says what that division assumes.
 """
 
 from __future__ import annotations
@@ -144,7 +150,22 @@ class CachedPlates:
             logger.warning("intake.rates_not_pinned", order_id=str(order.id))
             return None
 
-        rates = rates_from_dict(record.payload)
+        try:
+            rates = rates_from_dict(record.payload)
+        except (ValidationError, ValueError, TypeError, KeyError, ArithmeticError):
+            # A payload the current `RateSnapshot` cannot be rebuilt from — a rate
+            # whose *type* changed between releases is the way this arrives, and
+            # it is the same family of drift the id check below is about.
+            #
+            # It is caught rather than allowed to propagate because of where this
+            # runs: `IntakeSweep.sweep` only rescues `PrintorianError` per order,
+            # so anything else escapes the whole pass and every *other* paid order
+            # in the batch stops being converted too. One unpriceable order must
+            # cost that order an engineer, not cost the farm its intake.
+            logger.warning(
+                "intake.rates_not_rebuildable", order_id=str(order.id), snapshot_id=record.id
+            )
+            return None
         if rates.snapshot_id != record.id:
             logger.warning(
                 "intake.rates_not_reproducible",

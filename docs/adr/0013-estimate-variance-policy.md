@@ -46,20 +46,33 @@ both priced under the order's **own pinned `RateSnapshot`** (ADR-0020), by
 
 **Why a difference and not a fresh total.** Two inputs of the original quote
 cannot be recovered from the order, and each would land on the money column this
-ADR exists to make trustworthy: the **customer tier**, whose loyalty discount is
-resolved from spend at checkout and never stored; and the **per-line quote**,
-which does not exist — `OrderingService.place` prices the order and apportions the
-total across lines by quantity. A difference cancels everything the two prices
-share, including both of those, and leaves only what actually changed. The
-residual error is a percentage of the delta rather than of the total, and it is
-in the direction that holds a job for a person.
+ADR exists to make trustworthy. The **customer tier**: it is resolved from spend
+at checkout, and no column on the order holds it — only its *effect* survives, as
+a rendered discount line inside `price_breakdown`, and rebuilding a `CustomerTier`
+out of that is a second implementation of the loyalty ladder. And the **per-line
+quote**, which does not exist at all — `OrderingService.place` prices the order and
+apportions the total across lines by quantity. A difference cancels everything the
+two prices share, including both of those, and leaves only what actually changed.
+The residual error is a percentage of the delta rather than of the total, and it
+is in the direction that holds a job for a person.
 
 **Where it refuses.** No plate, more than one plate for the configuration, no
-pinned snapshot, a stored snapshot that no longer rebuilds to its own content
-hash, a material no longer in the catalogue, a plate with no minutes, or a
-multi-line order: each of those leaves the job `PENDING` and the order in `PREP`.
-None of them guesses. That list is the shape of this ADR's obligation — a variance
-nobody measured is worse than no variance, because it *looks* measured.
+pinned snapshot, a stored payload that will not rebuild at all, a snapshot that
+rebuilds but no longer hashes to its own content, a material no longer in the
+catalogue, a plate with no minutes, a multi-line order, or a line of more than one
+unit: each of those leaves the job `PENDING` and the order in `PREP`. None of them
+guesses. That list is the shape of this ADR's obligation — a variance nobody
+measured is worse than no variance, because it *looks* measured.
+
+**The quantity refusal is the one worth explaining**, because its absence is
+invisible. A `PreparedPlate` records minutes, grams and an opaque `layout_hash`,
+and nowhere records how many copies are on the plate — that is the engineer's
+decision at prep. Attach a one-up plate to a line of three and the job takes the
+plate's minutes and grams as its whole work, so the machine prints a third of what
+was sold; and the reprice divides the plate's totals by the quantity, so the line
+comes out at a third of the quoted work and sits comfortably *inside* the band. It
+dispatches, underpriced and under-printed, and the variance table records that the
+estimate was excellent.
 
 **`PRICE_REVIEW` is now reachable straight from `PAID`.** The band can be exceeded
 before any engineer has touched the order, so the order machine says so rather

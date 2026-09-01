@@ -8,8 +8,9 @@ took, which looks exactly like a measured one for ever afterwards (CLAUDE.md §1
 
 So: no plate, two plates, no pinned rates, rates that no longer rebuild to their
 own hash, a material gone from the catalogue, a plate with no minutes, a
-multi-line order, and a sweep wired without a plate library. Each leaves the job
-`PENDING` and the order in `PREP` — which is exactly where every order went before
+multi-line order, a line of more than one unit, a payload that will not rebuild at
+all, and a sweep wired without a plate library. Each leaves the job `PENDING` and
+the order in `PREP` — which is exactly where every order went before
 [#58](https://github.com/iritur/printorian/issues/58), so the fallback is the
 behaviour #41 shipped rather than a new one.
 """
@@ -157,6 +158,49 @@ async def test_a_stored_snapshot_that_no_longer_rebuilds_to_its_own_id_is_refuse
     assert await the_variance(db_session, order_id) is None
 
 
+async def test_a_snapshot_payload_that_cannot_be_rebuilt_costs_one_order_not_the_pass(
+    db_session: AsyncSession, library: PlateLibrary, sweep: IntakeSweep
+) -> None:
+    """A stored rate the current `RateSnapshot` cannot parse, and what it may cost.
+
+    The refusal itself is the same as every other one here. What this test is
+    really about is the *blast radius*: `IntakeSweep.sweep` rescues only
+    `PrintorianError` per order, so anything else — and `Decimal("")` raises
+    `InvalidOperation`, which is not one — escapes the whole pass. The second
+    order below is the assertion that matters: it has nothing wrong with it, and
+    an unguarded rebuild would leave it jobless because a *different* order's
+    snapshot was unreadable.
+    """
+    rates = some_rates()
+    payload = rates_to_dict(rates)
+    payload["margin_percent"] = "no longer a number"
+
+    await a_material(db_session)
+    asset_id = await an_asset(db_session)
+    await a_cached_plate(library)
+    broken = await a_paid_order(
+        db_session, number="BADPAY-1", asset_id=asset_id, rates=rates, payload=payload
+    )
+    other_asset = await an_asset(db_session, sha256="f" * 64)
+    await a_cached_plate(library, model_hash="f" * 64)
+    healthy = await a_paid_order(
+        db_session,
+        number="BADPAY-2",
+        asset_id=other_asset,
+        rates=some_rates(margin_percent=Decimal(41)),
+    )
+
+    outcome = await sweep.sweep()
+
+    assert outcome.failed == 0
+    assert (await the_job(db_session, broken)).status is JobStatus.PENDING
+    assert await status_of(db_session, broken) is OrderStatus.PREP
+    assert await the_variance(db_session, broken) is None
+    # The order that was fine is still fine.
+    assert (await the_job(db_session, healthy)).status is JobStatus.READY
+    assert await status_of(db_session, healthy) is OrderStatus.QUEUED
+
+
 async def test_a_multi_line_order_still_goes_to_prep(
     db_session: AsyncSession, library: PlateLibrary, sweep: IntakeSweep
 ) -> None:
@@ -232,3 +276,33 @@ async def test_a_sweep_with_no_plate_library_behaves_as_it_did_before(
 
     assert (await the_job(db_session, order_id)).status is JobStatus.PENDING
     assert await status_of(db_session, order_id) is OrderStatus.PREP
+
+
+async def test_a_line_of_three_is_not_attached_to_a_plate_of_unknown_copies(
+    db_session: AsyncSession, library: PlateLibrary, sweep: IntakeSweep
+) -> None:
+    """The one refusal whose absence both under-prints *and* under-prices.
+
+    Nothing on `PreparedPlate` counts copies — `layout_hash` is opaque — so the
+    sweep cannot tell a plate holding three cubes from a plate holding one. Attach
+    the one-up plate to a line of three and two things go wrong at once, both
+    quietly: `attach_plate` overwrites the job's minutes and grams with the
+    plate's, so the machine prints a third of what was sold; and the reprice
+    divides the plate's totals by the quantity, so the line comes out at a third
+    of the quoted work and sits comfortably *inside* the band. It dispatches.
+
+    This is not hypothetical — it is what this path did before the guard, and
+    removing the `quantity != 1` branch in
+    `intake_routing.OrderRouting._may_attach_automatically` puts the order back in
+    `QUEUED` with a `READY` job.
+    """
+    await a_material(db_session)
+    asset_id = await an_asset(db_session)
+    await a_cached_plate(library)
+    order_id = await a_paid_order(db_session, number="QTY-1", asset_id=asset_id, quantity=3)
+
+    await sweep.sweep()
+
+    assert (await the_job(db_session, order_id)).status is JobStatus.PENDING
+    assert await status_of(db_session, order_id) is OrderStatus.PREP
+    assert await the_variance(db_session, order_id) is None
