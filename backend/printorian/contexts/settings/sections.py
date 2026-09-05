@@ -40,7 +40,13 @@ from dataclasses import fields, replace
 from decimal import Decimal
 from typing import Final
 
-from printorian.contexts.pricing import LOYALTY_LADDER, CustomerTier, RateSnapshot
+from printorian.contexts.pricing import (
+    FINISH_CATALOGUE,
+    LOYALTY_LADDER,
+    CustomerTier,
+    FinishOption,
+    RateSnapshot,
+)
 from printorian.contexts.scheduling import SchedulingPolicy
 from printorian.contexts.settings.fields import FieldSpec, Kind, Section
 from printorian.contexts.settings.fields import config_default as _cfg
@@ -58,6 +64,24 @@ def default_tiers() -> tuple[CustomerTier, ...]:
         CustomerTier(code=step.code, discount_percent=step.discount_percent)
         for step in LOYALTY_LADDER
     )
+
+
+def default_finishes() -> tuple[FinishOption, ...]:
+    """The postprocessing operations as the pricing engine already prices them.
+
+    Derived from `FINISH_CATALOGUE` exactly as `default_tiers` is derived from
+    `LOYALTY_LADDER`, and **not** transcribed from the design kit, which shows
+    different numbers: `design/settings.html` draws primed at 0.7 h and painted at
+    1.6 h where `pricing/finishes.py` charges 0.6 and 1.5. Typing the kit's figures
+    in here would have quietly repriced every quote on the day this merged, under a
+    commit message about making a table editable — the farm never asked for a rise,
+    and the default is what it is running today.
+
+    `extra_days` rides along even though no editor draws it: it feeds the SLA
+    promise rather than the price, and dropping it from the default would silently
+    shorten what «Окраска» promises.
+    """
+    return tuple(FINISH_CATALOGUE.values())
 
 
 # -- derived from dataclasses --------------------------------------------
@@ -204,7 +228,19 @@ def _all_specs() -> list[FieldSpec]:
         FieldSpec("service.driver_send_retries", "service", Kind.INTEGER, 3),
         FieldSpec("service.pause_on_hms_error", "service", Kind.BOOLEAN, True),
         FieldSpec("service.allow_mock_driver", "service", Kind.BOOLEAN, False),
-        # 08 — Постобработка
+        # 08 — Постобработка. The operations catalogue the farm sells, in the same
+        # table shape as the tiers: a code the storefront already knows, with the
+        # norm-hours and the flat fee editable beside it.
+        #
+        # `postprocess.*` and deliberately not `pricing.finishes`, for two reasons
+        # a reader will otherwise re-litigate. «Сбросить тарифы» is
+        # `reset_prefix("pricing.")`, and an owner resetting the rate book has not
+        # asked to throw away the norm-hours their finishing station is measured
+        # against. And `resolve_rates` builds a `RateSnapshot`, which has no
+        # finishes field and must not gain one — `snapshot_id` hashes the field
+        # names, so a new field changes the hash of every rebuilt historical
+        # snapshot and the cached-plate path then refuses every order already paid.
+        FieldSpec("postprocess.operations", "postprocess", Kind.TABLE, default_finishes()),
         FieldSpec("postprocess.require_quality_check", "postprocess", Kind.BOOLEAN, True),
         FieldSpec("postprocess.photo_before_packing", "postprocess", Kind.BOOLEAN, False),
         # 09 — Логистика (beyond the two rates above)

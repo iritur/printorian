@@ -79,6 +79,7 @@ GROUPS: Final[dict[str, str]] = {
     "service.pause_on_hms_error": "service.drivers",
     "service.allow_mock_driver": "service.drivers",
     # 08 — Постобработка
+    "postprocess.operations": "postprocess.catalogue",
     "postprocess.require_quality_check": "postprocess.quality",
     "postprocess.photo_before_packing": "postprocess.quality",
     # 09 — Логистика
