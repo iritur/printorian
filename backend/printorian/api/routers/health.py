@@ -1,7 +1,7 @@
-"""Liveness, readiness, and whether the farm's background work is still running.
+"""Liveness, readiness, background work — and whether now is a moment to cut power.
 
-Three endpoints, because they answer three different questions and a deployment
-that conflates them makes bad decisions:
+Four endpoints, because they answer four different questions and a deployment that
+conflates them makes bad decisions:
 
 * ``/health`` — is this process up? Touches nothing. What a container restart
   policy reads.
@@ -12,12 +12,17 @@ that conflates them makes bad decisions:
   wedged sweep is not a reason to take the API out of rotation or roll a release
   back, and folding it into readiness would do exactly that. It is a monitoring
   signal, and it fails with 503 so an alert can key on it.
+* ``/health/printing`` — is anything on a machine right now? The only one here
+  whose consumer is not a screen and not a container runtime but the *host*:
+  `deploy/reboot-guard.sh`, asked before `unattended-upgrades` or a UPS shutdown
+  reboots the box. Its status code is the verdict and it fails closed — 200 only
+  for a reading that was actually taken and came back empty (#17).
 
-All three are unauthenticated, which is what a container runtime and a monitoring
-probe need. They carry no farm data — dependency names, loop names and timestamps —
-but they do describe the shape of the deployment, so **the storefront's edge should
-not forward `/health/*`** when it is built (INFRASTRUCTURE Stage 3). The console's
-proxy is on the LAN and may.
+All four are unauthenticated, which is what a container runtime, a monitoring probe
+and a host-side guard all need. They carry no farm data — dependency names, loop
+names, timestamps and aggregate counts — but they do describe the shape of the
+deployment, so **the storefront's edge should not forward `/health/*`** when it is
+built (INFRASTRUCTURE Stage 3). The console's proxy is on the LAN and may.
 """
 
 from __future__ import annotations
@@ -30,7 +35,7 @@ from sqlalchemy import text
 from printorian.contexts.fleet import listings as fleet_listings
 from printorian.contexts.fleet import retention
 from printorian.contexts.inventory import listings as inventory_listings
-from printorian.contexts.production import growth
+from printorian.contexts.production import growth, inflight
 from printorian.core.db import wal_archiving_stalled
 from printorian.core.driver_health import DriverStates
 from printorian.core.heartbeat import Heartbeat
@@ -171,5 +176,70 @@ async def workers(request: Request, response: Response) -> dict[str, Any]:
                 "since": driver.since,
             }
             for driver in drivers
+        },
+    }
+
+
+@router.get("/health/printing")
+async def printing(request: Request, response: Response) -> dict[str, Any]:
+    """Whether cutting power to this farm right now would destroy work.
+
+    Read by `deploy/reboot-guard.sh` on the host, not by a screen. The consumer is
+    about to do something irreversible — reboot for a kernel patch, or shut down on
+    a dying UPS — so the contract here is the opposite of a monitoring probe's.
+
+    **The status code is the verdict, and it fails closed.** 200 is the only
+    affirmative answer, and it is returned only for a reading that was actually
+    taken and came back with nothing on a machine. Busy and unreadable both answer
+    503, so a guard written as `curl -fsS` — and a guard that cannot reach this
+    process at all — defers by construction. Conflating the two in the *code* is
+    deliberate; the body names which one it was. That is the division
+    ``/health/ready`` already makes, where the status carries the verdict and
+    `checks` carries the cause.
+
+    **Unreadable is `in_flight: null`, never zeros.** Three zeros would read as "the
+    farm is doing nothing" and would authorise a reboot mid-print — root CLAUDE.md
+    §1, on the one path in this system where the flattering answer is also the
+    destructive one. The code is machine-readable (ADR-0012); the guard greps the
+    body and a human reads the log line.
+
+    No farm data, per this module's docstring: aggregate counts and nothing else.
+    No job or printer ids, no order numbers, no minutes, no money.
+    """
+    # `None` is doing real work here rather than standing in for a default: it means
+    # the reading was never taken, and it is the state this endpoint starts in. The
+    # only thing that can move it is a query that came back — not a session that
+    # opened, not a loop that ran zero times.
+    reading: inflight.InFlight | None = None
+    try:
+        async for session in request.app.state.database.session():
+            reading = await inflight.in_flight(session)
+    except Exception:
+        # Deliberately broad, the way `ready()` above is: whatever went wrong — the
+        # pool, the network, a migration mid-flight — the honest answer is that
+        # nothing was measured. Cleared rather than left alone, so a failure part way
+        # through cannot leave a half-taken reading standing.
+        reading = None
+
+    if reading is None:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {
+            "status": "unknown",
+            "in_flight": None,
+            "code": "error.health.production_unreadable",
+        }
+
+    unsafe = inflight.interrupting_is_unsafe(reading)
+    if unsafe:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return {
+        "status": "in_flight" if unsafe else "quiet",
+        # Reported whether or not it vetoed. An `assigned` count sits in a `quiet`
+        # body on purpose: a plan does not stop a reboot, and an operator looking at
+        # a queue that is not empty should still be able to see why.
+        "in_flight": {
+            "assigned": reading.assigned,
+            "dispatching": reading.dispatching,
+            "printing": reading.printing,
         },
     }
