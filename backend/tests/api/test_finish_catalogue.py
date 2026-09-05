@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
@@ -104,7 +104,8 @@ def a_line(*finishes: str) -> dict[str, object]:
     without either side dividing, which is the arithmetic a test should not be
     doing on the way to its own expected answer.
     """
-    line = dict(an_order_payload()["lines"][0])  # type: ignore[index]
+    lines = cast(list[dict[str, Any]], an_order_payload()["lines"])
+    line = dict(lines[0])
     line["quantity"] = 1
     line["finishes"] = list(finishes)
     return line
