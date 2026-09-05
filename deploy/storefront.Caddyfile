@@ -37,6 +37,15 @@
 	# disagreeing about the prefix is a class of bug that only appears after a
 	# deploy, so all three are kept the same deliberately.
 	handle_path /api/* {
+		# No `trusted_proxies`, deliberately. Caddy's default is to ignore an
+		# incoming `X-Forwarded-For` rather than append to it, so the API sees
+		# exactly one hop: the address this server's socket saw. Two places read
+		# that header and read opposite ends of it — `api/deps.py:throttle_key`
+		# takes the last (the quote ceiling and the sign-in lockout) and the
+		# YooKassa webhook's source check takes the first — and they agree only
+		# while the chain has one entry. Setting `trusted_proxies`, or putting a
+		# proxy in front of this one, makes it a chain again; both of those read
+		# sites have to be settled before that happens, not after.
 		reverse_proxy api:8000 {
 			header_up X-Forwarded-Proto {scheme}
 		}
