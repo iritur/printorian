@@ -98,3 +98,11 @@ class CreateMaterialLot(BaseModel):
     initial_grams: Decimal = Decimal(1000)
     remaining_grams: Decimal | None = None
     shelf: str | None = None
+    #: What the whole lot cost. Set by `procurement.receiving` off the receipt;
+    #: null when a lot is entered by hand and nobody said. Deliberately **not**
+    #: on `LotView`: `GET /materials` has no permission dependency and no session
+    #: requirement, so a purchase price served there would reach an anonymous
+    #: caller — the farm's buying price, on the storefront.
+    purchase_price: Decimal | None = None
+    #: The supplier's batch number, for recalls.
+    lot_number: str | None = None

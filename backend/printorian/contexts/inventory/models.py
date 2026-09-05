@@ -57,9 +57,11 @@ class MaterialSpec(Entity):
     notes: Mapped[str | None] = mapped_column(String(2000), nullable=True)
 
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    #: Open purchase orders are modelled in Phase 6; until then this carries the
-    #: "ordered" status the scenario's table needs.
-    has_open_order: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # `has_open_order` was here, and its own comment called it a placeholder until
+    # purchase orders existed. They exist (`contexts.procurement`), so "is this on
+    # order" is computed from the orders themselves by `procurement.ordered_codes`
+    # and the column is gone. A stored flag had to be cleared by hand, and one
+    # nobody cleared kept a material reading «Заказан» after the order landed.
 
     lots: Mapped[list[MaterialLot]] = relationship(
         back_populates="spec", cascade="all, delete-orphan"
@@ -89,7 +91,12 @@ class MaterialLot(Entity):
     label: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     initial_grams: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     remaining_grams: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    #: What this one spool cost, whole — a lot total, not a rate. Written when a
+    #: purchase receipt creates the lot (`procurement.receiving`); null for a lot
+    #: entered by hand, which is honest and is not the same as free.
     purchase_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    #: The supplier's batch number, copied off the receipt. The thread a recall is
+    #: pulled by, and the reason this column is worth filling in at all.
     lot_number: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
     # -- location (see policies.Location)
