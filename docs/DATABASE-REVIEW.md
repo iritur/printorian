@@ -12,14 +12,14 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **43 tables** across twelve contexts, built
-by twenty-five Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **46 tables** across twelve contexts, built
+by twenty-six Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
 | `identity` | `users`, `sessions` |
 | `account` | `addresses`, `notification_prefs` |
-| `inventory` | `material_specs`, `material_lots` |
+| `inventory` | `material_specs`, `material_lots`, `storage_zones`, `storage_cells`, `material_movements` |
 | `ordering` | `orders`, `order_lines`, `order_events`, `rate_snapshots`, `sla_credit_entries` |
 | `payments` | `payments`, `refunds`, `payment_notifications` |
 | `catalog` | `model_assets`, `prepared_plates`, `catalog_models`, `catalog_model_materials` |
@@ -61,7 +61,10 @@ printers ─┬─< ams_slots                  (CASCADE)
           ├─< material_lots.printer_id   (SET NULL)
           └─< print_jobs.printer_id      (SET NULL)
 
-material_specs ──< material_lots         (CASCADE) ──< ams_slots.lot_id  (SET NULL)
+material_specs ──< material_lots         (CASCADE) ─┬─< ams_slots.lot_id       (SET NULL)
+                                                     └─< material_movements     (RESTRICT)
+
+storage_zones ──< storage_cells          (CASCADE) ──< material_lots.cell_id (SET NULL)
 
 model_assets ─┬─< order_lines.model_asset_id     (RESTRICT)
               ├─< print_jobs.model_asset_id      (RESTRICT)

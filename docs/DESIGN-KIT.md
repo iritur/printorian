@@ -30,7 +30,7 @@ from another document has only moved the drift.
 
 ## 1. Where the screens stand
 
-**Seventeen of twenty-one are built.** Every public screen ships; the four that do
+**Eighteen of twenty-one are built.** Every public screen ships; the three that do
 not are all control-realm. `settings` was the nearest of them and is now built —
 102 parameters across fourteen sections, served and audited. What is left of it is
 the table-valued settings, not the screen (§2.1).
@@ -42,17 +42,17 @@ the table-valued settings, not the screen (§2.1).
 | `settings` | control | **built** — scalars and Диагностика; the tables remain, §2.1 |
 | `service` | control | **not built** — §2.2 |
 | `purchasing` | control | **not built** — §2.3 |
-| `store` | control | **not built** — §2.4 |
+| `store` | control | **built** — cells, ledger and movements; §2.4 for the rest |
 | `logistics` | control | **not built** — §2.5 |
 
 `index.html` is the kit's own contents page, not a screen.
 
-## 2. Settings, and the four that are not built
+## 2. Settings, the store, and the three that are not built
 
-For §2.2–§2.5 the kit inventories are preserved verbatim, because for those the kit
-*is* the spec, and each ends with what the backend already has. §2.1 is no longer
-one of them — settings is built, so the code is the truth for it and this document
-records only what is still owed. The numbering is kept as it was so that the
+For §2.2, §2.3 and §2.5 the kit inventories are preserved verbatim, because for
+those the kit *is* the spec, and each ends with what the backend already has.
+§2.1 and §2.4 are no longer among them — settings and the store are built, so the
+code is the truth for them and this document records only what is still owed. The numbering is kept as it was so that the
 references to it from the tracker and from §2.5 keep pointing at the same place.
 
 ### 2.1 `settings.html` — built, minus the tables
@@ -145,18 +145,30 @@ What backend exists: `ServiceOperation` with kind/interval/hours, наработ
 
 **What the backend still owes:** [#34](https://github.com/iritur/printorian/issues/34) — nothing exists; `PurchaseOrder`, `Supplier`, four purchasable classes.
 
-### 2.4 `store.html`
+### 2.4 `store.html` — built, minus turnover, money and stocktake
 
-- **Cell map** by zone — `.hv-node` per cell across zones A/B/C, brightness = fill
-- **Movements today** — Время · Операция · Позиция · Откуда → куда · Кол-во ·
-  Основание
-- **Batches in a cell** — FIFO, oldest first: Партия · Принята · Сушка · Остаток
-- **Turnover** — days on shelf per class; **dead stock** with the money in it
-- **Stocktake** — Позиция · Ячейка · Лежит · Стоимость
+**The screen exists.** [`StorePage.tsx`](../frontend/apps/console/src/StorePage.tsx)
+draws the cell map by zone and the movements feed;
+[`CellDetail.tsx`](../frontend/apps/console/src/CellDetail.tsx) is the cell popup,
+with its batches FIFO oldest-first. Behind them are `storage_zones`,
+`storage_cells` and the append-only `material_movements`, served by
+`/store/cells`, `/store/cells/{address}` and `/store/movements`.
 
-What backend exists: `MaterialLot` with location.
+Three of the kit's four KPI tiles are **deliberately not drawn**, and this is the
+part of §2.4 worth reading before adding them. «Стоимость остатков» and
+«Залежалое» are money, and `MaterialLot.purchase_price` is written by nothing, so
+both would read `0 ₽` on a farm holding several hundred thousand roubles of
+filament. «Расхождения» needs a stocktake that does not exist. A tile with an
+invented number in it is worse than a missing tile, so «Ячеек» and «Заполнение» —
+both counted from cells that exist — are the two that ship. Same reasoning for the
+right-hand column: «Движения» is built, «Оборачиваемость», «Залежалое» and
+«Инвентаризация» are not.
 
-**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — cells, zones, drying state, movement ledger with reason, turnover, dead stock, stocktake.
+**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — drying state, turnover in days on shelf, dead stock in money (which needs receiving, [#34](https://github.com/iritur/printorian/issues/34), before a lot has a price at all), stocktake, and the three non-filament purchasable classes: tara, consumables and spare parts.
+
+When dead stock arrives it takes the `api/routers/jobs.py` shape — a separate
+route with `VIEW_FINANCIALS` on top of the production gate — never a value field
+appended to the cell map an operator already reads.
 
 ### 2.5 `logistics.html`
 
