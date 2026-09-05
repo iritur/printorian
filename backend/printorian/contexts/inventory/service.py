@@ -164,8 +164,10 @@ class InventoryService:
         lot.ams_slot = ams_slot
         lot.shelf = None
         # A spool inside a machine is not in a cell. Left set, the map would draw
-        # it as occupying a place an operator would then find empty.
-        lot.cell_id = None
+        # it as occupying a place an operator would then find empty. Cleared
+        # through the relationship, so the loaded object goes with the key —
+        # `LotView.cell` reads the former, and the two disagreeing is the bug.
+        lot.cell = None
         await self._db.flush()
         return LotView.model_validate(lot)
 

@@ -200,7 +200,11 @@ class PlacementService:
             to_address=cell.address,
             note=note,
         )
-        lot.cell_id = cell.id
+        # The relationship rather than the raw key, because `LotView.cell` reads the
+        # address off `lot.cell` — assigning `cell_id` alone leaves the loaded
+        # relationship holding the *previous* cell, and the response would name the
+        # place the spool just left.
+        lot.cell = cell
         lot.location_kind = LocationKind.STOCK
         # A spool in a cell is not in a machine. Left set, the materials table
         # would go on offering it to the scheduler as loaded filament.

@@ -1,7 +1,7 @@
 """What each delete rule actually does, against real rows.
 
 `tests/test_referential_integrity.py` holds the inventory: which of the
-forty-eight foreign keys is ``CASCADE``, which is ``SET NULL``, which is
+fifty-two foreign keys is ``CASCADE``, which is ``SET NULL``, which is
 ``RESTRICT``, and whether PostgreSQL is holding the rule the model asked for. That
 is a catalogue comparison, and a catalogue is not behaviour (CLAUDE.md §2) — it
 would go on passing if ``RESTRICT`` did something other than what
@@ -15,7 +15,10 @@ rather than for coverage:
 - the two other ``RESTRICT``s standing in front of money — a payment whose order
   was deleted, and a price whose rates were;
 - the ``CASCADE`` that takes an order's lines with the order;
-- the ``SET NULL`` that lets a printer be retired without deleting the jobs it ran.
+- the ``SET NULL`` that lets a printer be retired without deleting the jobs it ran,
+  and the one that lets a storage cell be retired without deleting the spools in it;
+- the ``RESTRICT`` that stops a spool being deleted out from under the ledger that
+  records where it has been.
 
 **Every delete below is issued as SQL rather than through `session.delete`, and
 that is not a style choice.** `Order.lines` and `Order.events` carry
@@ -228,5 +231,92 @@ async def test_a_job_cannot_be_built_against_an_order_that_does_not_exist(
 
     db_session.add(PrintJob(id=new_id(), order_id=new_id()))
     with pytest.raises(IntegrityError):
+        await db_session.flush()
+    await db_session.rollback()
+
+
+async def _a_spool(session: AsyncSession, *, code: str) -> EntityId:
+    """A spec and one full lot of it, because a lot needs the spec it is a lot of."""
+    from printorian.contexts.inventory.models import MaterialLot, MaterialSpec
+
+    spec_id, lot_id = new_id(), new_id()
+    session.add(
+        MaterialSpec(
+            id=spec_id, code=code, name=code, family="PLA", sell_price_per_gram=Decimal("2.50")
+        )
+    )
+    await session.flush()
+    session.add(
+        MaterialLot(
+            id=lot_id,
+            spec_id=spec_id,
+            initial_grams=Decimal(1000),
+            remaining_grams=Decimal(1000),
+        )
+    )
+    await session.flush()
+    return lot_id
+
+
+async def test_retiring_a_cell_unplaces_the_spool_and_keeps_it(db_session: AsyncSession) -> None:
+    """``material_lots.cell_id`` is ``SET NULL``: the shelf goes, the spool stays.
+
+    ``CASCADE`` here would mean that tidying up the warehouse map deletes stock, and
+    ``RESTRICT`` would mean a cell can never be retired while anything has ever sat
+    in it. The lot survives with no cell, which reads as "not placed any more"
+    rather than as a spool that was never held (ADR-0007).
+    """
+    from printorian.contexts.inventory.models import MaterialLot, StorageCell, StorageZone
+
+    zone_id, cell_id = new_id(), new_id()
+    db_session.add(StorageZone(id=zone_id, code="DEL"))
+    await db_session.flush()
+    db_session.add(StorageCell(id=cell_id, zone_id=zone_id, address="DEL-1"))
+    await db_session.flush()
+    lot_id = await _a_spool(db_session, code="PLA-DELRULE")
+    lot = await db_session.get(MaterialLot, lot_id)
+    assert lot is not None
+    lot.cell_id = cell_id
+    await db_session.flush()
+
+    await db_session.execute(delete(StorageCell).where(StorageCell.id == cell_id))
+    await db_session.flush()
+    # `SET NULL` happened in the database, behind the identity map's back.
+    db_session.expire_all()
+
+    survivor = await db_session.get(MaterialLot, lot_id)
+    assert survivor is not None
+    assert survivor.cell_id is None
+
+
+async def test_a_lot_that_has_moved_cannot_be_deleted(db_session: AsyncSession) -> None:
+    """``material_movements.lot_id`` is ``RESTRICT``: stock history is not rewritable.
+
+    Deleting the spool a ledger describes would silently restate what the farm has
+    held, and leave no record that it had. The refusal is the whole value of the
+    rule, and it can only be seen by issuing the delete as SQL — the ORM would go
+    the same way through `MaterialSpec.lots`, which carries
+    ``cascade="all, delete-orphan"``, and that is precisely the path this constraint
+    stands in front of.
+    """
+    from printorian.contexts.inventory.models import MaterialLot
+    from printorian.contexts.inventory.movements import MaterialMovement
+
+    lot_id = await _a_spool(db_session, code="PLA-RESTRICT")
+    db_session.add(
+        MaterialMovement(
+            id=new_id(),
+            lot_id=lot_id,
+            sequence=1,
+            reason="stock.received",
+            grams=Decimal(0),
+            remaining_after=Decimal(1000),
+            at=datetime(2026, 3, 2, 9, 0, tzinfo=UTC),
+        )
+    )
+    await db_session.flush()
+
+    with pytest.raises(IntegrityError):
+        await db_session.execute(delete(MaterialLot).where(MaterialLot.id == lot_id))
         await db_session.flush()
     await db_session.rollback()
