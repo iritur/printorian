@@ -5,7 +5,6 @@ import type { Locale, MessageKey } from '@printorian/ui'
 import { Modal, api, translate, translateError } from '@printorian/ui'
 
 import { Field } from './FleetAdmin'
-import type { Cell } from './StorePage'
 
 /**
  * One cell's window, read from `GET /store/cells/{address}`.
@@ -21,6 +20,19 @@ import type { Cell } from './StorePage'
  * reel, so it is deliberately a separate control with its own confirmation rather
  * than an option on the move form.
  */
+
+/** `CellView`, hand-declared — the console's convention (frontend/CLAUDE.md). */
+export interface Cell {
+  id: string
+  address: string
+  zone_code: string
+  /** Null when nobody declared one. Not zero, and not one. */
+  capacity_lots: number | null
+  lot_count: number
+  /** Null wherever the capacity was never declared — draw no bar at all. */
+  fill_percent: string | null
+  is_active: boolean
+}
 
 export interface Movement {
   id: string

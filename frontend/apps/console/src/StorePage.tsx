@@ -5,7 +5,11 @@ import type { Locale, MessageKey } from '@printorian/ui'
 import { api, translate, translateError, useChrome, useSession } from '@printorian/ui'
 
 import { CellDetail } from './CellDetail'
-import type { Movement } from './CellDetail'
+// `Cell` and `Movement` are declared beside the window rather than here, so the
+// dependency runs one way: the map imports the detail, and the detail imports
+// nothing back. Both shapes appear in `GET /store/cells/{address}` as well as in
+// the map, so either file could have owned them and only one ordering is acyclic.
+import type { Cell, Movement } from './CellDetail'
 import { Field } from './FleetAdmin'
 
 /**
@@ -25,19 +29,6 @@ import { Field } from './FleetAdmin'
  */
 
 const MANAGE_INVENTORY = 'manage_inventory'
-
-/** `CellView`, hand-declared — the console's convention (frontend/CLAUDE.md). */
-export interface Cell {
-  id: string
-  address: string
-  zone_code: string
-  /** Null when nobody declared one. Not zero, and not one. */
-  capacity_lots: number | null
-  lot_count: number
-  /** Null wherever the capacity was never declared — draw no bar at all. */
-  fill_percent: string | null
-  is_active: boolean
-}
 
 export interface Zone {
   id: string
