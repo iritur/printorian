@@ -1,0 +1,26 @@
+// Printorian — the half of the reboot guard that is safe to ship without a host.
+//
+//     sudo install -m 0644 deploy/apt/99printorian-unattended-upgrades \
+//       /etc/apt/apt.conf.d/99printorian-unattended-upgrades
+//
+// `unattended-upgrades` is what keeps the farm host's kernel and openssl patched
+// without a person, and `deploy/readiness-check.sh` already warns when it is
+// missing. Its default is to install the patch and, if the update needs one,
+// reboot — which on this box means killing whatever plate is on a bed at the time.
+// A twelve-hour print stopped at hour eleven is spent filament, a spent bed and an
+// order that has to be remade.
+//
+// So the automatic reboot is switched off here. This file makes an unattended
+// reboot strictly LESS likely and can never cause one, which is why it ships now
+// while the other half — a timer that asks `deploy/reboot-guard.sh` and then
+// reboots when the answer is "quiet" — deliberately does not. That half needs a
+// Debian host and a real print to prove, and an unproven `systemctl reboot` in
+// this repository is the exact failure the guard exists to prevent
+// (deploy/systemd/README.md, "What is deliberately not here").
+//
+// The cost of leaving it here: patches that need a reboot are installed and then
+// wait, so the host runs a patched-on-disk kernel it is not yet running. That is
+// visible as `/var/run/reboot-required` and is a thing a person decides about,
+// which is the right trade while nothing on the box can tell a print from an idle
+// evening on its own.
+Unattended-Upgrade::Automatic-Reboot "false";

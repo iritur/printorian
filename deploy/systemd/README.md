@@ -78,3 +78,26 @@ an email to a mailbox nobody reads.
 needs `deploy/production.yaml` and `cosign` verification, which are Stage 4. A
 deploy timer without signature verification just moves the trust rather than
 establishing it, so it waits for the piece that establishes it.
+
+`printorian-reboot.timer` — the timer that would ask `deploy/reboot-guard.sh` and
+then reboot when the answer is "quiet" (INFRASTRUCTURE Stage 2 lists a `reboot`
+timer among its units). Everything it would need exists and is tested: the farm
+can say whether anything is on a machine (`GET /health/printing`), it answers 503
+for busy *and* for a database it could not read, and the guard turns that into an
+exit code with the four outcomes driven in CI's `image` job.
+
+What is missing is only the trigger, and it is missing on purpose — it is the
+irreversible half. `systemctl reboot` cannot be tested from a laptop or from a
+container: what would have to be shown, on a Debian host with a printer actually
+running, is that a real print defers a real reboot, that the deferral is visible
+in the journal afterwards, and that the host does eventually patch once the bed is
+clear rather than deferring for ever. Until somebody can demonstrate those three
+on a host, shipping the unit would mean shipping an untested `systemctl reboot` —
+which is precisely the failure the guard was written to prevent.
+
+The half that *is* safe to ship without a host is here already:
+`deploy/apt/99printorian-unattended-upgrades` sets
+`Unattended-Upgrade::Automatic-Reboot "false"`. It can only ever make an
+unattended reboot less likely, and it is what stops a farm rebooting mid-print
+today. The cost is that a patched host waits for a person; `/var/run/reboot-required`
+is where it says so.
