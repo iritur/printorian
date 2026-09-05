@@ -23,69 +23,28 @@ in `docs/DESIGN-KIT.md` §2.1.
 snapshot carries its currency *inside itself* (the kit's own note) — so it cannot
 be edited like a scalar without deciding what happens to the snapshots already
 pinned to orders. That is part of the read-edge stage, not the catalogue.
+
+**Where the next split goes.** `Kind`, `FieldSpec`, `Section` and the config-default
+reader moved down to `fields.py` when this file reached 399 lines against a hard
+400-line gate — the vocabulary below, the catalogue above, which is the seam the
+paragraphs before this one already describe. All three are re-exported here, so the
+importable surface did not move with them. The half that grows from now on is the
+declared list inside `_all_specs`, and that is where the next cut belongs; it is
+not pre-split, because a split with nothing on the other side of it is a file to
+read rather than a seam.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields, replace
+from dataclasses import fields, replace
 from decimal import Decimal
-from enum import StrEnum
-from typing import Any, Final
+from typing import Final
 
 from printorian.contexts.pricing import LOYALTY_LADDER, CustomerTier, RateSnapshot
 from printorian.contexts.scheduling import SchedulingPolicy
+from printorian.contexts.settings.fields import FieldSpec, Kind, Section
+from printorian.contexts.settings.fields import config_default as _cfg
 from printorian.contexts.settings.groups import GROUPS, in_group_order
-from printorian.core.config import Settings as CoreSettings
-
-
-class Kind(StrEnum):
-    """How a value is parsed, stored and drawn.
-
-    `TABLE` is for the structured values — the volume ladder and the customer
-    tiers — whose editors differ enough from a scalar input that they get their
-    own row type rather than a number in a box.
-    """
-
-    STRING = "string"
-    INTEGER = "integer"
-    DECIMAL = "decimal"
-    BOOLEAN = "boolean"
-    ENUM = "enum"
-    SECRET = "secret"
-    TABLE = "table"
-
-
-@dataclass(frozen=True, slots=True)
-class FieldSpec:
-    """One setting the screen draws: its key, where it lives, and what it holds.
-
-    `default` is the code default — the value a reset returns to and an empty
-    table prices/schedules with. `options` is non-empty only for enums.
-    """
-
-    key: str
-    section: str
-    kind: Kind
-    default: Any
-    options: tuple[str, ...] = ()
-    #: The panel heading within a section (`pricing.labor`, `general.farm`, …).
-    #: `None` means the section is one undivided panel.
-    group: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class Section:
-    """A screen section, in the order the rail lists them."""
-
-    id: str
-    fields: tuple[str, ...]
-
-
-#: A config default, read off the pydantic field rather than by instantiating
-#: `CoreSettings` — the latter reads the environment, and the catalogue must
-#: answer "what does the code ship" with the environment's voice out of the room.
-def _cfg(name: str) -> Any:
-    return CoreSettings.model_fields[name].default
 
 
 def default_tiers() -> tuple[CustomerTier, ...]:
