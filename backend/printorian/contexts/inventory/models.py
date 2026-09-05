@@ -151,6 +151,10 @@ class MaterialLot(Entity):
         # "What is loaded in this machine" — the AMS view, and the scheduler's
         # material check. Previously unindexed and unconstrained.
         Index("ix_material_lots_printer_id", "printer_id"),
+        # "What is in this cell" is the map's per-cell count and the `SET NULL`
+        # a retired cell fires. Unindexed, both are sequential scans over every
+        # spool the farm has ever held.
+        Index("ix_material_lots_cell_id", "cell_id"),
         CheckConstraint("initial_grams >= 0", name="initial_grams_non_negative"),
         CheckConstraint("remaining_grams >= 0", name="remaining_grams_non_negative"),
         # A spool cannot hold more than it started with. Consumption only subtracts,

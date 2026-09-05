@@ -39,6 +39,9 @@ accepts losing.
 No separate index on `material_movements.lot_id`: the `(lot_id, sequence)` unique
 constraint is an index whose leading column is `lot_id`, so the read path and the
 `RESTRICT` check are both served by it. `sla_credit_entries` carries the same note.
+`actor_id` and `material_lots.cell_id` have no such cover and get their own —
+`test_schema_contracts.test_every_foreign_key_is_indexed` is the gate that said so,
+and the cost it is about is a sequential scan on every retirement.
 
 Revision ID: 0024_storage_cells_and_movements
 Revises: 0023_prepared_plate_copies
@@ -201,7 +204,12 @@ def upgrade() -> None:
         sa.UniqueConstraint("lot_id", "sequence", name="uq_material_movements_lot_id_sequence"),
     )
 
+    op.create_index(
+        "ix_material_movements_actor_id", "material_movements", ["actor_id"], unique=False
+    )
+
     op.add_column("material_lots", sa.Column("cell_id", sa.Uuid(), nullable=True))
+    op.create_index("ix_material_lots_cell_id", "material_lots", ["cell_id"], unique=False)
     op.create_foreign_key(
         op.f("fk_material_lots_cell_id_storage_cells"),
         "material_lots",
@@ -221,7 +229,9 @@ def downgrade() -> None:
     op.drop_constraint(
         op.f("fk_material_lots_cell_id_storage_cells"), "material_lots", type_="foreignkey"
     )
+    op.drop_index("ix_material_lots_cell_id", table_name="material_lots")
     op.drop_column("material_lots", "cell_id")
+    op.drop_index("ix_material_movements_actor_id", table_name="material_movements")
     op.drop_table("material_movements")
     op.drop_index("ix_storage_cells_zone_id", table_name="storage_cells")
     op.drop_table("storage_cells")

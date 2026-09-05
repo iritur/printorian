@@ -30,6 +30,7 @@ from decimal import Decimal
 from sqlalchemy import (
     CheckConstraint,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -91,6 +92,11 @@ class MaterialMovement(Entity):
         # between two writers into an integrity error rather than two rows both
         # claiming to be the third movement of this spool.
         UniqueConstraint("lot_id", "sequence", name="uq_material_movements_lot_id_sequence"),
+        # No separate index on `lot_id`: the constraint above is one, and its
+        # leading column is `lot_id`, so both the per-lot read and the `RESTRICT`
+        # check are served by it. `actor_id` has no such cover, and the `SET NULL`
+        # that fires when a member of staff is removed would scan the whole ledger.
+        Index("ix_material_movements_actor_id", "actor_id"),
         CheckConstraint("sequence >= 1", name="sequence_positive"),
         # A movement of nothing is noise in a ledger whose whole point is to say
         # when something moved — `credit_actually_moved` next door, one context on.
