@@ -13,6 +13,16 @@ import type { Locale } from '../i18n/messages'
 
 export interface LotLocation {
   location_kind: string
+  /**
+   * The `storage_cells` address the lot sits at, or absent when it sits in none.
+   *
+   * Takes precedence over `shelf` below wherever both are set — the rule is
+   * stated once on the backend, at `contexts/inventory/policies.Location`, and
+   * this function is the only place the client applies it. `shelf` is the
+   * unvalidated free text the farm typed before cells existed; nothing can
+   * honestly translate one into the other, so both are kept and one wins.
+   */
+  cell?: string | null
   shelf?: string | null
   printer_id?: string | null
   ams_unit?: number | null
@@ -54,6 +64,7 @@ export function formatLocation(
     case 'consumed':
       return translate(locale, 'location.consumed')
     default:
+      if (location.cell) return translate(locale, 'location.cell', { cell: location.cell })
       return location.shelf
         ? translate(locale, 'location.shelf', { shelf: location.shelf })
         : translate(locale, 'location.stock')

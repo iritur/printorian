@@ -14,6 +14,7 @@ import { PackagingPage } from './packaging/PackagingPage'
 import { PostProductionPage } from './postproduction/PostProductionPage'
 import { PrepPage } from './PrepPage'
 import { SettingsPage } from './SettingsPage'
+import { StorePage } from './StorePage'
 import { UsersPage } from './UsersPage'
 
 type Screen =
@@ -26,6 +27,7 @@ type Screen =
   | 'journal'
   | 'fleet'
   | 'materials'
+  | 'store'
   | 'users'
   | 'settings'
 
@@ -230,6 +232,23 @@ function Shell() {
       shape: 'stack',
     },
     {
+      /*
+        Gated on VIEW_PRODUCTION rather than MANAGE_INVENTORY, matching the read
+        gate on `api/routers/store.py`. An operator can find a spool; the controls
+        that move one or take mass off it are hidden behind `mayManage` inside the
+        screen. A nav gate stricter than the API's would hide a map the server is
+        perfectly willing to serve.
+      */
+      key: 'store',
+      label: t('store.title'),
+      note: 'ЗОНЫ · ЯЧЕЙКИ · ДВИЖЕНИЯ',
+      permission: VIEW_PRODUCTION,
+      mark: 'CELL',
+      kicker: 'C:/SUPPLY/STORE/LOCATIONS',
+      text: 'Карта хранения по зонам, партии в ячейке и журнал перемещений: каждое движение — строка, которую ничто не переписывает.',
+      shape: 'nodes',
+    },
+    {
       key: 'users',
       label: t('users.title'),
       note: 'ДОСТУП · РОЛИ · СЕАНСЫ',
@@ -282,6 +301,7 @@ function Shell() {
     journal: '/JOURNAL/EDITOR',
     fleet: '/FLEET/PRINTERS',
     materials: '/INVENTORY/MATERIALS',
+    store: '/SUPPLY/STORE/LOCATIONS',
     users: '/IDENTITY/USERS.DB',
     settings: '/SYSTEM/SETTINGS/FARM.CONFIG',
   }
@@ -315,6 +335,7 @@ function Shell() {
       {active === 'journal' && <JournalPage locale={locale} />}
       {active === 'fleet' && <FleetPage locale={locale} />}
       {active === 'materials' && <MaterialsPage locale={locale} />}
+      {active === 'store' && <StorePage locale={locale} />}
       {active === 'users' && <UsersPage locale={locale} />}
       {active === 'settings' && <SettingsPage locale={locale} />}
     </AppShell>
