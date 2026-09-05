@@ -81,7 +81,16 @@ class IntakePass:
             # configuration and never a constant in the sweep. Without them every
             # order goes to prep, which is the behaviour that predates #58 — so
             # dropping this line would silently return the farm to clicking.
-            cached = CachedPlates(session, PlateLibrary(session, self._runtime.clock))
+            # The catalogue the paid line's finishes are repriced at, resolved per
+            # sweep the same way `SchedulerPass` resolves its weights — so an edit
+            # to «Постобработка» reaches the *next* sweep rather than the next
+            # restart, and the sweep's variance is computed against what the farm
+            # charges today rather than against the code constant.
+            cached = CachedPlates(
+                session,
+                PlateLibrary(session, self._runtime.clock),
+                finishes=await SettingsService(session, self._runtime.clock).resolve_finishes(),
+            )
             outcome = await intake.IntakeSweep(
                 session,
                 production,

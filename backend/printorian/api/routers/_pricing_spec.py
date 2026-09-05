@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 from collections import OrderedDict
+from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any
 
@@ -32,7 +33,7 @@ from printorian.contexts.catalog import (
 from printorian.contexts.inventory import InventoryService, MaterialStatus
 from printorian.contexts.ordering import PromisePolicy, promised_hours
 from printorian.contexts.pricing import (
-    FINISH_CATALOGUE,
+    FinishOption,
     MaterialPrice,
     PriceSpec,
     PrintEstimate,
@@ -124,8 +125,15 @@ async def _build_spec(
     uploaded_by: EntityId | None = None,
     max_bytes: int = _MAX_UPLOAD_BYTES,
     promise: PromisePolicy | None = None,
+    catalogue: Mapping[str, FinishOption],
 ) -> tuple[PriceSpec, dict[str, Any]]:
     """Measure an upload and turn it into a pricing input.
+
+    ``catalogue`` is the farm's resolved postprocessing catalogue, handed in rather
+    than read here: the engine is given everything it prices with (ADR-0002), and
+    both quoting endpoints already hold the settings store. It has no default —
+    a forgotten argument has to be a type error rather than a quote silently priced
+    at the code defaults while the order it becomes charges the farm's own rates.
 
     ``keep`` is supplied by the endpoints where the customer is committing to
     something — a real quote — and omitted by the ones that are exploring, so
@@ -166,7 +174,11 @@ async def _build_spec(
         scale=scale,
     )
 
-    unknown = [code for code in finishes if code not in FINISH_CATALOGUE]
+    # Refused here, where the customer is still choosing, and *not* on the
+    # repricing edges (`_line_pricing.spec_for`, `workers/cached_plates`): a
+    # finish the farm has stopped selling must not be quotable, and must still
+    # reprice for the orders already placed under it.
+    unknown = [code for code in finishes if code not in catalogue]
     if unknown:
         raise ValidationError("error.pricing.unknown_finish", finishes=unknown)
 
@@ -178,7 +190,7 @@ async def _build_spec(
         quantity=quantity,
         colors=tuple(colors) if colors else ("default",),
         scale=scale,
-        finishes=tuple(FINISH_CATALOGUE[code] for code in finishes),
+        finishes=tuple(catalogue[code] for code in finishes),
         rush=rush,
         include_shipping=include_shipping,
     )

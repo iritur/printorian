@@ -70,7 +70,14 @@ async def place_order(
     # Collection is not a discount, it is the absence of a service: the engine
     # omits the shipping line rather than zeroing it. Before this the spec used
     # the default, so every order — collected or not — was priced with delivery.
-    spec = await spec_for(db, data.lines[0], include_shipping=data.delivery.method.is_shipped)
+    # The finish catalogue is resolved here, beside the rates, because the order
+    # must charge what the configurator quoted — both edges read the same table.
+    spec = await spec_for(
+        db,
+        data.lines[0],
+        include_shipping=data.delivery.method.is_shipped,
+        finishes=await settings.resolve_finishes(),
+    )
     # Resolved once, here at the edge, and passed in — never fetched inside the
     # engine (ADR-0002). The order stores both the resulting breakdown and these
     # rates, so the quote can be rebuilt later rather than merely displayed.
@@ -109,7 +116,12 @@ async def reprice(
     caller already has, and refusing it to a signed-out visitor would only mean
     showing them a stale number.
     """
-    spec = await spec_for(db, data.lines[0], include_shipping=data.method.is_shipped)
+    spec = await spec_for(
+        db,
+        data.lines[0],
+        include_shipping=data.method.is_shipped,
+        finishes=await settings.resolve_finishes(),
+    )
     rates = await settings.resolve_rates()
     tiers = await settings.resolve_tiers()
     return {"breakdown": _render(price(spec, rates, await tier_for(db, actor, tiers)))}
