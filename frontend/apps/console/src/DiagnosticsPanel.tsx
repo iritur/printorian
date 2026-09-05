@@ -224,14 +224,14 @@ interface Tally {
  * This exists because the roster and the readings are two different lists that
  * happen to arrive in one object, and the tile has to be built from the second.
  * `Heartbeat.report()` iterates the compile-time constant `LOOPS` and returns
- * **all seven** entries with `state="unknown"` whenever the store cannot be read
+ * **all eight** entries with `state="unknown"` whenever the store cannot be read
  * — no Redis client, or an `mget` that raised — so a body full of rows that
  * measured nothing is the ordinary shape of a Redis outage rather than a corner
  * case. The driver roster does the same for a printer whose reading has lapsed.
  *
  * Counting those rows into the denominator makes the farm look worse with every
  * reading it loses. Counting their absence as a zero in the numerator is the
- * flattering half and the worse one: «0 из 7 циклов» asserts that seven loops
+ * flattering half and the worse one: «0 из 8 циклов» asserts that eight loops
  * have stopped, when what the panel knows is that nobody answered — the exact
  * pair root CLAUDE.md §1 forbids, an invented numerator over a roster.
  */
@@ -252,7 +252,7 @@ function tally(verdicts: Verdict[]): Tally {
  * withheld figure. Everything measured is the bare fraction. In between — some
  * rows answered and some did not — the fraction is true of the rows it counts
  * and says nothing about the rest, so the «· 2 НЕ ИЗМЕРЕНО» half is what stops a
- * farm with five of seven loops unreadable reading as a farm with five loops.
+ * farm with five of eight loops unreadable reading as a farm with five loops.
  */
 function noteOf(
   t: (key: MessageKey, details?: Record<string, unknown>) => string,
@@ -354,9 +354,9 @@ export function DiagnosticsPanel({ locale }: { locale: Locale }) {
         {/*
           The figure is withheld, not zeroed, when nothing was measured — and
           «nothing» is not the same question as «no rows». A heartbeat store the
-          worker cannot read answers with all seven loops present and every one
+          worker cannot read answers with all eight loops present and every one
           of them `unknown`, so a tile keyed on `loops.length` would have read
-          «0 из 7 циклов» on the farm's worst morning: an invented numerator over
+          «0 из 8 циклов» on the farm's worst morning: an invented numerator over
           a roster, and flattering in neither direction — it says the loops are
           stopped when what happened is that nobody looked.
 
