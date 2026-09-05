@@ -157,9 +157,9 @@ def upgrade() -> None:
         sa.Column("at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("actor_id", sa.Uuid(), nullable=True),
         sa.Column("from_kind", _location_kind(), nullable=True),
-        sa.Column("from_address", sa.String(length=24), nullable=True),
+        sa.Column("from_address", sa.String(length=60), nullable=True),
         sa.Column("to_kind", _location_kind(), nullable=True),
-        sa.Column("to_address", sa.String(length=24), nullable=True),
+        sa.Column("to_address", sa.String(length=60), nullable=True),
         sa.Column("note", sa.String(length=200), nullable=True),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column(

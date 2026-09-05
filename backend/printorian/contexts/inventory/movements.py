@@ -149,10 +149,15 @@ class MaterialMovement(Entity):
     #: fleet row from here is exactly the import the layering forbids, and a UUID
     #: is not an address a person reads. The machine is on the lot, which is where
     #: "where is it now" is asked; this row's job is the cell it *left*.
+    #: ``String(60)`` rather than the cell's ``String(24)``, and the difference is
+    #: the point: `MaterialLot.shelf` is 60 characters of free text and a spool
+    #: unmounted onto one is recorded here verbatim. Truncating it to an address
+    #: width would store a place nobody wrote down, which is the small end of the
+    #: same mistake as inventing one.
     from_kind: Mapped[LocationKind | None] = mapped_column(enum_column(LocationKind), nullable=True)
-    from_address: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    from_address: Mapped[str | None] = mapped_column(String(60), nullable=True)
     to_kind: Mapped[LocationKind | None] = mapped_column(enum_column(LocationKind), nullable=True)
-    to_address: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    to_address: Mapped[str | None] = mapped_column(String(60), nullable=True)
 
     #: Free text an operator typed — the «Основание» column of the kit's movements
     #: table. Optional, and never a substitute for `reason`: the client renders the

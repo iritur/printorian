@@ -205,8 +205,8 @@ class InventoryService:
             # Whatever the operator typed, which may be nothing. `shelf` is the
             # pre-cell free text rather than an address; a spool put away properly
             # is placed through `POST /store/lots/{id}/place`, which writes a real
-            # one. Copying it here anyway is honest — it is what was recorded.
-            to_address=shelf[:24] if shelf else None,
+            # one. Copied verbatim — the column is 60 wide for exactly this.
+            to_address=shelf,
         )
 
         lot.location_kind = LocationKind.STOCK
