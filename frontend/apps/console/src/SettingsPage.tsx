@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { type ReactElement, useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ApiError } from '@printorian/api-client'
 import type { Locale, MessageKey } from '@printorian/ui'
@@ -15,6 +15,7 @@ import {
 } from '@printorian/ui'
 
 import { DiagnosticsPanel } from './DiagnosticsPanel'
+import { OperationsEditor } from './settings/OperationsEditor'
 
 /**
  * The farm's own settings (design/settings.html).
@@ -328,45 +329,84 @@ export function SettingsPage({ locale }: { locale: Locale }) {
       .find((field) => field.key === 'general.farm_name')?.value ?? '',
   )
 
+  /**
+   * A table draws the editor its **key** names, and an unknown key draws nothing.
+   *
+   * This used to be `if (field.key === 'pricing.tiers') … if (field.kind ===
+   * 'table') <LadderEditor>`, so every table the page had never heard of fell
+   * through to the volume ladder: `postprocess.operations` would have rendered as
+   * a discount ladder — «От количества», «Скидка» — over finish rows, with no
+   * error anywhere. A control that misdescribes its data is worse than no control,
+   * because the owner reads it and believes it. `DiagnosticsPanel` follows the
+   * same whitelist rule for verdicts it has not heard of.
+   */
+  const tableEditors: Record<string, (field: SettingView) => ReactElement> = {
+    'pricing.discounts': (field) => (
+      <LadderEditor
+        key={field.key}
+        field={field}
+        locale={locale}
+        draft={drafts[field.key]}
+        onChange={(value) => setDraft(field.key, value)}
+        onRevert={() => revert(field.key)}
+        name={fieldName(field.key)}
+        hint={fieldHint(field.key)}
+        revertLabel={t('settings.revert')}
+        stepLabel={t('settings.ladder.step')}
+        fromLabel={t('settings.ladder.from')}
+        discountLabel={t('settings.ladder.discount')}
+        addLabel={t('settings.ladder.add')}
+        removeLabel={t('settings.ladder.remove')}
+        checkLabel={t('settings.ladder.check')}
+      />
+    ),
+    'pricing.tiers': (field) => (
+      <TiersEditor
+        key={field.key}
+        field={field}
+        locale={locale}
+        draft={drafts[field.key]}
+        onChange={(value) => setDraft(field.key, value)}
+        onRevert={() => revert(field.key)}
+        name={fieldName(field.key)}
+        hint={fieldHint(field.key)}
+        revertLabel={t('settings.revert')}
+        codeLabel={t('settings.tiers.code')}
+        discountLabel={t('settings.tiers.discount')}
+        marginLabel={t('settings.tiers.margin')}
+        marginNoneLabel={t('settings.tiers.margin_none')}
+      />
+    ),
+    'postprocess.operations': (field) => (
+      <OperationsEditor
+        key={field.key}
+        field={field}
+        draft={drafts[field.key]}
+        onChange={(value) => setDraft(field.key, value)}
+        onRevert={() => revert(field.key)}
+        dirty={drafts[field.key] !== undefined && !sameValue(drafts[field.key], field.value)}
+        name={fieldName(field.key)}
+        hint={fieldHint(field.key)}
+        revertLabel={t('settings.revert')}
+        operationLabel={t('settings.operations.operation')}
+        codeLabel={t('settings.operations.code')}
+        hoursLabel={t('settings.operations.hours')}
+        feeLabel={t('settings.operations.fee')}
+        hoursUnit={t('settings.unit.hour')}
+        feeUnit={t('settings.unit.rub')}
+        rowLabel={(code) => text(`settings.finish.${code}`) || code}
+      />
+    ),
+  }
+
   const renderField = (field: SettingView) => {
-    if (field.key === 'pricing.tiers') {
-      return (
-        <TiersEditor
-          key={field.key}
-          field={field}
-          locale={locale}
-          draft={drafts[field.key]}
-          onChange={(value) => setDraft(field.key, value)}
-          onRevert={() => revert(field.key)}
-          name={fieldName(field.key)}
-          hint={fieldHint(field.key)}
-          revertLabel={t('settings.revert')}
-          codeLabel={t('settings.tiers.code')}
-          discountLabel={t('settings.tiers.discount')}
-          marginLabel={t('settings.tiers.margin')}
-          marginNoneLabel={t('settings.tiers.margin_none')}
-        />
-      )
-    }
     if (field.kind === 'table') {
+      const editor = tableEditors[field.key]
+      if (editor) return editor(field)
       return (
-        <LadderEditor
-          key={field.key}
-          field={field}
-          locale={locale}
-          draft={drafts[field.key]}
-          onChange={(value) => setDraft(field.key, value)}
-          onRevert={() => revert(field.key)}
-          name={fieldName(field.key)}
-          hint={fieldHint(field.key)}
-          revertLabel={t('settings.revert')}
-          stepLabel={t('settings.ladder.step')}
-          fromLabel={t('settings.ladder.from')}
-          discountLabel={t('settings.ladder.discount')}
-          addLabel={t('settings.ladder.add')}
-          removeLabel={t('settings.ladder.remove')}
-          checkLabel={t('settings.ladder.check')}
-        />
+        <p className="hv-hint hv-bad" key={field.key} role="status">
+          {t('settings.table.no_editor', { key: field.key })}
+        </p>
       )
     }
     return (
