@@ -1312,6 +1312,34 @@ there is no `id` in a grouped result. `tests/unit/test_production_ordering.py` c
 the planner and the assignment record under `FixedClock`; six of its eight tests fail
 on every run against the code as it was, which is the part worth knowing.
 
+**The store's first slice is on `issue-35-store-cells-and-movement-ledger`, and
+no test in it has been run.** [#35](https://github.com/iritur/printorian/issues/35)
+as filed is the whole warehouse; this branch builds one half of it — a lot has a
+cell address, and every move of a lot appends a row nothing can overwrite. Three
+tables (`storage_zones`, `storage_cells`, `material_movements`), one column
+(`material_lots.cell_id`), migration 0024, `/store/*`, and the console's
+`StorePage`/`CellDetail`. `mount_lot` and `unmount_lot` now write a movement
+before they overwrite the five location columns, which is the whole leverage
+argument of the issue: those columns are the only place the previous position
+exists. Deliberately out and still owed by #35: turnover, dead stock in money,
+stocktake, drying state, and the three non-filament purchasable classes.
+`docs/DESIGN-KIT.md` §2.4 was rewritten to say exactly that rather than deleted.
+
+**What was verified there, and what was not.** The branch was built in an
+isolated worktree with no `.venv` and no `node_modules`, alongside eight other
+agents sharing one `printorian_test` database and one editable install pointing
+at the main tree. So `pytest`, `lint-imports`, every `alembic` command and every
+`npm` script were **not run** — a pytest run from that worktree imports the main
+tree's source and reports about code it did not build. What did run, each
+separately and each `exit=0`: `ruff check`, `ruff format --check`, `mypy
+--strict`, `check_context_isolation.py`, `check_file_length.py`. The four
+doc-drift gates and the metadata-only halves of `test_schema_contracts.py` and
+`test_referential_integrity.py` were additionally run as plain functions with the
+worktree ahead of the editable install on `sys.path`, which opens no database —
+and `test_every_foreign_key_is_indexed` caught two missing indexes that way. The
+sixteen new tests are written and **unproven**; the serial verification pass is
+where they first run.
+
 ## 3. What is actually next
 
 **Open work lives in [GitHub issues](https://github.com/iritur/printorian/issues),** grouped by [milestone](https://github.com/iritur/printorian/issues?q=is%3Aopen) and described in [docs/WORKFLOW.md](docs/WORKFLOW.md). Take one from a milestone rather than from this section. Where an issue and a document disagree, the issue is right.
