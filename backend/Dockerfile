@@ -10,14 +10,38 @@
 #   workers    python -m printorian.workers
 #   migrate    alembic upgrade head
 #
-# Base images are pinned by digest, not by tag. `python:3.13-slim` is a moving
-# target; a rebuild that silently changes the interpreter underneath a release is
-# the kind of difference that only shows up in production. Renovate bumps these
-# in Stage 6, which makes the change a reviewable commit instead of a surprise.
+# Base images carry a tag *and* a digest, and the two are edited as one thing.
+#
+# The digest is the half Docker acts on — `name:tag@sha256:...` resolves by
+# digest and never consults the tag — so a rebuild gets the interpreter the
+# release was tested against. `python:3.13-slim` on its own is a moving target,
+# and an interpreter that moved underneath a release only shows up in production.
+#
+# The tag is the half people and updaters act on, and it was missing here until
+# #24. `python@sha256:...` does not say which stream the digest came from, so a
+# reviewer cannot tell 3.13-slim from `latest`, and an updater has no reference
+# point to bump against: Renovate reads a tagless digest as `latest` and would
+# walk the base onto it. The tag is what stops that, not decoration.
+#
+# What the tag does *not* assert is that this digest was published under it.
+# Docker does not check, no gate in this repository can, and the pair has never
+# been resolved against a registry from here. The tag records the stream this pin
+# is required to follow — for python that stream is written down twice, at 13168e4
+# ("python:3.13-slim pinned by digest") and in docs/INFRASTRUCTURE.md Stage 1 —
+# and the first bump replaces the digest with that stream's head, which is where
+# the two finally become one measured fact. `tests/unit/test_base_image_pins.py`
+# holds the halves together meanwhile: a pin that loses its tag fails, and so do
+# the three python stages disagreeing.
+#
+# Debian rather than Alpine is load-bearing, and so is *which* Debian:
+# `postgresql-client-17` in the runtime stage comes from the base's own apt set
+# and trixie is where 17 lives. The release that moves `3.13-slim` onto the next
+# Debian stable takes that package's availability with it, and ADR-0019 finds out
+# at restore time rather than at build time — so that bump is read, not merged.
 
 # ---------------------------------------------------------------- builder
 
-FROM python@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS builder
+FROM python:3.13-slim@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS builder
 
 # Build tools live here and never reach the runtime layer. Most of the
 # dependency set ships manylinux wheels (numpy, asyncpg, cryptography,
@@ -59,7 +83,7 @@ RUN pip uninstall --yes pip
 
 # ---------------------------------------------------------------- runtime
 
-FROM python@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS runtime
+FROM python:3.13-slim@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS runtime
 
 # curl for the healthcheck below; nothing else. No compiler, no pip cache, no
 # package index — a runtime that cannot install anything is a runtime an attacker

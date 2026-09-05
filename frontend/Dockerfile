@@ -20,8 +20,17 @@
 # ----------------------------------------------------------------- schema
 # Exporting OpenAPI needs the backend importable, so this is the backend's
 # dependency set — but none of it reaches either final stage.
+#
+# Tag and digest are character-for-character `backend/Dockerfile`'s, and that is
+# the point rather than tidiness: this stage produces the contract the TypeScript
+# client is generated from (ADR-0005). Bumped in one file and not the other, the
+# console would be typechecked against a schema exported on an interpreter the
+# backend never runs — and every gate in the repository would stay green, because
+# nothing else compares the two. `backend/tests/unit/test_base_image_pins.py`
+# does. The long note at the top of `backend/Dockerfile` says what the tag beside
+# the digest does and does not claim.
 
-FROM python@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS schema
+FROM python:3.13-slim@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS schema
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
 WORKDIR /build
@@ -36,8 +45,17 @@ RUN pip install --no-cache-dir --no-deps . \
  && python tools/export_openapi.py --out /openapi.json
 
 # ---------------------------------------------------------------- builder
+#
+# `node:24` is a stream that was *chosen* here, not recovered: the pin arrived
+# tagless at 13168e4 and nothing in the tree ever recorded which image it came
+# from. 24 because that is the major CI installs for the frontend job
+# (`.github/workflows/ci.yml`, `node-version: "24"`) and the major the suite was
+# last reproduced under; the full variant rather than `-slim` because `npm ci`
+# here may still have to build a native dependency, and this stage is discarded
+# after `vite build` — a builder that cannot compile costs more than the layer
+# `-slim` saves. Say so in the bump if that reasoning stops holding.
 
-FROM node@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS builder
+FROM node:24@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS builder
 
 WORKDIR /build
 
@@ -68,7 +86,11 @@ RUN npm run typecheck && npm run build
 # Served from the farm server on the LAN (ADR-0016). Same-origin with the API,
 # so Caddy also proxies /api — no CORS, no bearer token.
 
-FROM caddy@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648 AS console
+# `caddy:2` is the other chosen stream — nothing recorded one, and the only thing
+# the tree asks of this image is that it serve files and carry a busybox `wget`
+# for the healthcheck below, which every Caddy 2 image does. A major waits for a
+# person: Caddy 3 would be a Caddyfile compatibility question, not a bump.
+FROM caddy:2@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648 AS console
 
 COPY --from=builder /build/apps/console/dist /srv
 COPY deploy/console.Caddyfile /etc/caddy/Caddyfile
@@ -99,7 +121,8 @@ COPY --from=builder /build/apps/web/dist /dist
 # `deploy/compose.prod.yml` puts it behind a profile so it never starts by
 # default. `deploy/storefront.Caddyfile` lists how it differs from the edge.
 
-FROM caddy@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648 AS storefront
+# Same pin as `console` above, and edited with it — see the note there.
+FROM caddy:2@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648 AS storefront
 
 COPY --from=builder /build/apps/web/dist /srv
 COPY deploy/storefront.Caddyfile /etc/caddy/Caddyfile
