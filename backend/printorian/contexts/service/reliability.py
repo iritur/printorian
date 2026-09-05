@@ -35,6 +35,7 @@ from printorian.contexts.service.models import PrinterFailure
 from printorian.contexts.service.policies import FailureCause
 from printorian.core.ids import EntityId
 
+
 class FailureTally(BaseModel):
     """What one machine's failures amount to over a window.
 
@@ -74,9 +75,7 @@ class FailureSummary(BaseModel):
     uncategorised: int = 0
 
 
-async def failure_summary(
-    db: AsyncSession, *, since: datetime, until: datetime
-) -> FailureSummary:
+async def failure_summary(db: AsyncSession, *, since: datetime, until: datetime) -> FailureSummary:
     """Count the window's failures, per machine and per named cause."""
     return FailureSummary(
         by_printer=await _by_printer(db, since=since, until=until),
@@ -114,9 +113,7 @@ async def _by_printer(
             func.count().filter(PrinterFailure.restored_at.is_(None)).label("open_failures"),
             # ``SUM`` over the closed rows, which is ``NULL`` when there are none —
             # exactly the absence `mttr_minutes` refuses to turn into a zero.
-            func.sum(
-                func.extract("epoch", PrinterFailure.restored_at - PrinterFailure.detected_at)
-            )
+            func.sum(func.extract("epoch", PrinterFailure.restored_at - PrinterFailure.detected_at))
             .filter(closed)
             .label("repair_seconds"),
         )
