@@ -128,6 +128,16 @@ class MockPaymentProvider:
             raw=record.payment.raw,
         )
 
+    def refunded(self, provider_payment_id: str) -> Decimal:
+        """How much this gateway has been told to return.
+
+        The upstream ledger, deliberately separate from `Payment.refunded_amount`:
+        the two agreeing is the whole claim a refund makes. A test that only reads
+        the database cannot tell a refund that reached the gateway from one that
+        was recorded against a gateway which never held the money.
+        """
+        return self._record_for(provider_payment_id).refunded
+
     def settle(self, provider_payment_id: str, amount: Decimal | None = None) -> WebhookEvent:
         """Build the notification a successful payment would produce."""
         record = self._record_for(provider_payment_id)

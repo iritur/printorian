@@ -57,10 +57,15 @@ async def a_shop(
     clock: FixedClock,
     bus: EventBus,
 ) -> AsyncIterator[AsyncClient]:
-    """A running storefront with one material and three accounts.
+    """A running storefront with one material and four accounts.
 
     Two customers, because half of what these tests check is that one of them
     cannot see the other's orders, and an owner for the cases that need staff.
+
+    The engineer is staff who holds no `VIEW_FINANCIALS`, which is the only way to
+    tell "any badge opens this" apart from "the money permission opens this". An
+    owner holds every permission, so a test written with the owner alone passes
+    whichever one the route actually checks.
     """
     app = create_app(settings)
     database = _TestDatabase(settings.database_url)
@@ -81,6 +86,7 @@ async def a_shop(
             ("buyer@example.com", Role.CUSTOMER),
             ("rival@example.com", Role.CUSTOMER),
             ("boss@example.com", Role.OWNER),
+            ("engineer@example.com", Role.ENGINEER),
         ):
             await identity.create_user(
                 CreateUser(email=email, display_name=email, password=PASSWORD, role=role)
