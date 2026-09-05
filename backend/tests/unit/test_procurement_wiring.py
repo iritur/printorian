@@ -34,7 +34,9 @@ def test_the_service_is_given_an_inventory_writer(
     through this one collaborator — so a service without it cannot put a delivery
     on a shelf at all.
     """
-    service = deps.get_procurement_service(db_session, clock, deps.get_inventory_service(db_session))
+    service = deps.get_procurement_service(
+        db_session, clock, deps.get_inventory_service(db_session)
+    )
 
     assert isinstance(service, ProcurementService)
     assert isinstance(service._lots, InventoryService)

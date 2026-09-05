@@ -36,9 +36,13 @@ from sqlalchemy.pool import NullPool
 from printorian.api.app import create_app
 from printorian.api.deps import get_current_actor
 from printorian.contexts.identity import Actor, CreateUser, IdentityService, Permission, Role
-from printorian.contexts.inventory import CreateMaterialSpec, InventoryService
+from printorian.contexts.inventory import (
+    CreateMaterialLot,
+    CreateMaterialSpec,
+    InventoryService,
+)
 from printorian.contexts.inventory.models import MaterialLot
-from printorian.contexts.procurement import PurchasingBoard, PurchaseOrderView
+from printorian.contexts.procurement import PurchaseOrderView, PurchasingBoard
 from printorian.contexts.procurement.models import PurchaseReceipt
 from printorian.contexts.settings import SettingsService
 from printorian.core.clock import FixedClock

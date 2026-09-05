@@ -134,7 +134,7 @@ async def test_a_delivery_with_no_invoice_yet_records_no_price_rather_than_zero(
 
 
 async def test_a_partial_receipt_leaves_the_order_open_and_records_only_what_arrived(
-    procurement: ProcurementService
+    procurement: ProcurementService,
 ) -> None:
     """Half a delivery moves the order to «Приёмка» and no further. `STORED` is a
     person saying the shelf is straight, which is why the two are different
@@ -173,7 +173,7 @@ async def test_a_second_receipt_cannot_take_the_line_past_what_was_ordered(
 
 
 async def test_two_entries_in_one_delivery_cannot_together_overrun_the_line(
-    procurement: ProcurementService
+    procurement: ProcurementService,
 ) -> None:
     """Each entry is checked against what the *line* has taken so far, including
     the entries earlier in this same request. Checking against the database as it
