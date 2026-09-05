@@ -294,6 +294,84 @@ jobs:
           compose exec -T workers python -m printorian.workers --check
           compose logs workers | tail -20
 
+      # The guard's decision, in real bash with a real curl. There is no shellcheck
+      # and no bats harness in this repository, and this is the only job with a
+      # Linux shell, a running stack and an empty database — so it is the only place
+      # `deploy/reboot-guard.sh` can be driven rather than read.
+      #
+      # The seam this leaves, stated rather than hidden: pytest proves the endpoint
+      # answers 503 while a job is printing, and this proves 503 defers. Nothing
+      # proves those are the same 503, because staging a PRINTING row inside the
+      # release-gate stack would mean hand-writing an insert naming every non-null
+      # column of `print_jobs` — a fixture that would break on the next schema change
+      # and would be repaired by whoever broke it rather than by whoever owns this.
+      - name: The reboot guard defers unless the farm says it is quiet
+        run: |
+          set -euo pipefail
+          guard() { PRINTORIAN_HEALTH_URL="$1" PRINTORIAN_GUARD_TIMEOUT=5 bash deploy/reboot-guard.sh; }
+
+          # 1. Against the live stack, whose database is empty. A guard that never
+          #    permits anything would pass all three refusals below and be useless,
+          #    so the affirmative is asserted first.
+          guard http://127.0.0.1:8080/api/health/printing
+
+          # 2. Nothing listening. An API that is down is not permission to reboot —
+          #    and this is the case a naive `curl | grep -q quiet` would wave
+          #    through, because a pipeline returns grep's status and not curl's.
+          ! guard http://127.0.0.1:9/health/printing
+
+          # A stub for the two body-shaped refusals, which cannot be produced from
+          # the live stack without staging a print in it.
+          cat > /tmp/health-stub.py <<'PY'
+          import sys
+          from http.server import BaseHTTPRequestHandler, HTTPServer
+
+          code, body = int(sys.argv[1]), sys.argv[2].encode()
+
+
+          class Stub(BaseHTTPRequestHandler):
+              def do_GET(self) -> None:
+                  self.send_response(code)
+                  self.send_header("Content-Type", "application/json")
+                  self.send_header("Content-Length", str(len(body)))
+                  self.end_headers()
+                  self.wfile.write(body)
+
+              def log_message(self, *args: object) -> None:
+                  pass
+
+
+          HTTPServer(("127.0.0.1", 8099), Stub).serve_forever()
+          PY
+
+          # Waits for the stub AND asserts it is answering with the code asked for.
+          # Without the assertion, a stub that never started would make every
+          # refusal below pass for the wrong reason — the guard would be refusing a
+          # dead port, not the body it was given, and case 4 in particular would
+          # then prove nothing at all.
+          serve() {
+            python3 /tmp/health-stub.py "$1" "$2" &
+            STUB=$!
+            for _ in $(seq 30); do
+              [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8099/health/printing)" = "$1" ] && return 0
+              sleep 1
+            done
+            echo "::error::the stub never answered $1 on 127.0.0.1:8099"
+            return 1
+          }
+          stop() { kill "$STUB"; wait "$STUB" 2>/dev/null || true; }
+
+          # 3. The farm saying it is busy, in the shape the endpoint really uses.
+          serve 503 '{"status":"in_flight","in_flight":{"assigned":0,"dispatching":0,"printing":1}}'
+          ! guard http://127.0.0.1:8099/health/printing
+          stop
+
+          # 4. A cheerful 200 that carries no verdict — a proxy error page, a captive
+          #    portal, or this route renamed under a catch-all. Not permission either.
+          serve 200 '{"status":"ok"}'
+          ! guard http://127.0.0.1:8099/health/printing
+          stop
+
       # Live events cross the process boundary. The API and the workers are
       # separate containers with an in-process bus each, so without the relay
       # every event a sweep raises dies in the worker and the console's boards
