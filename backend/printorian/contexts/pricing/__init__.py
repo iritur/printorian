@@ -78,6 +78,7 @@ from printorian.contexts.pricing.spec import (
     PrintEstimate,
     ScenarioProfile,
 )
+from printorian.contexts.pricing.zones import ShippingZone, ZoneTariffs, zone_for
 
 __all__ = [
     "ADJUSTMENT_CUSTOMER_DISCOUNT",
@@ -119,6 +120,8 @@ __all__ = [
     "PrintEstimate",
     "RateSnapshot",
     "ScenarioProfile",
+    "ShippingZone",
+    "ZoneTariffs",
     "breakdown_from_dict",
     "breakdown_to_dict",
     "delta_to_dict",
@@ -131,4 +134,5 @@ __all__ = [
     "rates_to_dict",
     "step_for_spend",
     "tier_for_spend",
+    "zone_for",
 ]
