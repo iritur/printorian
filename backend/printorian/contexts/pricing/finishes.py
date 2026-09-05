@@ -12,9 +12,25 @@ one definition or to keep a second copy in the worker, and a second copy is
 exactly how V1 ended up with two calculators that quoted different numbers for
 the same order; `_line_pricing.py`'s docstring is written about that failure.
 
-Phase 2 replaces this with a managed catalogue. The shape is already what the
-engine consumes, so that is a change of *where the rows come from* and not of
-what a finish is.
+**The rows now come from the settings table, and this is the default underneath
+them.** `contexts.settings` declares `postprocess.operations` with
+`tuple(FINISH_CATALOGUE.values())` as its default and `SettingsService.resolve_finishes()`
+lays the farm's overrides over it, so an empty settings table prices exactly as
+this constant always did — the whole settings context's rule, that a key with no
+row is not a missing setting but the code default. «Сбросить» on the row returns
+here. Nothing about *what a finish is* changed, which is why the move cost one
+argument at four call sites and no change to the engine.
+
+Two things a reader will want and should not take from the file alone. The kit
+(`design/settings.html`) shows primed at 0.7 h and painted at 1.6 h against the
+0.6 and 1.5 here; the code's figures are what the farm is running and the
+defaults deliberately follow them, because typing the kit's in would have repriced
+every quote on the day the catalogue merged. And `extra_days` is read by nothing —
+grep finds its declaration, this dict, and the settings round trip that carries it
+through. It is declared as the calendar days a finish adds to the promise, but
+`ordering.promised_hours` takes policy, minutes, quantity and rush, and never a
+finish. It is kept because a lossless round trip is cheaper than resurrecting the
+number later, not because it is doing anything.
 """
 
 from __future__ import annotations

@@ -187,9 +187,10 @@ async def test_a_finish_catalogue_round_trips_and_reaches_resolve_finishes(
 
     resolved = await settings.resolve_finishes()
     assert resolved["sanded"].labor_hours == Decimal("0.9")
-    # Carried through untouched even though no editor draws it: `extra_days` feeds
-    # the SLA promise, and a lossy round trip would shorten what «Окраска» promises
-    # the first time somebody edited a norm-hour.
+    # Carried through untouched even though no editor draws it and nothing reads
+    # it yet. A lossy round trip would zero «Окраска»'s two days the first time
+    # somebody edited an unrelated norm-hour, and the loss would surface only when
+    # a consumer finally arrived — long after the save that caused it.
     assert resolved["painted"].extra_days == 2
 
     rows = {row.key: row for row in await settings.listing()}

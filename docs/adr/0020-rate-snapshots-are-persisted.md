@@ -97,3 +97,51 @@ moved. It is written down here because the sentence above — "at the rates the 
 was sold under, not at today's" — is otherwise read as covering every input, and it
 does not cover this one. Closing it means carrying the line's price per gram onto
 `OrderLine` at `place()` time, a change on the checkout path rather than this one.
+## Amendment — a second unpinned input: the postprocessing catalogue (2026-09-05)
+
+[#29](https://github.com/iritur/printorian/issues/29) makes the finish catalogue a
+setting: `postprocess.operations` holds the norm-hours and flat fee of each
+operation, and the four edges that price a finish now read it through
+`SettingsService.resolve_finishes()` instead of the `FINISH_CATALOGUE` constant.
+That is a *second* input to a price that an owner can change and the snapshot does
+not carry — exactly the shape of gap this ADR was written to close for rates — so
+it is written down here rather than left for somebody to discover from a diff.
+
+**`RateSnapshot` does not gain a `finishes` field, and must not.** `snapshot_id` is
+the content hash and it is built over `sorted(self.__slots__)`, so one new field
+changes the hash of every snapshot rebuilt from a stored row. `_rates_for` would
+then refuse every already-paid order the cached-plate path touches — the refusal the
+amendment above describes as working exactly as designed, firing on every order in
+the table at once. Widening the snapshot to hold a table is the change that looks
+like closing the gap and is in fact the outage.
+
+What holds instead rests on three things, each checked in the code rather than
+reasoned from the shape:
+
+* **What was charged does not move.** The order pins its `Breakdown`, and the
+  breakdown carries a `postprocess.<code>` line per finish with the money already
+  computed. Editing the catalogue afterwards changes the *next* quote and nothing
+  agreed, which is this ADR's whole promise and it survives unchanged.
+* **The rate that was applied is recoverable from the order.** `pricing/lines.py`
+  writes `labor_hours × postprocess_rate_per_hour + flat_fee` onto the line's
+  `Basis.rate` and the quantity onto `Basis.quantity`, so the per-unit finish rate
+  in force at the time is *in* the pinned breakdown — the same argument that already
+  covers the tier percents landing on `Basis.percent`. What is not recoverable is
+  the split between norm-hours and flat fee, because only their sum is stored; a
+  question about that goes to the settings audit, which records every edit with its
+  author.
+* **`prepared_cost` is unaffected either way.** It is a difference between two
+  prices that share their finishes, and the finish term is independent of minutes
+  and grams, so it cancels exactly under the linear percentages — the property
+  `workers/plate_admission.py` already relies on when it declines to check finishes
+  before attaching a plate. The catalogue is nevertheless resolved and handed to
+  `CachedPlates` by `workers/passes.py`: the cancellation is a property of
+  `pricing.reprice`, not a licence for the sweep to assemble its spec from
+  different rows than the checkout did.
+
+The material price above and this catalogue are now the two live inputs to a path
+this document otherwise describes as computed under pinned rates. They are not the
+same size of problem — the material price enters a *difference* and this one
+cancels out of it entirely — but they are the same kind, and a third would be the
+point at which the snapshot needs to become something wider than a rate bundle
+rather than gaining another field.

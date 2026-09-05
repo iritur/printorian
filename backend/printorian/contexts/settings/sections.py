@@ -77,9 +77,12 @@ def default_finishes() -> tuple[FinishOption, ...]:
     commit message about making a table editable — the farm never asked for a rise,
     and the default is what it is running today.
 
-    `extra_days` rides along even though no editor draws it: it feeds the SLA
-    promise rather than the price, and dropping it from the default would silently
-    shorten what «Окраска» promises.
+    `extra_days` rides along even though no editor draws it — and, checked rather
+    than assumed, nothing reads it either: it is declared as the calendar days a
+    finish adds, and `promised_hours` takes policy, minutes, quantity and rush.
+    Dropping it here would still be wrong. A default that quietly loses a column is
+    how a field stays dead: the day a consumer arrives, «Окраска» has to still say
+    2. Making it *editable* is a different question and not this slice's.
     """
     return tuple(FINISH_CATALOGUE.values())
 

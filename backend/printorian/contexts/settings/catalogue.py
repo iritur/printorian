@@ -96,11 +96,14 @@ def to_json(value: Any) -> Any:
                 "code": finish.code,
                 "labor_hours": str(finish.labor_hours),
                 "flat_fee": str(finish.flat_fee),
-                # Carried even though no editor draws it. `extra_days` feeds the SLA
-                # promise rather than the price, and dropping it here would make the
-                # first save of the table silently shorten what «Окраска» promises —
-                # the round trip has to be lossless or editing the norm-hours would
-                # change something the owner never looked at.
+                # Carried although no editor draws it and — checked, not assumed —
+                # nothing reads it: `grep extra_days` finds its declaration on
+                # `FinishOption`, `finishes.py`, and this round trip. It is
+                # *declared* as calendar days a finish adds to the promise, and
+                # `promised_hours` takes policy, minutes, quantity and rush, so the
+                # promise never sees it. Carried anyway because the round trip has
+                # to be lossless: the day something does read it, «Окраска» must
+                # still say 2 rather than 0 because a save dropped the column.
                 "extra_days": finish.extra_days,
             }
             for finish in value
