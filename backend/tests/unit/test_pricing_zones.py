@@ -27,7 +27,7 @@ CENTRAL = ShippingZone(
     base=Decimal(550),
     per_kg=Decimal(60),
     transit_days=3,
-    postcode_prefixes=("3", "6"),
+    postcode_prefixes=("3", "4"),
 )
 
 

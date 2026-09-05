@@ -25,6 +25,7 @@ from printorian.contexts.pricing.breakdown import (
     LineItem,
 )
 from printorian.contexts.pricing.rates import DiscountLadder, DiscountTier, RateSnapshot
+from printorian.contexts.pricing.zones import ShippingZone, ZoneTariffs
 from printorian.core.money import Currency, Money
 
 SCHEMA_VERSION = 1
@@ -176,6 +177,22 @@ def rates_from_dict(data: dict[str, Any]) -> RateSnapshot:
 
 
 def _rate_to_json(value: Any) -> Any:
+    if isinstance(value, ZoneTariffs):
+        # The whole tariff table goes into `rate_snapshots.payload` with every
+        # order, which is the point: a farm re-drawing its zones next month must
+        # not be able to re-price an order it already sold (ADR-0020). Decimals
+        # travel as strings for the reason the module docstring gives.
+        return [
+            {
+                "code": zone.code,
+                "base": str(zone.base),
+                "per_kg": str(zone.per_kg),
+                "transit_days": zone.transit_days,
+                "postcode_prefixes": list(zone.postcode_prefixes),
+                "enabled": zone.enabled,
+            }
+            for zone in value.zones
+        ]
     if isinstance(value, DiscountLadder):
         return [
             {"min_quantity": tier.min_quantity, "percent": str(tier.percent)}
@@ -191,6 +208,23 @@ def _rate_to_json(value: Any) -> Any:
 
 
 def _rate_from_json(name: str, value: Any) -> Any:
+    if name == "zones":
+        # Named rather than sniffed, exactly like `discounts` below: without this
+        # branch the value falls through to `Decimal(value)` and a stored snapshot
+        # becomes an archive nobody can re-price from.
+        return ZoneTariffs(
+            zones=tuple(
+                ShippingZone(
+                    code=str(zone["code"]),
+                    base=Decimal(zone["base"]),
+                    per_kg=Decimal(zone["per_kg"]),
+                    transit_days=int(zone["transit_days"]),
+                    postcode_prefixes=tuple(zone["postcode_prefixes"]),
+                    enabled=bool(zone["enabled"]),
+                )
+                for zone in value
+            )
+        )
     if name == "discounts":
         return DiscountLadder(
             tiers=tuple(

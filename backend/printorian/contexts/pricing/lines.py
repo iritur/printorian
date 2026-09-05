@@ -16,6 +16,7 @@ from printorian.contexts.pricing.codes import (
     LABOR_SUPERVISION,
     LOGISTICS_PACKAGING,
     LOGISTICS_SHIPPING,
+    LOGISTICS_SHIPPING_WEIGHT,
     MACHINE_DEPRECIATION,
     MACHINE_ELECTRICITY,
     MATERIAL,
@@ -25,6 +26,10 @@ from printorian.contexts.pricing.codes import (
 )
 from printorian.contexts.pricing.rates import RateSnapshot
 from printorian.contexts.pricing.spec import PriceSpec
+from printorian.contexts.pricing.zones import ShippingZone
+
+#: Zone tariffs are quoted per kilogram; the estimate measures grams.
+_GRAMS_PER_KG = Decimal(1000)
 
 
 def material_lines(spec: PriceSpec, rates: RateSnapshot, quantity: Decimal) -> list[LineItem]:
@@ -186,9 +191,22 @@ def logistics_lines(spec: PriceSpec, rates: RateSnapshot, quantity: Decimal) -> 
             ),
         )
     ]
-    # One order ships once, so shipping is flat. Collection means no line at all
-    # rather than a zero line, so the customer does not wonder what it is.
-    if spec.include_shipping:
+    # Collection means no line at all rather than a zero line, so the customer
+    # does not wonder what it is.
+    if not spec.include_shipping:
+        return lines
+
+    zone = _zone_of(spec, rates)
+    if zone is None:
+        # The documented fallback, and it is a decision rather than an oversight.
+        # `pricing.shipping_flat` remains the **pre-address** figure: the
+        # storefront prices a courier delivery the moment the customer picks one,
+        # long before a postcode is typed (see `RepriceLine`'s docstring), and a
+        # zone tariff cannot answer a question that has no destination in it.
+        # It is also where an unmatched postcode lands, because `zone_for`
+        # returns None rather than guessing a nearest zone — quoting the flat
+        # rate the farm did set beats inventing one it did not (CLAUDE.md §1).
+        # Do not "simplify" this away once the zone table is populated.
         lines.append(
             LineItem(
                 code=LOGISTICS_SHIPPING,
@@ -197,4 +215,59 @@ def logistics_lines(spec: PriceSpec, rates: RateSnapshot, quantity: Decimal) -> 
                 basis=Basis(kind=BasisKind.FLAT, rate=rates.shipping_flat),
             )
         )
+        return lines
+
+    # One order ships once, so the zone's base is flat like the rate it replaces.
+    # It is emitted even at zero, unlike collection above: a zone charging nothing
+    # is a parcel going out for free, which is a fact the farm measured, and
+    # dropping the row would read as though delivery had not been considered.
+    #
+    # The zone *code* is deliberately not carried on the `Basis`. `basis_to_dict`
+    # is hand-listed and mirrored by a frontend `Breakdown` type, and the zone is
+    # already recoverable without it: the pinned `RateSnapshot` archives the whole
+    # tariff table with the order, and the order row carries the delivery city and
+    # postcode. Adding a field here would be a wire-format change buying nothing.
+    lines.append(
+        LineItem(
+            code=LOGISTICS_SHIPPING,
+            category=Category.LOGISTICS,
+            amount=rates.money(zone.base),
+            basis=Basis(kind=BasisKind.FLAT, rate=zone.base),
+        )
+    )
+    if zone.per_kg > 0:
+        # Measured geometry, not an estimate of a parcel: the mass the plate
+        # actually prints. Volumetric weight needs a bounding box, which is the
+        # *parcel's* rather than the part's, and belongs with the shipment.
+        billable_kg = spec.estimate.material_mass.grams * quantity / _GRAMS_PER_KG
+        lines.append(
+            LineItem(
+                code=LOGISTICS_SHIPPING_WEIGHT,
+                category=Category.LOGISTICS,
+                amount=rates.money(billable_kg * zone.per_kg),
+                basis=Basis(
+                    kind=BasisKind.RATE_OVER_QUANTITY,
+                    quantity=billable_kg,
+                    unit="kg",
+                    rate=zone.per_kg,
+                ),
+            )
+        )
     return lines
+
+
+def _zone_of(spec: PriceSpec, rates: RateSnapshot) -> ShippingZone | None:
+    """The tariff row this order ships under, or ``None`` for the flat fallback.
+
+    The spec names a zone *code* and the snapshot carries the tariff, so the
+    engine is handed both halves and looks neither of them up (ADR-0002). A code
+    naming a row that is missing or switched off in the pinned table is treated as
+    no zone at all — the farm may have retired it since, and a retired zone is not
+    a price.
+    """
+    if not spec.destination_zone:
+        return None
+    for zone in rates.zones.zones:
+        if zone.code == spec.destination_zone and zone.enabled:
+            return zone
+    return None
