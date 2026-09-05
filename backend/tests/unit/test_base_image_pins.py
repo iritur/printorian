@@ -104,6 +104,12 @@ def _pins(path: Path) -> list[tuple[int, str]]:
 
 
 def _named(references: list[tuple[int, str]], name: str) -> list[str]:
+    """The references for one image, matched on the name in front of the tag.
+
+    A pin that has lost its tag reads as `python@sha256:...` and therefore as a *different*
+    image here, so it drops out rather than being silently treated as this one. That is why
+    the callers below assert they found something and say what an empty result means.
+    """
     return [ref for _, ref in references if ref.split(":", 1)[0] == name]
 
 
@@ -152,10 +158,14 @@ def test_the_python_base_is_the_same_interpreter_in_every_stage() -> None:
     backend = _named(_pins(BACKEND_DOCKERFILE), "python")
     frontend = _named(_pins(FRONTEND_DOCKERFILE), "python")
 
-    assert backend, f"no python base found in {BACKEND_DOCKERFILE.relative_to(ROOT)}"
+    assert backend, (
+        f"no `python:<tag>@sha256:...` base in {BACKEND_DOCKERFILE.relative_to(ROOT)} — "
+        "either the image no longer builds on python, or a pin lost its tag and the check "
+        "above says which"
+    )
     assert frontend, (
-        f"no python base found in {FRONTEND_DOCKERFILE.relative_to(ROOT)} — if the schema "
-        "stage moved, this check moved with it or it is now checking nothing"
+        f"no `python:<tag>@sha256:...` base in {FRONTEND_DOCKERFILE.relative_to(ROOT)} — if "
+        "the schema stage moved, this check moves with it rather than checking nothing"
     )
 
     distinct = sorted(set(backend) | set(frontend))
@@ -176,14 +186,15 @@ def test_the_postgres_major_matches_the_client_and_the_restore_runbook() -> None
     discovered at restore time. This is the check that makes that a failing gate instead.
     """
     server = {_major(_tag_of(ref)) for ref in _named(_pins(COMPOSE_PROD), "postgres")}
-    assert server, f"no postgres image found in {COMPOSE_PROD.relative_to(ROOT)}"
+    assert server, (
+        f"no `postgres:<tag>@sha256:...` in {COMPOSE_PROD.relative_to(ROOT)} — a pin with "
+        "no tag has no major to compare, which is the state this whole file replaced"
+    )
 
     client = set(
         re.findall(r"postgresql-client-(\d+)", BACKEND_DOCKERFILE.read_text(encoding="utf-8"))
     )
-    runbook = set(
-        re.findall(r"postgres:(\d+)-alpine", RESTORE_RUNBOOK.read_text(encoding="utf-8"))
-    )
+    runbook = set(re.findall(r"postgres:(\d+)-alpine", RESTORE_RUNBOOK.read_text(encoding="utf-8")))
 
     assert client, "backend/Dockerfile no longer installs a versioned postgresql-client"
     assert runbook, f"no `postgres:NN-alpine` in {RESTORE_RUNBOOK.relative_to(ROOT)}"
@@ -217,12 +228,21 @@ def test_the_ci_service_images_share_a_major_with_production() -> None:
         )
 
 
+#: Directories whose `*.md` is not this repository's prose: dependency trees, build output,
+#: and `.claude/`, which holds one checked-out worktree per agent — a whole second copy of
+#: every document below. Matched against the path *relative to* `ROOT` rather than against
+#: its absolute parts, because the absolute path of a worktree checkout contains
+#: `.claude/worktrees/...` itself: the first version of this scan matched on absolute parts,
+#: found nothing at all when run from a worktree, and was saved only by the emptiness
+#: assertion below.
+NOT_OUR_PROSE = frozenset({".git", ".venv", ".claude", "node_modules", "dist", "__pycache__"})
+
+
 def _documented_github_paths() -> list[tuple[Path, str]]:
     """Backticked `.github/...` paths in the prose, with the document that names them."""
-    skip = {".git", ".venv", "node_modules", "dist", "worktrees", "__pycache__"}
     found: list[tuple[Path, str]] = []
     for document in sorted(ROOT.rglob("*.md")):
-        if skip & set(document.parts):
+        if NOT_OUR_PROSE & set(document.relative_to(ROOT).parts):
             continue
         text = document.read_text(encoding="utf-8", errors="replace")
         for reference in re.findall(r"`(\.github/[^`\s]+)`", text):
@@ -282,8 +302,7 @@ def test_the_scan_can_actually_see_an_unanchored_pin() -> None:
     # truncated copy-paste would arrive.
     assert not PINNED.match("python:3.13-slim@sha256:ffb752e1")
     assert PINNED.match(
-        "python:3.13-slim@sha256:"
-        "ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a"
+        "python:3.13-slim@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a"
     )
 
 
@@ -297,9 +316,7 @@ def test_the_parser_ignores_prose_and_reads_directives(tmp_path: Path) -> None:
     dockerfile = tmp_path / "Dockerfile"
     dockerfile.write_text(
         "# A bare python@sha256:... is what this file stopped doing.\n"
-        "FROM python:3.13-slim@sha256:"
-        + "a" * 64
-        + " AS builder\n"
+        "FROM python:3.13-slim@sha256:" + "a" * 64 + " AS builder\n"
         "FROM builder AS runtime\n"
         "FROM scratch AS cargo\n",
         encoding="utf-8",
@@ -318,9 +335,7 @@ def test_the_parser_ignores_prose_and_reads_directives(tmp_path: Path) -> None:
         "    image: ${PRINTORIAN_IMAGE:?must be set}\n",
         encoding="utf-8",
     )
-    assert [ref for _, ref in _image_references(compose)] == [
-        "redis:7-alpine@sha256:" + "b" * 64
-    ]
+    assert [ref for _, ref in _image_references(compose)] == ["redis:7-alpine@sha256:" + "b" * 64]
 
 
 @pytest.mark.parametrize(
