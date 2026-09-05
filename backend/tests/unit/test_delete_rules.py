@@ -1,7 +1,7 @@
 """What each delete rule actually does, against real rows.
 
 `tests/test_referential_integrity.py` holds the inventory: which of the
-forty-eight foreign keys is ``CASCADE``, which is ``SET NULL``, which is
+fifty-three foreign keys is ``CASCADE``, which is ``SET NULL``, which is
 ``RESTRICT``, and whether PostgreSQL is holding the rule the model asked for. That
 is a catalogue comparison, and a catalogue is not behaviour (CLAUDE.md §2) — it
 would go on passing if ``RESTRICT`` did something other than what
@@ -12,8 +12,8 @@ rather than for coverage:
 
 - the ``RESTRICT`` that model retention depends on, which is the only irreversible
   path any of these rules guards;
-- the two other ``RESTRICT``s standing in front of money — a payment whose order
-  was deleted, and a price whose rates were;
+- the three other ``RESTRICT``s standing in front of money — a payment whose order
+  was deleted, a price whose rates were, and a supplier whose purchase orders were;
 - the ``CASCADE`` that takes an order's lines with the order;
 - the ``SET NULL`` that lets a printer be retired without deleting the jobs it ran.
 
@@ -155,6 +155,33 @@ async def test_the_rates_a_price_was_computed_from_cannot_be_deleted(
         await db_session.execute(
             delete(RateSnapshotRecord).where(RateSnapshotRecord.id == "deadbeef")
         )
+    await db_session.rollback()
+
+
+async def test_a_supplier_with_a_purchase_order_cannot_be_deleted(
+    db_session: AsyncSession,
+) -> None:
+    """``purchase_orders.supplier_id`` is ``RESTRICT``: what was bought stays explicable.
+
+    The receipts hanging off a supplier's orders are the farm's only record of what
+    a thing cost on the day it arrived, and «Цены по ключевым позициям» is a year of
+    exactly those rows. ``CASCADE`` here would let one tidy-up of the supplier list
+    delete a year of price history; ``SET NULL`` would leave orders whose money
+    nobody can attribute. `suppliers.is_active` is the ordinary way to retire one,
+    and it exists because this rule refuses the alternative.
+    """
+    from printorian.contexts.procurement.models import PurchaseOrder, Supplier
+
+    supplier_id = new_id()
+    db_session.add(
+        Supplier(id=supplier_id, code="REF-SUPPLIER", name="Filament RU", kinds=["material"])
+    )
+    await db_session.flush()
+    db_session.add(PurchaseOrder(id=new_id(), number="PO-REF-1", supplier_id=supplier_id))
+    await db_session.flush()
+
+    with pytest.raises(IntegrityError):
+        await db_session.execute(delete(Supplier).where(Supplier.id == supplier_id))
     await db_session.rollback()
 
 

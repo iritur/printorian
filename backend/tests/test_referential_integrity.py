@@ -10,11 +10,12 @@ checking it. A rule flipped to ``CASCADE`` in a model is one word, would have pa
 all six gates and the whole suite, and the first evidence of it would have been a
 retention sweep deleting an order's lines.
 
-The inventory below is all forty-eight keys rather than the interesting ones,
-because a spot check leaves the other forty unwatched and because the forty-ninth
-key should not be addable without somebody deciding what it does on delete. Rules
+The inventory below is all fifty-three keys rather than the interesting ones,
+because a spot check leaves the other forty-five unwatched and because the
+fifty-fourth key should not be addable without somebody deciding what it does on
+delete. Rules
 are grouped by *rule* rather than listed per table: the reason for a rule is shared,
-and repeating it forty-eight times would be forty-eight places to keep in step.
+and repeating it fifty-three times would be fifty-three places to keep in step.
 Where an individual key is load-bearing, or reads wrong beside its neighbour, it is
 called out under its group.
 
@@ -81,6 +82,8 @@ CASCADE: frozenset[str] = frozenset(
         "postproduction_task_steps.task_id",
         "postproduction_tasks.order_id",
         "print_jobs.order_id",
+        "purchase_order_lines.order_id",
+        "purchase_receipts.line_id",
         "refunds.payment_id",
         "service_operations.printer_id",
         "sessions.user_id",
@@ -116,6 +119,8 @@ SET_NULL: frozenset[str] = frozenset(
         "prepared_plates.sliced_by",
         "print_jobs.prepared_plate_id",
         "print_jobs.printer_id",
+        "purchase_receipts.material_lot_id",
+        "purchase_receipts.received_by",
         "settings.updated_by",
         "settings_audit.changed_by",
     }
@@ -132,6 +137,12 @@ SET_NULL: frozenset[str] = frozenset(
 #: ``order_lines.model_asset_id`` is the one to preserve above all. It is the whole
 #: of what stops `catalog.assets`' retention sweep collecting a mesh an open order
 #: depends on — which is why that sweep does not, and must not, consult `ordering`.
+#:
+#: ``purchase_orders.supplier_id`` carries the same argument in the other direction:
+#: deleting a supplier must not erase what was bought from it, because the receipts
+#: hanging off those orders are the farm's only record of what a thing cost on the
+#: day it arrived. `suppliers.is_active` is the ordinary way to retire one, and it
+#: exists because this rule refuses the alternative.
 RESTRICT: frozenset[str] = frozenset(
     {
         "catalog_models.model_asset_id",
@@ -141,6 +152,7 @@ RESTRICT: frozenset[str] = frozenset(
         "payments.order_id",
         "postproduction_tasks.operation_id",
         "print_jobs.model_asset_id",
+        "purchase_orders.supplier_id",
     }
 )
 
