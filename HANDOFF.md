@@ -1312,6 +1312,33 @@ there is no `id` in a grouped result. `tests/unit/test_production_ordering.py` c
 the planner and the assignment record under `FixedClock`; six of its eight tests fail
 on every run against the code as it was, which is the part worth knowing.
 
+**The postprocessing catalogue is a setting, and two of its columns are not**
+([#29](https://github.com/iritur/printorian/issues/29), first slice). The finish
+rows now come from `postprocess.operations` and reach the price through
+`SettingsService.resolve_finishes()` at four edges — the two quoting endpoints, the
+order/reprice pair and the intake sweep. `FINISH_CATALOGUE` stays as the code
+default beneath them, which is what «Сбросить» returns to.
+
+Three things about it are decisions rather than unfinished work, and each would
+otherwise be re-litigated. The **code set is closed** to the four the storefront
+offers: `apps/web/src/config.ts` hardcodes them, so a fifth row would be a finish
+the farm had priced and no customer could choose — which is why the kit's
+«Добавить операцию» is not ported and the server answers a fifth code with
+`error.settings.finish_code_unknown`. **«На см² поверхности» is not ported**
+because surface area does not reach the checkout — the quote context emits
+`volume_cm3` and `bounding_box_mm` and no `surface_area_mm2`, `CheckoutPage.tsx`
+sends no mesh — so the term would price at the configurator and not on the order,
+and pricing an unmeasured mesh at 0 cm² is ADR-0007's forbidden move. **«Доступна»
+is not ported** because `FinishStep.tsx` renders a hardcoded list before any quote,
+so an honest switch needs a public read of the catalogue: a new endpoint and a
+regenerated client, which is the named follow-up slice.
+
+`RateSnapshot` deliberately did **not** gain a `finishes` field: `snapshot_id`
+hashes `sorted(self.__slots__)`, so one new field changes the hash of every
+snapshot rebuilt from a stored row and `CachedPlates._rates_for` would refuse every
+already-paid order at once. ADR-0020's new amendment says what is recoverable
+instead — the pinned `Breakdown`, and the applied per-unit rate on `Basis.rate`.
+
 ## 3. What is actually next
 
 **Open work lives in [GitHub issues](https://github.com/iritur/printorian/issues),** grouped by [milestone](https://github.com/iritur/printorian/issues?q=is%3Aopen) and described in [docs/WORKFLOW.md](docs/WORKFLOW.md). Take one from a milestone rather than from this section. Where an issue and a document disagree, the issue is right.
