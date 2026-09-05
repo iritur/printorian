@@ -1261,6 +1261,38 @@ FAIL, so it can gate the Stage 2 Ansible role instead of deploying onto a host t
 missing a disk or a secret. This is the first executable half of the "host configuration
 is prose" row in INFRASTRUCTURE §1 (provisioning, not checking, is still Ansible).
 
+**Purchasing exists, on `issue-34-purchase-orders`, and nothing about it has been
+run against a database.** `contexts/procurement` — suppliers, purchase orders over
+six stages plus cancellation, five purchasable classes, and receiving a material
+line into a `material_lots` row carrying its lot number and the price paid — plus
+`api/routers/purchasing.py`, migration `0024_procurement`, 46 backend tests and the
+console screen. Two things it changed outside its own context are worth knowing
+before touching either:
+
+- **`material_specs.has_open_order` is gone.** `InventoryService.table`,
+  `get_by_code` and `recommend` take `on_order: frozenset[str]` as a **required**
+  keyword, supplied by `procurement.reads.ordered_codes`. Required, with no empty
+  default, because a default would turn "nobody asked procurement" into "nothing is
+  on order" — silent and flattering, which is the ADR-0007 collapse this repository
+  keeps repeating. There were eight call sites, not the three the plan predicted:
+  `get_by_code` is also the pricing path's way in.
+- **`0024_procurement` is one of several `0024_*` revising `0023`.** Correct per
+  branch, and whichever merges second needs renumbering.
+
+**What was and was not run on that branch.** Five path-based gates, each separately
+from the main tree's interpreter and each reading this worktree: `ruff check`,
+`ruff format --check`, `mypy --strict`, `check_context_isolation.py` and
+`check_file_length.py`, all `exit=0`. The three documentation gates
+(`test_docs_table_inventory`, `test_docs_screen_inventory`,
+`test_docs_endpoint_consumers`) were run and pass — they read files and the OpenAPI
+schema rather than the database. **`pytest` proper, `lint-imports`, every `alembic`
+command and all four frontend gates were not run**, because the worktree shares one
+test database with other agents, `printorian` is an editable install pointing at the
+main tree, and there is no `node_modules` here. So: 46 backend tests and 6 frontend
+tests are written and **unproven**, the migration has never been applied, and the
+console screen has never been type-checked. The serial verification pass is what
+will find out, and it should be believed over this paragraph.
+
 ## 2. Deliberately unfinished
 
 Not oversights. Changing any of them is a decision, not a cleanup.

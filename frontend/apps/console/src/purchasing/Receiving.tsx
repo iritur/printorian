@@ -57,10 +57,11 @@ export function Receiving({
 
   const entryFor = (lineId: string) => entries[lineId] ?? BLANK
   const set = (lineId: string, field: keyof Entry, value: string) =>
-    setEntries((current) => ({
-      ...current,
-      [lineId]: { ...(current[lineId] ?? BLANK), [field]: value },
-    }))
+    setEntries((current) => {
+      const entry: Entry = { ...(current[lineId] ?? BLANK) }
+      entry[field] = value
+      return { ...current, [lineId]: entry }
+    })
 
   // Only the lines somebody actually typed a quantity against. A body carrying
   // every line with a zero would be a delivery claiming nothing arrived, which

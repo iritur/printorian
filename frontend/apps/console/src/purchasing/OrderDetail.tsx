@@ -83,7 +83,9 @@ export function OrderDetail({
     return () => {
       live = false
     }
-  }, [order.id, order.status, order.lines.length, order.receipts.length, maySeeMoney])
+    // `order` whole rather than its id: it is replaced on every write, and a
+    // re-read after receiving a line is exactly when the money changed.
+  }, [order, maySeeMoney])
 
   const run = async (work: () => Promise<PurchaseOrderView>) => {
     setBusy(true)
@@ -322,7 +324,7 @@ function Stage({
 }) {
   const state = stage.is_current ? 'now' : stage.at === null ? undefined : 'done'
   return (
-    <div className="hv-pipe__step" {...(state ? { 'data-state': state } : {})}>
+    <div className="hv-pipe__step" data-state={state}>
       <div className="hv-pipe__n">{String(index + 1).padStart(2, '0')}</div>
       <div className="hv-pipe__k">{translate(locale, statusKey(stage.status))}</div>
       <div className="hv-pipe__t">{formatStamp(stage.at, locale)}</div>

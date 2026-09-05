@@ -15,7 +15,7 @@
  * happened to match.
  */
 
-import type { Locale, MessageKey } from '@printorian/ui'
+import type { ChipTone, Locale, MessageKey } from '@printorian/ui'
 
 import type { PurchasableKind, PurchaseStatus } from './types'
 
@@ -64,7 +64,7 @@ export function kindKey(kind: PurchasableKind): MessageKey {
  * Cancelled is `bad` and stored is `good`; everything between is neutral or
  * live, because an order in transit is a fact in motion rather than a problem.
  */
-export function statusTone(status: PurchaseStatus): string | undefined {
+export function statusTone(status: PurchaseStatus): ChipTone | undefined {
   if (status === 'cancelled') return 'bad'
   if (status === 'stored') return 'good'
   if (status === 'in_transit' || status === 'receiving') return 'live'

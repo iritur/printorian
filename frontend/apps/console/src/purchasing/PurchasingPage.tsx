@@ -112,14 +112,13 @@ export function PurchasingPage({ locale }: { locale: Locale }) {
     () =>
       ALL_STATUSES.map((value) => {
         const found = board?.counts.find((count) => count.status === value)
-        const tone = statusTone(value)
         return {
           key: value,
           label: translate(locale, statusKey(value)),
           // `null`, not `0`, before the board has loaded: nothing has been
           // counted yet, and «—» says so.
           count: found ? found.count : null,
-          ...(tone ? { tone: tone as FilterChip['tone'] } : {}),
+          tone: statusTone(value),
         }
       }),
     [board, locale],
