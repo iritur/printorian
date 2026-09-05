@@ -10,13 +10,16 @@ SQLite is a suite with no foreign keys.
 Skipped automatically when no PostgreSQL is reachable, so ``pytest`` works with no
 Docker. CI always has one, so these never silently stop running there.
 
-Three things are asserted, and the third is the one that matters most:
+Four things are asserted, and the third is the one that matters most:
 
 1. ``upgrade head`` builds the schema from nothing;
 2. ``downgrade base`` reverses it — an untested downgrade is not a rollback plan;
 3. ``alembic check`` finds no drift, i.e. the migrations and the ORM models agree.
    V1 could not make this assertion at all: it had migrations *and* two hand-written
    schema patchers, so no artefact was authoritative.
+4. the two standalone sequences are gone afterwards. They are the one object a
+   ``downgrade base`` can leave standing with every other assertion here still
+   green, because nothing else in this file looks at sequences at all.
 """
 
 from __future__ import annotations
@@ -101,6 +104,21 @@ def _table_names(url: str) -> set[str]:
         engine.dispose()
 
 
+def _sequence_names(url: str) -> set[str]:
+    """Sequences PostgreSQL is holding, which `inspect().get_table_names()` never sees.
+
+    A standalone sequence is invisible to every other assertion in this file, and
+    that is the whole reason for the one below: `create_table` does not emit
+    ``Sequence(..., metadata=...)``, so a migration that forgets to drop one by hand
+    leaves it behind and ``downgrade base`` is not clean (ADR-0008).
+    """
+    engine = create_engine(url.replace("+asyncpg", "+psycopg2"), future=True)
+    try:
+        return set(inspect(engine).get_sequence_names())
+    finally:
+        engine.dispose()
+
+
 def test_upgrade_builds_the_schema_from_nothing(fresh_database: str) -> None:
     command.upgrade(_alembic_config(fresh_database), "head")
     assert _table_names(fresh_database) >= EXPECTED_TABLES
@@ -114,6 +132,29 @@ def test_downgrade_reverses_the_schema(fresh_database: str) -> None:
     remaining = _table_names(fresh_database)
     assert "users" not in remaining
     assert "sessions" not in remaining
+
+
+def test_the_hand_written_sequences_are_created_and_dropped_by_hand(
+    fresh_database: str,
+) -> None:
+    """`downgrade base` must leave no sequence behind, and two are not table-owned.
+
+    `order_number_seq` and `po_number_seq` are declared as
+    ``Sequence(..., metadata=Base.metadata)``, which `create_table` does **not**
+    emit — so 0005 and 0024 each create and drop theirs with explicit SQL. Nothing
+    else in this file can see a leftover sequence: `_table_names` does not list
+    them and ``alembic check`` does not compare them, so a downgrade that dropped
+    every table and left both counters standing would pass every other assertion
+    here.
+    """
+    config = _alembic_config(fresh_database)
+    command.upgrade(config, "head")
+
+    assert {"order_number_seq", "po_number_seq"} <= _sequence_names(fresh_database)
+
+    command.downgrade(config, "base")
+
+    assert _sequence_names(fresh_database) == set()
 
 
 def test_migrations_match_the_orm_models(fresh_database: str) -> None:
