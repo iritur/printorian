@@ -55,6 +55,13 @@ NOT_A_SCREEN_CONSUMER: dict[str, str] = {
     # «Диагностика» section reads it (#30) — so the exemption is gone rather than
     # reworded. Keeping it would have failed the stale-entry gate next door, which
     # is the direction that catches an exemption nobody is following any more.
+    "GET /health/printing": (
+        "Whether anything is on a machine, asked before a host reboots. Its consumer "
+        "is `deploy/reboot-guard.sh` on the farm host — a shell script run by "
+        "`unattended-upgrades` or a UPS shutdown, not a screen. A Diagnostics row on "
+        "the settings screen reading it would end this entry, and per the note above "
+        "the entry would then be deleted rather than reworded."
+    ),
     "GET /settings": (
         "`SettingsPage.tsx` builds the screen from `/settings/sections` and the "
         "audit from `/settings/history`. The flat key/value dump has no caller and "
