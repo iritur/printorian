@@ -80,12 +80,23 @@ class SettingsService:
         `dataclasses.replace` rather than by assignment because `RateSnapshot` is
         frozen — and it is frozen so that a snapshot pinned to an order cannot be
         edited afterwards, which is the guarantee ADR-0020 rests on.
+
+        Selected by the snapshot's own **field names**, not by everything under the
+        `pricing.` prefix. The prefix is a namespace on the settings screen, not a
+        promise that every key beneath it is a rate: `pricing.tiers` is the customer
+        price book and `RateSnapshot` has no `tiers` field, so splatting the prefix
+        raised `TypeError: RateSnapshot.__init__() got an unexpected keyword
+        argument 'tiers'` — an uncoded 500 on `POST /pricing/quote`, `POST /orders`
+        and `POST /orders/reprice` from the moment an owner edited «Тарифы
+        клиентов». Deriving the set from the dataclass is the idiom
+        `resolve_scheduling` already uses below, and unlike a hand-listed skip of
+        `tiers` it cannot go stale when the next table lands under `pricing.`.
         """
         overrides = await self.overrides()
         changed = {
-            key.removeprefix(catalogue.RATE_PREFIX): value
-            for key, value in overrides.items()
-            if key.startswith(catalogue.RATE_PREFIX)
+            field.name: overrides[f"{catalogue.RATE_PREFIX}{field.name}"]
+            for field in dataclasses.fields(RateSnapshot)
+            if f"{catalogue.RATE_PREFIX}{field.name}" in overrides
         }
         return dataclasses.replace(RateSnapshot(), **changed) if changed else RateSnapshot()
 
