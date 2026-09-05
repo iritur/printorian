@@ -114,17 +114,13 @@ class ProcurementService:
         """
         order = await self._load(order_id)
         if order.status is not PurchaseStatus.DRAFT:
-            raise ValidationError(
-                "error.procurement.order_not_draft", status=order.status.value
-            )
+            raise ValidationError("error.procurement.order_not_draft", status=order.status.value)
         for entry in lines:
             order.lines.append(_line(entry))
         await self._db.flush()
         return await self.order(order_id)
 
-    async def assign_supplier(
-        self, order_id: EntityId, supplier_id: EntityId
-    ) -> PurchaseOrderView:
+    async def assign_supplier(self, order_id: EntityId, supplier_id: EntityId) -> PurchaseOrderView:
         """Say who this is being bought from.
 
         Its own action because the kit's draft shows «не выбран»: an order is

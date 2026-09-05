@@ -130,6 +130,18 @@ class SettingsService:
         overrides = await self.overrides()
         return int(overrides.get(key, catalogue.default_for(key)))
 
+    async def resolve_bool(self, key: str) -> bool:
+        """The resolved value of one boolean setting — override, else the default.
+
+        The sibling of :meth:`resolve_int`, and it exists for the same reason: a
+        caller that reached into `overrides()` itself would get ``None`` for a key
+        nobody has set, which is the *default's* value dressed as an absence.
+        `inventory.auto_reorder` defaults to true, so reading it that way would
+        turn the reorder panel off on a farm that never touched the switch.
+        """
+        overrides = await self.overrides()
+        return bool(overrides.get(key, catalogue.default_for(key)))
+
     async def resolve_tiers(self) -> dict[str, CustomerTier]:
         """The customer tiers (discount + margin override), keyed by code.
 

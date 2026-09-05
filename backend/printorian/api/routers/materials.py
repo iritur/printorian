@@ -17,6 +17,7 @@ from printorian.contexts.inventory import (
     MaterialTable,
     ScenarioMatch,
 )
+from printorian.contexts.procurement import ordered_codes
 
 router = APIRouter(prefix="/materials", tags=["materials"])
 
@@ -39,7 +40,11 @@ async def materials_table(db: DbSession, family: str | None = None) -> MaterialT
     purchasable class, this is the paragraph that was left for you: move the query
     onto `core.pagination` rather than hand-rolling a ``LIMIT``.
     """
-    return await InventoryService(db).table(family=family)
+    # One extra query on an anonymous path, and it is the price of the status
+    # column meaning something. `on_order` has no empty default: a caller that
+    # forgot to ask procurement would be told "nothing is on order", which is a
+    # claim about the farm rather than an admission that nobody looked.
+    return await InventoryService(db).table(on_order=await ordered_codes(db), family=family)
 
 
 @router.get("/recommend")
@@ -58,12 +63,13 @@ async def recommend(
         requires_flexible=requires_flexible,
         requires_outdoor=requires_outdoor,
         limit=limit,
+        on_order=await ordered_codes(db),
     )
 
 
 @router.get("/{code}")
 async def get_material(code: str, db: DbSession) -> MaterialSpecView:
-    return await InventoryService(db).get_by_code(code)
+    return await InventoryService(db).get_by_code(code, on_order=await ordered_codes(db))
 
 
 @router.post(

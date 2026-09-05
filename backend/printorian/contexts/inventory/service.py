@@ -44,9 +44,7 @@ class InventoryService:
 
     # -- the table -------------------------------------------------------
 
-    async def table(
-        self, *, on_order: frozenset[str], family: str | None = None
-    ) -> MaterialTable:
+    async def table(self, *, on_order: frozenset[str], family: str | None = None) -> MaterialTable:
         """Rows plus status counts, as the scenario's materials screen needs.
 
         ``on_order`` is the set of material codes sitting on an open purchase

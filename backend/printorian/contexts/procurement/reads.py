@@ -74,9 +74,7 @@ class StockedItem:
     coverage_months: Decimal | None = None
 
 
-def material_items(
-    rows: Sequence[MaterialSpecView], *, low_at: Decimal
-) -> list[StockedItem]:
+def material_items(rows: Sequence[MaterialSpecView], *, low_at: Decimal) -> list[StockedItem]:
     """Flatten the materials table into stock items the reorder rule can read.
 
     Every active spec, including the ones at zero — which is why this reads the
@@ -132,7 +130,7 @@ def reorder_rows(
     ]
     # Emptiest first, in units of "how far under the threshold", so a class
     # counted in rolls and one counted in grams sort against each other sensibly.
-    rows.sort(key=lambda row: _shortfall(row), reverse=True)
+    rows.sort(key=_shortfall, reverse=True)
     return rows
 
 

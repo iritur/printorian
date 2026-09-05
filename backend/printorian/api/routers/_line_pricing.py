@@ -23,6 +23,7 @@ from printorian.contexts.pricing import (
     PriceSpec,
     PrintEstimate,
 )
+from printorian.contexts.procurement import ordered_codes
 from printorian.core.units import Duration, Mass
 
 
@@ -33,7 +34,13 @@ async def spec_for(db: AsyncSession, line: DraftLine, *, include_shipping: bool)
     delivery choice — and collection is the *absence* of the service rather than a
     discount on it, so the engine omits the line entirely rather than zeroing it.
     """
-    material = await InventoryService(db).get_by_code(line.material_code)
+    # `on_order` is asked for rather than assumed empty even though this path
+    # prices off `sell_price_per_gram` and never reads the status: a caller that
+    # passes an empty set is asserting "nothing is on order", and the next reader
+    # copies the assertion somewhere it matters.
+    material = await InventoryService(db).get_by_code(
+        line.material_code, on_order=await ordered_codes(db)
+    )
     return PriceSpec(
         estimate=PrintEstimate(
             print_time=Duration(line.estimated_minutes),
