@@ -442,7 +442,12 @@ describe('the save bar', () => {
 
     const hours = screen.getByLabelText('Нормо-часы · база sanded')
     await userEvent.clear(hours)
-    await userEvent.type(hours, '0.9')
+    // A whole number rather than «0.9», and not because the field is one. jsdom
+    // sanitises `<input type="number">` the way browsers do, so the value is empty
+    // at the keystroke where «0.» is not yet a number — typing a decimal here
+    // asserts the jsdom version as much as the component. The decimal path is
+    // proved server-side instead, in `tests/api/test_finish_catalogue.py`.
+    await userEvent.type(hours, '2')
 
     expect(screen.getByText('ИЗМЕНЕНИЙ :: 1')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Вернуть' })).toBeInTheDocument()
@@ -454,7 +459,7 @@ describe('the save bar', () => {
     expect(put[0]?.[1]).toEqual({
       value: [
         { code: 'raw', labor_hours: '0', flat_fee: '0', extra_days: 0 },
-        { code: 'sanded', labor_hours: '0.9', flat_fee: '0', extra_days: 0 },
+        { code: 'sanded', labor_hours: '2', flat_fee: '0', extra_days: 0 },
         { code: 'primed', labor_hours: '0.6', flat_fee: '150', extra_days: 0 },
         // Decimals as strings, and `extra_days` still 2 — the parser wants both.
         { code: 'painted', labor_hours: '1.5', flat_fee: '400', extra_days: 2 },
