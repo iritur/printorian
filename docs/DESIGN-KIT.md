@@ -32,7 +32,7 @@ from another document has only moved the drift.
 
 **Seventeen of twenty-one are built.** Every public screen ships; the four that do
 not are all control-realm. `settings` was the nearest of them and is now built —
-102 parameters across fourteen sections, served and audited. What is left of it is
+103 parameters across fourteen sections, served and audited. What is left of it is
 the table-valued settings, not the screen (§2.1).
 
 | Screen | Realm | State |
@@ -59,7 +59,7 @@ references to it from the tracker and from §2.5 keep pointing at the same place
 
 **The screen exists.** [`SettingsPage.tsx`](../frontend/apps/console/src/SettingsPage.tsx)
 renders it and [`contexts/settings`](../backend/printorian/contexts/settings/) serves
-it: **102 parameters across fourteen sections**, over `GET /settings`,
+it: **103 parameters across fourteen sections**, over `GET /settings`,
 `GET /settings/sections`, `GET /settings/history` and `PUT`/`DELETE /settings/{key}`,
 gated on `MANAGE_SETTINGS`.
 
@@ -71,7 +71,7 @@ settings screen missing a rate is worse than one that never had it, because it
 looks complete.
 
 One control per `kind`, all built — `integer` 31 · `decimal` 30 · `boolean` 15 ·
-`enum` 15 · `string` 8 · `table` 2 · `secret` 1. The single secret,
+`enum` 15 · `string` 8 · `table` 3 · `secret` 1. The single secret,
 `finance.yookassa_secret_key`, is write-only: stored encrypted and never read
 back. Editing a row marks it dirty, reveals the previous value, offers a per-row
 revert and counts into a save bar; each save writes an audited «было · стало»
@@ -105,9 +105,11 @@ has nothing for a settings catalogue to carry, and that is still the right call.
 **What is still owed.** The settings that are *tables* rather than scalars, and one
 behaviour the screen displays without wiring:
 
-- [#29](https://github.com/iritur/printorian/issues/29) — the six table-valued
-  sections. The volume ladder and the customer tiers are built and are the
-  pattern to copy, not to reinvent.
+- [#29](https://github.com/iritur/printorian/issues/29) — the remaining
+  table-valued sections. Three are built and are the pattern to copy rather than
+  reinvent: the volume ladder, the customer tiers, and now `logistics.zones` —
+  the shipping tariff, which `resolve_rates` maps onto `RateSnapshot.zones` and
+  which therefore reaches a customer's estimate and is pinned per order.
 - [#32](https://github.com/iritur/printorian/issues/32) — worker loop intervals
   still take effect only on restart.
 
@@ -162,12 +164,16 @@ What backend exists: `MaterialLot` with location.
 
 - **Отгрузка сегодня** to the same cut-off as packaging
 - **Carriers** — Перевозчик · Отправлений · В срок · Повреждений · Средняя цена
-- **Зоны и тарифы** — *these land in the order's estimate*, so they are the same
-  rows as the settings zones table (§2.1). Build them once.
+- **Зоны и тарифы** — built once, in settings (§2.1), and read from there: the
+  rows are `logistics.zones`, they price the shipping lines of a real order, and
+  the whole table is archived into that order's rate snapshot. What this screen
+  still owes is the **Отправлений** column, which counts parcels — nothing counts
+  parcels until there is a `Shipment`, and a column of noughts would claim the
+  farm shipped nothing (ADR-0007), so the console's editor omits it.
 - **Сроки доставки** — Зона · Обещано · Факт · Точность
 - Shipment detail: 6-stage path, address from the cabinet, tracking history
 
-**What the backend still owes:** [#36](https://github.com/iritur/printorian/issues/36) — nothing beyond `carrier_code` on a parcel; no `Shipment`, no carrier, no zone, no tracking.
+**What the backend still owes:** [#36](https://github.com/iritur/printorian/issues/36) — zones are built (a `ZoneTariffs` on the rate snapshot, edited as `logistics.zones`); still nothing beyond `carrier_code` on a parcel, and no `Shipment`, no carrier, no tracking and no recorded arrival.
 
 ## 3. Conventions every screen honours
 

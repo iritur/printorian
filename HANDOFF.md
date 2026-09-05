@@ -1275,6 +1275,9 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 | Storefront `body` lifts the page ground | Predates Harvester; `--hv-bg` vs `--hv-void` is six values out of 255 in dark, identical in light. A visual call, not a cleanup. See `apps/web/src/app.css`. |
 | TypeScript held at 5.x | `openapi-typescript` crashes on TS 7. Reason and three failed workarounds are in `.github/dependabot.yml`. |
 | Six queries still sort on a timestamp alone | Read in one pass and left that way on purpose. See below. |
+| `pricing.shipping_flat` survives the zone tariff | It is the **pre-address** figure, not a leftover. The checkout prices a courier the moment the customer picks one (`RepriceLine`), and a zone tariff cannot answer a question with no destination in it. It is also where a postcode no zone claims lands, because `zone_for` returns `None` rather than guessing. Owner decision, recorded at `pricing/lines.py::logistics_lines`. |
+| `logistics.free_shipping_threshold` still unread | Shipping sits *inside* the base that rush, the volume discount and margin are all taken over, so "free over 15 000 ₽" against an order total is circular — the total already contains the shipping and the margin on it. It needs a defined base (the pre-shipping subtotal), which is its own decision with its own test. |
+| `logistics.volumetric_divisor` still unread | Volumetric weight needs a bounding box, and the box that matters is the *parcel's* rather than the part's. It belongs with the `Shipment` record ([#36](https://github.com/iritur/printorian/issues/36)). |
 
 **The single-column time sort has been triaged, once, across the whole tree**
 ([#42](https://github.com/iritur/printorian/issues/42)). It started with
@@ -1342,6 +1345,17 @@ What exists now so that proving it is one command rather than a project:
 
 ## 5. Needs a person, not an agent
 
+- **`farm_stats.on_time_percent` measures dispatch and calls it arrival.**
+  `backend/printorian/api/farm_stats.py:53` documents it as "Share of delivered
+  orders that arrived by the date promised"; the query at :117-118 compares
+  `Order.shipped_at <= Order.promised_at`, which is when the parcel *left*.
+  `grep -rn 'delivered_at' backend/printorian` returns nothing, so arrival is
+  recorded nowhere at all. That is an ADR-0007 overstatement standing in the tree
+  today, independent of the zone work, and it has two possible fixes — correct the
+  docstring now, or add a `delivered_at` column with the shipment record later.
+  Which one is right is a product decision, and it wants its own `type:bug` issue
+  rather than being folded into somebody else's diff. Editing the tracker is not
+  an agent's to do.
 - **A cancelled job keeps its wait-list row, and that is a second defect on a
   different path — it needs an issue.** Measured, not reasoned about: a probe run
   against the fixed tree wait-listed a job, cancelled it, and
