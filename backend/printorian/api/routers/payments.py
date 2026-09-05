@@ -4,6 +4,14 @@ The webhook endpoint is the one place in the API that is deliberately
 unauthenticated — gateways cannot present a session. Its safety comes from the
 provider adapter verifying the notification and the service re-reading the payment
 from the gateway before believing anything.
+
+Every other route is scoped through the **order**, by `_order_access.order_for`.
+A payment knows its order and nothing about who placed it, so ownership can only
+be decided here, in the delivery layer, where both are in reach. The staff half of
+that rule is `VIEW_FINANCIALS` and not `VIEW_ALL_ORDERS`: a `PaymentView` is
+rubles end to end, and CLAUDE.md §1 keeps the money permission out of the
+production ones so a screen that was given "see every order" does not silently
+acquire "see every amount".
 """
 
 from __future__ import annotations
@@ -12,8 +20,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
 
-from printorian.api.deps import AppSettings, CurrentActor, Payments, requires
+from printorian.api.deps import AppSettings, CurrentActor, Ordering, Payments, requires
 from printorian.api.providers import build_provider
+from printorian.api.routers._order_access import order_for
 from printorian.contexts.identity import Permission
 from printorian.contexts.payments import (
     PaymentProvider,
@@ -47,13 +56,20 @@ async def start_payment(
     data: StartPayment,
     request: Request,
     actor: CurrentActor,
+    ordering: Ordering,
     payments: Payments,
     settings: AppSettings,
 ) -> PaymentView:
     """Begin collecting for an order and return where to pay.
 
     There is no amount in the request. It is read from the order.
+
+    The order is checked *before* the gateway is touched. `PaymentsService.start`
+    moves a draft order to `awaiting_payment` as a side effect, so a refusal that
+    arrived any later would already have advanced somebody else's order — a 403
+    that keeps the side effect refuses the response and grants the request.
     """
+    await order_for(ordering, data.order_id, actor, staff_permission=Permission.VIEW_FINANCIALS)
     provider = gateway(request, data.provider or settings.payment_provider, settings)
     return await payments.start(data, provider)
 
@@ -79,15 +95,31 @@ async def gateway_webhook(
 
 @router.get("/order/{order_id}")
 async def payments_for_order(
-    order_id: EntityId, actor: CurrentActor, payments: Payments
+    order_id: EntityId, actor: CurrentActor, ordering: Ordering, payments: Payments
 ) -> list[PaymentView]:
-    """Payment attempts against one order, for the cabinet and for support."""
+    """Payment attempts against one order, for the cabinet and for support.
+
+    Scoped through the *order*, because that is where the answer lives: the
+    payments context knows about orders and nothing about who placed them, and
+    teaching it to filter by customer would be teaching it to read another
+    context's table (`PaymentsService.documents_for` says the same, and means it).
+    """
+    await order_for(ordering, order_id, actor, staff_permission=Permission.VIEW_FINANCIALS)
     return await payments.for_order(order_id)
 
 
 @router.get("/{payment_id}")
-async def get_payment(payment_id: EntityId, actor: CurrentActor, payments: Payments) -> PaymentView:
-    return await payments.get(payment_id)
+async def get_payment(
+    payment_id: EntityId, actor: CurrentActor, ordering: Ordering, payments: Payments
+) -> PaymentView:
+    """One payment, for whoever the order behind it belongs to.
+
+    The second door onto the same rows. Reaching a payment by its own id skipped
+    the order entirely, so the id was all a stranger needed.
+    """
+    payment = await payments.get(payment_id)
+    await order_for(ordering, payment.order_id, actor, staff_permission=Permission.VIEW_FINANCIALS)
+    return payment
 
 
 @router.post(
@@ -100,10 +132,19 @@ async def refund_payment(
     request: Request,
     payments: Payments,
     settings: AppSettings,
-    provider_name: str = "",
 ) -> PaymentView:
-    """Return money, in whole or in part. Owner-only."""
-    provider = gateway(request, provider_name, settings)
+    """Return money, in whole or in part. Owner-only.
+
+    The gateway comes from the payment, never from the caller. It used to be a
+    `provider_name` query parameter defaulting to the deployment's configured
+    gateway, which meant `?provider_name=manual` sent a card refund into
+    `ManualPaymentProvider` — whose contract is "a person will send the money" and
+    which therefore always reports success. The payment would read REFUNDED while
+    the gateway actually holding the money had never been told. A caller has no
+    business naming the gateway; the payment already knows which one took it.
+    """
+    payment = await payments.get(payment_id)
+    provider = gateway(request, payment.provider, settings)
     return await payments.refund(payment_id, provider, amount=data.amount, reason=data.reason)
 
 
@@ -116,11 +157,14 @@ async def refund_sla_credit(
     request: Request,
     payments: Payments,
     settings: AppSettings,
-    provider_name: str = "",
 ) -> PaymentView:
     """Pay back exactly what lateness owes — the scenario's late-delivery discount,
-    for a customer who has already been charged."""
-    provider = gateway(request, provider_name, settings)
+    for a customer who has already been charged.
+
+    Same rule as the plain refund: the gateway is the one that took the money.
+    """
+    payment = await payments.get(payment_id)
+    provider = gateway(request, payment.provider, settings)
     return await payments.refund_sla_credit(payment_id, provider)
 
 

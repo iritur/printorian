@@ -24,6 +24,7 @@ from printorian.api.deps import (
 from printorian.api.routers._cabinet_views import Machine, OrderProgress
 from printorian.api.routers._line_pricing import spec_for
 from printorian.api.routers._loyalty import tier_for
+from printorian.api.routers._order_access import order_for
 from printorian.api.routers._pricing_render import _render
 
 # Shared with the pricing router so a finish cannot be priced one way in the
@@ -154,15 +155,7 @@ async def overdue_orders(
 @router.get("/{order_id}")
 async def get_order(order_id: EntityId, actor: CurrentActor, ordering: Ordering) -> OrderView:
     """One order, if the caller is entitled to it."""
-    order = await ordering.get(order_id)
-    if order.customer_id == actor.user_id or actor.can(Permission.VIEW_ALL_ORDERS):
-        return order
-
-    # Deliberately identical to a plain permission failure. Saying "that order
-    # exists but is not yours" would let a stranger enumerate which orders exist.
-    raise PermissionDeniedError(
-        "error.permission_denied", permission=Permission.VIEW_ALL_ORDERS.value
-    )
+    return await order_for(ordering, order_id, actor, staff_permission=Permission.VIEW_ALL_ORDERS)
 
 
 @router.get(
@@ -211,11 +204,7 @@ async def order_queue(
     rather than an error. A queue with no `machine` is work that has not been
     given one, which is the ordinary case for anything still waiting.
     """
-    order = await ordering.get(order_id)
-    if not (order.customer_id == actor.user_id or actor.can(Permission.VIEW_ALL_ORDERS)):
-        raise PermissionDeniedError(
-            "error.permission_denied", permission=Permission.VIEW_ALL_ORDERS.value
-        )
+    await order_for(ordering, order_id, actor, staff_permission=Permission.VIEW_ALL_ORDERS)
 
     queue = await production.queue_position(order_id)
     machine: Machine | None = None
