@@ -53,7 +53,10 @@ async def _raw_open(db: AsyncSession, printer_id: EntityId) -> None:
             "id": str(new_id()),
             "printer_id": str(printer_id),
             "origin": FailureOrigin.DRIVER.value,
-            "detected_at": HOUR.isoformat(),
+            # A datetime, not its ISO string: asyncpg type-checks a bound parameter
+            # before the CAST is ever reached, so a string fails here rather than being
+            # parsed. The CAST stays for the ids, which really are passed as text.
+            "detected_at": HOUR,
         },
     )
 
@@ -118,7 +121,7 @@ async def test_a_restore_earlier_than_the_detection_is_refused_by_the_database(
                 "UPDATE printer_failures SET restored_at = CAST(:at AS timestamptz) "
                 "WHERE id = CAST(:id AS uuid)"
             ),
-            {"at": (HOUR - timedelta(minutes=1)).isoformat(), "id": str(failure)},
+            {"at": HOUR - timedelta(minutes=1), "id": str(failure)},
         )
     await db_session.rollback()
 
