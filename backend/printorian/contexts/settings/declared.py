@@ -178,7 +178,25 @@ def manual_specs() -> list[FieldSpec]:
         FieldSpec("postprocess.require_quality_check", "postprocess", Kind.BOOLEAN, True),
         FieldSpec("postprocess.photo_before_packing", "postprocess", Kind.BOOLEAN, False),
         # 09 — Логистика (beyond the two rates above)
+        #
+        # The zone tariff, and the third `Kind.TABLE` field after the volume
+        # ladder and the customer tiers. Empty by default: a farm that has drawn
+        # no zones ships at `pricing.shipping_flat`, exactly as it did before the
+        # table existed. `resolve_rates` maps it onto `RateSnapshot.zones`, so
+        # editing it moves the *next* quote and nothing already sold (ADR-0020).
+        FieldSpec("logistics.zones", "logistics", Kind.TABLE, []),
+        # Also still unread: volumetric weight needs a bounding box, and the box
+        # that matters is the *parcel's* rather than the part's. It belongs with
+        # the shipment, which this slice does not build.
         FieldSpec("logistics.volumetric_divisor", "logistics", Kind.INTEGER, 5000),
+        # Deliberately still unread, and that is a judgement rather than a miss.
+        # Shipping sits *inside* the base that rush, the volume discount and
+        # margin are all taken over (`engine._adjustment_lines` passes every line
+        # code as the base), so "free over 15 000 ₽" compared against an order
+        # total is circular — the total already contains the shipping and the
+        # margin taken on it. It needs a defined base, which is its own decision
+        # with its own test. Wiring it carelessly to make the row look consumed
+        # would invent a number.
         FieldSpec("logistics.free_shipping_threshold", "logistics", Kind.INTEGER, 15000),
         # 10 — Финансы
         FieldSpec(

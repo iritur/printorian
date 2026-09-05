@@ -26,12 +26,24 @@ from printorian.contexts.pricing import (
 from printorian.core.units import Duration, Mass
 
 
-async def spec_for(db: AsyncSession, line: DraftLine, *, include_shipping: bool) -> PriceSpec:
+async def spec_for(
+    db: AsyncSession,
+    line: DraftLine,
+    *,
+    include_shipping: bool,
+    destination_zone: str = "",
+) -> PriceSpec:
     """Build the pricing input for one configured line.
 
     ``include_shipping`` is the caller's, because only the caller knows the
     delivery choice — and collection is the *absence* of the service rather than a
     discount on it, so the engine omits the line entirely rather than zeroing it.
+
+    ``destination_zone`` is the caller's for the same reason, and it is a *code*
+    rather than a postcode: resolving the postcode is a read-edge job so the
+    engine stays given-its-rates (ADR-0002). Empty is the ordinary case rather
+    than an error — the customer may not have typed an address yet — and the
+    engine then quotes the flat rate.
     """
     material = await InventoryService(db).get_by_code(line.material_code)
     return PriceSpec(
@@ -50,4 +62,5 @@ async def spec_for(db: AsyncSession, line: DraftLine, *, include_shipping: bool)
         ),
         rush=line.rush,
         include_shipping=include_shipping,
+        destination_zone=destination_zone,
     )

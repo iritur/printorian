@@ -86,6 +86,9 @@ GROUPS: Final[dict[str, str]] = {
     "pricing.shipping_flat": "logistics.packaging",
     "logistics.volumetric_divisor": "logistics.packaging",
     "logistics.free_shipping_threshold": "logistics.packaging",
+    # The kit draws «Зоны и тарифы» as its own panel with its own table, not as a
+    # row among the packaging numbers, so it gets its own heading.
+    "logistics.zones": "logistics.zones",
     # 10 — Финансы
     "finance.tax_regime": "finance.tax",
     "finance.vat_percent": "finance.tax",
