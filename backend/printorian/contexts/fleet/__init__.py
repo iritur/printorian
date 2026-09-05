@@ -10,6 +10,7 @@ Two rules define this context:
   ``OFFLINE``, never assumed idle (ADR-0007).
 """
 
+from printorian.contexts.fleet.labels import brands_for
 from printorian.contexts.fleet.measures import (
     MAX_BUCKETS,
     MAX_WINDOW_HOURS,
@@ -85,6 +86,7 @@ __all__ = [
     "SetAccessCode",
     "StatusCount",
     "amortization_per_hour",
+    "brands_for",
     "can_take",
     "fleet_metrics",
     "hourly_load",
