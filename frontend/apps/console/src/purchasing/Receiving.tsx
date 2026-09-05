@@ -122,7 +122,14 @@ export function Receiving({
           guarantee (ADR-0020) that a rate change never reprices quoted work.
         */}
         <p className="hv-prose">{t('pu.receive.note')}</p>
-        {error && <p className="notice notice--bad">{error}</p>}
+        {/*
+        `.notice` is deliberately neutral — console.css says so at the rule:
+        it carries "this screen is not yours", where nothing has gone wrong.
+        A refused delivery has, so the tone comes from Harvester's own
+        `hv-bad` rather than from a `notice--` modifier no stylesheet
+        defines.
+      */}
+      {error && <p className="notice hv-bad">{error}</p>}
         <table className="hv-table">
           <thead>
             <tr>

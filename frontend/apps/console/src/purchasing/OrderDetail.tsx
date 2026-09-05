@@ -125,7 +125,14 @@ export function OrderDetail({
         </>
       }
     >
-      {error && <p className="notice notice--bad">{error}</p>}
+      {/*
+        `.notice` is deliberately neutral — console.css says so at the rule:
+        it carries "this screen is not yours", where nothing has gone wrong.
+        A refused delivery has, so the tone comes from Harvester's own
+        `hv-bad` rather than from a `notice--` modifier no stylesheet
+        defines.
+      */}
+      {error && <p className="notice hv-bad">{error}</p>}
 
       {/* --------------------------------------------------- «Путь заказа» */}
       <section className="hv-panel">
