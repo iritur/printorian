@@ -28,12 +28,18 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.ordering import PromisePolicy
-from printorian.contexts.pricing import CustomerTier, RateSnapshot
+from printorian.contexts.pricing import CustomerTier, FinishOption, RateSnapshot
 from printorian.contexts.scheduling import SchedulingPolicy
 from printorian.contexts.settings import catalogue
 from printorian.contexts.settings.models import Setting, SettingChange
 from printorian.contexts.settings.schemas import SectionView, SettingChangeView, SettingView
-from printorian.contexts.settings.sections import FIELDS, SECTIONS, Kind, default_tiers
+from printorian.contexts.settings.sections import (
+    FIELDS,
+    SECTIONS,
+    Kind,
+    default_finishes,
+    default_tiers,
+)
 from printorian.core.clock import Clock
 from printorian.core.errors import ConfigurationError, NotFoundError
 from printorian.core.ids import EntityId
@@ -151,6 +157,26 @@ class SettingsService:
         overrides = await self.overrides()
         tiers = overrides.get("pricing.tiers", default_tiers())
         return {tier.code: tier for tier in tiers}
+
+    async def resolve_finishes(self) -> dict[str, FinishOption]:
+        """The postprocessing operations the farm sells right now, keyed by code.
+
+        The same read-edge shape as `resolve_tiers`, and it exists for the same
+        reason: the engine keeps receiving the catalogue inside `PriceSpec.finishes`
+        and looks nothing up (ADR-0002), so the only thing that changes is where the
+        rows come from. An empty table prices exactly as `FINISH_CATALOGUE` always
+        did, which is the whole context's rule — a key with no row is not a missing
+        setting, it is the code default.
+
+        Deliberately **not** folded into `resolve_rates`. `RateSnapshot.snapshot_id`
+        hashes its own field names, so a `finishes` field would change the hash of
+        every historical snapshot rebuilt from a stored order, and
+        `CachedPlates._rates_for` would then refuse every order already paid.
+        ADR-0020's amendment says what is recoverable instead.
+        """
+        overrides = await self.overrides()
+        finishes = overrides.get("postprocess.operations", default_finishes())
+        return {finish.code: finish for finish in finishes}
 
     async def listing(self) -> list[SettingView]:
         """Every known setting, in section order, with its default beside it.

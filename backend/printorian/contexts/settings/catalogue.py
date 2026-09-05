@@ -23,7 +23,13 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Any, Final
 
-from printorian.contexts.pricing import CustomerTier, DiscountLadder, DiscountTier
+from printorian.contexts.pricing import (
+    FINISH_CATALOGUE,
+    CustomerTier,
+    DiscountLadder,
+    DiscountTier,
+    FinishOption,
+)
 from printorian.contexts.settings.sections import FIELDS, SECTIONS, Kind
 from printorian.core.errors import NotFoundError, ValidationError
 
@@ -83,6 +89,21 @@ def to_json(value: Any) -> Any:
                 ),
             }
             for tier in value
+        ]
+    if isinstance(value, tuple) and value and isinstance(value[0], FinishOption):
+        return [
+            {
+                "code": finish.code,
+                "labor_hours": str(finish.labor_hours),
+                "flat_fee": str(finish.flat_fee),
+                # Carried even though no editor draws it. `extra_days` feeds the SLA
+                # promise rather than the price, and dropping it here would make the
+                # first save of the table silently shorten what «Окраска» promises —
+                # the round trip has to be lossless or editing the norm-hours would
+                # change something the owner never looked at.
+                "extra_days": finish.extra_days,
+            }
+            for finish in value
         ]
     return str(value) if isinstance(value, Decimal) else value
 
@@ -174,12 +195,68 @@ def _parse_tiers(key: str, raw: Any, options: tuple[str, ...]) -> tuple[Customer
     return tiers
 
 
+def _parse_finishes(key: str, raw: Any, options: tuple[str, ...]) -> tuple[FinishOption, ...]:
+    """Parse the postprocessing catalogue — `{code, labor_hours, flat_fee, extra_days}`.
+
+    Real `FinishOption`s, not dicts, so the pricing engine's own
+    `__post_init__` refuses a negative norm-hour or flat fee with
+    `error.pricing.finish_negative` — the rule is already written down once, in
+    the context that prices with it.
+
+    **The code set is closed, and that is a decision rather than an omission.**
+    `apps/web/src/config.ts` offers exactly `raw`, `sanded`, `primed`, `painted`,
+    and `_pricing_spec` refuses any other code at the quote. A fifth row added
+    here would therefore be a finish the farm has priced, the console has shown,
+    and the storefront never offers — a setting that took and did nothing, which
+    is the failure #29 exists to remove rather than to introduce in a new place.
+    A dropped row is the mirror of it: the storefront would keep offering a
+    finish the catalogue no longer prices. So the codes must be exactly the four,
+    each once, and «Добавить операцию» from the kit is deliberately not ported —
+    the tiers editor's "code fixed, values editable" is the precedent.
+
+    Widening the set is a real feature (a public read of the catalogue, so the
+    configurator draws what the farm sells) and is the named follow-up slice, not
+    something to reach by loosening a check here.
+    """
+    if not isinstance(raw, list):
+        raise ValidationError("error.settings.not_a_table", key=key)
+    try:
+        finishes = tuple(
+            FinishOption(
+                code=str(item["code"]),
+                labor_hours=Decimal(str(item["labor_hours"])),
+                flat_fee=Decimal(str(item["flat_fee"])),
+                extra_days=int(item.get("extra_days", 0)),
+            )
+            for item in raw
+        )
+    except (KeyError, TypeError, ValueError, InvalidOperation) as exc:
+        raise ValidationError("error.settings.not_a_table", key=key) from exc
+
+    codes = [finish.code for finish in finishes]
+    duplicated = sorted({code for code in codes if codes.count(code) > 1})
+    if duplicated:
+        # Two rows for one code do not merge into one answer: `resolve_finishes`
+        # keys by code and the last row would silently win, so the row an owner
+        # edited and the price the farm charges could differ by a scroll position.
+        raise ValidationError("error.settings.finish_code_duplicate", key=key, codes=duplicated)
+    unknown = sorted(set(codes) - set(FINISH_CATALOGUE))
+    if unknown:
+        raise ValidationError("error.settings.finish_code_unknown", key=key, codes=unknown)
+    missing = sorted(set(FINISH_CATALOGUE) - set(codes))
+    if missing:
+        raise ValidationError("error.settings.finish_code_missing", key=key, codes=missing)
+    return finishes
+
+
 def _parse_table(key: str, raw: Any, options: tuple[str, ...]) -> Any:
-    """The two table shapes, routed by key rather than by a second `Kind`."""
+    """The three table shapes, routed by key rather than by a second `Kind`."""
     if key == "pricing.discounts":
         return _parse_ladder(key, raw, options)
     if key == "pricing.tiers":
         return _parse_tiers(key, raw, options)
+    if key == "postprocess.operations":
+        return _parse_finishes(key, raw, options)
     raise ValidationError("error.settings.unsupported_type", key=key)
 
 
