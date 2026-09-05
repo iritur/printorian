@@ -37,6 +37,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass
+from typing import Any
 
 import structlog
 from sqlalchemy import select
@@ -186,7 +187,7 @@ class ServiceSweep:
 
 
 async def run_forever(
-    build_sweep: object,
+    build_sweep: Any,
     *,
     interval_seconds: int,
     stop: asyncio.Event | None = None,
@@ -207,7 +208,7 @@ async def run_forever(
 
     while not stop.is_set():
         try:
-            sweep = await build_sweep()  # type: ignore[operator]
+            sweep = await build_sweep()
             outcome = await sweep.sweep()
             if outcome.opened or outcome.closed or outcome.failed:
                 logger.info(
