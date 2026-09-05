@@ -251,6 +251,11 @@ async def _truncate_everything(connection: object) -> None:
     await connection.execute(  # type: ignore[attr-defined]
         text("ALTER SEQUENCE IF EXISTS order_number_seq RESTART WITH 1")
     )
+    # `po_number_seq` stands alone for the same reason and needs the same reset,
+    # or the first purchase order of the second test in a run is «PO-000002».
+    await connection.execute(  # type: ignore[attr-defined]
+        text("ALTER SEQUENCE IF EXISTS po_number_seq RESTART WITH 1")
+    )
 
 
 @pytest.fixture
