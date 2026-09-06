@@ -21,6 +21,7 @@ const ENGINE_LINE_CODES = [
   'labor.engineering',
   'logistics.packaging',
   'logistics.shipping',
+  'logistics.shipping_weight',
   'overhead.general',
   'risk.failure_buffer',
   'adjustment.rush',

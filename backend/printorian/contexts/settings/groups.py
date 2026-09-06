@@ -86,6 +86,11 @@ GROUPS: Final[dict[str, str]] = {
     "pricing.shipping_flat": "logistics.packaging",
     "logistics.volumetric_divisor": "logistics.packaging",
     "logistics.free_shipping_threshold": "logistics.packaging",
+    # The kit draws «Зоны и тарифы» as its own panel with its own table rather
+    # than as a row among the packaging numbers, and `logistics.zones` is absent
+    # here for exactly that reason: its editor *is* that panel and heads itself
+    # with the field name, the same as the volume ladder and the customer tiers.
+    # A group whose label repeated the field name drew the heading twice, nested.
     # 10 — Финансы
     "finance.tax_regime": "finance.tax",
     "finance.vat_percent": "finance.tax",
