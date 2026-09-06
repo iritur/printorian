@@ -165,6 +165,7 @@ says it.
 | [docs/GLOSSARY.md](docs/GLOSSARY.md) | One agreed name per concept, RU / EN |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Setup, daily commands, the CI gates |
 | [docs/DATABASE-REVIEW.md](docs/DATABASE-REVIEW.md) | Schema by context, indexing, partitioning, and the accepted trade-offs |
+| [docs/SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md) | A read of the money path and the unauthenticated entry points — what was fixed, what is waiting on a person |
 | [docs/DESIGN-KIT.md](docs/DESIGN-KIT.md) | Which of the twenty-one kit screens exist, and what the unbuilt ones would need |
 | [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | Containers, release gate, deployment stages |
 | [docs/RUNBOOK-FIRST-BOOT.md](docs/RUNBOOK-FIRST-BOOT.md) | Standing the stack up on a real host, and the pre-flight that fails early |
