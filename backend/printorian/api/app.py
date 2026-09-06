@@ -21,6 +21,7 @@ from printorian.api.routers import (
     jobs,
     journal,
     materials,
+    metrics,
     orders,
     packaging,
     payments,
@@ -183,6 +184,10 @@ async def _refuse_reserved_accounts(app: FastAPI) -> None:
 def _install_routers(app: FastAPI) -> None:
     """Mount every router. Its own function so `create_app` stays readable."""
     app.include_router(health.router)
+    # Beside the probes because it is the same kind of surface: unauthenticated,
+    # read by machines, and carrying no farm data. Not to be confused with
+    # `fleet.router`'s `/fleet/metrics`, which is occupancy in seconds for a screen.
+    app.include_router(metrics.router)
     app.include_router(auth.router)
     app.include_router(account.router)
     app.include_router(users.router)

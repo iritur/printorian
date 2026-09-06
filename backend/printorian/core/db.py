@@ -305,3 +305,33 @@ def archiving_stalled_on(archived: str | None, failed: str | None) -> str | None
     if archived is None or failed >= archived:
         return failed
     return None
+
+
+async def archiver_failures(session: AsyncSession) -> int | None:
+    """`pg_stat_archiver.failed_count`, or `None` when the view has no row.
+
+    The reading behind `printorian_wal_archive_failures_total`, and deliberately
+    the counter that :func:`wal_archiving_stalled` above **rejects** — the two
+    answer different questions and the difference is the window.
+
+    A probe has no window. `/health/ready` is asked "is archiving broken *right
+    now*", once, with no memory of the last answer, and `failed_count` cannot tell
+    it: the counter never resets, so a farm that failed once in March would read
+    as broken for ever and the check would be one people learn to ignore. Hence
+    the watermark comparison there.
+
+    A time series has a window, and that is the whole of why the raw counter is
+    right here. `increase(printorian_wal_archive_failures_total[15m]) > 0` asks
+    exactly the question the probe could not, because Prometheus keeps the
+    previous samples that make "since when" meaningful. Exporting the probe's
+    boolean instead would throw away the rate, which is the part that says whether
+    archiving is failing occasionally or continuously.
+
+    `None` rather than `0` for a missing row: `pg_stat_archiver` is a server-wide
+    singleton and an empty result means this database could not tell us, not that
+    nothing has ever failed (root CLAUDE.md §1).
+    """
+    row = (await session.execute(text("SELECT failed_count FROM pg_stat_archiver"))).one_or_none()
+    if row is None or row[0] is None:
+        return None
+    return int(row[0])

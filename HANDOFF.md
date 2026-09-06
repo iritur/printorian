@@ -56,6 +56,20 @@ three test files; neither #90 nor #91 added a backend source file, so neither
 moved either count. They are quoted because a gate whose file count nobody reads
 is a gate that can quietly stop covering a tree.
 
+**`feat/20-metrics-exposition` claims no suite figure at all, and that is the
+honest state of it.** No `pytest` run happened on that branch: it is one of several
+worktrees live on this machine, they share `printorian_test`, and the `printorian`
+editable install in the shared `.venv` points at the *main* tree — so a run started
+from a worktree reports on source the branch does not contain. What did run there,
+each separately and each read for its own exit code, is the five path-based gates
+(`ruff check`, `ruff format --check`, `mypy --strict` over 226 source files,
+`check_context_isolation.py`, `check_file_length.py`), all `exit=0`. `lint-imports`
+was **not** run, for the editable-install reason above; nor was `alembic check`,
+which touches the shared dev database — and neither is owed a result by that branch,
+which adds no migration and no ORM change. Everything else it states about behaviour
+was reproduced outside pytest against the real modules and the real documents, and
+the branch says so at each commit rather than borrowing this block's numbers.
+
 `alembic heads` reports a single head, `0023_prepared_plate_copies`. Two branches
 merging is the way ADR-0008's one-head rule usually breaks, so it is checked here
 rather than left to CI to discover.
@@ -1389,7 +1403,8 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 |---|---|
 | `customer_storage_quota_bytes` displayed, not enforced | Refusing a quote mid-configuration is the wrong UX. Growth is bounded by `model_retention_days` instead. |
 | Rate limiting and sign-in lockout are in-process | Correct for one API process (ADR-0003). Counters reset on restart; a second replica would get its own allowance. `docs/DATABASE-REVIEW.md` §9. |
-| No `/metrics` endpoint | Stage 5. `/health/workers` gives the honest liveness signal meanwhile — it reads beats each worker loop records at the *end* of a pass, so it distinguishes wedged from working. |
+| `/metrics` serves three of INFRASTRUCTURE §5's ten series | The first slice of Stage 5, and it stops where the API process's own measurements do. The worker exporter, the four remaining DB-backed collectors and the whole VictoriaMetrics/Grafana/Alertmanager host stack are still absent; `/health/workers` remains the liveness signal, reading beats each loop records at the *end* of a pass. |
+| `printorian_sla_credit_accrued_rub` is held back rather than unbuilt | `/metrics` is unauthenticated, so `VIEW_FINANCIALS` has no caller to check. The money series waits for the scrape to have an identity — a token in Settings, or mTLS — and that is a decision for a person, not a query somebody has not written. A test forbids any `_rub` or `sla_credit` name on the endpoint meanwhile. |
 | Off-site backup sync has a recipe, no committed job | Needs farm-specific credentials. |
 | `assignment_records` is not partitioned | ADR-0018's deferral still holds — bounded by planning frequency, not by the clock. `/health/ready` now reports when the trigger fires; [#44](https://github.com/iritur/printorian/issues/44) stays open until it does. |
 | Storefront `body` lifts the page ground | Predates Harvester; `--hv-bg` vs `--hv-void` is six values out of 255 in dark, identical in light. A visual call, not a cleanup. See `apps/web/src/app.css`. |

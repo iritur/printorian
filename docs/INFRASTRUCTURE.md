@@ -316,20 +316,43 @@ a secondary email path.
 ### The metrics that matter here are domain metrics
 
 Request rates and CPU graphs will not tell you the farm has stopped earning. These
-will, and every one maps to a decision already written down:
+will, and every one maps to a decision already written down. `[served]` marks the
+three the API exposes today at `GET /metrics`; the rest are not exposed anywhere,
+and a scrape that returns three series is not a §5 that is nearly finished:
 
 ```
-printorian_printers_offline{printer,brand}              ADR-0007
+printorian_printers_offline{printer,brand}              ADR-0007                                  [served]
 printorian_job_stuck_seconds{state}                     jobs wedged in dispatching
 printorian_backup_last_success_timestamp                ADR-0019
 printorian_restore_drill_last_success_timestamp         ADR-0019 — a failing drill is an incident
-printorian_wal_archive_failures_total                   docker-compose archive_command
-printorian_telemetry_partition_months_ahead             config.py names this failure explicitly
+printorian_wal_archive_failures_total                   docker-compose archive_command            [served]
+printorian_telemetry_partition_months_ahead             config.py names this failure explicitly   [served]
 printorian_estimate_variance_ratio                      ADR-0013 tolerance band
 printorian_orders_awaiting_prep                         the human queue backing up
 printorian_payment_notifications_unreconciled           ADR-0019's reason for a 1-minute RPO
-printorian_sla_credit_accrued_rub                       money leaking through lateness
+printorian_sla_credit_accrued_rub                       money leaking through lateness            [held back]
 ```
+
+`printorian_sla_credit_accrued_rub` is `[held back]` rather than merely unbuilt, and
+the distinction matters because it is the one entry here that will not arrive by
+somebody writing a query. `/metrics` is unauthenticated — a scraper has no session,
+the same reason the health probes are open — and `VIEW_FINANCIALS` is kept apart
+from every production permission precisely so that a response carrying seconds does
+not quietly begin carrying rubles. An endpoint with no caller identity at all cannot
+check that permission, so the money series waits for the scrape to *have* an
+identity: a token in Settings, or mTLS. Until then `tests/api/test_metrics_api.py`
+forbids any metric name on that endpoint ending in `_rub` or containing
+`sla_credit`, as a rule over parsed names rather than a substring check, so a fourth
+collector cannot bring one in by accident.
+
+The three that are served are the three whose data the API process already measures.
+The seven that are not divide into three different kinds of missing, which is worth
+saying because only one of them is a query somebody has not written yet:
+`job_stuck_seconds`, `estimate_variance_ratio`, `orders_awaiting_prep` and
+`payment_notifications_unreconciled` are database-backed readings that need writing;
+`backup_last_success_timestamp` and `restore_drill_last_success_timestamp` cannot be
+written at all yet, because neither `scripts/backup.sh` nor `scripts/restore_drill.py`
+leaves a machine-readable marker behind; and the money one is the paragraph above.
 
 ### Tracing: deliberately not yet
 
