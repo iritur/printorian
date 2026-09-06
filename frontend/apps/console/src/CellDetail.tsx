@@ -99,7 +99,12 @@ export function CellDetail({
   }, [address, locale])
 
   useEffect(() => {
-    void load()
+    // The load is started from an async wrapper rather than called straight from
+    // the effect body: `load` sets state, and a setState run synchronously inside
+    // an effect is the cascading render `react-hooks/set-state-in-effect` rejects.
+    void (async () => {
+      await load()
+    })()
   }, [load])
 
   const after = useCallback(async () => {

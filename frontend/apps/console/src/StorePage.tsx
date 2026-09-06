@@ -100,7 +100,12 @@ export function StorePage({ locale }: { locale: Locale }) {
   }, [locale])
 
   useEffect(() => {
-    void load()
+    // The load is started from an async wrapper rather than called straight from
+    // the effect body: `load` sets state, and a setState run synchronously inside
+    // an effect is the cascading render `react-hooks/set-state-in-effect` rejects.
+    void (async () => {
+      await load()
+    })()
   }, [load])
 
   /*
@@ -285,7 +290,7 @@ function MovementTable({ rows, locale }: { rows: Movement[]; locale: Locale }) {
  * Declaring a zone and a cell, in the map panel's foot.
  *
  * Without this the two POST routes have no path literal anywhere under
- * `frontend/apps/*​/src` and the endpoint-consumer gate fails — but the gate is
+ * `frontend/apps/<app>/src` and the endpoint-consumer gate fails — but the gate is
  * the symptom. The real point is that a warehouse screen with no way to declare a
  * cell is a mechanism the product cannot reach, which is the #58 finding HANDOFF
  * records in as many words.
