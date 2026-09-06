@@ -1279,19 +1279,32 @@ before touching either:
 - **`0024_procurement` is one of several `0024_*` revising `0023`.** Correct per
   branch, and whichever merges second needs renumbering.
 
-**What was and was not run on that branch.** Five path-based gates, each separately
-from the main tree's interpreter and each reading this worktree: `ruff check`,
-`ruff format --check`, `mypy --strict`, `check_context_isolation.py` and
-`check_file_length.py`, all `exit=0`. The three documentation gates
-(`test_docs_table_inventory`, `test_docs_screen_inventory`,
-`test_docs_endpoint_consumers`) were run and pass — they read files and the OpenAPI
-schema rather than the database. **`pytest` proper, `lint-imports`, every `alembic`
-command and all four frontend gates were not run**, because the worktree shares one
-test database with other agents, `printorian` is an editable install pointing at the
-main tree, and there is no `node_modules` here. So: 46 backend tests and 6 frontend
-tests are written and **unproven**, the migration has never been applied, and the
-console screen has never been type-checked. The serial verification pass is what
-will find out, and it should be believed over this paragraph.
+**Since verified, in the main tree.** Everything the branch could not run has now
+been run there: `ruff check`, `ruff format --check`, `mypy`,
+`check_context_isolation.py`, `check_file_length.py` and `lint-imports` (6 contracts
+kept), all `exit=0`; `0024_procurement` as the single head, applied, `alembic check`
+clean, downgraded and re-applied, all `exit=0`; the whole backend suite, 1 443
+collected, 8 skipped, `exit=0`, the 46 procurement tests among them; and the three
+frontend gates — `typecheck`, `lint`, `vitest` (290 tests, 7 of them purchasing) —
+also `exit=0`. Three things had to be fixed to get there, and all three were the
+harness rather than the feature:
+
+- `test_the_purchasing_routes_are_actually_mounted` walked `app.routes` one level
+  deep. Since FastAPI 0.141 `include_router` leaves one `_IncludedRouter` there
+  instead of splicing routes in, so it saw `/docs` and nothing else while the ten
+  purchasing operations were mounted and serving. It reads the generated schema now.
+- `test_a_refused_delivery_leaves_nothing_behind` expected `400`. `api/errors.py`
+  maps every `ValidationError` to `422` and the rest of the suite asserts `422`.
+- `PurchasingPage` called `refetch()` from an effect body, which
+  `react-hooks/set-state-in-effect` refuses. `PackagingPage` already awaited its
+  fetch inside a closure; this does the same.
+
+Worth knowing for the next verifier: the run began with a wall of drop-table errors
+that were **not** this branch. `printorian_test` still held `material_movements`,
+`storage_cells` and `storage_zones` from a previous branch's pass, and `drop_all`
+sees only the current branch's metadata, so it could not drop `material_lots` out
+from under a foreign key it does not know about. Dropping the database and letting
+`conftest` rebuild it is the fix; leaving it behind is the trap.
 
 ## 2. Deliberately unfinished
 
