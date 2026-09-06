@@ -121,9 +121,15 @@ def publish(client: AsyncClient, *drivers: DriverHealth) -> None:
 
 
 async def add_printer(database: _TestDatabase, printer_id: EntityId, *, brand: str) -> None:
-    """A real fleet row, so the brand label comes from the farm rather than a stub."""
+    """A real fleet row, so the brand label comes from the farm rather than a stub.
+
+    The name is built from the id, not the brand: `printers.name` is unique, and
+    two machines of one brand is the ordinary case these tests are made of — a
+    name derived from the brand makes the second insert a `uq_printers_name`
+    violation and the test fails on its own fixture rather than on the exposition.
+    """
     async for session in database.session():
-        session.add(Printer(id=printer_id, name=f"P-{brand}", brand=brand))
+        session.add(Printer(id=printer_id, name=f"P-{printer_id}", brand=brand))
 
 
 def parse(body: str) -> list[tuple[str, dict[str, str], float]]:
