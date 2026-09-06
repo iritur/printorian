@@ -70,6 +70,7 @@ from printorian.contexts.pricing import (
     prepared_cost,
     rates_from_dict,
 )
+from printorian.contexts.procurement import ordered_codes
 from printorian.core.errors import NotFoundError, ValidationError
 from printorian.core.units import Duration, Mass
 from printorian.workers.plate_admission import admits
@@ -295,7 +296,9 @@ class CachedPlates:
         `place()` time — a schema change on the checkout path, not on this one.
         """
         try:
-            material = await InventoryService(self._db).get_by_code(line.material_code)
+            material = await InventoryService(self._db).get_by_code(
+                line.material_code, on_order=await ordered_codes(self._db)
+            )
         except NotFoundError:
             # The product has left the catalogue since the order was placed. Its
             # price per gram is gone, and inventing one would put a made-up figure

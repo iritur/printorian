@@ -38,6 +38,7 @@ from printorian.contexts.pricing import (
     PriceSpec,
     PrintEstimate,
 )
+from printorian.contexts.procurement import ordered_codes
 from printorian.core.cpu import CpuGate
 from printorian.core.errors import PayloadTooLargeError, ValidationError
 from printorian.core.ids import EntityId
@@ -98,7 +99,13 @@ async def _material_price(db: DbSession, codes: list[str]) -> MaterialPrice:
       unstocked, was quoted with no procurement charge whenever the dearest
       happened to be the one in stock.
     """
-    specs = [await InventoryService(db).get_by_code(code) for code in codes]
+    # One read of the open orders for the whole list, so every spec in it is
+    # judged against the same instant. `needs_procurement` below does not turn
+    # on it — "ordered" and "none" are both outside `_IN_STOCK` — but the view
+    # this builds carries a status, and one built from an assumed-empty set is
+    # a claim nobody checked.
+    on_order = await ordered_codes(db)
+    specs = [await InventoryService(db).get_by_code(code, on_order=on_order) for code in codes]
     dearest = max(specs, key=lambda spec: spec.sell_price_per_gram)
     return MaterialPrice(
         spec_code=dearest.code,
@@ -167,7 +174,9 @@ async def _build_spec(
 
     material = await _material_price(db, material_codes or [material_code])
     # Density comes from the priced product; within a family the colours share it.
-    spec_view = await InventoryService(db).get_by_code(material.spec_code)
+    spec_view = await InventoryService(db).get_by_code(
+        material.spec_code, on_order=await ordered_codes(db)
+    )
     prediction = estimate(
         analysis,
         EstimationProfile(density_g_per_cm3=spec_view.density_g_per_cm3),

@@ -10,13 +10,13 @@ checking it. A rule flipped to ``CASCADE`` in a model is one word, would have pa
 all six gates and the whole suite, and the first evidence of it would have been a
 retention sweep deleting an order's lines.
 
-The inventory below is all fifty-four keys rather than the interesting ones,
-because a spot check leaves the other forty-six unwatched and because the
-fifty-fifth key should not be addable without somebody deciding what it does on
-delete. Rules are grouped by *rule* rather than listed per table: the reason for a
-rule is shared, and repeating it fifty-four times would be fifty-four places to
-keep in step. Where an individual key is load-bearing, or reads wrong beside its
-neighbour, it is called out under its group.
+The inventory below is all fifty-nine keys rather than the interesting ones,
+because a spot check leaves the other fifty-one unwatched and because the sixtieth
+key should not be addable without somebody deciding what it does on delete. Rules
+are grouped by *rule* rather than listed per table: the reason for a rule is shared,
+and repeating it fifty-nine times would be fifty-nine places to keep in step. Where
+an individual key is load-bearing, or reads wrong beside its neighbour, it is called
+out under its group.
 
 Two comparisons follow from it, and they are not redundant. The **metadata** must
 agree with the inventory, which is a millisecond and catches the edit. The
@@ -81,6 +81,8 @@ CASCADE: frozenset[str] = frozenset(
         "postproduction_task_steps.task_id",
         "postproduction_tasks.order_id",
         "print_jobs.order_id",
+        "purchase_order_lines.order_id",
+        "purchase_receipts.line_id",
         "refunds.payment_id",
         "service_operations.printer_id",
         "sessions.user_id",
@@ -127,6 +129,8 @@ SET_NULL: frozenset[str] = frozenset(
         # while they were here with them — `contexts/service/models.py` says so
         # beside the column.
         "printer_failures.recorded_by",
+        "purchase_receipts.material_lot_id",
+        "purchase_receipts.received_by",
         "settings.updated_by",
         "settings_audit.changed_by",
     }
@@ -143,6 +147,12 @@ SET_NULL: frozenset[str] = frozenset(
 #: ``order_lines.model_asset_id`` is the one to preserve above all. It is the whole
 #: of what stops `catalog.assets`' retention sweep collecting a mesh an open order
 #: depends on — which is why that sweep does not, and must not, consult `ordering`.
+#:
+#: ``purchase_orders.supplier_id`` carries the same argument in the other direction:
+#: deleting a supplier must not erase what was bought from it, because the receipts
+#: hanging off those orders are the farm's only record of what a thing cost on the
+#: day it arrived. `suppliers.is_active` is the ordinary way to retire one, and it
+#: exists because this rule refuses the alternative.
 RESTRICT: frozenset[str] = frozenset(
     {
         "catalog_models.model_asset_id",
@@ -165,6 +175,7 @@ RESTRICT: frozenset[str] = frozenset(
         # all for the opposite reason (ADR-0018 drops partitions under it), so
         # the two are not the inconsistency they look like side by side.
         "printer_failures.printer_id",
+        "purchase_orders.supplier_id",
     }
 )
 

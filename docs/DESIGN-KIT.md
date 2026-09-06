@@ -5,7 +5,7 @@ The kit is twenty-one screens of static HTML in [`design/`](../design/README.md)
 is not a transcription of them, and deliberately no longer tries to be.
 
 What it carries instead is the part the HTML cannot: which screens exist in the
-app, what the four that do not would need from the backend, and the conventions
+app, what the two that do not would need from the backend, and the conventions
 that hold across all of them.
 
 > Replaces `DESIGN-KIT-PLAN.md`, `DESIGN-KIT-INTEGRATION.md` and
@@ -30,7 +30,7 @@ from another document has only moved the drift.
 
 ## 1. Where the screens stand
 
-**Eighteen of twenty-one are built.** Every public screen ships; the three that do
+**Nineteen of twenty-one are built.** Every public screen ships; the two that do
 not are all control-realm. `settings` was the nearest of them and is now built —
 104 parameters across fourteen sections, served and audited. What is left of it is
 the table-valued settings, not the screen (§2.1).
@@ -41,17 +41,17 @@ the table-valued settings, not the screen (§2.1).
 | `dashboard` `orders` `fleet` `materials` `users` `postproduction` `packaging` | control | **built** |
 | `settings` | control | **built** — scalars and Диагностика; the tables remain, §2.1 |
 | `service` | control | **not built** — §2.2 |
-| `purchasing` | control | **not built** — §2.3 |
+| `purchasing` | control | **built** — the desk, the six stages and receiving into material stock; the deferred panels are in §2.3 |
 | `store` | control | **built** — cells, ledger and movements; §2.4 for the rest |
 | `logistics` | control | **not built** — §2.5 |
 
 `index.html` is the kit's own contents page, not a screen.
 
-## 2. Settings, the store, and the three that are not built
+## 2. Settings, purchasing, the store, and the two that are not built
 
-For §2.2, §2.3 and §2.5 the kit inventories are preserved verbatim, because for
-those the kit *is* the spec, and each ends with what the backend already has.
-§2.1 and §2.4 are no longer among them — settings and the store are built, so the
+For §2.2 and §2.5 the kit inventories are preserved verbatim, because for those the
+kit *is* the spec, and each ends with what the backend already has. §2.1, §2.3 and
+§2.4 are no longer among them — settings, purchasing and the store are built, so the
 code is the truth for them and this document records only what is still owed. The numbering is kept as it was so that the
 references to it from the tracker and from §2.5 keep pointing at the same place.
 
@@ -171,18 +171,49 @@ recorded verbatim but is **not** a cause; the farm has no table mapping one to �
 
 **What the backend still owes:** [#33](https://github.com/iritur/printorian/issues/33) — tickets as an entity with steps, assignee, elapsed, consequence; spare parts stock; наработка on the same table as надёжность, which today would be two rulers (`Printer.printed_hours` accumulates from the live row, while надёжность divides by `metric_rollups`). «Последствия» is not merely unbuilt but partly **unmeasurable**: nothing decrements a spool, so «потеряно материала 148 г» has no source, and «Итого потеря 2 140 ₽» is money and belongs behind `VIEW_FINANCIALS` rather than on a production response.
 
-### 2.3 `purchasing.html`
+### 2.3 `purchasing.html` — built, minus the panels that need receipts first
 
-- **Структура закупок** — funnel by class
-- **Требуют заказа сейчас** — Позиция · Класс · Остаток · **Последствие**
-- **Purchase orders** — Номер · Поставщик · Состав · Статус · Заказан · Ожидается ·
-  Сумма
-- **Supplier scorecards** — Поставщик · Поставок · В срок · Брак · Оборот · Оценка
-- **Цены по ключевым позициям** — a year of price history
-- PO detail: 6-stage path, line items, **Зачем этот заказ**, **Приёмка** (receiving
-  into lots)
+**The screen exists.**
+[`purchasing/PurchasingPage.tsx`](../frontend/apps/console/src/purchasing/PurchasingPage.tsx)
+renders it and [`contexts/procurement`](../backend/printorian/contexts/procurement/)
+serves it: suppliers, purchase orders over the kit's six stages plus cancellation,
+five purchasable classes on the lines, and receiving a material line into a
+`material_lots` row carrying its lot number and the price paid. `MANAGE_INVENTORY`
+gates the desk; prices arrive from `GET /purchasing/orders/{id}/costs` behind
+`VIEW_FINANCIALS`, as a separate route rather than as blanked fields — a null
+already means "not measured" (ADR-0007) and reusing it for "not permitted" makes
+the two indistinguishable.
 
-**What the backend still owes:** [#34](https://github.com/iritur/printorian/issues/34) — nothing exists; `PurchaseOrder`, `Supplier`, four purchasable classes.
+It also gave `inventory.low_stock_grams`, `inventory.auto_reorder` and their two
+siblings their first reader, and it replaced `material_specs.has_open_order` — a
+hand-set boolean whose own comment called it a placeholder — with a question asked
+of the order lines.
+
+**What is deliberately not built, and why.** Each of these is a follow-up rather
+than an omission; three of them would have to invent a number to exist at all.
+
+- **«Структура закупок»** and the four KPI tiles — «Экономия за квартал» has no
+  baseline and «БЮДЖЕТ МЕСЯЦА 68%» has no source: there is no budget setting
+  anywhere in the catalogue. Dropped the way #30 dropped the uptime tile.
+- **Supplier scorecards** — «Поставок · В срок · Брак · Оборот · Оценка» needs a
+  defect record captured at receiving and a promised-versus-delivered measure. On
+  a farm with no receipts every column would be a fabricated denominator, so the
+  supplier panel carries counts and nothing else.
+- **«Цены по ключевым позициям»** — derivable from `purchase_receipts` once they
+  accumulate. Empty and honest on day one.
+- **«Зачем этот заказ»'s consumption rows**, and the months-of-cover arm of
+  «Последствие» — nothing in this system measures material consumption:
+  `material_lots.remaining_grams` is written once, at lot creation, and never
+  decremented. The reorder row's consequence is a discriminated value with no
+  coverage arm and the console draws «—». `test_procurement_reorder.py` is the
+  tripwire.
+- **Receiving into `packaging_tara` and `postproduction_consumables`** — neither
+  context offers an *increment*; `PackingCatalogue.stock_tara` restates the level
+  absolutely, so receiving into it would lose whatever a packer did in between.
+  The lines are ordered and paid for; only the arrival is refused, by code.
+- **Spare parts stock** — [#33](https://github.com/iritur/printorian/issues/33)
+  claims that table. `spare_part` is declared in the enum so adding it later is a
+  service change, and modelling stock for it here would give the farm two.
 
 ### 2.4 `store.html` — built, minus turnover, money and stocktake
 
