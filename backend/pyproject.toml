@@ -28,6 +28,22 @@ dependencies = [
     "cryptography>=44",
     # Bambu LAN control: MQTT over TLS.
     "paho-mqtt>=2.1",
+    # The Prometheus text exposition at `GET /metrics` (INFRASTRUCTURE §5).
+    #
+    # A library rather than the forty lines of string building this looks like,
+    # for two things a hand-rolled writer gets wrong and no reviewer catches by
+    # eye: escaping label values (a backslash, a double quote or a newline in a
+    # printer name silently produces an exposition a scraper parses as different
+    # metrics, or refuses outright), and the exact `Content-Type` — the version
+    # and `escaping` parameters are part of the contract, not decoration. Both
+    # are pinned by `tests/unit/test_metrics_exposition.py`, which round-trips
+    # through this package's own parser rather than matching strings.
+    #
+    # Only the registry, the metric types and the text writer are used. The
+    # ASGI app, the process collector and the multiprocess mode are not: a
+    # per-scrape registry is what keeps two `create_app` instances in one test
+    # session from accumulating each other's series.
+    "prometheus-client>=0.21",
     # The IANA time zone database, for `farm_timezone`.
     #
     # `zoneinfo` reads the operating system's copy where there is one, so a Linux

@@ -25,6 +25,7 @@ from sqlalchemy.orm import selectinload
 
 from printorian.contexts.ordering import OrderingService, OrderStatus
 from printorian.contexts.payments import events as payment_events
+from printorian.contexts.payments.documents import documents_for
 from printorian.contexts.payments.models import Payment, PaymentNotification, Refund
 from printorian.contexts.payments.policies import (
     PaymentStatus,
@@ -220,6 +221,25 @@ class PaymentsService:
         payment = await self._db.get(Payment, payment_id)
         if payment is None:
             raise NotFoundError("error.payments.not_found", payment_id=str(payment_id))
+
+        # Money only goes back through the gateway that took it. The route above
+        # already resolves the gateway from the payment rather than from the
+        # caller; this is the second, independent guard — the same two-guard shape
+        # `api/providers.py` uses to keep the mock out of production, and for the
+        # same reason: what a single missed check costs here is a payment marked
+        # refunded while the money is still at a gateway nobody told.
+        #
+        # `ManualPaymentProvider` is the one that makes this urgent. Its refund
+        # always reports success, correctly — its contract is that a person will
+        # send the money — so routing a card payment into it produces a refund
+        # record for a transfer nobody is going to make.
+        if provider.name != payment.provider:
+            raise ConflictError(
+                "error.payments.provider_mismatch",
+                expected=payment.provider,
+                actual=provider.name,
+            )
+
         if not payment.status.is_settled:
             raise ConflictError("error.payments.not_settled", status=payment.status.value)
 
@@ -309,55 +329,13 @@ class PaymentsService:
     # -- internals -------------------------------------------------------
 
     async def documents_for(self, order_ids: Sequence[EntityId]) -> list[PaymentDocument]:
-        """Receipts and refund notes for a set of orders, newest first.
+        """Receipts and refund notes for these orders — see `payments.documents`.
 
-        Takes ids rather than a customer: payments know about orders and nothing
-        about who placed them, and teaching this context to filter by customer
-        would be teaching it to read another context's table. The caller scopes.
-
-        Only settled payments and only succeeded refunds. A payment that was
-        started and abandoned is not a receipt, and listing it as one would put a
-        document in front of a customer for money that never moved.
+        Kept on the service so the context's public surface stays one object: the
+        derivation lives next door because it is a different job (reading what the
+        money did, never moving it), not because this file ran out of room.
         """
-        if not order_ids:
-            return []
-
-        payments = await self._db.scalars(
-            select(Payment)
-            .where(Payment.order_id.in_(list(order_ids)))
-            .options(selectinload(Payment.refunds))
-        )
-
-        documents: list[PaymentDocument] = []
-        for payment in payments:
-            if payment.status is PaymentStatus.SUCCEEDED and payment.settled_at is not None:
-                documents.append(
-                    PaymentDocument(
-                        kind="receipt",
-                        payment_id=payment.id,
-                        order_id=payment.order_id,
-                        provider=payment.provider,
-                        amount=payment.amount,
-                        currency=payment.currency,
-                        issued_at=payment.settled_at,
-                    )
-                )
-            documents.extend(
-                PaymentDocument(
-                    kind="refund",
-                    payment_id=payment.id,
-                    order_id=payment.order_id,
-                    provider=payment.provider,
-                    amount=refund.amount,
-                    currency=payment.currency,
-                    issued_at=refund.created_at,
-                )
-                for refund in payment.refunds
-                if refund.succeeded
-            )
-
-        documents.sort(key=lambda row: row.issued_at, reverse=True)
-        return documents
+        return await documents_for(self._db, order_ids)
 
     async def _already_seen(self, provider_name: str, event: WebhookEvent, body: bytes) -> bool:
         """Record the notification, reporting whether it is a repeat.

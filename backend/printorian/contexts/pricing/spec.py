@@ -100,6 +100,15 @@ class PriceSpec:
     rush: bool = False
     #: False for customer collection — no shipping line at all.
     include_shipping: bool = True
+    #: Which shipping zone this is going to, or `''` when nobody knows yet.
+    #:
+    #: The *code* is a spec input because it describes the thing being priced; the
+    #: *tariff* behind it is a rate and travels in `RateSnapshot`. Keeping that
+    #: split is what keeps ADR-0002 true — the engine is handed both and resolves
+    #: the postcode itself never. Empty means the destination is not known (the
+    #: configurator has no address, and the checkout may not have one yet), and
+    #: the engine falls back to the flat rate rather than picking a zone.
+    destination_zone: str = ""
     customer_tier_code: str = "standard"
 
     def __post_init__(self) -> None:

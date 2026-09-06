@@ -13,7 +13,9 @@ import { OrdersPage } from './OrdersPage'
 import { PackagingPage } from './packaging/PackagingPage'
 import { PostProductionPage } from './postproduction/PostProductionPage'
 import { PrepPage } from './PrepPage'
+import { PurchasingPage } from './purchasing/PurchasingPage'
 import { SettingsPage } from './SettingsPage'
+import { StorePage } from './StorePage'
 import { UsersPage } from './UsersPage'
 
 type Screen =
@@ -26,6 +28,8 @@ type Screen =
   | 'journal'
   | 'fleet'
   | 'materials'
+  | 'purchasing'
+  | 'store'
   | 'users'
   | 'settings'
 
@@ -40,6 +44,10 @@ const VIEW_PRODUCTION = 'view_production'
 const PREPARE_PLATE = 'prepare_plate'
 const VIEW_ALL_ORDERS = 'view_all_orders'
 const MANAGE_USERS = 'manage_users'
+// The permission `packaging.py` describes as "those decide what the farm buys".
+// Kept separate from `view_financials`: the desk shows what was ordered to
+// anyone who buys, and the prices only to whoever may read money.
+const MANAGE_INVENTORY = 'manage_inventory'
 const MANAGE_LIBRARY = 'manage_library'
 const MANAGE_JOURNAL = 'manage_journal'
 const MANAGE_SETTINGS = 'manage_settings'
@@ -230,6 +238,36 @@ function Shell() {
       shape: 'stack',
     },
     {
+      // Straight after materials, because that is where a person arrives from:
+      // the materials table says a spool is «Заказан» and this is the screen
+      // that made it say so.
+      key: 'purchasing',
+      label: t('pu.title'),
+      note: 'ЗАКАЗЫ · ПОСТАВЩИКИ · ПРИЁМКА',
+      permission: MANAGE_INVENTORY,
+      mark: 'BUY',
+      kicker: 'C:/SUPPLY/PURCHASING/ORDERS',
+      text: 'Что ферма закупает и у кого: пороги остатков, путь заказа по шести этапам и приёмка партий на склад.',
+      shape: 'stack',
+    },
+    {
+      /*
+        Gated on VIEW_PRODUCTION rather than MANAGE_INVENTORY, matching the read
+        gate on `api/routers/store.py`. An operator can find a spool; the controls
+        that move one or take mass off it are hidden behind `mayManage` inside the
+        screen. A nav gate stricter than the API's would hide a map the server is
+        perfectly willing to serve.
+      */
+      key: 'store',
+      label: t('store.title'),
+      note: 'ЗОНЫ · ЯЧЕЙКИ · ДВИЖЕНИЯ',
+      permission: VIEW_PRODUCTION,
+      mark: 'CELL',
+      kicker: 'C:/SUPPLY/STORE/LOCATIONS',
+      text: 'Карта хранения по зонам, партии в ячейке и журнал перемещений: каждое движение — строка, которую ничто не переписывает.',
+      shape: 'nodes',
+    },
+    {
       key: 'users',
       label: t('users.title'),
       note: 'ДОСТУП · РОЛИ · СЕАНСЫ',
@@ -282,6 +320,8 @@ function Shell() {
     journal: '/JOURNAL/EDITOR',
     fleet: '/FLEET/PRINTERS',
     materials: '/INVENTORY/MATERIALS',
+    purchasing: '/SUPPLY/PURCHASING/ORDERS',
+    store: '/SUPPLY/STORE/LOCATIONS',
     users: '/IDENTITY/USERS.DB',
     settings: '/SYSTEM/SETTINGS/FARM.CONFIG',
   }
@@ -315,6 +355,8 @@ function Shell() {
       {active === 'journal' && <JournalPage locale={locale} />}
       {active === 'fleet' && <FleetPage locale={locale} />}
       {active === 'materials' && <MaterialsPage locale={locale} />}
+      {active === 'purchasing' && <PurchasingPage locale={locale} />}
+      {active === 'store' && <StorePage locale={locale} />}
       {active === 'users' && <UsersPage locale={locale} />}
       {active === 'settings' && <SettingsPage locale={locale} />}
     </AppShell>

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 from collections import OrderedDict
+from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any
 
@@ -32,11 +33,12 @@ from printorian.contexts.catalog import (
 from printorian.contexts.inventory import InventoryService, MaterialStatus
 from printorian.contexts.ordering import PromisePolicy, promised_hours
 from printorian.contexts.pricing import (
-    FINISH_CATALOGUE,
+    FinishOption,
     MaterialPrice,
     PriceSpec,
     PrintEstimate,
 )
+from printorian.contexts.procurement import ordered_codes
 from printorian.core.cpu import CpuGate
 from printorian.core.errors import PayloadTooLargeError, ValidationError
 from printorian.core.ids import EntityId
@@ -97,7 +99,13 @@ async def _material_price(db: DbSession, codes: list[str]) -> MaterialPrice:
       unstocked, was quoted with no procurement charge whenever the dearest
       happened to be the one in stock.
     """
-    specs = [await InventoryService(db).get_by_code(code) for code in codes]
+    # One read of the open orders for the whole list, so every spec in it is
+    # judged against the same instant. `needs_procurement` below does not turn
+    # on it — "ordered" and "none" are both outside `_IN_STOCK` — but the view
+    # this builds carries a status, and one built from an assumed-empty set is
+    # a claim nobody checked.
+    on_order = await ordered_codes(db)
+    specs = [await InventoryService(db).get_by_code(code, on_order=on_order) for code in codes]
     dearest = max(specs, key=lambda spec: spec.sell_price_per_gram)
     return MaterialPrice(
         spec_code=dearest.code,
@@ -124,8 +132,15 @@ async def _build_spec(
     uploaded_by: EntityId | None = None,
     max_bytes: int = _MAX_UPLOAD_BYTES,
     promise: PromisePolicy | None = None,
+    catalogue: Mapping[str, FinishOption],
 ) -> tuple[PriceSpec, dict[str, Any]]:
     """Measure an upload and turn it into a pricing input.
+
+    ``catalogue`` is the farm's resolved postprocessing catalogue, handed in rather
+    than read here: the engine is given everything it prices with (ADR-0002), and
+    both quoting endpoints already hold the settings store. It has no default —
+    a forgotten argument has to be a type error rather than a quote silently priced
+    at the code defaults while the order it becomes charges the farm's own rates.
 
     ``keep`` is supplied by the endpoints where the customer is committing to
     something — a real quote — and omitted by the ones that are exploring, so
@@ -159,14 +174,20 @@ async def _build_spec(
 
     material = await _material_price(db, material_codes or [material_code])
     # Density comes from the priced product; within a family the colours share it.
-    spec_view = await InventoryService(db).get_by_code(material.spec_code)
+    spec_view = await InventoryService(db).get_by_code(
+        material.spec_code, on_order=await ordered_codes(db)
+    )
     prediction = estimate(
         analysis,
         EstimationProfile(density_g_per_cm3=spec_view.density_g_per_cm3),
         scale=scale,
     )
 
-    unknown = [code for code in finishes if code not in FINISH_CATALOGUE]
+    # Refused here, where the customer is still choosing, and *not* on the
+    # repricing edges (`_line_pricing.spec_for`, `workers/cached_plates`): a
+    # finish the farm has stopped selling must not be quotable, and must still
+    # reprice for the orders already placed under it.
+    unknown = [code for code in finishes if code not in catalogue]
     if unknown:
         raise ValidationError("error.pricing.unknown_finish", finishes=unknown)
 
@@ -178,7 +199,7 @@ async def _build_spec(
         quantity=quantity,
         colors=tuple(colors) if colors else ("default",),
         scale=scale,
-        finishes=tuple(FINISH_CATALOGUE[code] for code in finishes),
+        finishes=tuple(catalogue[code] for code in finishes),
         rush=rush,
         include_shipping=include_shipping,
     )

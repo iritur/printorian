@@ -34,6 +34,7 @@ from printorian.contexts.pricing import (
     PrintEstimate,
     price,
 )
+from printorian.contexts.procurement import ordered_codes
 from printorian.contexts.production import JobStatus
 from printorian.contexts.production.models import PrintJob
 from printorian.core.cpu import CpuGate
@@ -68,9 +69,12 @@ async def _suitable_materials(db: DbSession, model: CatalogModel) -> list[Suitab
         return []
 
     inventory = InventoryService(db)
+    # Hoisted out of the loop below: one purchase-order read for the whole
+    # panel rather than one per offered family, all describing one instant.
+    on_order = await ordered_codes(db)
     families: dict[str, tuple[str, Decimal | None, Decimal]] = {}
     for offer in offers:
-        table = await inventory.table(family=offer.material_code.upper())
+        table = await inventory.table(on_order=on_order, family=offer.material_code.upper())
         if not table.rows:
             continue
         # Dearest colour in the family, and the family's whole shelf.
@@ -131,7 +135,9 @@ async def _price_ladder(
         return [], ""
 
     inventory = InventoryService(db)
-    table = await inventory.table(family=offered[0].material_code.upper())
+    table = await inventory.table(
+        on_order=await ordered_codes(db), family=offered[0].material_code.upper()
+    )
     if not table.rows:
         return [], ""
     # Dearest colour in the family, for the same reason `_material_price` picks it:

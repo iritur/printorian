@@ -3,6 +3,11 @@
 The pricing-only behaviour is covered by `test_settings_store.py`; this file is
 the new surface — that every kit section is represented, that each field knows its
 own type, and that a secret is never read back and never appears in the audit.
+
+The `Kind.TABLE` keys live in `test_settings_tables.py`. They moved out when this
+file neared the 400-line gate, and the seam is a real one: a table's parser builds
+a domain object and its resolver hands that object to a consumer, which is a longer
+story than "a string round-trips".
 """
 
 from __future__ import annotations
@@ -14,7 +19,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.ordering import PromisePolicy
-from printorian.contexts.pricing import DiscountTier
 from printorian.contexts.scheduling import SchedulingPolicy
 from printorian.contexts.settings import FIELDS, SECTIONS, Kind, SettingsService
 from printorian.contexts.settings.models import Setting
@@ -162,40 +166,6 @@ async def test_a_scheduler_weight_changes_the_resolved_policy(
     assert resolved.weight_capability_waste == SchedulingPolicy().weight_capability_waste
 
 
-async def test_a_ladder_round_trips_and_reaches_the_rates(
-    db_session: AsyncSession, clock: FixedClock
-) -> None:
-    """The volume ladder is a table, not a scalar, and it reaches `resolve_rates`."""
-    settings = store(db_session, clock)
-    ladder = [
-        {"min_quantity": 10, "percent": "5"},
-        {"min_quantity": 50, "percent": "12"},
-    ]
-
-    await settings.set_value("pricing.discounts", ladder, by=None)
-
-    resolved = await settings.resolve_rates()
-    assert resolved.discounts.tiers == (
-        DiscountTier(min_quantity=10, percent=Decimal(5)),
-        DiscountTier(min_quantity=50, percent=Decimal(12)),
-    )
-    rows = {row.key: row for row in await settings.listing()}
-    assert rows["pricing.discounts"].value == ladder
-
-
-async def test_an_inverting_ladder_is_refused(db_session: AsyncSession, clock: FixedClock) -> None:
-    """A ladder that undercuts itself is refused with the pricing engine's own code."""
-    with pytest.raises(ValidationError):
-        await store(db_session, clock).set_value(
-            "pricing.discounts",
-            [
-                {"min_quantity": 10, "percent": "12"},
-                {"min_quantity": 50, "percent": "5"},
-            ],
-            by=None,
-        )
-
-
 async def test_reset_prefix_drops_every_override_and_audits_each(
     db_session: AsyncSession, clock: FixedClock
 ) -> None:
@@ -214,43 +184,6 @@ async def test_reset_prefix_drops_every_override_and_audits_each(
     assert rows["pricing.margin_percent"].is_overridden is False
     reset_keys = [row.key for row in await settings.history() if row.new_value is None]
     assert set(reset_keys) == {"pricing.margin_percent", "pricing.labor_rate_per_hour"}
-
-
-async def test_tiers_resolve_with_defaults_and_overrides(
-    db_session: AsyncSession, clock: FixedClock
-) -> None:
-    """The customer tiers default from the loyalty ladder, and overrides land."""
-    settings = store(db_session, clock)
-
-    defaults = await settings.resolve_tiers()
-    assert defaults["silver"].discount_percent == Decimal(4)
-    assert defaults["gold"].margin_percent_override is None
-
-    await settings.set_value(
-        "pricing.tiers",
-        [
-            {"code": "standard", "discount_percent": "0", "margin_percent_override": None},
-            {"code": "silver", "discount_percent": "10", "margin_percent_override": None},
-            {"code": "gold", "discount_percent": "8", "margin_percent_override": "22"},
-        ],
-        by=None,
-    )
-
-    resolved = await settings.resolve_tiers()
-    assert resolved["silver"].discount_percent == Decimal(10)
-    assert resolved["gold"].margin_percent_override == Decimal(22)
-
-
-async def test_a_discount_at_or_past_100_percent_is_refused(
-    db_session: AsyncSession, clock: FixedClock
-) -> None:
-    """A tier discount that reaches 100% is a negative price — never intended."""
-    with pytest.raises(ValidationError):
-        await store(db_session, clock).set_value(
-            "pricing.tiers",
-            [{"code": "standard", "discount_percent": "100", "margin_percent_override": None}],
-            by=None,
-        )
 
 
 async def test_every_field_knows_its_kind(db_session: AsyncSession, clock: FixedClock) -> None:

@@ -12,10 +12,11 @@ pushed toward the better design.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from decimal import Decimal
 from itertools import pairwise
 
+from printorian.contexts.pricing.zones import ShippingZone, ZoneTariffs
 from printorian.core.errors import ValidationError
 from printorian.core.money import Currency, Money
 
@@ -82,6 +83,21 @@ class CustomerTier:
     margin_percent_override: Decimal | None = None
 
 
+def _zone_key(zone: ShippingZone) -> str:
+    """One zone, reduced to a string the content hash can be built from.
+
+    Written over ``dataclasses.fields`` for the same reason ``rates_to_dict`` is:
+    a hand-listed set of names silently omits whatever is added to
+    :class:`ShippingZone` next, and a *field left out of the hash* is the one
+    failure that actually hurts — two different tariffs would share a snapshot id,
+    and ADR-0020 would archive one order's rates under another order's key.
+
+    Values go through ``repr`` rather than ``str`` so that a separator typed into
+    a zone code cannot forge an extra field boundary.
+    """
+    return ";".join(f"{item.name}={getattr(zone, item.name)!r}" for item in fields(zone))
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RateSnapshot:
     """Every rate used by one calculation, frozen together.
@@ -117,7 +133,20 @@ class RateSnapshot:
     #: changing it never re-prices work already quoted.
     material_procurement_flat: Decimal = Decimal(500)
     packaging_per_unit: Decimal = Decimal(40)
+    #: What shipping costs when the destination is not yet known — the figure the
+    #: checkout shows before an address is typed, and the fallback for a postcode
+    #: no zone claims. It is *not* dead once `zones` is populated: the storefront
+    #: prices a courier delivery the moment the customer picks one, and demanding
+    #: an address before answering is the behaviour `RepriceLine` exists to avoid.
     shipping_flat: Decimal = Decimal(400)
+    #: The farm's zone tariff, taking over as soon as a postcode is known.
+    #:
+    #: **Empty by default, and that is the whole safety argument.** A farm that has
+    #: drawn no zones prices exactly as it did before this field existed, so every
+    #: pricing test written before zones is a regression guard for them. It travels
+    #: inside the snapshot rather than being looked up, so a table re-drawn next
+    #: month cannot re-price an order already sold (ADR-0020).
+    zones: ZoneTariffs = field(default_factory=ZoneTariffs)
 
     # -- burden ----------------------------------------------------------
     overhead_per_print_hour: Decimal = Decimal(25)
@@ -150,6 +179,10 @@ class RateSnapshot:
         ):
             if getattr(self, name) < 0:
                 raise ValidationError("error.pricing.negative_rate", rate=name)
+        # `zones` is deliberately absent from that list. It is a table, not a
+        # scalar, and its own `__post_init__` already refuses a negative base or
+        # per-kg naming the offending zone — a check here could only say "zones"
+        # and leave the owner hunting for which row.
         # At -100% the price would be zero; below it the farm pays the customer.
         if self.margin_percent <= _MARGIN_FLOOR_PERCENT:
             raise ValidationError("error.pricing.margin_percent", value=str(self.margin_percent))
@@ -167,6 +200,8 @@ class RateSnapshot:
                 parts.append(
                     f"{name}=" + ";".join(f"{t.min_quantity}:{t.percent}" for t in value.tiers)
                 )
+            elif isinstance(value, ZoneTariffs):
+                parts.append(f"{name}=" + ";".join(_zone_key(zone) for zone in value.zones))
             else:
                 parts.append(f"{name}={value}")
         digest = hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()

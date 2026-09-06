@@ -12,10 +12,18 @@ status documents that described built features as missing.
 [#91](https://github.com/iritur/printorian/pull/91), alongside the six backend
 gates each run separately and each `exit=0`. That is pytest's own trailing
 summary line, read out of the redirect rather than counted off the progress
-characters — a previous session's run lost that line and said so, and `-p
-no:cacheprovider --tb=short` is what brought it back. Eighteen of those tests are
-the fourth review's, and ten mutations were applied, run and reverted against
-them.
+characters. Eighteen of those tests are the fourth review's, and ten mutations
+were applied, run and reverted against them.
+
+**A run loses that summary line when the command adds its own `-q`,** and it is
+worth knowing before it costs another twenty minutes. `addopts` in
+`backend/pyproject.toml` already carries `-q`; a second one on the command line
+makes it `-qq`, and at that level pytest prints the progress marks and then
+nothing — `[100%]`, `exit=0`, and no counts anywhere. The line above previously
+credited `-p no:cacheprovider --tb=short` with bringing the line back. Neither
+flag has anything to do with it: what brought it back was dropping `-q` from the
+invocation, because the config supplies it. Run the suite as
+`python -m pytest -p no:cacheprovider`, with no `-q` of your own.
 
 **The figure was re-measured across the merge rather than carried over it, and
 the two extra tests are what makes that checkable.** 1 381 was this branch over
@@ -47,6 +55,20 @@ fourth review of #92 added `core/geometry.py`, `workers/plate_admission.py` and
 three test files; neither #90 nor #91 added a backend source file, so neither
 moved either count. They are quoted because a gate whose file count nobody reads
 is a gate that can quietly stop covering a tree.
+
+**`feat/20-metrics-exposition` claims no suite figure at all, and that is the
+honest state of it.** No `pytest` run happened on that branch: it is one of several
+worktrees live on this machine, they share `printorian_test`, and the `printorian`
+editable install in the shared `.venv` points at the *main* tree — so a run started
+from a worktree reports on source the branch does not contain. What did run there,
+each separately and each read for its own exit code, is the five path-based gates
+(`ruff check`, `ruff format --check`, `mypy --strict` over 226 source files,
+`check_context_isolation.py`, `check_file_length.py`), all `exit=0`. `lint-imports`
+was **not** run, for the editable-install reason above; nor was `alembic check`,
+which touches the shared dev database — and neither is owed a result by that branch,
+which adds no migration and no ORM change. Everything else it states about behaviour
+was reproduced outside pytest against the real modules and the real documents, and
+the branch says so at each commit rather than borrowing this block's numbers.
 
 `alembic heads` reports a single head, `0023_prepared_plate_copies`. Two branches
 merging is the way ADR-0008's one-head rule usually breaks, so it is checked here
@@ -1325,6 +1347,54 @@ FAIL, so it can gate the Stage 2 Ansible role instead of deploying onto a host t
 missing a disk or a secret. This is the first executable half of the "host configuration
 is prose" row in INFRASTRUCTURE §1 (provisioning, not checking, is still Ansible).
 
+**Purchasing exists, on `issue-34-purchase-orders`, and nothing about it has been
+run against a database.** `contexts/procurement` — suppliers, purchase orders over
+six stages plus cancellation, five purchasable classes, and receiving a material
+line into a `material_lots` row carrying its lot number and the price paid — plus
+`api/routers/purchasing.py`, migration `0026_procurement`, 46 backend tests and the
+console screen. Two things it changed outside its own context are worth knowing
+before touching either:
+
+- **`material_specs.has_open_order` is gone.** `InventoryService.table`,
+  `get_by_code` and `recommend` take `on_order: frozenset[str]` as a **required**
+  keyword, supplied by `procurement.reads.ordered_codes`. Required, with no empty
+  default, because a default would turn "nobody asked procurement" into "nothing is
+  on order" — silent and flattering, which is the ADR-0007 collapse this repository
+  keeps repeating. There were eight call sites, not the three the plan predicted:
+  `get_by_code` is also the pricing path's way in.
+- **The migration is `0026_procurement`, and it was renumbered to get there.** It
+  was written as `0024_procurement` off `0023`, which was correct while this branch
+  stood alone. `#95` then landed `0024_printer_failures` and `#97` landed
+  `0025_storage_cells_and_movements`, so it now revises `0025` and is the single
+  head. The renumbering is the merge commit's, not the original author's.
+
+**Since verified, in the main tree.** Everything the branch could not run has now
+been run there: `ruff check`, `ruff format --check`, `mypy`,
+`check_context_isolation.py`, `check_file_length.py` and `lint-imports` (6 contracts
+kept), all `exit=0`; `0026_procurement` as the single head, applied, `alembic check`
+clean, downgraded and re-applied, all `exit=0`; the whole backend suite, 1 443
+collected, 8 skipped, `exit=0`, the 46 procurement tests among them; and the three
+frontend gates — `typecheck`, `lint`, `vitest` (290 tests, 7 of them purchasing) —
+also `exit=0`. Three things had to be fixed to get there, and all three were the
+harness rather than the feature:
+
+- `test_the_purchasing_routes_are_actually_mounted` walked `app.routes` one level
+  deep. Since FastAPI 0.141 `include_router` leaves one `_IncludedRouter` there
+  instead of splicing routes in, so it saw `/docs` and nothing else while the ten
+  purchasing operations were mounted and serving. It reads the generated schema now.
+- `test_a_refused_delivery_leaves_nothing_behind` expected `400`. `api/errors.py`
+  maps every `ValidationError` to `422` and the rest of the suite asserts `422`.
+- `PurchasingPage` called `refetch()` from an effect body, which
+  `react-hooks/set-state-in-effect` refuses. `PackagingPage` already awaited its
+  fetch inside a closure; this does the same.
+
+Worth knowing for the next verifier: the run began with a wall of drop-table errors
+that were **not** this branch. `printorian_test` still held `material_movements`,
+`storage_cells` and `storage_zones` from a previous branch's pass, and `drop_all`
+sees only the current branch's metadata, so it could not drop `material_lots` out
+from under a foreign key it does not know about. Dropping the database and letting
+`conftest` rebuild it is the fix; leaving it behind is the trap.
+
 ## 2. Deliberately unfinished
 
 Not oversights. Changing any of them is a decision, not a cleanup.
@@ -1333,12 +1403,16 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 |---|---|
 | `customer_storage_quota_bytes` displayed, not enforced | Refusing a quote mid-configuration is the wrong UX. Growth is bounded by `model_retention_days` instead. |
 | Rate limiting and sign-in lockout are in-process | Correct for one API process (ADR-0003). Counters reset on restart; a second replica would get its own allowance. `docs/DATABASE-REVIEW.md` §9. |
-| No `/metrics` endpoint | Stage 5. `/health/workers` gives the honest liveness signal meanwhile — it reads beats each worker loop records at the *end* of a pass, so it distinguishes wedged from working. |
+| `/metrics` serves three of INFRASTRUCTURE §5's ten series | The first slice of Stage 5, and it stops where the API process's own measurements do. The worker exporter, the four remaining DB-backed collectors and the whole VictoriaMetrics/Grafana/Alertmanager host stack are still absent; `/health/workers` remains the liveness signal, reading beats each loop records at the *end* of a pass. |
+| `printorian_sla_credit_accrued_rub` is held back rather than unbuilt | `/metrics` is unauthenticated, so `VIEW_FINANCIALS` has no caller to check. The money series waits for the scrape to have an identity — a token in Settings, or mTLS — and that is a decision for a person, not a query somebody has not written. A test forbids any `_rub` or `sla_credit` name on the endpoint meanwhile. |
 | Off-site backup sync has a recipe, no committed job | Needs farm-specific credentials. |
 | `assignment_records` is not partitioned | ADR-0018's deferral still holds — bounded by planning frequency, not by the clock. `/health/ready` now reports when the trigger fires; [#44](https://github.com/iritur/printorian/issues/44) stays open until it does. |
 | Storefront `body` lifts the page ground | Predates Harvester; `--hv-bg` vs `--hv-void` is six values out of 255 in dark, identical in light. A visual call, not a cleanup. See `apps/web/src/app.css`. |
 | TypeScript held at 5.x | `openapi-typescript` crashes on TS 7. Reason and three failed workarounds are in `.github/dependabot.yml`. |
 | Six queries still sort on a timestamp alone | Read in one pass and left that way on purpose. See below. |
+| `pricing.shipping_flat` survives the zone tariff | It is the **pre-address** figure, not a leftover. The checkout prices a courier the moment the customer picks one (`RepriceLine`), and a zone tariff cannot answer a question with no destination in it. It is also where a postcode no zone claims lands, because `zone_for` returns `None` rather than guessing. Owner decision, recorded at `pricing/lines.py::logistics_lines`. |
+| `logistics.free_shipping_threshold` still unread | Shipping sits *inside* the base that rush, the volume discount and margin are all taken over, so "free over 15 000 ₽" against an order total is circular — the total already contains the shipping and the margin on it. It needs a defined base (the pre-shipping subtotal), which is its own decision with its own test. |
+| `logistics.volumetric_divisor` still unread | Volumetric weight needs a bounding box, and the box that matters is the *parcel's* rather than the part's. It belongs with the `Shipment` record ([#36](https://github.com/iritur/printorian/issues/36)). |
 
 **The single-column time sort has been triaged, once, across the whole tree**
 ([#42](https://github.com/iritur/printorian/issues/42)). It started with
@@ -1376,6 +1450,86 @@ there is no `id` in a grouped result. `tests/unit/test_production_ordering.py` c
 the planner and the assignment record under `FixedClock`; six of its eight tests fail
 on every run against the code as it was, which is the part worth knowing.
 
+**The postprocessing catalogue is a setting, and two of its columns are not**
+([#29](https://github.com/iritur/printorian/issues/29), first slice). The finish
+rows now come from `postprocess.operations` and reach the price through
+`SettingsService.resolve_finishes()` at four edges — the two quoting endpoints, the
+order/reprice pair and the intake sweep. `FINISH_CATALOGUE` stays as the code
+default beneath them, which is what «Сбросить» returns to.
+
+Three things about it are decisions rather than unfinished work, and each would
+otherwise be re-litigated. The **code set is closed** to the four the storefront
+offers: `apps/web/src/config.ts` hardcodes them, so a fifth row would be a finish
+the farm had priced and no customer could choose — which is why the kit's
+«Добавить операцию» is not ported and the server answers a fifth code with
+`error.settings.finish_code_unknown`. **«На см² поверхности» is not ported**
+because surface area does not reach the checkout — the quote context emits
+`volume_cm3` and `bounding_box_mm` and no `surface_area_mm2`, `CheckoutPage.tsx`
+sends no mesh — so the term would price at the configurator and not on the order,
+and pricing an unmeasured mesh at 0 cm² is ADR-0007's forbidden move. **«Доступна»
+is not ported** because `FinishStep.tsx` renders a hardcoded list before any quote,
+so an honest switch needs a public read of the catalogue: a new endpoint and a
+regenerated client, which is the named follow-up slice.
+
+`RateSnapshot` deliberately did **not** gain a `finishes` field: `snapshot_id`
+hashes `sorted(self.__slots__)`, so one new field changes the hash of every
+snapshot rebuilt from a stored row and `CachedPlates._rates_for` would refuse every
+already-paid order at once. ADR-0020's new amendment says what is recoverable
+instead — the pinned `Breakdown`, and the applied per-unit rate on `Basis.rate`.
+
+**The store's first slice is on `issue-35-store-cells-and-movement-ledger`, and
+no test in it has been run.** [#35](https://github.com/iritur/printorian/issues/35)
+as filed is the whole warehouse; this branch builds one half of it — a lot has a
+cell address, and every move of a lot appends a row nothing can overwrite. Three
+tables (`storage_zones`, `storage_cells`, `material_movements`), one column
+(`material_lots.cell_id`), migration 0024, `/store/*`, and the console's
+`StorePage`/`CellDetail`. `mount_lot` and `unmount_lot` now write a movement
+before they overwrite the five location columns, which is the whole leverage
+argument of the issue: those columns are the only place the previous position
+exists. Deliberately out and still owed by #35: turnover, dead stock in money,
+stocktake, drying state, and the three non-filament purchasable classes.
+`docs/DESIGN-KIT.md` §2.4 was rewritten to say exactly that rather than deleted.
+
+**What was verified there, and what was not.** The branch was built in an
+isolated worktree with no `.venv` and no `node_modules`, alongside eight other
+agents sharing one `printorian_test` database and one editable install pointing
+at the main tree. So `pytest`, `lint-imports`, every `alembic` command and every
+`npm` script were **not run** — a pytest run from that worktree imports the main
+tree's source and reports about code it did not build. What did run, each
+separately and each `exit=0`: `ruff check`, `ruff format --check`, `mypy
+--strict`, `check_context_isolation.py`, `check_file_length.py`. The four
+doc-drift gates and the metadata-only halves of `test_schema_contracts.py` and
+`test_referential_integrity.py` were additionally run as plain functions with the
+worktree ahead of the editable install on `sys.path`, which opens no database —
+and `test_every_foreign_key_is_indexed` caught two missing indexes that way. The
+sixteen new tests are written and **unproven**; the serial verification pass is
+where they first run.
+
+**They have since been run, in the main tree, and they pass.** All six backend
+gates `exit=0`, `lint-imports` included — 6 contracts kept, which is the one gate
+the worktree could not answer. 0024 goes up, `alembic check` finds no new
+operations, `downgrade -1` comes back clean and up again. The whole backend suite
+is 1 406 passed, 8 skipped, `exit=0`. Two things had to be fixed, both frontend
+and both the cost of never having compiled the files: `StorePage.test.tsx` read
+`map.zones[0].cells[0]`, which `noUncheckedIndexedAccess` will not let a test
+assume is populated, and both store screens called `load()` straight from a
+`useEffect` body, which `react-hooks/set-state-in-effect` rejects — the async
+wrapper `MaterialsPage` already uses is the fix. `npm run typecheck`, `lint` and
+`test` (290 tests, 30 files) are `exit=0` after those two commits. Nothing in the
+backend needed changing, and no test was weakened to make anything green.
+
+Two failures in that pass were **not this branch's**: a `procurement/`
+directory holding nothing but stale `__pycache__`, and four procurement tables
+(`suppliers`, `purchase_orders`, `purchase_order_lines`, `purchase_receipts`)
+still standing in `printorian_test` — both left by an earlier branch's run.
+`test_the_contexts_said_to_own_no_tables_own_none` counts context *directories*,
+so the empty one read as a context that lost its tables; and `drop_all` cannot
+drop `material_lots` while a foreign key from a table outside `Base.metadata`
+points at it. Both were cleaned off the machine, not worked around. It is worth
+knowing that `clean_database` has no defence against a leftover table from
+another branch — the next agent to hit it will see the same misleading wall of
+setup errors.
+
 ## 3. What is actually next
 
 **Open work lives in [GitHub issues](https://github.com/iritur/printorian/issues),** grouped by [milestone](https://github.com/iritur/printorian/issues?q=is%3Aopen) and described in [docs/WORKFLOW.md](docs/WORKFLOW.md). Take one from a milestone rather than from this section. Where an issue and a document disagree, the issue is right.
@@ -1406,6 +1560,17 @@ What exists now so that proving it is one command rather than a project:
 
 ## 5. Needs a person, not an agent
 
+- **`farm_stats.on_time_percent` measures dispatch and calls it arrival.**
+  `backend/printorian/api/farm_stats.py:53` documents it as "Share of delivered
+  orders that arrived by the date promised"; the query at :117-118 compares
+  `Order.shipped_at <= Order.promised_at`, which is when the parcel *left*.
+  `grep -rn 'delivered_at' backend/printorian` returns nothing, so arrival is
+  recorded nowhere at all. That is an ADR-0007 overstatement standing in the tree
+  today, independent of the zone work, and it has two possible fixes — correct the
+  docstring now, or add a `delivered_at` column with the shipment record later.
+  Which one is right is a product decision, and it wants its own `type:bug` issue
+  rather than being folded into somebody else's diff. Editing the tracker is not
+  an agent's to do.
 - **A cancelled job keeps its wait-list row, and that is a second defect on a
   different path — it needs an issue.** Measured, not reasoned about: a probe run
   against the fixed tree wait-listed a job, cancelled it, and
