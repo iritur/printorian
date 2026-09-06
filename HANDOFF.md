@@ -88,6 +88,70 @@ was still owed.
 > command, and guessing costs a paragraph of confident prose that has to be
 > retracted. Check that the database is up **before** reading a failure list.
 
+**The farm now keeps a record of what broke** ([#33](https://github.com/iritur/printorian/issues/33),
+first slice, branch `issue-33-failure-record`). `contexts/service` is a new context
+holding one table, `printer_failures`: a machine the driver reported in `ERROR` gets a
+failure opened by an eighth worker loop, and the observation that sees it working again
+closes it. `GET /service/reliability` divides those counts by
+`metric_rollups.observed_seconds` per machine and serves отказов/1000 ч, MTTR over
+repaired failures only, and the «Причины отказов» funnel with an `uncategorised` count
+beside it. Three routes behind `OPERATE_PRINTER` let a person open a failure, close one,
+and name a cause. **Backend only, and deliberately no screen** — §1 of
+`docs/DESIGN-KIT.md` still says `service` is not built, and §4 now lists all four routes
+as capability nothing consumes.
+
+> **Two judgements a reader will otherwise re-litigate, both written into the code
+> beside the line they govern.**
+>
+> **`OFFLINE` is not a failure.** `FleetService.mark_unreachable` writes `OFFLINE` for a
+> poll that did not answer — a dropped MQTT session, a switch rebooting, this very
+> worker restarting — so counting it would mint one failure per machine on every blip
+> and drive MTTR from repairs nobody made. The cost is real and is **not** hidden: a
+> machine unreachable half the month still contributes its `offline_seconds` to its own
+> denominator and therefore reads as a reliable machine that simply never broke.
+> Unreachability is a coverage problem and the honest answer to it is a coverage figure,
+> not a row in this table. `test_an_unreachable_printer_does_not_become_a_failure` and
+> its closing-side twin are the only two tests that notice if that changes.
+>
+> **A driver code is not a cause.** `drivers/bambu/report.py` yields
+> `bambu.print_error.{code}` and the farm holds no table turning one into «слом
+> филамента», so a sweep-opened failure carries the code verbatim and a `NULL` cause
+> until a person names one. The funnel counts named causes; `uncategorised` sits beside
+> it rather than inside `OTHER`, because "nobody looked" and "we looked, and it was
+> something else" are two facts.
+>
+> **What this slice deliberately did not touch.** `Printer.printed_hours` is untouched
+> and «Наработка» is **not** on the reliability response. The issue body claims наработка
+> is already computed from `metric_rollups`; it is not — `contexts/fleet/service.py`
+> accumulates `printed_hours` from the live row instead, so putting the two on one table
+> row would be two rulers under one heading. That is written down rather than papered
+> over, and it is the first thing to settle if the screen is built.
+> `pause_on_hms_error` still has no consumer (two catalogue hits, no reader); acting on
+> it is a machine-side action and is out of this slice.
+>
+> **Still owed on #33:** the ticket entity with steps, assignee, priority and elapsed;
+> spare-parts stock; the console screen. «Последствия» is not merely unbuilt but partly
+> **unmeasurable** — `production/models.py`'s `grams_required`, `estimated_grams` and
+> `prepared_grams` are estimates and nothing decrements a spool, so the kit's «потеряно
+> материала 148 г» has no source, while «Итого потеря 2 140 ₽» is money and belongs
+> behind `VIEW_FINANCIALS` rather than on a response a production role reads.
+>
+> **What was measured on this branch, and what was not.** Five path-based gates, each
+> run separately from the main tree's interpreter against this worktree, each
+> `exit=0`: `ruff check` (all checks passed), `ruff format --check` (**402** files),
+> `mypy --strict` (**232** source files), `check_context_isolation.py`,
+> `check_file_length.py`. **`lint-imports` was not run and no test was run at all.**
+> `printorian` is an editable install pointing at the main tree, so both would have
+> reported on source this branch does not contain; `alembic upgrade`/`check` were not
+> run either, because they reach the shared dev database. The head is a single
+> `0024_printer_failures` **read off the files** — one migration declares
+> `down_revision = "0023_prepared_plate_copies"` and nothing revises 0024 — rather than
+> from `alembic heads`. So nothing here claims a passing test: the thirty-five new
+> tests across five files — nine reliability, seven constraint-and-refusal, eight sweep,
+> one wiring, ten API — are written and unproven, and a serial verification pass in
+> the main tree is what will say whether they hold. The figures in the «As of» block at
+> the top of this file belong to another branch and were **not** re-measured here.
+
 **A wait-list row now ends when the wait does, and not one pass later.**
 `planning._refresh_wait_list` discarded rows only for the jobs in
 `result.wait_list` — the ones *still* waiting. A job wait-listed on one pass and

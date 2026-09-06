@@ -143,4 +143,30 @@ ORDER BY 1
 """
 
 
-__all__ = ["Grain", "fleet_statement", "printer_statement"]
+def observed_by_printer_statement() -> str:
+    """One number per machine: the seconds the farm actually watched it.
+
+    No grain and no dense filling, because this answers a different question from
+    the two statements above. Those draw a ruler — every hour of the window, gaps
+    materialised — and this is the **denominator** somebody else divides by, so a
+    machine with no row must come back absent rather than as a zero. Zero is a
+    measurement ("we watched, and nothing was observable"); absent is "nobody
+    summarised this machine at all", and `measures.observed_by_printer` is where
+    that distinction is stated and defended.
+
+    ``SUM`` over a group is never ``NULL`` here: a group exists only because at
+    least one row fell in it, and `metric_rollups.observed_seconds` is ``NOT
+    NULL``. The reader still handles ``None`` rather than asserting it away,
+    because a nullable column added to this table later would otherwise turn a
+    denominator into a silent zero.
+    """
+    return f"""
+SELECT printer_id, SUM(observed_seconds) AS observed_seconds
+FROM {TABLE}
+WHERE bucket_start >= CAST(:since AS timestamptz)
+  AND bucket_start < CAST(:until AS timestamptz)
+GROUP BY printer_id
+"""
+
+
+__all__ = ["Grain", "fleet_statement", "observed_by_printer_statement", "printer_statement"]

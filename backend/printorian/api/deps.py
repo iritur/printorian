@@ -23,6 +23,7 @@ from printorian.contexts.packaging import PackagingService, PackingCatalogue
 from printorian.contexts.payments import PaymentsService
 from printorian.contexts.postproduction import PostProductionService
 from printorian.contexts.production import ProductionService
+from printorian.contexts.service import ServiceDesk
 from printorian.contexts.settings import SettingsService
 from printorian.core.clock import Clock
 from printorian.core.config import Settings
@@ -236,6 +237,18 @@ def get_fleet_service(
 
 
 Fleet = Annotated[FleetService, Depends(get_fleet_service)]
+
+
+def get_service_desk(db: DbSession, clock: AppClock) -> ServiceDesk:
+    return ServiceDesk(db, clock)
+
+
+#: Named `ServiceDeskDep` rather than `Service`, which every other entry here would
+#: have suggested. "Service" is the most overloaded word in this tree — there is a
+#: `FleetService`, a `SettingsService`, a `printorian.contexts.service` and a
+#: `services` relationship on `Printer` meaning the machine's service card — and a
+#: dependency called `Service` would leave a route signature saying nothing at all.
+ServiceDeskDep = Annotated[ServiceDesk, Depends(get_service_desk)]
 
 
 def get_production_service(
