@@ -17,7 +17,12 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from printorian.contexts.pricing import LOYALTY_LADDER, CustomerTier
+from printorian.contexts.pricing import (
+    FINISH_CATALOGUE,
+    LOYALTY_LADDER,
+    CustomerTier,
+    FinishOption,
+)
 from printorian.core.config import Settings as CoreSettings
 
 
@@ -84,4 +89,25 @@ def default_tiers() -> tuple[CustomerTier, ...]:
     )
 
 
-__all__ = ["FieldSpec", "Kind", "Section", "cfg", "default_tiers"]
+def default_finishes() -> tuple[FinishOption, ...]:
+    """The postprocessing operations as the pricing engine already prices them.
+
+    Derived from `FINISH_CATALOGUE` exactly as `default_tiers` is derived from
+    `LOYALTY_LADDER`, and **not** transcribed from the design kit, which shows
+    different numbers: `design/settings.html` draws primed at 0.7 h and painted at
+    1.6 h where `pricing/finishes.py` charges 0.6 and 1.5. Typing the kit's figures
+    in here would have quietly repriced every quote on the day this merged, under a
+    commit message about making a table editable — the farm never asked for a rise,
+    and the default is what it is running today.
+
+    `extra_days` rides along even though no editor draws it — and, checked rather
+    than assumed, nothing reads it either: it is declared as the calendar days a
+    finish adds, and `promised_hours` takes policy, minutes, quantity and rush.
+    Dropping it here would still be wrong. A default that quietly loses a column is
+    how a field stays dead: the day a consumer arrives, «Окраска» has to still say
+    2. Making it *editable* is a different question and not this slice's.
+    """
+    return tuple(FINISH_CATALOGUE.values())
+
+
+__all__ = ["FieldSpec", "Kind", "Section", "cfg", "default_finishes", "default_tiers"]

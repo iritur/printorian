@@ -60,14 +60,22 @@ def test_the_zone_table_is_filed_under_logistics_with_its_own_panel() -> None:
     assert ZONES in next(section for section in SECTIONS if section.id == "logistics").fields
 
 
-def test_the_zone_table_is_the_third_table_valued_setting() -> None:
-    """Two before it — the volume ladder and the customer tiers.
+def test_the_zone_table_is_the_fourth_table_valued_setting() -> None:
+    """Three before it — the volume ladder, the customer tiers, and the operations.
 
-    Asserted by name rather than by count so that a fourth table added without a
-    parser in `_parse_table` is a failing test rather than a 500 at the edge.
+    Asserted by name rather than by count so that a fifth table added without a
+    parser in `_parse_table` is a failing test rather than a 500 at the edge. It
+    did its job when `postprocess.operations` (#29) landed beside this one: the
+    list is the guard, so growing it is a deliberate act with the parser checked,
+    not a number nudged until the test went quiet.
     """
     tables = [key for key, spec in FIELDS.items() if spec.kind is Kind.TABLE]
-    assert tables == ["pricing.discounts", "pricing.tiers", ZONES]
+    assert tables == [
+        "pricing.discounts",
+        "pricing.tiers",
+        "postprocess.operations",
+        ZONES,
+    ]
 
 
 def test_the_default_is_empty_so_a_farm_without_zones_ships_at_the_flat_rate() -> None:

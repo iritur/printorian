@@ -28,7 +28,13 @@ from printorian.contexts.settings.declared import (
     scheduling_weight_specs,
 )
 from printorian.contexts.settings.groups import GROUPS, in_group_order
-from printorian.contexts.settings.spec import FieldSpec, Kind, Section, default_tiers
+from printorian.contexts.settings.spec import (
+    FieldSpec,
+    Kind,
+    Section,
+    default_finishes,
+    default_tiers,
+)
 
 
 def _all_specs() -> list[FieldSpec]:
@@ -84,5 +90,6 @@ __all__ = [
     "FieldSpec",
     "Kind",
     "Section",
+    "default_finishes",
     "default_tiers",
 ]

@@ -94,6 +94,26 @@ function aSections(): { id: string; fields: Field[] }[] {
       ],
     },
     {
+      id: 'postprocess',
+      fields: [
+        {
+          key: 'postprocess.operations',
+          section: 'postprocess',
+          kind: 'table',
+          value: [
+            { code: 'raw', labor_hours: '0', flat_fee: '0', extra_days: 0 },
+            { code: 'sanded', labor_hours: '0.4', flat_fee: '0', extra_days: 0 },
+            { code: 'primed', labor_hours: '0.6', flat_fee: '150', extra_days: 0 },
+            { code: 'painted', labor_hours: '1.5', flat_fee: '400', extra_days: 2 },
+          ],
+          default: [],
+          is_overridden: false,
+          is_set: false,
+          options: [],
+        },
+      ],
+    },
+    {
       id: 'logistics',
       fields: [
         {
@@ -451,6 +471,89 @@ describe('the save bar', () => {
     expect(((await screen.findByLabelText('Название фермы')) as HTMLInputElement).value).toBe(
       'KN-SOL.21',
     )
+  })
+
+  it('edits a norm-hour and PUTs the whole catalogue with the untouched columns', async () => {
+    // The catalogue is one JSONB value, so a save sends every row back. The
+    // assertion is on the *whole* body rather than on the edited cell, because a
+    // row rebuilt without `extra_days` saves «Окраска» at zero extra days — a
+    // value the owner never touched, changed by editing something else.
+    const put: Array<[string, unknown]> = []
+    serve((url, body) => {
+      put.push([url, body])
+      return {}
+    })
+
+    render(<SettingsPage locale="ru" />)
+    await screen.findByLabelText('Название фермы')
+    await userEvent.click(screen.getByRole('tab', { name: 'Постобработка' }))
+
+    expect(await screen.findByText('Каталог операций')).toBeInTheDocument()
+    // The code is fixed and the value is editable, as on the tiers table: there
+    // is no «Добавить операцию», because the server refuses a fifth code.
+    expect(screen.queryByRole('button', { name: /Добавить/ })).not.toBeInTheDocument()
+
+    const hours = screen.getByLabelText('Нормо-часы · база sanded')
+    await userEvent.clear(hours)
+    // A whole number rather than «0.9», and not because the field is one. jsdom
+    // sanitises `<input type="number">` the way browsers do, so the value is empty
+    // at the keystroke where «0.» is not yet a number — typing a decimal here
+    // asserts the jsdom version as much as the component. The decimal path is
+    // proved server-side instead, in `tests/api/test_finish_catalogue.py`.
+    await userEvent.type(hours, '2')
+
+    expect(screen.getByText('ИЗМЕНЕНИЙ :: 1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Вернуть' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    await waitFor(() => expect(put.length).toBe(1))
+    expect(put[0]?.[0]?.endsWith('/settings/postprocess.operations')).toBe(true)
+    expect(put[0]?.[1]).toEqual({
+      value: [
+        { code: 'raw', labor_hours: '0', flat_fee: '0', extra_days: 0 },
+        { code: 'sanded', labor_hours: '2', flat_fee: '0', extra_days: 0 },
+        { code: 'primed', labor_hours: '0.6', flat_fee: '150', extra_days: 0 },
+        // Decimals as strings, and `extra_days` still 2 — the parser wants both.
+        { code: 'painted', labor_hours: '1.5', flat_fee: '400', extra_days: 2 },
+      ],
+    })
+  })
+
+  it('says it has no editor for an unknown table instead of drawing a ladder', async () => {
+    // The trap this replaced: the page dispatched on `kind === 'table'` with the
+    // volume ladder as the fallthrough, so any table it had never heard of drew
+    // «От количества» and «Скидка» over rows that were neither. A control that
+    // misdescribes its data is worse than no control, and a reviewer cannot see
+    // it from the diff — hence a test rather than a comment.
+    const withStranger = aSections()
+    withStranger.push({
+      id: 'security',
+      fields: [
+        {
+          key: 'security.api_keys',
+          section: 'security',
+          kind: 'table',
+          value: [{ label: 'ci', prefix: 'pk_live' }],
+          default: [],
+          is_overridden: false,
+          is_set: false,
+          options: [],
+        },
+      ],
+    })
+    net.handler = (url: string) => {
+      if (url.endsWith('/settings/sections')) return Promise.resolve(jsonOk(withStranger))
+      if (url.endsWith('/settings/history')) return Promise.resolve(jsonOk([]))
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+    await screen.findByLabelText('Название фермы')
+    await userEvent.click(screen.getByRole('tab', { name: 'Доступ и безопасность' }))
+
+    expect(await screen.findByText(/нет редактора/)).toBeInTheDocument()
+    expect(screen.queryByText('От количества')).not.toBeInTheDocument()
   })
 
   it('refuses an emptied number box rather than saving it as zero', async () => {

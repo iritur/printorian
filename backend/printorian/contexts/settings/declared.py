@@ -30,7 +30,7 @@ from typing import Final
 
 from printorian.contexts.pricing import RateSnapshot
 from printorian.contexts.scheduling import SchedulingPolicy
-from printorian.contexts.settings.spec import FieldSpec, Kind, cfg, default_tiers
+from printorian.contexts.settings.spec import FieldSpec, Kind, cfg, default_finishes, default_tiers
 
 # -- derived from dataclasses --------------------------------------------
 
@@ -175,6 +175,19 @@ def manual_specs() -> list[FieldSpec]:
         FieldSpec("service.pause_on_hms_error", "service", Kind.BOOLEAN, True),
         FieldSpec("service.allow_mock_driver", "service", Kind.BOOLEAN, False),
         # 08 — Постобработка
+        # 08 — Постобработка. The operations catalogue the farm sells, in the same
+        # table shape as the tiers: a code the storefront already knows, with the
+        # norm-hours and the flat fee editable beside it.
+        #
+        # `postprocess.*` and deliberately not `pricing.finishes`, for two reasons
+        # a reader will otherwise re-litigate. «Сбросить тарифы» is
+        # `reset_prefix("pricing.")`, and an owner resetting the rate book has not
+        # asked to throw away the norm-hours their finishing station is measured
+        # against. And `resolve_rates` builds a `RateSnapshot`, which has no
+        # finishes field and must not gain one — `snapshot_id` hashes the field
+        # names, so a new field changes the hash of every rebuilt historical
+        # snapshot and the cached-plate path then refuses every order already paid.
+        FieldSpec("postprocess.operations", "postprocess", Kind.TABLE, default_finishes()),
         FieldSpec("postprocess.require_quality_check", "postprocess", Kind.BOOLEAN, True),
         FieldSpec("postprocess.photo_before_packing", "postprocess", Kind.BOOLEAN, False),
         # 09 — Логистика (beyond the two rates above)

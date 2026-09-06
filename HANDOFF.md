@@ -12,10 +12,18 @@ status documents that described built features as missing.
 [#91](https://github.com/iritur/printorian/pull/91), alongside the six backend
 gates each run separately and each `exit=0`. That is pytest's own trailing
 summary line, read out of the redirect rather than counted off the progress
-characters — a previous session's run lost that line and said so, and `-p
-no:cacheprovider --tb=short` is what brought it back. Eighteen of those tests are
-the fourth review's, and ten mutations were applied, run and reverted against
-them.
+characters. Eighteen of those tests are the fourth review's, and ten mutations
+were applied, run and reverted against them.
+
+**A run loses that summary line when the command adds its own `-q`,** and it is
+worth knowing before it costs another twenty minutes. `addopts` in
+`backend/pyproject.toml` already carries `-q`; a second one on the command line
+makes it `-qq`, and at that level pytest prints the progress marks and then
+nothing — `[100%]`, `exit=0`, and no counts anywhere. The line above previously
+credited `-p no:cacheprovider --tb=short` with bringing the line back. Neither
+flag has anything to do with it: what brought it back was dropping `-q` from the
+invocation, because the config supplies it. Run the suite as
+`python -m pytest -p no:cacheprovider`, with no `-q` of your own.
 
 **The figure was re-measured across the merge rather than carried over it, and
 the two extra tests are what makes that checkable.** 1 381 was this branch over
@@ -1441,6 +1449,33 @@ there is churn; the remaining six were read and left, each saying so at the line
 there is no `id` in a grouped result. `tests/unit/test_production_ordering.py` covers
 the planner and the assignment record under `FixedClock`; six of its eight tests fail
 on every run against the code as it was, which is the part worth knowing.
+
+**The postprocessing catalogue is a setting, and two of its columns are not**
+([#29](https://github.com/iritur/printorian/issues/29), first slice). The finish
+rows now come from `postprocess.operations` and reach the price through
+`SettingsService.resolve_finishes()` at four edges — the two quoting endpoints, the
+order/reprice pair and the intake sweep. `FINISH_CATALOGUE` stays as the code
+default beneath them, which is what «Сбросить» returns to.
+
+Three things about it are decisions rather than unfinished work, and each would
+otherwise be re-litigated. The **code set is closed** to the four the storefront
+offers: `apps/web/src/config.ts` hardcodes them, so a fifth row would be a finish
+the farm had priced and no customer could choose — which is why the kit's
+«Добавить операцию» is not ported and the server answers a fifth code with
+`error.settings.finish_code_unknown`. **«На см² поверхности» is not ported**
+because surface area does not reach the checkout — the quote context emits
+`volume_cm3` and `bounding_box_mm` and no `surface_area_mm2`, `CheckoutPage.tsx`
+sends no mesh — so the term would price at the configurator and not on the order,
+and pricing an unmeasured mesh at 0 cm² is ADR-0007's forbidden move. **«Доступна»
+is not ported** because `FinishStep.tsx` renders a hardcoded list before any quote,
+so an honest switch needs a public read of the catalogue: a new endpoint and a
+regenerated client, which is the named follow-up slice.
+
+`RateSnapshot` deliberately did **not** gain a `finishes` field: `snapshot_id`
+hashes `sorted(self.__slots__)`, so one new field changes the hash of every
+snapshot rebuilt from a stored row and `CachedPlates._rates_for` would refuse every
+already-paid order at once. ADR-0020's new amendment says what is recoverable
+instead — the pinned `Breakdown`, and the applied per-unit rate on `Basis.rate`.
 
 **The store's first slice is on `issue-35-store-cells-and-movement-ledger`, and
 no test in it has been run.** [#35](https://github.com/iritur/printorian/issues/35)

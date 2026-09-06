@@ -8,6 +8,7 @@ reading how the two sides were built.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -218,6 +219,24 @@ def test_the_stated_counts_match_the_table() -> None:
         f'{DOC} §1 should say "{settings_claim}" — that is `len(FIELDS)` and '
         "`len(SECTIONS)` in `contexts/settings/sections.py`, which the preamble already "
         "names as the source. §2.1 carries the same figures and needs the same edit."
+    )
+
+    # The kind counts one line below the parameter count in §2.1, which the
+    # preamble also claims are "evaluated rather than transcribed" and which
+    # nothing checked until a third table arrived and the line still said two.
+    # Derived here for the same reason the count above is: an author who adds a
+    # field must not be able to update one number and leave the other.
+    counts = Counter(spec.kind.value for spec in FIELDS.values())
+    by_size = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    kinds_claim = " · ".join(f"`{kind}` {count}" for kind, count in by_size)
+    # Compared against the document with its line breaks flattened: the sentence
+    # wraps mid-list, and an assertion that broke every time somebody rewrapped a
+    # paragraph would be turned off rather than fixed.
+    flattened = re.sub(r"\s+", " ", DOC.read_text(encoding="utf-8"))
+    assert kinds_claim in flattened, (
+        f'{DOC} §2.1 should say "{kinds_claim}" — that is `Counter(spec.kind ...)` '
+        "over `FIELDS`, ordered by descending count then by name, which is how the "
+        "line is already written."
     )
 
 
