@@ -54,9 +54,17 @@ def test_the_writer_is_injected_rather_than_built_inside_the_service() -> None:
 
 def test_the_purchasing_routes_are_actually_mounted(settings: Settings) -> None:
     """A router written and never included is the shape of the gap this branch
-    inherited: four files describing tables that existed nowhere."""
-    app = create_app(settings)
-    paths = {getattr(route, "path", "") for route in app.routes}
+    inherited: four files describing tables that existed nowhere.
+
+    Read from the generated schema rather than from `app.routes`. Since FastAPI
+    0.141 an `include_router` leaves a single `_IncludedRouter` in that list
+    instead of splicing the routes into it, so walking it one level deep sees
+    only `/docs` and `/openapi.json` and this assertion failed against an app
+    that was mounting purchasing perfectly well. The schema is also the surface
+    the generated TypeScript client is built from, which is the thing a missing
+    router would actually cost us.
+    """
+    paths = create_app(settings).openapi()["paths"]
 
     assert "/purchasing/board" in paths
     assert "/purchasing/orders/{po_id}" in paths
