@@ -129,21 +129,8 @@ async def drop_partitions_before(db: AsyncSession, *, cutoff: datetime) -> tuple
         return ()
 
     boundary = _month_start(cutoff)
-    rows = await db.execute(
-        text(
-            """
-            SELECT c.relname
-            FROM pg_class c
-            JOIN pg_inherits i ON i.inhrelid = c.oid
-            JOIN pg_class parent ON parent.oid = i.inhparent
-            WHERE parent.relname = :table AND c.relname <> :default_name
-            """
-        ),
-        {"table": TABLE, "default_name": DEFAULT_PARTITION},
-    )
-
     dropped: list[str] = []
-    for (name,) in rows:
+    for name in await _partition_names(db):
         month = _parse_partition_month(name)
         # `< boundary`, not `<=`: the partition holding the cutoff month still has
         # rows inside the retention window.
@@ -190,6 +177,59 @@ async def unroutable_sample_count(db: AsyncSession) -> int:
     return int(count or 0)
 
 
+async def months_provisioned_ahead(db: AsyncSession, *, now: datetime) -> int | None:
+    """How many whole months past this one already have a partition waiting.
+
+    The reading behind `printorian_telemetry_partition_months_ahead`, and the
+    number the alert in INFRASTRUCTURE §5 keys on: below 1, the farm is one month
+    from writing telemetry it cannot route, and :func:`ensure_partitions` has
+    stopped running without saying so.
+
+    **Zero here is a measurement, not a blank.** Only the current month
+    provisioned *is* the reading — the one that should page somebody — so this
+    counts and returns it rather than treating an empty result as nothing to
+    report. ``None`` is reserved for the case below, where no count was taken at
+    all; root CLAUDE.md §1 is the difference, and the exporter turns it into an
+    absent series rather than a confident zero.
+
+    The `DEFAULT` partition is excluded because it is not a month: counting it
+    would report one month of headroom on a farm that has none, which is
+    precisely backwards — rows land there when provisioning has already failed.
+    """
+    if not _is_partitioned(db):
+        # No partitions on this dialect, so there is nothing to count and no
+        # honest number to return. Not `0`: that would read as "provisioning has
+        # fallen behind" on a database that never had partitions to fall behind
+        # on, and would fire the alert this reading exists to arm.
+        return None
+
+    this_month = _month_start(now)
+    months = [_parse_partition_month(name) for name in await _partition_names(db)]
+    return sum(1 for month in months if month is not None and month > this_month)
+
+
+async def _partition_names(db: AsyncSession) -> list[str]:
+    """Every month partition of :data:`TABLE`, `DEFAULT` excluded.
+
+    One copy of the catalogue query, because the two callers must agree on what
+    counts as a partition: a second copy that drifted would let retention drop a
+    table the headroom reading had never counted.
+    """
+    rows = await db.execute(
+        text(
+            """
+            SELECT c.relname
+            FROM pg_class c
+            JOIN pg_inherits i ON i.inhrelid = c.oid
+            JOIN pg_class parent ON parent.oid = i.inhparent
+            WHERE parent.relname = :table AND c.relname <> :default_name
+            """
+        ),
+        {"table": TABLE, "default_name": DEFAULT_PARTITION},
+    )
+    return [name for (name,) in rows]
+
+
 def _parse_partition_month(name: str) -> datetime | None:
     suffix = name.removeprefix(f"{TABLE}_")
     year, _, month = suffix.partition("_")
@@ -204,6 +244,7 @@ __all__ = [
     "PartitionSweep",
     "drop_partitions_before",
     "ensure_partitions",
+    "months_provisioned_ahead",
     "partition_name",
     "unroutable_sample_count",
 ]

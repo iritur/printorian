@@ -55,6 +55,13 @@ NOT_A_SCREEN_CONSUMER: dict[str, str] = {
     # «Диагностика» section reads it (#30) — so the exemption is gone rather than
     # reworded. Keeping it would have failed the stale-entry gate next door, which
     # is the direction that catches an exemption nobody is following any more.
+    "GET /metrics": (
+        "A scraper calls this, not a screen. A frontend consumer here would mean "
+        "the console drawing its own instrumentation from the exposition format, "
+        "which is what Grafana is for. Named rather than hidden with "
+        "`include_in_schema=False`: hiding it would also take it out of the "
+        "`openapi.json` artifact CI publishes for the frontend job."
+    ),
     "GET /settings": (
         "`SettingsPage.tsx` builds the screen from `/settings/sections` and the "
         "audit from `/settings/history`. The flat key/value dump has no caller and "

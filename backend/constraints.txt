@@ -83,6 +83,7 @@ packaging==26.3
 paho-mqtt==2.1.0
 pathspec==1.1.1
 pluggy==1.6.0
+prometheus_client==0.26.0
 psycopg2-binary==2.9.12
 pycparser==3.0
 pydantic-settings==2.15.0
