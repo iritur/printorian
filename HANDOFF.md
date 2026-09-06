@@ -1325,6 +1325,54 @@ FAIL, so it can gate the Stage 2 Ansible role instead of deploying onto a host t
 missing a disk or a secret. This is the first executable half of the "host configuration
 is prose" row in INFRASTRUCTURE §1 (provisioning, not checking, is still Ansible).
 
+**Purchasing exists, on `issue-34-purchase-orders`, and nothing about it has been
+run against a database.** `contexts/procurement` — suppliers, purchase orders over
+six stages plus cancellation, five purchasable classes, and receiving a material
+line into a `material_lots` row carrying its lot number and the price paid — plus
+`api/routers/purchasing.py`, migration `0026_procurement`, 46 backend tests and the
+console screen. Two things it changed outside its own context are worth knowing
+before touching either:
+
+- **`material_specs.has_open_order` is gone.** `InventoryService.table`,
+  `get_by_code` and `recommend` take `on_order: frozenset[str]` as a **required**
+  keyword, supplied by `procurement.reads.ordered_codes`. Required, with no empty
+  default, because a default would turn "nobody asked procurement" into "nothing is
+  on order" — silent and flattering, which is the ADR-0007 collapse this repository
+  keeps repeating. There were eight call sites, not the three the plan predicted:
+  `get_by_code` is also the pricing path's way in.
+- **The migration is `0026_procurement`, and it was renumbered to get there.** It
+  was written as `0024_procurement` off `0023`, which was correct while this branch
+  stood alone. `#95` then landed `0024_printer_failures` and `#97` landed
+  `0025_storage_cells_and_movements`, so it now revises `0025` and is the single
+  head. The renumbering is the merge commit's, not the original author's.
+
+**Since verified, in the main tree.** Everything the branch could not run has now
+been run there: `ruff check`, `ruff format --check`, `mypy`,
+`check_context_isolation.py`, `check_file_length.py` and `lint-imports` (6 contracts
+kept), all `exit=0`; `0026_procurement` as the single head, applied, `alembic check`
+clean, downgraded and re-applied, all `exit=0`; the whole backend suite, 1 443
+collected, 8 skipped, `exit=0`, the 46 procurement tests among them; and the three
+frontend gates — `typecheck`, `lint`, `vitest` (290 tests, 7 of them purchasing) —
+also `exit=0`. Three things had to be fixed to get there, and all three were the
+harness rather than the feature:
+
+- `test_the_purchasing_routes_are_actually_mounted` walked `app.routes` one level
+  deep. Since FastAPI 0.141 `include_router` leaves one `_IncludedRouter` there
+  instead of splicing routes in, so it saw `/docs` and nothing else while the ten
+  purchasing operations were mounted and serving. It reads the generated schema now.
+- `test_a_refused_delivery_leaves_nothing_behind` expected `400`. `api/errors.py`
+  maps every `ValidationError` to `422` and the rest of the suite asserts `422`.
+- `PurchasingPage` called `refetch()` from an effect body, which
+  `react-hooks/set-state-in-effect` refuses. `PackagingPage` already awaited its
+  fetch inside a closure; this does the same.
+
+Worth knowing for the next verifier: the run began with a wall of drop-table errors
+that were **not** this branch. `printorian_test` still held `material_movements`,
+`storage_cells` and `storage_zones` from a previous branch's pass, and `drop_all`
+sees only the current branch's metadata, so it could not drop `material_lots` out
+from under a foreign key it does not know about. Dropping the database and letting
+`conftest` rebuild it is the fix; leaving it behind is the trap.
+
 ## 2. Deliberately unfinished
 
 Not oversights. Changing any of them is a decision, not a cleanup.

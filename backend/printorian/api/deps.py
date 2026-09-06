@@ -17,11 +17,13 @@ from printorian.contexts.account import AccountService
 from printorian.contexts.catalog import ModelLibrary, PlateLibrary
 from printorian.contexts.fleet import FleetService
 from printorian.contexts.identity import Actor, IdentityService, Permission
+from printorian.contexts.inventory import InventoryService
 from printorian.contexts.journal import JournalService
 from printorian.contexts.ordering import OrderingService
 from printorian.contexts.packaging import PackagingService, PackingCatalogue
 from printorian.contexts.payments import PaymentsService
 from printorian.contexts.postproduction import PostProductionService
+from printorian.contexts.procurement import ProcurementService
 from printorian.contexts.production import ProductionService
 from printorian.contexts.service import ServiceDesk
 from printorian.contexts.settings import SettingsService
@@ -259,6 +261,38 @@ def get_packaging_service(db: DbSession, clock: AppClock, bus: AppEventBus) -> P
 
 
 Packaging = Annotated[PackagingService, Depends(get_packaging_service)]
+
+
+def get_inventory_service(db: DbSession) -> InventoryService:
+    """The materials catalogue and its lots.
+
+    A dependency rather than `InventoryService(db)` at each call site, because
+    procurement now needs the *same* instance the routes use — see
+    :func:`get_procurement_service`.
+    """
+    return InventoryService(db)
+
+
+Inventory = Annotated[InventoryService, Depends(get_inventory_service)]
+
+
+def get_procurement_service(db: DbSession, clock: AppClock, lots: Inventory) -> ProcurementService:
+    """Purchasing, with its one way of writing stock handed to it.
+
+    `lots` is the whole of procurement's reach into another context: receiving a
+    material line calls `InventoryService.add_lot` and nothing deeper, which is
+    what `tools/check_context_isolation.py` enforces and what `scheduling` → `fleet`
+    already does.
+
+    Injected here rather than constructed inside `ProcurementService` so that
+    api and workers stay siblings and a test can hand it a double. It is also the
+    line `test_procurement_wiring.py` exists to guard: the last collaborator wired
+    this way was deleted from `deps.py` and every test stayed green.
+    """
+    return ProcurementService(db, clock, lots=lots)
+
+
+Procurement = Annotated[ProcurementService, Depends(get_procurement_service)]
 
 
 def get_packing_catalogue(db: DbSession) -> PackingCatalogue:

@@ -1372,6 +1372,109 @@ export const ru = {
   'settings.group.integrations.printers': 'Принтеры',
   'settings.group.maintenance.backup': 'Резервное копирование',
   'settings.group.maintenance.storage': 'Хранение данных',
+
+  // -- purchasing: what the farm buys, and what it is short of ---------------
+  'pu.title': 'Закупки',
+  'pu.forbidden': 'У вас нет доступа к закупкам',
+
+  'pu.status.draft': 'Черновик',
+  'pu.status.approved': 'Согласован',
+  'pu.status.paid': 'Оплачен',
+  'pu.status.in_transit': 'В пути',
+  'pu.status.receiving': 'Приёмка',
+  'pu.status.stored': 'На складе',
+  'pu.status.cancelled': 'Отменён',
+  // A stage this build has never heard of. Named as unknown rather than drawn
+  // as the last stage in the list: «На складе» would be a claim the server
+  // never made, and a whitelist is what keeps the two apart.
+  'pu.status.unknown': 'Неизвестный этап',
+
+  'pu.kind.material': 'Материал',
+  'pu.kind.printer': 'Принтер',
+  'pu.kind.spare_part': 'Запчасть',
+  'pu.kind.packaging': 'Упаковка',
+  'pu.kind.post_consumable': 'Расходник поста',
+  'pu.kind.unknown': 'Неизвестный класс',
+
+  'pu.reorder.title': 'Требуют заказа сейчас',
+  'pu.reorder.aside': 'ПО ПОРОГАМ ОСТАТКОВ ФЕРМЫ',
+  'pu.reorder.item': 'Позиция',
+  'pu.reorder.kind': 'Класс',
+  'pu.reorder.remaining': 'Остаток',
+  'pu.reorder.consequence': 'Последствие',
+  'pu.reorder.empty': 'Ничего не ниже порога',
+  'pu.reorder.foot': 'ПОРОГ И ВЫКЛЮЧАТЕЛЬ — В НАСТРОЙКАХ СКЛАДА',
+  'pu.reorder.seed': 'Собрать один заказ',
+  // The only consequence this system measures: grams the print queue has
+  // already promised away. Everything else the kit puts in that column is
+  // months of cover, and nothing decrements the remaining grams — so those
+  // rows show «—» instead.
+  'pu.consequence.committed': '{jobs} заказов ждёт · {grams}',
+
+  'pu.filter.label': 'Фильтр по этапу',
+  'pu.search': 'ПОИСК :: НОМЕР / ПОСТАВЩИК',
+  'pu.action.new': 'Новый заказ',
+  'pu.action.advance': 'Перевести в «{stage}»',
+  'pu.action.cancel': 'Отменить заказ',
+
+  'pu.table.number': 'Номер',
+  'pu.table.supplier': 'Поставщик',
+  'pu.table.composition': 'Состав',
+  'pu.table.status': 'Статус',
+  'pu.table.raised': 'Заказан',
+  'pu.table.expected': 'Ожидается',
+  'pu.table.units': '{lines} позиций · {quantity} единиц',
+
+  'pu.detail.title': 'Заказ поставщику',
+  'pu.detail.supplier': 'ПОСТАВЩИК',
+  'pu.detail.expected': 'ОЖИДАЕТСЯ',
+  'pu.detail.lines': 'ПОЗИЦИЙ',
+
+  'pu.pipe.title': 'Путь заказа',
+  'pu.pipe.aside': '{total} ЭТАПОВ',
+  'pu.pipe.foot': 'ЭТАП БЕЗ ВРЕМЕНИ НЕ БЫЛ ПРОЙДЕН — ПРОЧЕРК, А НЕ ДАТА СОСЕДА',
+
+  'pu.lines.title': 'Состав заказа',
+  'pu.lines.aside': '{count} ПОЗИЦИЙ',
+  'pu.lines.item': 'Позиция',
+  'pu.lines.kind': 'Класс',
+  'pu.lines.ordered': 'Заказано',
+  'pu.lines.received': 'Принято',
+  'pu.lines.add_code': 'Код позиции',
+  'pu.lines.add_quantity': 'Количество',
+  'pu.lines.add': 'Добавить позицию',
+
+  'pu.supplier.title': 'Поставщик',
+  // Counts only in this slice. «Поставок · В срок · Брак · Оценка» needs a
+  // defect record captured at receiving and a promised-versus-delivered
+  // measure; on a farm with no receipts every one of those columns would be a
+  // fabricated denominator.
+  'pu.supplier.aside': 'ОЦЕНКА ПОЯВИТСЯ ПОСЛЕ ПРИЁМОК',
+  'pu.supplier.none': 'не выбран',
+  'pu.supplier.choose': 'Выберите поставщика',
+  'pu.supplier.assign': 'Назначить',
+
+  'pu.costs.title': 'Стоимость заказа',
+  'pu.costs.aside': 'ТРЕБУЕТСЯ ДОСТУП К ФИНАНСАМ',
+  'pu.costs.frozen': 'Заморозится в остатках',
+  'pu.costs.total': 'Итого',
+  'pu.costs.unpriced': 'БЕЗ ЦЕНЫ ПОЗИЦИЙ: {count} · ИТОГО НЕ СЧИТАЕТСЯ',
+
+  'pu.receive.title': 'Приёмка',
+  'pu.receive.aside': 'ЗАПОЛНЯЕТСЯ ПРИ ПОСТУПЛЕНИИ',
+  'pu.receive.note':
+    'Сверяется количество и заносятся номера партий. Цена записывается как факт приёмки и сама по себе тариф не меняет — это отдельное решение человека.',
+  'pu.receive.outstanding': 'Осталось принять',
+  'pu.receive.quantity': 'Пришло',
+  'pu.receive.lot': 'Номер партии',
+  'pu.receive.price': 'Цена за единицу',
+  'pu.receive.shelf': 'Полка',
+  'pu.receive.quantity_for': 'Пришло — {item}',
+  'pu.receive.lot_for': 'Номер партии — {item}',
+  'pu.receive.price_for': 'Цена за единицу — {item}',
+  'pu.receive.shelf_for': 'Полка — {item}',
+  'pu.receive.foot': 'ПУСТАЯ СТРОКА НЕ ОТПРАВЛЯЕТСЯ · ПРИНИМАЮТСЯ ТОЛЬКО МАТЕРИАЛЫ',
+  'pu.receive.submit': 'Принять',
 } as const
 
 export type MessageKey = keyof typeof ru
@@ -2680,6 +2783,98 @@ export const en: Messages = {
   'settings.group.integrations.printers': 'Printers',
   'settings.group.maintenance.backup': 'Backups',
   'settings.group.maintenance.storage': 'Data retention',
+
+  // -- purchasing ------------------------------------------------------------
+  'pu.title': 'Purchasing',
+  'pu.forbidden': 'You do not have access to purchasing',
+
+  'pu.status.draft': 'Draft',
+  'pu.status.approved': 'Approved',
+  'pu.status.paid': 'Paid',
+  'pu.status.in_transit': 'In transit',
+  'pu.status.receiving': 'Receiving',
+  'pu.status.stored': 'Stored',
+  'pu.status.cancelled': 'Cancelled',
+  'pu.status.unknown': 'Unknown stage',
+
+  'pu.kind.material': 'Material',
+  'pu.kind.printer': 'Printer',
+  'pu.kind.spare_part': 'Spare part',
+  'pu.kind.packaging': 'Packaging',
+  'pu.kind.post_consumable': 'Finishing consumable',
+  'pu.kind.unknown': 'Unknown class',
+
+  'pu.reorder.title': 'Needs ordering now',
+  'pu.reorder.aside': 'AGAINST THE FARM OWN THRESHOLDS',
+  'pu.reorder.item': 'Item',
+  'pu.reorder.kind': 'Class',
+  'pu.reorder.remaining': 'Remaining',
+  'pu.reorder.consequence': 'Consequence',
+  'pu.reorder.empty': 'Nothing is below its threshold',
+  'pu.reorder.foot': 'THRESHOLD AND SWITCH LIVE IN THE INVENTORY SETTINGS',
+  'pu.reorder.seed': 'Raise one order',
+  'pu.consequence.committed': '{jobs} jobs waiting · {grams}',
+
+  'pu.filter.label': 'Filter by stage',
+  'pu.search': 'SEARCH :: NUMBER / SUPPLIER',
+  'pu.action.new': 'New order',
+  'pu.action.advance': 'Move to «{stage}»',
+  'pu.action.cancel': 'Cancel order',
+
+  'pu.table.number': 'Number',
+  'pu.table.supplier': 'Supplier',
+  'pu.table.composition': 'Composition',
+  'pu.table.status': 'Status',
+  'pu.table.raised': 'Raised',
+  'pu.table.expected': 'Expected',
+  'pu.table.units': '{lines} lines · {quantity} units',
+
+  'pu.detail.title': 'Purchase order',
+  'pu.detail.supplier': 'SUPPLIER',
+  'pu.detail.expected': 'EXPECTED',
+  'pu.detail.lines': 'LINES',
+
+  'pu.pipe.title': 'Order path',
+  'pu.pipe.aside': '{total} STAGES',
+  'pu.pipe.foot': 'A STAGE WITH NO TIME WAS NEVER ENTERED — A DASH, NOT A NEIGHBOUR DATE',
+
+  'pu.lines.title': 'Order lines',
+  'pu.lines.aside': '{count} LINES',
+  'pu.lines.item': 'Item',
+  'pu.lines.kind': 'Class',
+  'pu.lines.ordered': 'Ordered',
+  'pu.lines.received': 'Received',
+  'pu.lines.add_code': 'Item code',
+  'pu.lines.add_quantity': 'Quantity',
+  'pu.lines.add': 'Add line',
+
+  'pu.supplier.title': 'Supplier',
+  'pu.supplier.aside': 'A SCORE NEEDS RECEIPTS FIRST',
+  'pu.supplier.none': 'not chosen',
+  'pu.supplier.choose': 'Choose a supplier',
+  'pu.supplier.assign': 'Assign',
+
+  'pu.costs.title': 'Order cost',
+  'pu.costs.aside': 'REQUIRES FINANCIAL ACCESS',
+  'pu.costs.frozen': 'Tied up in stock',
+  'pu.costs.total': 'Total',
+  'pu.costs.unpriced': 'UNPRICED LINES: {count} · NO TOTAL IS COMPUTED',
+
+  'pu.receive.title': 'Receiving',
+  'pu.receive.aside': 'FILLED IN ON ARRIVAL',
+  'pu.receive.note':
+    'Quantities are checked against the order and lot numbers recorded. The price paid is stored as a measurement and does not move the tariff by itself — that stays a decision somebody makes.',
+  'pu.receive.outstanding': 'Still outstanding',
+  'pu.receive.quantity': 'Arrived',
+  'pu.receive.lot': 'Lot number',
+  'pu.receive.price': 'Unit price paid',
+  'pu.receive.shelf': 'Shelf',
+  'pu.receive.quantity_for': 'Arrived — {item}',
+  'pu.receive.lot_for': 'Lot number — {item}',
+  'pu.receive.price_for': 'Unit price paid — {item}',
+  'pu.receive.shelf_for': 'Shelf — {item}',
+  'pu.receive.foot': 'AN EMPTY ROW IS NOT SENT · ONLY MATERIALS CAN BE RECEIVED',
+  'pu.receive.submit': 'Receive',
 }
 
 export const catalogues = { ru, en } as const

@@ -12,8 +12,8 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **47 tables** across thirteen contexts, built
-by twenty-seven Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **51 tables** across fourteen contexts, built
+by twenty-eight Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
@@ -27,6 +27,7 @@ by twenty-seven Alembic migrations on a single linear head.
 | `production` | `print_jobs`, `job_events`, `assignment_records`, `wait_list_entries`, `estimate_variances` |
 | `postproduction` | `postproduction_operations`, `postproduction_instruction_steps`, `postproduction_tasks`, `postproduction_task_steps`, `postproduction_consumables` |
 | `packaging` | `packaging_tara`, `packaging_instructions`, `packaging_instruction_steps`, `packaging_tasks`, `packaging_task_steps`, `packaging_task_tara` |
+| `procurement` | `suppliers`, `purchase_orders`, `purchase_order_lines`, `purchase_receipts` |
 | `journal` | `journal_posts`, `journal_subscribers` |
 | `service` | `printer_failures` |
 | `settings` | `settings`, `settings_audit` |
@@ -145,10 +146,10 @@ second writer cannot get past them.
 
 ### Referential integrity
 
-**Fifty foreign keys, each with a deliberate delete rule** — 26 `CASCADE`,
-16 `SET NULL`, 8 `RESTRICT`. The enumeration is
+**Fifty-nine foreign keys, each with a deliberate delete rule** — 29 `CASCADE`,
+20 `SET NULL`, 10 `RESTRICT`. The enumeration is
 `backend/tests/test_referential_integrity.py` rather than the list below: it names
-all fifty as `table.column`, fails if a fifty-first is added without somebody
+all fifty-nine as `table.column`, fails if a sixtieth is added without somebody
 deciding what it does on delete, and reads the rules back out of `pg_constraint` so
 that what the database is *holding* is what the models declare. Look there for which
 key carries which rule. What follows is why there are three groups, which is the

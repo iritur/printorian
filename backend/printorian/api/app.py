@@ -28,6 +28,7 @@ from printorian.api.routers import (
     pricing,
     printers,
     public,
+    purchasing,
     service,
     store,
     users,
@@ -195,6 +196,7 @@ def _install_routers(app: FastAPI) -> None:
     app.include_router(payments.router)
     app.include_router(postproduction.router)
     app.include_router(packaging.router)
+    app.include_router(purchasing.router)
     app.include_router(printers.router)
     app.include_router(store.router)
     app.include_router(settings_router.router)

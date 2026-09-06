@@ -47,8 +47,19 @@ class InventoryService:
 
     # -- the table -------------------------------------------------------
 
-    async def table(self, *, family: str | None = None) -> MaterialTable:
-        """Rows plus status counts, as the scenario's materials screen needs."""
+    async def table(self, *, on_order: frozenset[str], family: str | None = None) -> MaterialTable:
+        """Rows plus status counts, as the scenario's materials screen needs.
+
+        ``on_order`` is the set of material codes sitting on an open purchase
+        order, from `procurement.ordered_codes`. It is a **required** keyword and
+        deliberately has no empty default: a caller that forgot to ask procurement
+        would otherwise be told "nothing is on order", which is a claim about the
+        farm rather than an admission that nobody looked — the ADR-0007 collapse
+        this codebase keeps repeating. Required means mypy names every new caller.
+
+        It replaced `material_specs.has_open_order`, a hand-set flag whose own
+        comment called it a placeholder until purchase orders existed.
+        """
         query = (
             select(MaterialSpec)
             # The lots' cells come along, because `LotView.cell` reads the address
@@ -62,7 +73,7 @@ class InventoryService:
             query = query.where(MaterialSpec.family == family)
 
         specs = list(await self._db.scalars(query))
-        rows = [self._to_view(spec) for spec in specs]
+        rows = [self._to_view(spec, on_order=on_order) for spec in specs]
 
         tally = Counter(row.status for row in rows)
         # Every status appears, including the empty ones: a chip reading "ordered 0"
@@ -72,7 +83,9 @@ class InventoryService:
         ]
         return MaterialTable(rows=rows, counts=counts, total=len(rows))
 
-    async def get_by_code(self, code: str) -> MaterialSpecView:
+    async def get_by_code(self, code: str, *, on_order: frozenset[str]) -> MaterialSpecView:
+        """One spec by code. ``on_order`` as in :meth:`table`, and for the same
+        reason it is required there."""
         spec = await self._db.scalar(
             select(MaterialSpec)
             .options(selectinload(MaterialSpec.lots).selectinload(MaterialLot.cell))
@@ -80,7 +93,7 @@ class InventoryService:
         )
         if spec is None:
             raise NotFoundError("error.inventory.spec_not_found", material_code=code)
-        return self._to_view(spec)
+        return self._to_view(spec, on_order=on_order)
 
     # -- writes ----------------------------------------------------------
 
@@ -93,7 +106,9 @@ class InventoryService:
         self._db.add(spec)
         await self._db.flush()
         await self._db.refresh(spec, ["lots"])
-        return self._to_view(spec)
+        # A spec that has just been created can have nothing on order against it,
+        # and this is the one place that is a fact rather than an assumption.
+        return self._to_view(spec, on_order=frozenset())
 
     async def add_lot(self, data: CreateMaterialLot) -> LotView:
         # `lots` is eager-loaded because the default label counts existing lots;
@@ -115,6 +130,11 @@ class InventoryService:
             ),
             location_kind=LocationKind.STOCK,
             shelf=data.shelf,
+            # The two columns declared at the start and written by nothing until
+            # receiving existed. `purchase_price` is what this lot cost whole and
+            # `lot_number` is the supplier's batch — see `procurement.receiving`.
+            purchase_price=data.purchase_price,
+            lot_number=data.lot_number,
         )
         self._db.add(lot)
         await self._db.flush()
@@ -243,13 +263,14 @@ class InventoryService:
         requires_outdoor: bool = False,
         preferred_families: tuple[str, ...] = (),
         limit: int = 5,
+        on_order: frozenset[str],
     ) -> list[ScenarioMatch]:
         """Pick materials for a usage scenario (scenario option 2a).
 
         Hard requirements filter; everything else scores. Availability is weighted
         above specification, because the recommendation has to be printable today.
         """
-        table = await self.table()
+        table = await self.table(on_order=on_order)
         matches: list[ScenarioMatch] = []
 
         for row in table.rows:
@@ -293,12 +314,12 @@ class InventoryService:
     # -- internals -------------------------------------------------------
 
     @staticmethod
-    def _to_view(spec: MaterialSpec) -> MaterialSpecView:
+    def _to_view(spec: MaterialSpec, *, on_order: frozenset[str]) -> MaterialSpecView:
         live = [lot for lot in spec.lots if lot.remaining_grams > 0]
         status = derive_status(
             has_stock_lots=any(lot.location_kind is LocationKind.STOCK for lot in live),
             has_mounted_lots=any(lot.location_kind is LocationKind.PRINTER for lot in live),
-            has_open_orders=spec.has_open_order,
+            has_open_orders=spec.code in on_order,
         )
         return MaterialSpecView(
             id=spec.id,
