@@ -39,6 +39,12 @@ from printorian.core.errors import ConfigurationError, NotFoundError
 from printorian.core.ids import EntityId
 from printorian.core.secrets import SecretBox
 
+#: Settings key -> `RateSnapshot` field, for the rates the screen files outside
+#: the `pricing.` section. Small on purpose: every other rate is matched by
+#: prefix, and a growing list here would mean the section layout had started
+#: deciding the shape of the snapshot.
+_ALIASED_RATES = {"logistics.zones": "zones"}
+
 #: Newest-first audit page size. The kit's «Обслуживание системы» log is a panel,
 #: not an archive — the whole history is reachable, a screenful at a time.
 HISTORY_LIMIT = 100
@@ -87,6 +93,17 @@ class SettingsService:
             for key, value in overrides.items()
             if key.startswith(catalogue.RATE_PREFIX)
         }
+        # Rates whose key does not carry the `pricing.` prefix, mapped explicitly
+        # in the shape `resolve_promise` uses below. The shipping zone table is a
+        # rate — it is priced from and pinned per order — but the kit files it
+        # under Логистика, and renaming it to `pricing.zones` to make the prefix
+        # trick work would put it in the wrong section of the screen. It would
+        # also have `rate_specs()` try to derive a second FieldSpec for the same
+        # field; that it currently skips non-scalar defaults is a coincidence to
+        # rely on, not a design.
+        for key, field_name in _ALIASED_RATES.items():
+            if key in overrides:
+                changed[field_name] = overrides[key]
         return dataclasses.replace(RateSnapshot(), **changed) if changed else RateSnapshot()
 
     async def resolve_promise(self) -> PromisePolicy:

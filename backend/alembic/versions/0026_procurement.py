@@ -40,8 +40,8 @@ is not emitted by `create_table`, so `downgrade base` would otherwise leave a
 sequence behind and ADR-0008's clean-downgrade rule would fail — the reason 0005
 creates `order_number_seq` by hand.
 
-Revision ID: 0024_procurement
-Revises: 0023_prepared_plate_copies
+Revision ID: 0026_procurement
+Revises: 0025_storage_cells_and_movements
 Created: 2026-09-05
 """
 
@@ -54,8 +54,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "0024_procurement"
-down_revision: str | None = "0023_prepared_plate_copies"
+revision: str = "0026_procurement"
+down_revision: str | None = "0025_storage_cells_and_movements"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

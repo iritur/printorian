@@ -44,6 +44,7 @@ from printorian.workers import (
     packaging,
     postproduction,
     scheduler,
+    service,
     sla,
     telemetry,
 )
@@ -54,6 +55,7 @@ from printorian.workers.passes import (
     PackagingPass,
     PostProductionPass,
     SchedulerPass,
+    ServicePass,
     SlaPass,
     TelemetryPass,
 )
@@ -136,6 +138,28 @@ async def _packaging_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> Non
     )
 
 
+async def _service_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> None:
+    """Turn what the driver reported into a failure record, and close it on repair.
+
+    Its own loop rather than a step inside the telemetry poll, though the poll is
+    where the state it reads comes from. The poll runs every five seconds and talks
+    to every machine over the network; folding a write-heavy reconciliation into it
+    would put a database transaction inside the loop whose whole job is to stay
+    responsive to printers. And because both ends of the record are dated from the
+    machine's own observation, running this on a slower clock costs nothing the farm
+    measures.
+    """
+
+    async def build() -> ServicePass:
+        return ServicePass(runtime)
+
+    await service.run_forever(
+        build,
+        interval_seconds=runtime.settings.service_sweep_seconds,
+        stop=stop,
+    )
+
+
 async def _maintenance_forever(runtime: WorkerRuntime, stop: asyncio.Event) -> None:
     """Run housekeeping — partitions, retention, expired sessions.
 
@@ -214,6 +238,7 @@ async def main(settings: Settings | None = None) -> None:
         asyncio.create_task(_sla_forever(runtime, stop), name="sla"),
         asyncio.create_task(_postproduction_forever(runtime, stop), name="postproduction"),
         asyncio.create_task(_packaging_forever(runtime, stop), name="packaging"),
+        asyncio.create_task(_service_forever(runtime, stop), name="service"),
         asyncio.create_task(_maintenance_forever(runtime, stop), name="maintenance"),
     ]
     try:

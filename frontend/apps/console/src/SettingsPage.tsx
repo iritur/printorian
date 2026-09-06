@@ -15,6 +15,8 @@ import {
 } from '@printorian/ui'
 
 import { DiagnosticsPanel } from './DiagnosticsPanel'
+import type { ZoneRow } from './settings/ZonesEditor'
+import { ZonesEditor } from './settings/ZonesEditor'
 
 /**
  * The farm's own settings (design/settings.html).
@@ -345,6 +347,26 @@ export function SettingsPage({ locale }: { locale: Locale }) {
           discountLabel={t('settings.tiers.discount')}
           marginLabel={t('settings.tiers.margin')}
           marginNoneLabel={t('settings.tiers.margin_none')}
+        />
+      )
+    }
+    if (field.key === 'logistics.zones') {
+      // Before the `kind === 'table'` fallback below, which is a ladder editor.
+      // A third table field falling through to it would render a zone tariff as
+      // a discount ladder with `tsc` perfectly green, so `SettingsPage.test.tsx`
+      // asserts this branch rather than trusting the ordering to survive.
+      const rows = ((drafts[field.key] ?? field.value) as ZoneRow[]) ?? []
+      return (
+        <ZonesEditor
+          key={field.key}
+          locale={locale}
+          rows={rows}
+          dirty={drafts[field.key] !== undefined && !sameValue(drafts[field.key], field.value)}
+          onChange={(value) => setDraft(field.key, value)}
+          onRevert={() => revert(field.key)}
+          name={fieldName(field.key)}
+          hint={fieldHint(field.key)}
+          revertLabel={t('settings.revert')}
         />
       )
     }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -10,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from printorian.contexts.inventory.models import MaterialLot, MaterialSpec
+from printorian.contexts.inventory.movements import MOVED_MOUNTED, MOVED_UNMOUNTED
+from printorian.contexts.inventory.placement import record_movement
 from printorian.contexts.inventory.policies import (
     LocationKind,
     MaterialStatus,
@@ -59,7 +62,10 @@ class InventoryService:
         """
         query = (
             select(MaterialSpec)
-            .options(selectinload(MaterialSpec.lots))
+            # The lots' cells come along, because `LotView.cell` reads the address
+            # off the related row and a lazy load under asyncio raises
+            # `MissingGreenlet` rather than returning anything.
+            .options(selectinload(MaterialSpec.lots).selectinload(MaterialLot.cell))
             .where(MaterialSpec.is_active.is_(True))
             .order_by(MaterialSpec.family, MaterialSpec.name)
         )
@@ -82,7 +88,7 @@ class InventoryService:
         reason it is required there."""
         spec = await self._db.scalar(
             select(MaterialSpec)
-            .options(selectinload(MaterialSpec.lots))
+            .options(selectinload(MaterialSpec.lots).selectinload(MaterialLot.cell))
             .where(MaterialSpec.code == code)
         )
         if spec is None:
@@ -109,7 +115,7 @@ class InventoryService:
         # touching a lazy relationship under asyncio raises MissingGreenlet.
         spec = await self._db.scalar(
             select(MaterialSpec)
-            .options(selectinload(MaterialSpec.lots))
+            .options(selectinload(MaterialSpec.lots).selectinload(MaterialLot.cell))
             .where(MaterialSpec.code == data.spec_code)
         )
         if spec is None:
@@ -135,22 +141,64 @@ class InventoryService:
         return LotView.model_validate(lot)
 
     async def mount_lot(
-        self, lot_id: object, *, printer_id: EntityId, ams_unit: int, ams_slot: int
+        self,
+        lot_id: object,
+        *,
+        printer_id: EntityId,
+        ams_unit: int,
+        ams_slot: int,
+        at: datetime,
+        actor_id: EntityId | None = None,
     ) -> LotView:
-        """Move a lot into a printer's AMS slot — the scenario's second location kind."""
-        lot = await self._db.get(MaterialLot, lot_id)
-        if lot is None:
-            raise NotFoundError("error.inventory.lot_not_found")
+        """Move a lot into a printer's AMS slot — the scenario's second location kind.
+
+        The five location columns are overwritten in place, which is right for
+        "where is it now" and destroys "where was it". The movement is appended
+        **before** the overwrite, from values read off the row while they are
+        still there — that ordering is the whole of why `movements.py` exists.
+
+        In the same transaction as the overwrite, deliberately: a ledger that can
+        commit while its effect does not is a record that looks complete and is
+        not.
+        """
+        lot = await self._lot_with_cell(lot_id)
+
+        await record_movement(
+            self._db,
+            lot,
+            reason=MOVED_MOUNTED,
+            at=at,
+            actor_id=actor_id,
+            from_kind=lot.location_kind,
+            from_address=lot.cell_address,
+            to_kind=LocationKind.PRINTER,
+            # No address on the printer side: naming a `fleet` row from here is
+            # the import the layering forbids, and a UUID is not an address
+            # anybody reads. Which machine it went into is on the lot, below.
+            to_address=None,
+        )
 
         lot.location_kind = LocationKind.PRINTER
         lot.printer_id = printer_id
         lot.ams_unit = ams_unit
         lot.ams_slot = ams_slot
         lot.shelf = None
+        # A spool inside a machine is not in a cell. Left set, the map would draw
+        # it as occupying a place an operator would then find empty. Cleared
+        # through the relationship, so the loaded object goes with the key —
+        # `LotView.cell` reads the former, and the two disagreeing is the bug.
+        lot.cell = None
         await self._db.flush()
         return LotView.model_validate(lot)
 
-    async def unmount_lot(self, lot_id: object, *, shelf: str | None = None) -> LotView:
+    async def unmount_lot(
+        self,
+        lot_id: object,
+        *,
+        shelf: str | None = None,
+        at: datetime,
+        actor_id: EntityId | None = None,
+    ) -> LotView:
         """Take a lot out of a printer and put it back into storage.
 
         The counterpart to :meth:`mount_lot`. Without it a spool can enter a
@@ -163,9 +211,23 @@ class InventoryService:
         without a recorded place, which is honest, rather than being left in a
         printer it is not in.
         """
-        lot = await self._db.get(MaterialLot, lot_id)
-        if lot is None:
-            raise NotFoundError("error.inventory.lot_not_found")
+        lot = await self._lot_with_cell(lot_id)
+
+        await record_movement(
+            self._db,
+            lot,
+            reason=MOVED_UNMOUNTED,
+            at=at,
+            actor_id=actor_id,
+            from_kind=lot.location_kind,
+            from_address=None,
+            to_kind=LocationKind.STOCK,
+            # Whatever the operator typed, which may be nothing. `shelf` is the
+            # pre-cell free text rather than an address; a spool put away properly
+            # is placed through `POST /store/lots/{id}/place`, which writes a real
+            # one. Copied verbatim — the column is 60 wide for exactly this.
+            to_address=shelf,
+        )
 
         lot.location_kind = LocationKind.STOCK
         lot.printer_id = None
@@ -174,6 +236,21 @@ class InventoryService:
         lot.shelf = shelf
         await self._db.flush()
         return LotView.model_validate(lot)
+
+    async def _lot_with_cell(self, lot_id: object) -> MaterialLot:
+        """The lot, with its cell loaded, or the ADR-0012 refusal.
+
+        Eager, because `cell_address` is read on the way past and a lazy load
+        under asyncio raises `MissingGreenlet` instead of answering.
+        """
+        lot = await self._db.scalar(
+            select(MaterialLot)
+            .options(selectinload(MaterialLot.cell))
+            .where(MaterialLot.id == lot_id)
+        )
+        if lot is None:
+            raise NotFoundError("error.inventory.lot_not_found")
+        return lot
 
     # -- recommendation --------------------------------------------------
 
