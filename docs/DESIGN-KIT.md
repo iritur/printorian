@@ -5,7 +5,7 @@ The kit is twenty-one screens of static HTML in [`design/`](../design/README.md)
 is not a transcription of them, and deliberately no longer tries to be.
 
 What it carries instead is the part the HTML cannot: which screens exist in the
-app, what the three that do not would need from the backend, and the conventions
+app, what the two that do not would need from the backend, and the conventions
 that hold across all of them.
 
 > Replaces `DESIGN-KIT-PLAN.md`, `DESIGN-KIT-INTEGRATION.md` and
@@ -30,7 +30,7 @@ from another document has only moved the drift.
 
 ## 1. Where the screens stand
 
-**Eighteen of twenty-one are built.** Every public screen ships; the three that do
+**Nineteen of twenty-one are built.** Every public screen ships; the two that do
 not are all control-realm. `settings` was the nearest of them and is now built —
 103 parameters across fourteen sections, served and audited. What is left of it is
 the table-valued settings, not the screen (§2.1).
