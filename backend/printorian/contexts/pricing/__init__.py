@@ -34,6 +34,7 @@ from printorian.contexts.pricing.codes import (
     LABOR_SUPERVISION,
     LOGISTICS_PACKAGING,
     LOGISTICS_SHIPPING,
+    LOGISTICS_SHIPPING_WEIGHT,
     MACHINE_DEPRECIATION,
     MACHINE_ELECTRICITY,
     MARGIN,
@@ -78,6 +79,7 @@ from printorian.contexts.pricing.spec import (
     PrintEstimate,
     ScenarioProfile,
 )
+from printorian.contexts.pricing.zones import ShippingZone, ZoneTariffs, zone_for
 
 __all__ = [
     "ADJUSTMENT_CUSTOMER_DISCOUNT",
@@ -90,6 +92,7 @@ __all__ = [
     "LABOR_SUPERVISION",
     "LOGISTICS_PACKAGING",
     "LOGISTICS_SHIPPING",
+    "LOGISTICS_SHIPPING_WEIGHT",
     "LOYALTY_LADDER",
     "MACHINE_DEPRECIATION",
     "MACHINE_ELECTRICITY",
@@ -119,6 +122,8 @@ __all__ = [
     "PrintEstimate",
     "RateSnapshot",
     "ScenarioProfile",
+    "ShippingZone",
+    "ZoneTariffs",
     "breakdown_from_dict",
     "breakdown_to_dict",
     "delta_to_dict",
@@ -131,4 +136,5 @@ __all__ = [
     "rates_to_dict",
     "step_for_spend",
     "tier_for_spend",
+    "zone_for",
 ]

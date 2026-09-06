@@ -18,12 +18,15 @@ from printorian.contexts.ordering import OrderingService, rate_snapshot_for
 from printorian.contexts.ordering.models import Order, RateSnapshotRecord
 from printorian.contexts.ordering.schemas import DraftLine, PlaceOrder
 from printorian.contexts.pricing import (
+    LOGISTICS_SHIPPING,
     DiscountLadder,
     DiscountTier,
     MaterialPrice,
     PriceSpec,
     PrintEstimate,
     RateSnapshot,
+    ShippingZone,
+    ZoneTariffs,
     price,
     rates_from_dict,
     rates_to_dict,
@@ -104,6 +107,80 @@ def test_every_rate_field_is_serialized() -> None:
     payload = rates_to_dict(RateSnapshot())
     for field in fields(RateSnapshot):
         assert field.name in payload, f"rate {field.name!r} is not serialized"
+
+
+# ------------------------------------------------------ the zone tariff
+
+
+def zoned_rates(per_kg: str = "60") -> RateSnapshot:
+    return RateSnapshot(
+        zones=ZoneTariffs(
+            zones=(
+                ShippingZone(
+                    code="msk", base=Decimal(400), transit_days=1, postcode_prefixes=("101", "1")
+                ),
+                ShippingZone(
+                    code="cfo",
+                    base=Decimal("550.50"),
+                    per_kg=Decimal(per_kg),
+                    transit_days=3,
+                    postcode_prefixes=("3",),
+                    enabled=False,
+                ),
+            )
+        )
+    )
+
+
+def test_the_whole_zone_table_survives_the_round_trip() -> None:
+    """ADR-0020's mechanism: the tariff is archived with the order, not referenced.
+
+    A farm that re-draws its zones next month must not be able to move the price
+    of an order it already sold, and this is what makes that true — the table is
+    in the payload rather than being looked up again at read time.
+    """
+    rates = zoned_rates()
+    restored = rates_from_dict(rates_to_dict(rates))
+    assert restored == rates
+    assert restored.snapshot_id == rates.snapshot_id
+
+
+def test_zone_money_is_stored_as_strings_not_json_numbers() -> None:
+    """A JSON number is a float, and a float is not a price."""
+    stored = rates_to_dict(zoned_rates())["zones"]
+    assert stored[1]["base"] == "550.50"
+    assert stored[1]["per_kg"] == "60"
+    assert stored[1]["enabled"] is False
+    assert stored[0]["postcode_prefixes"] == ["101", "1"]
+
+
+def test_a_kopeck_on_one_zone_changes_the_snapshot_id() -> None:
+    """Without this the pinned snapshot could be re-used for a re-drawn tariff.
+
+    That is ADR-0020 failing *silently*: the id is the primary key of the archive,
+    so two different tariffs sharing one id means an order is stored against rates
+    it was never priced at.
+    """
+    assert zoned_rates().snapshot_id == zoned_rates().snapshot_id
+    assert zoned_rates().snapshot_id != zoned_rates(per_kg="60.01").snapshot_id
+
+
+def test_a_snapshot_stored_before_zones_existed_still_reprices() -> None:
+    """Hand-written rather than generated, because that is the real archive.
+
+    Every row already in `rate_snapshots` was written without a `zones` key.
+    `rates_from_dict` skips absent fields, so such a row rebuilds with an empty
+    table and reproduces the flat figure it was sold at — verified here rather
+    than assumed.
+    """
+    payload = rates_to_dict(RateSnapshot())
+    del payload["zones"]
+
+    restored = rates_from_dict(payload)
+
+    assert restored.zones == ZoneTariffs()
+    breakdown = price(a_spec(), restored)
+    assert breakdown.amount_of(LOGISTICS_SHIPPING).amount == RateSnapshot().shipping_flat
 
 
 # -------------------------------------------------------- persistence

@@ -4,6 +4,12 @@ The split V1 did not make (see docs/GLOSSARY.md): a **spec** is a catalogue
 identity with prices and properties; a **lot** is a physical spool with a mass and
 a location. V1's single `Spool` entity conflated them, which is why its materials
 table could not answer "how much PLA Black do we have, and where".
+
+The *where* half is `StorageZone` and `StorageCell` below: a named area of the
+warehouse, and one addressable place inside it. They live here rather than in a
+context of their own because "a lot is a physical spool with a mass and a place"
+is the responsibility this module already names — a cell without a lot in it is
+of no interest to anything.
 """
 
 from __future__ import annotations
@@ -57,13 +63,85 @@ class MaterialSpec(Entity):
     notes: Mapped[str | None] = mapped_column(String(2000), nullable=True)
 
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    #: Open purchase orders are modelled in Phase 6; until then this carries the
-    #: "ordered" status the scenario's table needs.
-    has_open_order: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # `has_open_order` was here, and its own comment called it a placeholder until
+    # purchase orders existed. They exist (`contexts.procurement`), so "is this on
+    # order" is computed from the orders themselves by `procurement.ordered_codes`
+    # and the column is gone. A stored flag had to be cleared by hand, and one
+    # nobody cleared kept a material reading «Заказан» after the order landed.
 
     lots: Mapped[list[MaterialLot]] = relationship(
         back_populates="spec", cascade="all, delete-orphan"
     )
+
+
+class StorageZone(Entity):
+    """A named area of the warehouse — «Зона A», the dry cabinet, the reject bin.
+
+    ``temp_c`` and ``humidity_percent`` are the conditions the kit's zone header
+    prints, and both are nullable **on purpose**: a zone nobody has hung a sensor
+    in has not been measured, and 0 °C is a reading rather than an absence
+    (ADR-0007). Defaulting either to zero would put a number on the screen the
+    farm never took.
+
+    They are the last reading, kept on the zone rather than in a series: this
+    slice draws one figure per zone and a history nothing reads is a table to
+    migrate later for no benefit. When drying state arrives it will want the
+    series, and that is the point to move them.
+    """
+
+    __tablename__ = "storage_zones"
+    __table_args__ = (
+        CheckConstraint(
+            "humidity_percent IS NULL OR (humidity_percent >= 0 AND humidity_percent <= 100)",
+            name="humidity_is_a_percentage",
+        ),
+    )
+
+    code: Mapped[str] = mapped_column(String(16), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    temp_c: Mapped[Decimal | None] = mapped_column(Numeric(5, 1), nullable=True)
+    humidity_percent: Mapped[Decimal | None] = mapped_column(Numeric(5, 1), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    cells: Mapped[list[StorageCell]] = relationship(
+        back_populates="zone", cascade="all, delete-orphan"
+    )
+
+
+class StorageCell(Entity):
+    """One addressable place — the ``A1-1`` a batch label carries.
+
+    ``address`` is unique farm-wide rather than per zone, because it is what gets
+    written on a spool and read back by somebody standing in the aisle. Scoping it
+    to a zone would make ``A1-1`` ambiguous the moment a second zone reused it, and
+    the person holding the spool has no zone in their hand.
+
+    ``capacity_lots`` is **nullable and never defaulted**, and that is the ADR-0007
+    decision in this file. A cell whose capacity nobody declared has no fill
+    percentage — not 0%, which reads as empty, and not 100%, which is what a
+    default of 1 would produce for every cell holding a single spool. The same
+    shape `PreparedPlate.copies` took in migration 0023: the column says whether
+    the farm has told us, and the read path answers ``None`` when it has not.
+    """
+
+    __tablename__ = "storage_cells"
+    __table_args__ = (
+        Index("ix_storage_cells_zone_id", "zone_id"),
+        CheckConstraint(
+            "capacity_lots IS NULL OR capacity_lots >= 1", name="capacity_positive_when_declared"
+        ),
+    )
+
+    zone_id: Mapped[EntityId] = mapped_column(
+        ForeignKey("storage_zones.id", ondelete="CASCADE"), nullable=False
+    )
+    #: The label an operator reads off the shelf. Short on purpose: `A1-1`, not a
+    #: sentence — the kit prints it inside a `.hv-node` about forty pixels wide.
+    address: Mapped[str] = mapped_column(String(24), unique=True, nullable=False)
+    capacity_lots: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    zone: Mapped[StorageZone] = relationship(back_populates="cells")
 
 
 class MaterialLot(Entity):
@@ -75,6 +153,10 @@ class MaterialLot(Entity):
         # "What is loaded in this machine" — the AMS view, and the scheduler's
         # material check. Previously unindexed and unconstrained.
         Index("ix_material_lots_printer_id", "printer_id"),
+        # "What is in this cell" is the map's per-cell count and the `SET NULL`
+        # a retired cell fires. Unindexed, both are sequential scans over every
+        # spool the farm has ever held.
+        Index("ix_material_lots_cell_id", "cell_id"),
         CheckConstraint("initial_grams >= 0", name="initial_grams_non_negative"),
         CheckConstraint("remaining_grams >= 0", name="remaining_grams_non_negative"),
         # A spool cannot hold more than it started with. Consumption only subtracts,
@@ -89,14 +171,34 @@ class MaterialLot(Entity):
     label: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     initial_grams: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     remaining_grams: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    #: What this one spool cost, whole — a lot total, not a rate. Written when a
+    #: purchase receipt creates the lot (`procurement.receiving`); null for a lot
+    #: entered by hand, which is honest and is not the same as free.
     purchase_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    #: The supplier's batch number, copied off the receipt. The thread a recall is
+    #: pulled by, and the reason this column is worth filling in at all.
     lot_number: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
     # -- location (see policies.Location)
     location_kind: Mapped[LocationKind] = mapped_column(
         enum_column(LocationKind), nullable=False, default=LocationKind.STOCK
     )
+    #: The pre-cell free text, kept alive and alone. It is an unvalidated
+    #: ``String(60)`` written by hand before `storage_cells` existed, so there is no
+    #: honest mapping from it to an address and migration 0024 deliberately
+    #: backfills nothing from it (ADR-0007). Which of the two answers wins when both
+    #: are set is stated in exactly one place — `policies.Location` — so they cannot
+    #: come to disagree the way `printer_id` and its old string spelling did.
     shelf: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    #: Where the spool sits when it is not in a machine.
+    #:
+    #: ``SET NULL`` for the same reason `printer_id` below carries it: retiring a
+    #: cell unplaces the spool, it does not destroy it. The movement ledger keeps
+    #: the address as text, so the history of a retired cell survives this column
+    #: going null — see `movements.MaterialMovement`.
+    cell_id: Mapped[EntityId | None] = mapped_column(
+        ForeignKey("storage_cells.id", ondelete="SET NULL"), nullable=True
+    )
     #: A real reference to the machine, not a loose string.
     #:
     #: This was ``String(80)`` while `AmsSlot.printer_id` beside it was a UUID
@@ -112,7 +214,22 @@ class MaterialLot(Entity):
     ams_slot: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     spec: Mapped[MaterialSpec] = relationship(back_populates="lots")
+    cell: Mapped[StorageCell | None] = relationship()
 
     @property
     def is_empty(self) -> bool:
         return self.remaining_grams <= 0
+
+    @property
+    def cell_address(self) -> str | None:
+        """The address this spool sits at, or ``None`` — never a placeholder.
+
+        Guarded on ``cell_id`` before the relationship is touched, and that guard
+        is load-bearing rather than an optimisation: most lots in the farm have no
+        cell at all, and under asyncio a lazy load raises `MissingGreenlet` rather
+        than returning anything. An unplaced lot must be answerable without a
+        query, because every read path has one.
+        """
+        if self.cell_id is None:
+            return None
+        return self.cell.address if self.cell is not None else None

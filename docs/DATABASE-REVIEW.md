@@ -12,14 +12,14 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **44 tables** across thirteen contexts, built
-by twenty-six Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **51 tables** across fourteen contexts, built
+by twenty-eight Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
 | `identity` | `users`, `sessions` |
 | `account` | `addresses`, `notification_prefs` |
-| `inventory` | `material_specs`, `material_lots` |
+| `inventory` | `material_specs`, `material_lots`, `storage_zones`, `storage_cells`, `material_movements` |
 | `ordering` | `orders`, `order_lines`, `order_events`, `rate_snapshots`, `sla_credit_entries` |
 | `payments` | `payments`, `refunds`, `payment_notifications` |
 | `catalog` | `model_assets`, `prepared_plates`, `catalog_models`, `catalog_model_materials` |
@@ -27,6 +27,7 @@ by twenty-six Alembic migrations on a single linear head.
 | `production` | `print_jobs`, `job_events`, `assignment_records`, `wait_list_entries`, `estimate_variances` |
 | `postproduction` | `postproduction_operations`, `postproduction_instruction_steps`, `postproduction_tasks`, `postproduction_task_steps`, `postproduction_consumables` |
 | `packaging` | `packaging_tara`, `packaging_instructions`, `packaging_instruction_steps`, `packaging_tasks`, `packaging_task_steps`, `packaging_task_tara` |
+| `procurement` | `suppliers`, `purchase_orders`, `purchase_order_lines`, `purchase_receipts` |
 | `journal` | `journal_posts`, `journal_subscribers` |
 | `service` | `printer_failures` |
 | `settings` | `settings`, `settings_audit` |
@@ -63,7 +64,10 @@ printers ─┬─< ams_slots                  (CASCADE)
           ├─< material_lots.printer_id   (SET NULL)
           └─< print_jobs.printer_id      (SET NULL)
 
-material_specs ──< material_lots         (CASCADE) ──< ams_slots.lot_id  (SET NULL)
+material_specs ──< material_lots         (CASCADE) ─┬─< ams_slots.lot_id       (SET NULL)
+                                                     └─< material_movements     (RESTRICT)
+
+storage_zones ──< storage_cells          (CASCADE) ──< material_lots.cell_id (SET NULL)
 
 model_assets ─┬─< order_lines.model_asset_id     (RESTRICT)
               ├─< print_jobs.model_asset_id      (RESTRICT)
@@ -142,10 +146,10 @@ second writer cannot get past them.
 
 ### Referential integrity
 
-**Fifty foreign keys, each with a deliberate delete rule** — 26 `CASCADE`,
-16 `SET NULL`, 8 `RESTRICT`. The enumeration is
+**Fifty-nine foreign keys, each with a deliberate delete rule** — 29 `CASCADE`,
+20 `SET NULL`, 10 `RESTRICT`. The enumeration is
 `backend/tests/test_referential_integrity.py` rather than the list below: it names
-all fifty as `table.column`, fails if a fifty-first is added without somebody
+all fifty-nine as `table.column`, fails if a sixtieth is added without somebody
 deciding what it does on delete, and reads the rules back out of `pg_constraint` so
 that what the database is *holding* is what the models declare. Look there for which
 key carries which rule. What follows is why there are three groups, which is the

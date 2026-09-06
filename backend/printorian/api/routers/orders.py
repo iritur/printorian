@@ -41,6 +41,7 @@ from printorian.contexts.ordering import (
 )
 from printorian.contexts.pricing import (
     price,
+    zone_for,
 )
 from printorian.core.errors import NotFoundError, PermissionDeniedError
 from printorian.core.ids import EntityId
@@ -68,10 +69,6 @@ async def place_order(
             "error.permission_denied", permission=Permission.PLACE_ORDER.value
         )
 
-    # Collection is not a discount, it is the absence of a service: the engine
-    # omits the shipping line rather than zeroing it. Before this the spec used
-    # the default, so every order — collected or not — was priced with delivery.
-    spec = await spec_for(db, data.lines[0], include_shipping=data.delivery.method.is_shipped)
     # Resolved once, here at the edge, and passed in — never fetched inside the
     # engine (ADR-0002). The order stores both the resulting breakdown and these
     # rates, so the quote can be rebuilt later rather than merely displayed.
@@ -81,6 +78,22 @@ async def place_order(
     # snapshot is *pinned* here is what makes the farm safe to re-rate at all —
     # tomorrow's margin does not reach into today's agreed order (ADR-0020).
     rates = await settings.resolve_rates()
+    # Which shipping zone the address falls in, resolved *before* pricing and from
+    # the same tariff table that is about to be pinned — so the zone the customer
+    # is charged for and the zone the archive can prove are one lookup, not two.
+    # A postcode no zone claims resolves to `None`, and the engine then quotes the
+    # flat rate rather than the nearest zone (CLAUDE.md §1).
+    #
+    # Collection is not a discount, it is the absence of a service: the engine
+    # omits the shipping line rather than zeroing it. Before this the spec used
+    # the default, so every order — collected or not — was priced with delivery.
+    zone = zone_for(rates.zones, data.delivery.postcode)
+    spec = await spec_for(
+        db,
+        data.lines[0],
+        include_shipping=data.delivery.method.is_shipped,
+        destination_zone=zone.code if zone is not None else "",
+    )
     tiers = await settings.resolve_tiers()
     # The loyalty discount, resolved from what this customer has already spent.
     # Resolved here rather than inside the engine, which is given its rates and
@@ -102,16 +115,27 @@ async def reprice(
     they pressed the button, with nothing on screen explaining why.
 
     Runs the same spec builder the order does, so the figure shown here is the
-    figure charged — the one thing a re-price must never get wrong. It takes only
-    the delivery *method* though, not an address: the rate is flat, and demanding
-    one would withhold the answer at exactly the moment the customer is deciding.
+    figure charged — the one thing a re-price must never get wrong.
+
+    The postcode is **optional**, and that is the point rather than an oversight.
+    Without one the answer is the flat rate, so the customer sees what a courier
+    costs the instant they choose one; with one it is the zone tariff, which is
+    what `POST /orders` will then charge for that address. Requiring an address
+    before answering would withhold the figure at exactly the moment the customer
+    is deciding, which is the reason this endpoint exists at all.
 
     Nothing is written and no permission is needed. It prices a configuration the
     caller already has, and refusing it to a signed-out visitor would only mean
     showing them a stale number.
     """
-    spec = await spec_for(db, data.lines[0], include_shipping=data.method.is_shipped)
     rates = await settings.resolve_rates()
+    zone = zone_for(rates.zones, data.postcode)
+    spec = await spec_for(
+        db,
+        data.lines[0],
+        include_shipping=data.method.is_shipped,
+        destination_zone=zone.code if zone is not None else "",
+    )
     tiers = await settings.resolve_tiers()
     return {"breakdown": _render(price(spec, rates, await tier_for(db, actor, tiers)))}
 

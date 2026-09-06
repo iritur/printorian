@@ -144,13 +144,21 @@ export function CheckoutPage({
     let live = true
     void api
       /*
-        The method alone, not the whole order. Pricing a courier delivery needs to
-        know only that it is one — the rate is flat — and sending the order body
+        The method and the postcode, not the whole order. Sending the order body
         would carry an address requirement that withholds the answer until the
-        customer has typed one, which is exactly when they want to see it.
+        customer has typed one, which is exactly when they want to see it — so
+        the method alone still gets an answer, at the flat rate.
+
+        The postcode goes up as typed rather than once it looks finished, because
+        "finished" would be a six-digit rule invented here for one country. The
+        server matches the longest prefix, so a half-typed postcode is a genuine
+        partial answer that sharpens with each digit, and the figure on screen at
+        the moment the customer presses the button is the one `POST /orders`
+        charges for the address they actually entered.
       */
       .post<{ breakdown: Breakdown }>('/orders/reprice', {
         method: delivery.method,
+        postcode: delivery.postcode,
         lines: asOrder(delivery).lines,
       })
       .then((answer) => live && setRepriced(answer.breakdown))
