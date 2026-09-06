@@ -193,9 +193,16 @@ def render(registry: CollectorRegistry) -> tuple[bytes, str]:
 def names_in(registries: Iterable[CollectorRegistry]) -> set[str]:
     """Every sample name present in the given registries.
 
-    Exists for the guard in `tests/api/test_metrics_api.py` that forbids money on
-    this surface, and lives here so that guard reads the same structure the writer
-    does rather than grepping the response text.
+    Reads the registry rather than the rendered body, which is what
+    `tests/unit/test_metrics_exposition.py` needs in order to say that two scrapes
+    share nothing: "the second registry carries no samples" is a claim about
+    structure, and a search of a text body could only report that some string is
+    absent from it.
+
+    The money guard lives in `tests/api/test_metrics_api.py` and cannot call this
+    — it holds an HTTP response and no registry — so it parses the body with the
+    library's own parser instead. Same rule, read at the only place each caller can
+    reach it, and neither of them by grepping.
     """
     return {
         sample.name
