@@ -33,6 +33,7 @@ async def spec_for(
     *,
     include_shipping: bool,
     finishes: Mapping[str, FinishOption],
+    destination_zone: str = "",
 ) -> PriceSpec:
     """Build the pricing input for one configured line.
 
@@ -46,6 +47,12 @@ async def spec_for(
     configurator could quote a farm's own norm-hours while the order charged the
     code default — the "checkout quotes one number and the order charges another"
     failure this module's docstring is written about.
+
+    ``destination_zone`` is the caller's for the same reason, and it is a *code*
+    rather than a postcode: resolving the postcode is a read-edge job so the
+    engine stays given-its-rates (ADR-0002). Empty is the ordinary case rather
+    than an error — the customer may not have typed an address yet — and the
+    engine then quotes the flat rate.
     """
     material = await InventoryService(db).get_by_code(line.material_code)
     return PriceSpec(
@@ -68,4 +75,5 @@ async def spec_for(
         finishes=tuple(finishes.get(code, FinishOption(code=code)) for code in line.finishes),
         rush=line.rush,
         include_shipping=include_shipping,
+        destination_zone=destination_zone,
     )

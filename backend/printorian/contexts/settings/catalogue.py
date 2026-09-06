@@ -29,6 +29,8 @@ from printorian.contexts.pricing import (
     DiscountLadder,
     DiscountTier,
     FinishOption,
+    ShippingZone,
+    ZoneTariffs,
 )
 from printorian.contexts.settings.sections import FIELDS, SECTIONS, Kind
 from printorian.core.errors import NotFoundError, ValidationError
@@ -76,6 +78,18 @@ def to_json(value: Any) -> Any:
         return [
             {"min_quantity": tier.min_quantity, "percent": str(tier.percent)}
             for tier in value.tiers
+        ]
+    if isinstance(value, ZoneTariffs):
+        return [
+            {
+                "code": zone.code,
+                "base": str(zone.base),
+                "per_kg": str(zone.per_kg),
+                "transit_days": zone.transit_days,
+                "postcode_prefixes": list(zone.postcode_prefixes),
+                "enabled": zone.enabled,
+            }
+            for zone in value.zones
         ]
     if isinstance(value, tuple) and value and isinstance(value[0], CustomerTier):
         return [
@@ -252,14 +266,50 @@ def _parse_finishes(key: str, raw: Any, options: tuple[str, ...]) -> tuple[Finis
     return finishes
 
 
+def _parse_zones(key: str, raw: Any, options: tuple[str, ...]) -> ZoneTariffs:
+    """Parse the shipping zone table — the rows the farm draws on the kit's «Зоны и тарифы».
+
+    Every key is required rather than defaulted. A row arriving without a base is
+    a malformed submission, and quietly reading it as «0 ₽» would put free
+    delivery into a quote nobody priced (CLAUDE.md §1) — the shape errors a
+    settings *screen* owns are re-mapped to `error.settings.not_a_table`, and the
+    pricing rules stay where they can name the offending zone: `ShippingZone` and
+    `ZoneTariffs` raise `error.pricing.zone_negative_rate`,
+    `error.pricing.zone_prefix_empty` and `error.pricing.duplicate_zone`
+    themselves, and those travel through untouched.
+    """
+    if not isinstance(raw, list):
+        raise ValidationError("error.settings.not_a_table", key=key)
+    try:
+        return ZoneTariffs(
+            zones=tuple(
+                ShippingZone(
+                    code=str(item["code"]),
+                    base=Decimal(str(item["base"])),
+                    per_kg=Decimal(str(item["per_kg"])),
+                    transit_days=int(item["transit_days"]),
+                    postcode_prefixes=tuple(str(prefix) for prefix in item["postcode_prefixes"]),
+                    enabled=bool(item["enabled"]),
+                )
+                for item in raw
+            )
+        )
+    except (KeyError, TypeError, ValueError, InvalidOperation) as exc:
+        raise ValidationError("error.settings.not_a_table", key=key) from exc
+
+
 def _parse_table(key: str, raw: Any, options: tuple[str, ...]) -> Any:
-    """The three table shapes, routed by key rather than by a second `Kind`."""
+    """The four table shapes, routed by key rather than by a second `Kind`."""
     if key == "pricing.discounts":
         return _parse_ladder(key, raw, options)
     if key == "pricing.tiers":
         return _parse_tiers(key, raw, options)
     if key == "postprocess.operations":
         return _parse_finishes(key, raw, options)
+    if key == "logistics.zones":
+        return _parse_zones(key, raw, options)
+    # A fifth table with no route refuses loudly rather than storing a shape
+    # nothing can read back.
     raise ValidationError("error.settings.unsupported_type", key=key)
 
 

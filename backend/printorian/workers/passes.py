@@ -27,6 +27,7 @@ from printorian.contexts.ordering import OrderingService
 from printorian.contexts.packaging import PackagingService
 from printorian.contexts.postproduction import PostProductionService
 from printorian.contexts.production import ProductionService
+from printorian.contexts.service import ServiceDesk
 from printorian.contexts.settings import SettingsService
 from printorian.core.secrets import SecretBox
 from printorian.workers import (
@@ -35,6 +36,7 @@ from printorian.workers import (
     packaging,
     postproduction,
     scheduler,
+    service,
     sla,
     telemetry,
 )
@@ -150,6 +152,26 @@ class PackagingPass:
         return outcome
 
 
+class ServicePass:
+    """One failure-record pass, with its own session and its own commit.
+
+    Composed here rather than inside `contexts.service`: the sweep reads the fleet's
+    registry rows and writes the service context's table, and a service reaching
+    across that boundary for itself is how the boundary stops meaning anything —
+    the same argument `IntakePass` makes about orders and jobs.
+    """
+
+    def __init__(self, runtime: WorkerRuntime) -> None:
+        self._runtime = runtime
+
+    async def sweep(self) -> service.SweepOutcome:
+        async with self._runtime.session() as session:
+            desk = ServiceDesk(session, self._runtime.clock)
+            outcome = await service.ServiceSweep(session, desk).sweep()
+        await self._runtime.record_beat("service", self._runtime.settings.service_sweep_seconds)
+        return outcome
+
+
 class MaintenancePass:
     """A maintenance pass that opens, uses and commits its own session."""
 
@@ -233,6 +255,7 @@ __all__ = [
     "PackagingPass",
     "PostProductionPass",
     "SchedulerPass",
+    "ServicePass",
     "SlaPass",
     "TelemetryPass",
     "all_printers",

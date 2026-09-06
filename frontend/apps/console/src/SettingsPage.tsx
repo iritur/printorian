@@ -16,6 +16,8 @@ import {
 
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { OperationsEditor } from './settings/OperationsEditor'
+import type { ZoneRow } from './settings/ZonesEditor'
+import { ZonesEditor } from './settings/ZonesEditor'
 
 /**
  * The farm's own settings (design/settings.html).
@@ -397,6 +399,26 @@ export function SettingsPage({ locale }: { locale: Locale }) {
         rowLabel={(code) => text(`settings.finish.${code}`) || code}
       />
     ),
+    'logistics.zones': (field) => {
+      // A zone tariff must never fall through to the ladder editor below: it
+      // would render as a discount ladder with `tsc` perfectly green, which is
+      // why `SettingsPage.test.tsx` asserts this entry rather than trusting the
+      // map to keep its key.
+      const rows = ((drafts[field.key] ?? field.value) as ZoneRow[]) ?? []
+      return (
+        <ZonesEditor
+          key={field.key}
+          locale={locale}
+          rows={rows}
+          dirty={drafts[field.key] !== undefined && !sameValue(drafts[field.key], field.value)}
+          onChange={(value) => setDraft(field.key, value)}
+          onRevert={() => revert(field.key)}
+          name={fieldName(field.key)}
+          hint={fieldHint(field.key)}
+          revertLabel={t('settings.revert')}
+        />
+      )
+    },
   }
 
   const renderField = (field: SettingView) => {
