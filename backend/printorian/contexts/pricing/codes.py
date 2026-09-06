@@ -23,7 +23,14 @@ LABOR_ENGINEERING = "labor.engineering"
 POSTPROCESS_PREFIX = "postprocess."
 
 LOGISTICS_PACKAGING = "logistics.packaging"
+#: The base charge for reaching the destination — the zone's, once a postcode
+#: names one, and the flat rate before that.
 LOGISTICS_SHIPPING = "logistics.shipping"
+#: The mass-dependent half of a zone tariff, emitted only where the zone actually
+#: charges by weight. A separate code rather than a fatter `logistics.shipping`
+#: because the customer is owed the two figures apart: one is "where", the other
+#: is "how heavy", and only the second moves when they order more.
+LOGISTICS_SHIPPING_WEIGHT = "logistics.shipping_weight"
 
 OVERHEAD = "overhead.general"
 RISK_FAILURE_BUFFER = "risk.failure_buffer"
@@ -47,6 +54,7 @@ ALL_FIXED_CODES: tuple[str, ...] = (
     LABOR_ENGINEERING,
     LOGISTICS_PACKAGING,
     LOGISTICS_SHIPPING,
+    LOGISTICS_SHIPPING_WEIGHT,
     OVERHEAD,
     RISK_FAILURE_BUFFER,
     ADJUSTMENT_RUSH,

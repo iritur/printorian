@@ -94,6 +94,30 @@ function aSections(): { id: string; fields: Field[] }[] {
       ],
     },
     {
+      id: 'logistics',
+      fields: [
+        {
+          key: 'logistics.zones',
+          section: 'logistics',
+          kind: 'table',
+          value: [
+            {
+              code: 'msk',
+              base: '400',
+              per_kg: '0',
+              transit_days: 1,
+              postcode_prefixes: ['101', '1'],
+              enabled: true,
+            },
+          ],
+          default: [],
+          is_overridden: true,
+          is_set: false,
+          options: [],
+        },
+      ],
+    },
+    {
       id: 'finance',
       fields: [
         {
@@ -176,6 +200,35 @@ describe('the sections', () => {
     expect(screen.getByDisplayValue('10')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Добавить ступень' }))
+
+    expect(screen.getByText('ИЗМЕНЕНИЙ :: 1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Вернуть' })).toBeInTheDocument()
+  })
+
+  it('draws the zone tariff as a zone table, not as a discount ladder', async () => {
+    // `logistics.zones` is the third `kind: 'table'` field, and the fallback
+    // branch below the special cases is the ladder editor. Without this
+    // assertion a zone table renders as a volume ladder — every column wrong,
+    // every rate unreachable — and `tsc` stays perfectly green.
+    render(<SettingsPage locale="ru" />)
+    await screen.findByText('Название фермы')
+    await userEvent.click(screen.getByRole('tab', { name: 'Логистика' }))
+
+    expect(await screen.findByText('Зоны и тарифы')).toBeInTheDocument()
+    expect(screen.getByText('ЗОНА ОПРЕДЕЛЯЕТСЯ ПО ИНДЕКСУ')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('101, 1')).toBeInTheDocument()
+    expect(screen.queryByText('Ступень')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Добавить ступень' })).not.toBeInTheDocument()
+  })
+
+  it('counts a zone rate edit into the save bar', async () => {
+    render(<SettingsPage locale="ru" />)
+    await screen.findByText('Название фермы')
+    await userEvent.click(screen.getByRole('tab', { name: 'Логистика' }))
+
+    const base = await screen.findByLabelText(/Базовая\s*1/)
+    await userEvent.clear(base)
+    await userEvent.type(base, '450')
 
     expect(screen.getByText('ИЗМЕНЕНИЙ :: 1')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Вернуть' })).toBeInTheDocument()

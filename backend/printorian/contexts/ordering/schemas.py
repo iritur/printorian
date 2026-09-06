@@ -144,14 +144,25 @@ class RepriceLine(BaseModel):
     """What a configuration costs under a given delivery, before anyone commits.
 
     Deliberately *not* `PlaceOrder`. That model requires an address for anything
-    that ships, which is right when an order is being placed and wrong here: the
-    shipping rate is flat, so pricing a courier delivery needs to know only that
-    it is one. Reusing `PlaceOrder` meant the checkout could not re-price until an
+    that ships, which is right when an order is being placed and wrong here:
+    knowing that a delivery is a courier delivery is enough to answer with the
+    flat rate. Reusing `PlaceOrder` meant the checkout could not re-price until an
     address was typed — the moment the customer most wants to see what the choice
     costs.
+
+    A postcode may now be given and the answer sharpens when it is: the zone
+    tariff takes over, and the figure returned is the figure `POST /orders` will
+    charge for that address. Omitting it is not an error and never becomes one —
+    the flat rate remains the honest pre-address answer, and demanding an address
+    to give any answer at all would undo the reason this model exists.
+
+    The city is deliberately not asked for. The zone is determined by the index
+    («ЗОНА ОПРЕДЕЛЯЕТСЯ ПО ИНДЕКСУ» in the design kit), and a field the pricing
+    path does not read would only invite the belief that it does.
     """
 
     method: DeliveryMethod = DeliveryMethod.PICKUP
+    postcode: str = Field(default="", max_length=20)
     lines: list[DraftLine] = Field(min_length=1, max_length=1)
 
 

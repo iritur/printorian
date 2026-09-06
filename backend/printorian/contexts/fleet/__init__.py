@@ -21,6 +21,7 @@ from printorian.contexts.fleet.measures import (
     PrinterBucket,
     PrinterMetrics,
     fleet_metrics,
+    observed_by_printer,
     printer_metrics,
     resolve_window,
 )
@@ -91,6 +92,7 @@ __all__ = [
     "fleet_metrics",
     "hourly_load",
     "needs_attention",
+    "observed_by_printer",
     "occupancy",
     "printer_metrics",
     "resolve_window",

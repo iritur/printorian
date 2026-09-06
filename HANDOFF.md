@@ -102,6 +102,70 @@ was still owed.
 > command, and guessing costs a paragraph of confident prose that has to be
 > retracted. Check that the database is up **before** reading a failure list.
 
+**The farm now keeps a record of what broke** ([#33](https://github.com/iritur/printorian/issues/33),
+first slice, branch `issue-33-failure-record`). `contexts/service` is a new context
+holding one table, `printer_failures`: a machine the driver reported in `ERROR` gets a
+failure opened by an eighth worker loop, and the observation that sees it working again
+closes it. `GET /service/reliability` divides those counts by
+`metric_rollups.observed_seconds` per machine and serves отказов/1000 ч, MTTR over
+repaired failures only, and the «Причины отказов» funnel with an `uncategorised` count
+beside it. Three routes behind `OPERATE_PRINTER` let a person open a failure, close one,
+and name a cause. **Backend only, and deliberately no screen** — §1 of
+`docs/DESIGN-KIT.md` still says `service` is not built, and §4 now lists all four routes
+as capability nothing consumes.
+
+> **Two judgements a reader will otherwise re-litigate, both written into the code
+> beside the line they govern.**
+>
+> **`OFFLINE` is not a failure.** `FleetService.mark_unreachable` writes `OFFLINE` for a
+> poll that did not answer — a dropped MQTT session, a switch rebooting, this very
+> worker restarting — so counting it would mint one failure per machine on every blip
+> and drive MTTR from repairs nobody made. The cost is real and is **not** hidden: a
+> machine unreachable half the month still contributes its `offline_seconds` to its own
+> denominator and therefore reads as a reliable machine that simply never broke.
+> Unreachability is a coverage problem and the honest answer to it is a coverage figure,
+> not a row in this table. `test_an_unreachable_printer_does_not_become_a_failure` and
+> its closing-side twin are the only two tests that notice if that changes.
+>
+> **A driver code is not a cause.** `drivers/bambu/report.py` yields
+> `bambu.print_error.{code}` and the farm holds no table turning one into «слом
+> филамента», so a sweep-opened failure carries the code verbatim and a `NULL` cause
+> until a person names one. The funnel counts named causes; `uncategorised` sits beside
+> it rather than inside `OTHER`, because "nobody looked" and "we looked, and it was
+> something else" are two facts.
+>
+> **What this slice deliberately did not touch.** `Printer.printed_hours` is untouched
+> and «Наработка» is **not** on the reliability response. The issue body claims наработка
+> is already computed from `metric_rollups`; it is not — `contexts/fleet/service.py`
+> accumulates `printed_hours` from the live row instead, so putting the two on one table
+> row would be two rulers under one heading. That is written down rather than papered
+> over, and it is the first thing to settle if the screen is built.
+> `pause_on_hms_error` still has no consumer (two catalogue hits, no reader); acting on
+> it is a machine-side action and is out of this slice.
+>
+> **Still owed on #33:** the ticket entity with steps, assignee, priority and elapsed;
+> spare-parts stock; the console screen. «Последствия» is not merely unbuilt but partly
+> **unmeasurable** — `production/models.py`'s `grams_required`, `estimated_grams` and
+> `prepared_grams` are estimates and nothing decrements a spool, so the kit's «потеряно
+> материала 148 г» has no source, while «Итого потеря 2 140 ₽» is money and belongs
+> behind `VIEW_FINANCIALS` rather than on a response a production role reads.
+>
+> **What was measured on this branch, and what was not.** Five path-based gates, each
+> run separately from the main tree's interpreter against this worktree, each
+> `exit=0`: `ruff check` (all checks passed), `ruff format --check` (**402** files),
+> `mypy --strict` (**232** source files), `check_context_isolation.py`,
+> `check_file_length.py`. **`lint-imports` was not run and no test was run at all.**
+> `printorian` is an editable install pointing at the main tree, so both would have
+> reported on source this branch does not contain; `alembic upgrade`/`check` were not
+> run either, because they reach the shared dev database. The head is a single
+> `0024_printer_failures` **read off the files** — one migration declares
+> `down_revision = "0023_prepared_plate_copies"` and nothing revises 0024 — rather than
+> from `alembic heads`. So nothing here claims a passing test: the thirty-five new
+> tests across five files — nine reliability, seven constraint-and-refusal, eight sweep,
+> one wiring, ten API — are written and unproven, and a serial verification pass in
+> the main tree is what will say whether they hold. The figures in the «As of» block at
+> the top of this file belong to another branch and were **not** re-measured here.
+
 **A wait-list row now ends when the wait does, and not one pass later.**
 `planning._refresh_wait_list` discarded rows only for the jobs in
 `result.wait_list` — the ones *still* waiting. A job wait-listed on one pass and
@@ -1275,6 +1339,54 @@ FAIL, so it can gate the Stage 2 Ansible role instead of deploying onto a host t
 missing a disk or a secret. This is the first executable half of the "host configuration
 is prose" row in INFRASTRUCTURE §1 (provisioning, not checking, is still Ansible).
 
+**Purchasing exists, on `issue-34-purchase-orders`, and nothing about it has been
+run against a database.** `contexts/procurement` — suppliers, purchase orders over
+six stages plus cancellation, five purchasable classes, and receiving a material
+line into a `material_lots` row carrying its lot number and the price paid — plus
+`api/routers/purchasing.py`, migration `0026_procurement`, 46 backend tests and the
+console screen. Two things it changed outside its own context are worth knowing
+before touching either:
+
+- **`material_specs.has_open_order` is gone.** `InventoryService.table`,
+  `get_by_code` and `recommend` take `on_order: frozenset[str]` as a **required**
+  keyword, supplied by `procurement.reads.ordered_codes`. Required, with no empty
+  default, because a default would turn "nobody asked procurement" into "nothing is
+  on order" — silent and flattering, which is the ADR-0007 collapse this repository
+  keeps repeating. There were eight call sites, not the three the plan predicted:
+  `get_by_code` is also the pricing path's way in.
+- **The migration is `0026_procurement`, and it was renumbered to get there.** It
+  was written as `0024_procurement` off `0023`, which was correct while this branch
+  stood alone. `#95` then landed `0024_printer_failures` and `#97` landed
+  `0025_storage_cells_and_movements`, so it now revises `0025` and is the single
+  head. The renumbering is the merge commit's, not the original author's.
+
+**Since verified, in the main tree.** Everything the branch could not run has now
+been run there: `ruff check`, `ruff format --check`, `mypy`,
+`check_context_isolation.py`, `check_file_length.py` and `lint-imports` (6 contracts
+kept), all `exit=0`; `0026_procurement` as the single head, applied, `alembic check`
+clean, downgraded and re-applied, all `exit=0`; the whole backend suite, 1 443
+collected, 8 skipped, `exit=0`, the 46 procurement tests among them; and the three
+frontend gates — `typecheck`, `lint`, `vitest` (290 tests, 7 of them purchasing) —
+also `exit=0`. Three things had to be fixed to get there, and all three were the
+harness rather than the feature:
+
+- `test_the_purchasing_routes_are_actually_mounted` walked `app.routes` one level
+  deep. Since FastAPI 0.141 `include_router` leaves one `_IncludedRouter` there
+  instead of splicing routes in, so it saw `/docs` and nothing else while the ten
+  purchasing operations were mounted and serving. It reads the generated schema now.
+- `test_a_refused_delivery_leaves_nothing_behind` expected `400`. `api/errors.py`
+  maps every `ValidationError` to `422` and the rest of the suite asserts `422`.
+- `PurchasingPage` called `refetch()` from an effect body, which
+  `react-hooks/set-state-in-effect` refuses. `PackagingPage` already awaited its
+  fetch inside a closure; this does the same.
+
+Worth knowing for the next verifier: the run began with a wall of drop-table errors
+that were **not** this branch. `printorian_test` still held `material_movements`,
+`storage_cells` and `storage_zones` from a previous branch's pass, and `drop_all`
+sees only the current branch's metadata, so it could not drop `material_lots` out
+from under a foreign key it does not know about. Dropping the database and letting
+`conftest` rebuild it is the fix; leaving it behind is the trap.
+
 ## 2. Deliberately unfinished
 
 Not oversights. Changing any of them is a decision, not a cleanup.
@@ -1290,6 +1402,9 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 | Storefront `body` lifts the page ground | Predates Harvester; `--hv-bg` vs `--hv-void` is six values out of 255 in dark, identical in light. A visual call, not a cleanup. See `apps/web/src/app.css`. |
 | TypeScript held at 5.x | `openapi-typescript` crashes on TS 7. Reason and three failed workarounds are in `.github/dependabot.yml`. |
 | Six queries still sort on a timestamp alone | Read in one pass and left that way on purpose. See below. |
+| `pricing.shipping_flat` survives the zone tariff | It is the **pre-address** figure, not a leftover. The checkout prices a courier the moment the customer picks one (`RepriceLine`), and a zone tariff cannot answer a question with no destination in it. It is also where a postcode no zone claims lands, because `zone_for` returns `None` rather than guessing. Owner decision, recorded at `pricing/lines.py::logistics_lines`. |
+| `logistics.free_shipping_threshold` still unread | Shipping sits *inside* the base that rush, the volume discount and margin are all taken over, so "free over 15 000 ₽" against an order total is circular — the total already contains the shipping and the margin on it. It needs a defined base (the pre-shipping subtotal), which is its own decision with its own test. |
+| `logistics.volumetric_divisor` still unread | Volumetric weight needs a bounding box, and the box that matters is the *parcel's* rather than the part's. It belongs with the `Shipment` record ([#36](https://github.com/iritur/printorian/issues/36)). |
 
 **The single-column time sort has been triaged, once, across the whole tree**
 ([#42](https://github.com/iritur/printorian/issues/42)). It started with
@@ -1327,6 +1442,59 @@ there is no `id` in a grouped result. `tests/unit/test_production_ordering.py` c
 the planner and the assignment record under `FixedClock`; six of its eight tests fail
 on every run against the code as it was, which is the part worth knowing.
 
+**The store's first slice is on `issue-35-store-cells-and-movement-ledger`, and
+no test in it has been run.** [#35](https://github.com/iritur/printorian/issues/35)
+as filed is the whole warehouse; this branch builds one half of it — a lot has a
+cell address, and every move of a lot appends a row nothing can overwrite. Three
+tables (`storage_zones`, `storage_cells`, `material_movements`), one column
+(`material_lots.cell_id`), migration 0024, `/store/*`, and the console's
+`StorePage`/`CellDetail`. `mount_lot` and `unmount_lot` now write a movement
+before they overwrite the five location columns, which is the whole leverage
+argument of the issue: those columns are the only place the previous position
+exists. Deliberately out and still owed by #35: turnover, dead stock in money,
+stocktake, drying state, and the three non-filament purchasable classes.
+`docs/DESIGN-KIT.md` §2.4 was rewritten to say exactly that rather than deleted.
+
+**What was verified there, and what was not.** The branch was built in an
+isolated worktree with no `.venv` and no `node_modules`, alongside eight other
+agents sharing one `printorian_test` database and one editable install pointing
+at the main tree. So `pytest`, `lint-imports`, every `alembic` command and every
+`npm` script were **not run** — a pytest run from that worktree imports the main
+tree's source and reports about code it did not build. What did run, each
+separately and each `exit=0`: `ruff check`, `ruff format --check`, `mypy
+--strict`, `check_context_isolation.py`, `check_file_length.py`. The four
+doc-drift gates and the metadata-only halves of `test_schema_contracts.py` and
+`test_referential_integrity.py` were additionally run as plain functions with the
+worktree ahead of the editable install on `sys.path`, which opens no database —
+and `test_every_foreign_key_is_indexed` caught two missing indexes that way. The
+sixteen new tests are written and **unproven**; the serial verification pass is
+where they first run.
+
+**They have since been run, in the main tree, and they pass.** All six backend
+gates `exit=0`, `lint-imports` included — 6 contracts kept, which is the one gate
+the worktree could not answer. 0024 goes up, `alembic check` finds no new
+operations, `downgrade -1` comes back clean and up again. The whole backend suite
+is 1 406 passed, 8 skipped, `exit=0`. Two things had to be fixed, both frontend
+and both the cost of never having compiled the files: `StorePage.test.tsx` read
+`map.zones[0].cells[0]`, which `noUncheckedIndexedAccess` will not let a test
+assume is populated, and both store screens called `load()` straight from a
+`useEffect` body, which `react-hooks/set-state-in-effect` rejects — the async
+wrapper `MaterialsPage` already uses is the fix. `npm run typecheck`, `lint` and
+`test` (290 tests, 30 files) are `exit=0` after those two commits. Nothing in the
+backend needed changing, and no test was weakened to make anything green.
+
+Two failures in that pass were **not this branch's**: a `procurement/`
+directory holding nothing but stale `__pycache__`, and four procurement tables
+(`suppliers`, `purchase_orders`, `purchase_order_lines`, `purchase_receipts`)
+still standing in `printorian_test` — both left by an earlier branch's run.
+`test_the_contexts_said_to_own_no_tables_own_none` counts context *directories*,
+so the empty one read as a context that lost its tables; and `drop_all` cannot
+drop `material_lots` while a foreign key from a table outside `Base.metadata`
+points at it. Both were cleaned off the machine, not worked around. It is worth
+knowing that `clean_database` has no defence against a leftover table from
+another branch — the next agent to hit it will see the same misleading wall of
+setup errors.
+
 ## 3. What is actually next
 
 **Open work lives in [GitHub issues](https://github.com/iritur/printorian/issues),** grouped by [milestone](https://github.com/iritur/printorian/issues?q=is%3Aopen) and described in [docs/WORKFLOW.md](docs/WORKFLOW.md). Take one from a milestone rather than from this section. Where an issue and a document disagree, the issue is right.
@@ -1357,6 +1525,17 @@ What exists now so that proving it is one command rather than a project:
 
 ## 5. Needs a person, not an agent
 
+- **`farm_stats.on_time_percent` measures dispatch and calls it arrival.**
+  `backend/printorian/api/farm_stats.py:53` documents it as "Share of delivered
+  orders that arrived by the date promised"; the query at :117-118 compares
+  `Order.shipped_at <= Order.promised_at`, which is when the parcel *left*.
+  `grep -rn 'delivered_at' backend/printorian` returns nothing, so arrival is
+  recorded nowhere at all. That is an ADR-0007 overstatement standing in the tree
+  today, independent of the zone work, and it has two possible fixes — correct the
+  docstring now, or add a `delivered_at` column with the shipment record later.
+  Which one is right is a product decision, and it wants its own `type:bug` issue
+  rather than being folded into somebody else's diff. Editing the tracker is not
+  an agent's to do.
 - **A cancelled job keeps its wait-list row, and that is a second defect on a
   different path — it needs an issue.** Measured, not reasoned about: a probe run
   against the fixed tree wait-listed a job, cancelled it, and

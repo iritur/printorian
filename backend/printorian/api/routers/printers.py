@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
 
-from printorian.api.deps import DbSession, Fleet, requires
+from printorian.api.deps import AppClock, CurrentActor, DbSession, Fleet, requires
 from printorian.contexts.fleet import (
     CreatePrinter,
     CreateServiceOperation,
@@ -79,7 +79,12 @@ async def set_access_code(printer_id: EntityId, data: SetAccessCode, fleet: Flee
     dependencies=[Depends(requires(Permission.MANAGE_INVENTORY))],
 )
 async def mount_lot(
-    printer_id: EntityId, data: MountLot, fleet: Fleet, db: DbSession
+    printer_id: EntityId,
+    data: MountLot,
+    fleet: Fleet,
+    db: DbSession,
+    actor: CurrentActor,
+    clock: AppClock,
 ) -> PrinterView:
     """Record which physical material lot sits in which AMS slot.
 
@@ -99,6 +104,11 @@ async def mount_lot(
         printer_id=printer_id,
         ams_unit=data.unit,
         ams_slot=data.index,
+        # The clock and the actor are passed in rather than looked up, because the
+        # movement this appends is a record somebody has to be able to read back:
+        # a row saying only "it moved" answers half the question.
+        at=clock.now(),
+        actor_id=actor.user_id,
     )
     return view
 
@@ -108,7 +118,14 @@ async def mount_lot(
     dependencies=[Depends(requires(Permission.MANAGE_INVENTORY))],
 )
 async def unmount_lot(
-    printer_id: EntityId, unit: int, index: int, fleet: Fleet, db: DbSession, shelf: str = ""
+    printer_id: EntityId,
+    unit: int,
+    index: int,
+    fleet: Fleet,
+    db: DbSession,
+    actor: CurrentActor,
+    clock: AppClock,
+    shelf: str = "",
 ) -> PrinterView:
     """Take the spool out of a slot and put it back into storage.
 
@@ -122,7 +139,9 @@ async def unmount_lot(
     """
     lot_id = await fleet.clear_slot(printer_id, unit=unit, index=index)
     if lot_id is not None:
-        await InventoryService(db).unmount_lot(lot_id, shelf=shelf or None)
+        await InventoryService(db).unmount_lot(
+            lot_id, shelf=shelf or None, at=clock.now(), actor_id=actor.user_id
+        )
     return await fleet.get(printer_id)
 
 
