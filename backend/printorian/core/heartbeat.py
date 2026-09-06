@@ -44,6 +44,7 @@ LOOPS: Final = (
     "sla",
     "postproduction",
     "packaging",
+    "service",
     "maintenance",
 )
 

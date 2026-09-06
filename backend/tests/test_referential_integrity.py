@@ -10,13 +10,13 @@ checking it. A rule flipped to ``CASCADE`` in a model is one word, would have pa
 all six gates and the whole suite, and the first evidence of it would have been a
 retention sweep deleting an order's lines.
 
-The inventory below is all forty-eight keys rather than the interesting ones,
-because a spot check leaves the other forty unwatched and because the forty-ninth
-key should not be addable without somebody deciding what it does on delete. Rules
-are grouped by *rule* rather than listed per table: the reason for a rule is shared,
-and repeating it forty-eight times would be forty-eight places to keep in step.
-Where an individual key is load-bearing, or reads wrong beside its neighbour, it is
-called out under its group.
+The inventory below is all fifty keys rather than the interesting ones, because a
+spot check leaves the other forty-two unwatched and because the fifty-first key
+should not be addable without somebody deciding what it does on delete. Rules are
+grouped by *rule* rather than listed per table: the reason for a rule is shared,
+and repeating it fifty times would be fifty places to keep in step. Where an
+individual key is load-bearing, or reads wrong beside its neighbour, it is called
+out under its group.
 
 Two comparisons follow from it, and they are not redundant. The **metadata** must
 agree with the inventory, which is a millisecond and catches the edit. The
@@ -116,6 +116,11 @@ SET_NULL: frozenset[str] = frozenset(
         "prepared_plates.sliced_by",
         "print_jobs.prepared_plate_id",
         "print_jobs.printer_id",
+        # The sweep opens most of these, and NULL there already means "no person
+        # did". A member of staff leaving must not take the record of what broke
+        # while they were here with them — `contexts/service/models.py` says so
+        # beside the column.
+        "printer_failures.recorded_by",
         "settings.updated_by",
         "settings_audit.changed_by",
     }
@@ -141,6 +146,14 @@ RESTRICT: frozenset[str] = frozenset(
         "payments.order_id",
         "postproduction_tasks.operation_id",
         "print_jobs.model_asset_id",
+        # The one key here that guards a *history* rather than work in flight.
+        # Nothing in this tree deletes a printer — the fleet retires them with
+        # `is_active` — so RESTRICT costs nothing today and refuses the single
+        # deletion that could not be undone: the one that erases the evidence a
+        # machine was unreliable. `metric_rollups.printer_id` carries no key at
+        # all for the opposite reason (ADR-0018 drops partitions under it), so
+        # the two are not the inconsistency they look like side by side.
+        "printer_failures.printer_id",
     }
 )
 
