@@ -52,6 +52,29 @@ function jsonOk(body: unknown): Response {
  * Zone Z holds nothing at all — the two ADR-0007 cases the screen must not round
  * into a percentage.
  */
+// Named rather than written inline inside `map`, because `detail` below needs the
+// very same cell and `map.zones[0].cells[0]` is two indexed reads that
+// `noUncheckedIndexedAccess` will not let a test assume are populated.
+const cellA1 = {
+  id: 'c-1',
+  address: 'A1-1',
+  zone_code: 'A',
+  capacity_lots: null,
+  lot_count: 1,
+  fill_percent: null,
+  is_active: true,
+}
+
+const cellA2 = {
+  id: 'c-2',
+  address: 'A1-2',
+  zone_code: 'A',
+  capacity_lots: 4,
+  lot_count: 2,
+  fill_percent: '50.0',
+  is_active: true,
+}
+
 const map = {
   zones: [
     {
@@ -63,26 +86,7 @@ const map = {
       cell_count: 2,
       occupied_cells: 1,
       fill_percent: '50.0',
-      cells: [
-        {
-          id: 'c-1',
-          address: 'A1-1',
-          zone_code: 'A',
-          capacity_lots: null,
-          lot_count: 1,
-          fill_percent: null,
-          is_active: true,
-        },
-        {
-          id: 'c-2',
-          address: 'A1-2',
-          zone_code: 'A',
-          capacity_lots: 4,
-          lot_count: 2,
-          fill_percent: '50.0',
-          is_active: true,
-        },
-      ],
+      cells: [cellA1, cellA2],
     },
     {
       id: 'z-z',
@@ -119,7 +123,7 @@ const movements = [
 ]
 
 const detail = {
-  cell: map.zones[0].cells[0],
+  cell: cellA1,
   lots: [
     {
       id: 'lot-1',
