@@ -28,6 +28,7 @@ from printorian.contexts.fleet import history as fleet_history
 from printorian.contexts.fleet import models as fleet_models
 from printorian.contexts.identity import models as identity_models
 from printorian.contexts.inventory import models as inventory_models
+from printorian.contexts.inventory import movements as inventory_movements
 from printorian.contexts.journal import models as journal_models
 from printorian.contexts.ordering import credit as ordering_credit
 from printorian.contexts.ordering import models as ordering_models
@@ -35,6 +36,7 @@ from printorian.contexts.packaging import models as packaging_models
 from printorian.contexts.payments import models as payment_models
 from printorian.contexts.postproduction import models as postproduction_models
 from printorian.contexts.production import models as production_models
+from printorian.contexts.service import models as service_models
 from printorian.contexts.settings import models as settings_models
 from printorian.core.db import Base
 
@@ -49,6 +51,7 @@ __all__ = [
     "fleet_models",
     "identity_models",
     "inventory_models",
+    "inventory_movements",
     "journal_models",
     "metadata",
     "ordering_credit",
@@ -57,5 +60,6 @@ __all__ = [
     "payment_models",
     "postproduction_models",
     "production_models",
+    "service_models",
     "settings_models",
 ]

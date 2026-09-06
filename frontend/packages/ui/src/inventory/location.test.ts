@@ -29,6 +29,28 @@ describe('formatLocation', () => {
     expect(formatLocation({ location_kind: 'stock', shelf: null }, 'en')).toBe('In stock')
   })
 
+  it('names the cell when the lot is in one', () => {
+    expect(formatLocation({ location_kind: 'stock', cell: 'A1-1' }, 'en')).toBe('Cell A1-1')
+    expect(formatLocation({ location_kind: 'stock', cell: 'A1-1' }, 'ru')).toBe('Ячейка A1-1')
+  })
+
+  it('prefers the cell over the legacy free-text shelf', () => {
+    // Both can be set: `shelf` is what the farm typed before cells existed and is
+    // deliberately never backfilled into an address, so a lot that has since been
+    // placed carries two answers. The precedence rule is defined once on the
+    // backend (`policies.Location`) and applied here — this is the assertion that
+    // pins the client to it.
+    expect(
+      formatLocation({ location_kind: 'stock', cell: 'A1-1', shelf: 'стеллаж 2' }, 'en'),
+    ).toBe('Cell A1-1')
+  })
+
+  it('still renders the shelf for a lot that was never placed in a cell', () => {
+    expect(formatLocation({ location_kind: 'stock', cell: null, shelf: 'B2' }, 'en')).toBe(
+      'Shelf B2',
+    )
+  })
+
   it('names the printer and the slot', () => {
     expect(
       formatLocation(
