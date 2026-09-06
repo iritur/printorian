@@ -12,10 +12,18 @@ status documents that described built features as missing.
 [#91](https://github.com/iritur/printorian/pull/91), alongside the six backend
 gates each run separately and each `exit=0`. That is pytest's own trailing
 summary line, read out of the redirect rather than counted off the progress
-characters — a previous session's run lost that line and said so, and `-p
-no:cacheprovider --tb=short` is what brought it back. Eighteen of those tests are
-the fourth review's, and ten mutations were applied, run and reverted against
-them.
+characters. Eighteen of those tests are the fourth review's, and ten mutations
+were applied, run and reverted against them.
+
+**A run loses that summary line when the command adds its own `-q`,** and it is
+worth knowing before it costs another twenty minutes. `addopts` in
+`backend/pyproject.toml` already carries `-q`; a second one on the command line
+makes it `-qq`, and at that level pytest prints the progress marks and then
+nothing — `[100%]`, `exit=0`, and no counts anywhere. The line above previously
+credited `-p no:cacheprovider --tb=short` with bringing the line back. Neither
+flag has anything to do with it: what brought it back was dropping `-q` from the
+invocation, because the config supplies it. Run the suite as
+`python -m pytest -p no:cacheprovider`, with no `-q` of your own.
 
 **The figure was re-measured across the merge rather than carried over it, and
 the two extra tests are what makes that checkable.** 1 381 was this branch over
