@@ -43,8 +43,8 @@ constraint is an index whose leading column is `lot_id`, so the read path and th
 `test_schema_contracts.test_every_foreign_key_is_indexed` is the gate that said so,
 and the cost it is about is a sequential scan on every retirement.
 
-Revision ID: 0024_storage_cells_and_movements
-Revises: 0023_prepared_plate_copies
+Revision ID: 0025_storage_cells_and_movements
+Revises: 0024_printer_failures
 Created: 2026-09-05
 """
 
@@ -56,8 +56,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0024_storage_cells_and_movements"
-down_revision: str | None = "0023_prepared_plate_copies"
+revision: str = "0025_storage_cells_and_movements"
+down_revision: str | None = "0024_printer_failures"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

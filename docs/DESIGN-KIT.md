@@ -129,8 +129,23 @@ Five ticket kinds: **установка · ремонт · ТО · загруз�
 - Crew badges and marks; MTTR, fleet readiness
 
 What backend exists: `ServiceOperation` with kind/interval/hours, наработка, ближайшее ТО.
+Since [#33](https://github.com/iritur/printorian/issues/33)'s first slice, also the
+**failure record** — `printer_failures`, opened automatically from a machine the driver
+reported in `ERROR`, closed by the observation that saw it working again, and read back
+through `GET /service/reliability` as отказов/1000 ч, MTTR over repaired failures only,
+and the «Причины отказов» funnel with an `uncategorised` count beside it. **No screen
+consumes any of it** (§4), which is why §1 still calls `service` not built.
 
-**What the backend still owes:** [#33](https://github.com/iritur/printorian/issues/33) — tickets as an entity with steps, assignee, elapsed, consequence; failure causes, MTTR, отказов/год, надёжность; spare parts stock.
+Two judgements in that slice are worth knowing before arguing with the numbers.
+`OFFLINE` is deliberately **not** a failure: `mark_unreachable` writes it for a poll that
+did not answer, so counting it would mint one failure per machine on every network blip
+and drive MTTR from repairs nobody made. The cost is real and unfixed — a machine that
+is unreachable half the month still contributes its `offline_seconds` to its own
+denominator and so reads as reliable. And a driver's `bambu.print_error.{code}` is
+recorded verbatim but is **not** a cause; the farm has no table mapping one to «слом
+филамента», so the funnel counts only causes a person named.
+
+**What the backend still owes:** [#33](https://github.com/iritur/printorian/issues/33) — tickets as an entity with steps, assignee, elapsed, consequence; spare parts stock; наработка on the same table as надёжность, which today would be two rulers (`Printer.printed_hours` accumulates from the live row, while надёжность divides by `metric_rollups`). «Последствия» is not merely unbuilt but partly **unmeasurable**: nothing decrements a spool, so «потеряно материала 148 г» has no source, and «Итого потеря 2 140 ₽» is money and belongs behind `VIEW_FINANCIALS` rather than on a production response.
 
 ### 2.3 `purchasing.html`
 
@@ -242,11 +257,18 @@ answered here rather than opened again out of completeness.
 
 ## 4. Backend capability nothing consumes
 
-**This list has moved to the issue tracker, and it is now empty.** All fourteen endpoints this section once carried have consumers. The last of them was `GET /materials/{code}`, and [#38](https://github.com/iritur/printorian/issues/38) put two ways of closing it: build the materials detail popup the route was written for, or delete the route. **The popup was built.** `frontend/apps/console/src/MaterialDetail.tsx` reads the spec by code when a row is opened, which is where the density, the tensile figure, the heat-deflection temperature and the two suitability flags come from — none of those is a column of the materials table, so before this the window had nothing to show them from and the route had no caller.
+**This list was empty and is not any more.** All fourteen endpoints it originally carried gained consumers; the last of them was `GET /materials/{code}`, and [#38](https://github.com/iritur/printorian/issues/38) put two ways of closing it — build the materials detail popup the route was written for, or delete the route. **The popup was built.** `frontend/apps/console/src/MaterialDetail.tsx` reads the spec by code when a row is opened, which is where the density, the tensile figure, the heat-deflection temperature and the two suitability flags come from.
+
+**The four that remain are the failure record**, landed backend-first and deliberately without a screen (§2.2). `service` is still **not built** in §1 and adding a partial route key to the console's `Screen` union would make `test_docs_screen_inventory.py` call it built, which would be the more expensive lie: a screen listed as done that shows one table out of seven panels.
+
+- [#33](https://github.com/iritur/printorian/issues/33) — **`GET /service/reliability`**, «Надёжность»: failures over `metric_rollups.observed_seconds` per machine, the «Причины отказов» funnel, and MTTR from closed failures only. Seconds and counts; the kit's «ПОТЕРЯ 3 820 ₽» is not here and is not owed by this route
+- [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/failures`**, a person recording that a machine stopped working; the sweep in `workers/service.py` writes the «СООБЩИЛ ДРАЙВЕР» half and no client can claim that badge
+- [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/failures/{failure_id}/restore`**, the observation in which the machine was working again, which is the only measurement of how long it was down
+- [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/failures/{failure_id}/cause`**, naming the cause of a failure the driver opened with none — the farm holds no table turning `bambu.print_error.{code}` into «слом филамента» (ADR-0007), so this route is the only way a bar of the funnel is ever written
 
 `TelemetrySample` was the headline entry here and no longer is: `metric_rollups` summarises it and `/fleet/metrics` serves it. `EstimateVariance` left the same way — `GET /jobs/variances` serves it and the order desk's «Пересмотр цены» panel reads it. So did `RateSnapshotRecord`: `GET /orders/{order_id}/rate-snapshot` serves it and «Тарифы заказа» reads it.
 
-**An empty section is not a finished one, and this one is measured from both ends.** `backend/tests/unit/test_docs_endpoint_consumers.py` fails if an entry listed here has quietly gained a consumer — the drift that took thirteen of them at once while the section sat still. It also fails in the other direction, which is the one that matters now that nothing is listed: an endpoint the API serves, with no path literal anywhere under `frontend/apps/*/src` or `frontend/packages/*/src`, has to be named here or exempted in `NOT_A_SCREEN_CONSUMER` with the reason. That list holds twenty-three routes — three no screen can ever have, and twenty that are real gaps, each naming the screen or the action that is missing. It is longer than this section ever was, so reading "nothing is listed here" as "the backend owes the console nothing" would be precisely the flattering mistake §4 exists to catch.
+**This section is measured from both ends.** `backend/tests/unit/test_docs_endpoint_consumers.py` fails if an entry listed here has quietly gained a consumer — the drift that took thirteen of them at once while the section sat still. It also fails in the other direction: an endpoint the API serves, with no path literal anywhere under `frontend/apps/*/src` or `frontend/packages/*/src`, has to be named here or exempted in `NOT_A_SCREEN_CONSUMER` with the reason. That list holds twenty-two routes — three no screen can ever have, and nineteen that are real gaps, each naming the screen or the action that is missing. (Twenty-three until `GET /health/workers` gained the settings screen's «Диагностика» section and left; the arithmetic here is ungated prose and had gone stale by one, which is the drift this section is otherwise about.) It is longer than this section has ever been, so reading a short list here as "the backend owes the console nothing" would be precisely the flattering mistake §4 exists to catch.
 
 ## 5. Order to build the rest in
 
