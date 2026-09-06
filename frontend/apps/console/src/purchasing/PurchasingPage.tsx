@@ -79,7 +79,15 @@ export function PurchasingPage({ locale }: { locale: Locale }) {
 
   useEffect(() => {
     if (!ready || !entitled) return
-    void refetch()
+    // Awaited inside the effect rather than called from its body, which is what
+    // `PackagingPage` does and for the same reason: `react-hooks/set-state-in-effect`
+    // reads a plain `refetch()` here as a synchronous setState and a cascading
+    // render. Two separate closures rather than one, so the supplier list is not
+    // queued behind the board — the «Новый заказ» form needs it and the board is
+    // the slower of the two.
+    void (async () => {
+      await refetch()
+    })()
     void (async () => {
       try {
         setSuppliers(await api.get<SupplierView[]>('/purchasing/suppliers'))
