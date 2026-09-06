@@ -35,6 +35,7 @@ from printorian.contexts.packaging import models as packaging_models
 from printorian.contexts.payments import models as payment_models
 from printorian.contexts.postproduction import models as postproduction_models
 from printorian.contexts.production import models as production_models
+from printorian.contexts.service import models as service_models
 from printorian.contexts.settings import models as settings_models
 from printorian.core.db import Base
 
@@ -57,5 +58,6 @@ __all__ = [
     "payment_models",
     "postproduction_models",
     "production_models",
+    "service_models",
     "settings_models",
 ]

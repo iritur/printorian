@@ -134,6 +134,13 @@ class Settings(BaseSettings):
     #: it is the interval the promise in `sla` is measured against — every second
     #: an order sits paid and jobless is spent from a lead time already sold.
     intake_sweep_seconds: int = Field(default=30, ge=1)
+    #: How often a machine the driver reported in `ERROR` becomes a failure record,
+    #: and a machine seen working again closes one. Sixty, and unusually relaxed
+    #: about it: `workers/service.py` dates both ends of the record from the
+    #: machine's own `last_seen_at`, so this interval decides when a failure
+    #: *appears* on a screen and never how long the farm measured it as down.
+    #: Lengthening it costs latency; it cannot move the reliability figure.
+    service_sweep_seconds: int = Field(default=60, ge=1)
 
     # -- pricing guardrails ----------------------------------------------
     #: Fraction by which a sliced plate may exceed the quoted cost before the job
