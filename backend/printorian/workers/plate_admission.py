@@ -51,11 +51,19 @@ closed when the plate does not record the answer:
   must rebuild to its own content hash (ADR-0020) and must have been read by
   today's `ENGINE_VERSION`.
 
-**Deliberately not on the list.** Finishes. Every entry in `FINISH_CATALOGUE` is
+**Deliberately not on the list.** Finishes. Every operation in the catalogue is
 post-production labour, a flat fee and extra days on the promise; none of them
 changes what the slicer produced, so they are identical on both sides of the
 reprice and cancel. Recorded here as a decision rather than left as an omission,
 because the next reader would otherwise have to work it out again.
+
+That the rows are now a *setting* (`postprocess.operations`, #29) rather than the
+`FINISH_CATALOGUE` constant does not reopen it, and the reason is worth having in
+one line: the cancellation is between the two sides of one reprice, both priced
+from the same resolved catalogue, so it holds whatever the rows say. What it does
+not survive is the two sides being resolved from *different* catalogues, which is
+why `workers/passes.py` hands one to `CachedPlates` instead of letting it reach
+for the constant.
 
 ---
 

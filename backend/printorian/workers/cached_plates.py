@@ -49,6 +49,7 @@ and what each open dimension would cost to close.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal, DivisionByZero, InvalidOperation
 
@@ -61,7 +62,6 @@ from printorian.contexts.ordering import DeliveryMethod, rate_snapshot_for
 from printorian.contexts.ordering.models import Order, OrderLine
 from printorian.contexts.pricing import (
     ENGINE_VERSION,
-    FINISH_CATALOGUE,
     FinishOption,
     MaterialPrice,
     PriceSpec,
@@ -93,9 +93,16 @@ class PricedPlate:
 class CachedPlates:
     """Answers whether a line is already sliced, and what that truth costs."""
 
-    def __init__(self, db: AsyncSession, plates: PlateLibrary) -> None:
+    def __init__(
+        self, db: AsyncSession, plates: PlateLibrary, *, finishes: Mapping[str, FinishOption]
+    ) -> None:
         self._db = db
         self._plates = plates
+        #: The farm's resolved postprocessing catalogue, handed in by `passes.py`.
+        #: Not a default: this sweep reprices a *paid* line, and a catalogue that
+        #: quietly fell back to the code constant would compute the variance
+        #: ADR-0013 bands against numbers the farm stopped charging.
+        self._finishes = finishes
 
     async def for_line(
         self, order: Order, line: OrderLine, *, model_hash: str
@@ -267,10 +274,10 @@ class CachedPlates:
         """The pricing question this line was quoted from, rebuilt.
 
         Assembled the same way `api/routers/_line_pricing.spec_for` assembles it
-        for the checkout, from the same catalogue of finishes — which is why
-        `FINISH_CATALOGUE` moved into `pricing` rather than being copied here. A
-        second, subtly different spec assembly is how a checkout quotes one number
-        and an order charges another.
+        for the checkout, from the same catalogue of finishes — resolved from the
+        settings table by `workers/passes.py` and handed to `__init__`, because a
+        worker may not import the API (`.importlinter`) and a second copy of the
+        rows is how a checkout quotes one number and an order charges another.
 
         The estimate is the *mesh* one the line recorded, not the plate's: this is
         the "before" of the comparison, and `pricing.reprice` supplies the "after".
@@ -315,8 +322,12 @@ class CachedPlates:
                 quantity=line.quantity,
                 colors=tuple(line.colors) if line.colors else ("default",),
                 scale=line.scale,
+                # Tolerant of a code the catalogue no longer prices, exactly as
+                # `spec_for` is and for the same reason: this is the "before" of a
+                # comparison for an order already paid, and refusing it would mean
+                # an owner tidying the catalogue stopped the sweep from answering.
                 finishes=tuple(
-                    FINISH_CATALOGUE.get(code, FinishOption(code=code)) for code in line.finishes
+                    self._finishes.get(code, FinishOption(code=code)) for code in line.finishes
                 ),
                 rush=line.rush,
                 # Collection is the absence of a shipping line rather than a zero

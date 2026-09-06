@@ -87,12 +87,17 @@ async def place_order(
     # Collection is not a discount, it is the absence of a service: the engine
     # omits the shipping line rather than zeroing it. Before this the spec used
     # the default, so every order — collected or not — was priced with delivery.
+    #
+    # The finish catalogue is resolved here too, beside the rates, because the
+    # order must charge what the configurator quoted — both edges read the same
+    # table (#29).
     zone = zone_for(rates.zones, data.delivery.postcode)
     spec = await spec_for(
         db,
         data.lines[0],
         include_shipping=data.delivery.method.is_shipped,
         destination_zone=zone.code if zone is not None else "",
+        finishes=await settings.resolve_finishes(),
     )
     tiers = await settings.resolve_tiers()
     # The loyalty discount, resolved from what this customer has already spent.
@@ -135,6 +140,7 @@ async def reprice(
         data.lines[0],
         include_shipping=data.method.is_shipped,
         destination_zone=zone.code if zone is not None else "",
+        finishes=await settings.resolve_finishes(),
     )
     tiers = await settings.resolve_tiers()
     return {"breakdown": _render(price(spec, rates, await tier_for(db, actor, tiers)))}

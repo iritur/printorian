@@ -12,12 +12,13 @@ quoting one number and an order charging another.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.inventory import InventoryService
 from printorian.contexts.ordering import DraftLine
 from printorian.contexts.pricing import (
-    FINISH_CATALOGUE,
     FinishOption,
     MaterialPrice,
     PriceSpec,
@@ -32,6 +33,7 @@ async def spec_for(
     line: DraftLine,
     *,
     include_shipping: bool,
+    finishes: Mapping[str, FinishOption],
     destination_zone: str = "",
 ) -> PriceSpec:
     """Build the pricing input for one configured line.
@@ -39,6 +41,13 @@ async def spec_for(
     ``include_shipping`` is the caller's, because only the caller knows the
     delivery choice — and collection is the *absence* of the service rather than a
     discount on it, so the engine omits the line entirely rather than zeroing it.
+
+    ``finishes`` is the caller's for the same reason ``rates`` and ``tiers`` are:
+    resolved at the read edge and handed in, so nothing below this line reaches for
+    a settings table (ADR-0002). It used to be the module constant, which meant the
+    configurator could quote a farm's own norm-hours while the order charged the
+    code default — the "checkout quotes one number and the order charges another"
+    failure this module's docstring is written about.
 
     ``destination_zone`` is the caller's for the same reason, and it is a *code*
     rather than a postcode: resolving the postcode is a read-edge job so the
@@ -64,9 +73,13 @@ async def spec_for(
         quantity=line.quantity,
         colors=tuple(line.colors) if line.colors else ("default",),
         scale=line.scale,
-        finishes=tuple(
-            FINISH_CATALOGUE.get(code, FinishOption(code=code)) for code in line.finishes
-        ),
+        # A code the catalogue no longer prices costs nothing rather than 422-ing,
+        # and that asymmetry with the quoting edges is deliberate: this builds the
+        # spec for an order that *already exists*, and refusing it would mean an
+        # owner tidying the catalogue could stop a placed order from repricing.
+        # The quoting edges refuse the same code with `error.pricing.unknown_finish`,
+        # because there the customer is still choosing.
+        finishes=tuple(finishes.get(code, FinishOption(code=code)) for code in line.finishes),
         rush=line.rush,
         include_shipping=include_shipping,
         destination_zone=destination_zone,

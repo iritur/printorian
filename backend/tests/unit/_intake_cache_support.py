@@ -36,6 +36,7 @@ from printorian.contexts.inventory.models import MaterialSpec
 from printorian.contexts.ordering import OrderingService, OrderStatus
 from printorian.contexts.ordering.models import Order, OrderLine, RateSnapshotRecord
 from printorian.contexts.pricing import (
+    FINISH_CATALOGUE,
     MaterialPrice,
     PriceSpec,
     PrintEstimate,
@@ -146,7 +147,12 @@ def a_sweep(
         db,
         ProductionService(db, clock, bus),
         OrderingService(db, clock, bus),
-        CachedPlates(db, library),
+        # The code default rather than a resolved settings row, because these are
+        # behaviour tests over a farm that has not edited «Постобработка» — and
+        # `resolve_finishes()` on an empty table returns exactly this. That
+        # `passes.py` resolves it from the store rather than reaching for the
+        # constant is a *wiring* fact, and `test_intake_pass_wiring.py` owns it.
+        CachedPlates(db, library, finishes=FINISH_CATALOGUE),
         tolerance=TOLERANCE,
     )
 
