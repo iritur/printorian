@@ -10,13 +10,13 @@ checking it. A rule flipped to ``CASCADE`` in a model is one word, would have pa
 all six gates and the whole suite, and the first evidence of it would have been a
 retention sweep deleting an order's lines.
 
-The inventory below is all fifty keys rather than the interesting ones, because a
-spot check leaves the other forty-two unwatched and because the fifty-first key
-should not be addable without somebody deciding what it does on delete. Rules are
-grouped by *rule* rather than listed per table: the reason for a rule is shared,
-and repeating it fifty times would be fifty places to keep in step. Where an
-individual key is load-bearing, or reads wrong beside its neighbour, it is called
-out under its group.
+The inventory below is all fifty-four keys rather than the interesting ones,
+because a spot check leaves the other forty-six unwatched and because the
+fifty-fifth key should not be addable without somebody deciding what it does on
+delete. Rules are grouped by *rule* rather than listed per table: the reason for a
+rule is shared, and repeating it fifty-four times would be fifty-four places to
+keep in step. Where an individual key is load-bearing, or reads wrong beside its
+neighbour, it is called out under its group.
 
 Two comparisons follow from it, and they are not redundant. The **metadata** must
 agree with the inventory, which is a millisecond and catches the edit. The
@@ -85,6 +85,7 @@ CASCADE: frozenset[str] = frozenset(
         "service_operations.printer_id",
         "sessions.user_id",
         "sla_credit_entries.order_id",
+        "storage_cells.zone_id",
         "wait_list_entries.job_id",
         "wait_list_entries.order_id",
     }
@@ -104,7 +105,12 @@ CASCADE: frozenset[str] = frozenset(
 SET_NULL: frozenset[str] = frozenset(
     {
         "ams_slots.lot_id",
+        # Retiring a cell unplaces the spool; it does not destroy it. The history
+        # of that cell survives the column going null, because a movement copies
+        # the address as text rather than pointing at the row.
+        "material_lots.cell_id",
         "material_lots.printer_id",
+        "material_movements.actor_id",
         "model_assets.uploaded_by",
         "order_events.actor_id",
         "orders.customer_id",
@@ -140,6 +146,11 @@ SET_NULL: frozenset[str] = frozenset(
 RESTRICT: frozenset[str] = frozenset(
     {
         "catalog_models.model_asset_id",
+        # The ledger is what stock history is computed from, so deleting the spool
+        # it describes would silently rewrite the record. The cost is written at
+        # the column: a spec whose lot has moved can no longer be ORM-deleted,
+        # because `MaterialSpec.lots` cascades.
+        "material_movements.lot_id",
         "order_lines.model_asset_id",
         "orders.rate_snapshot_id",
         "packaging_task_tara.tara_id",

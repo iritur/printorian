@@ -26,6 +26,14 @@ export interface MaterialLot {
   label: string
   remaining_grams: string
   location_kind: string
+  /**
+   * The cell address, or null when the spool has never been placed in one.
+   *
+   * Declared beside `shelf` rather than instead of it: the free text predates
+   * cells and is never backfilled into an address, so a lot can carry both.
+   * `formatLocation` holds the precedence rule (the cell wins) in one place.
+   */
+  cell: string | null
   shelf: string | null
   printer_id: string | null
   ams_unit: number | null
