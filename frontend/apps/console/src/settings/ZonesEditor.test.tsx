@@ -106,7 +106,7 @@ describe('the zone tariff editor', () => {
 
     expect(onChange).toHaveBeenCalled()
     const last = onChange.mock.calls.at(-1)?.[0] as ZoneRow[]
-    expect(last[0].base).toBe('5')
+    expect(last[0]!.base).toBe('5')
     // The untouched row travels through unchanged; an editor that rebuilt the
     // whole table from its inputs would quietly normalise the others.
     expect(last[1]).toEqual(rows()[1])
@@ -122,7 +122,7 @@ describe('the zone tariff editor', () => {
     expect(screen.getByDisplayValue('101, 1,')).toBeInTheDocument()
     // A trailing comma is a half-finished edit, not a blank prefix — a blank one
     // would match every postcode on earth.
-    expect((onChange.mock.calls.at(-1)?.[0] as ZoneRow[])[0].postcode_prefixes).toEqual([
+    expect((onChange.mock.calls.at(-1)?.[0] as ZoneRow[])[0]!.postcode_prefixes).toEqual([
       '101',
       '1',
     ])
@@ -133,7 +133,7 @@ describe('the zone tariff editor', () => {
 
     await userEvent.type(screen.getByLabelText(/Индексы\s*1/), ', 3')
 
-    expect((onChange.mock.calls.at(-1)?.[0] as ZoneRow[])[0].postcode_prefixes).toEqual([
+    expect((onChange.mock.calls.at(-1)?.[0] as ZoneRow[])[0]!.postcode_prefixes).toEqual([
       '101',
       '1',
       '3',
@@ -146,9 +146,12 @@ describe('the zone tariff editor', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Добавить зону' }))
     expect((onChange.mock.calls.at(-1)?.[0] as ZoneRow[]).length).toBe(3)
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Удалить' })[1])
+    // The second of the three, so «msk» and the blank row just added survive —
+    // an editor that removed by value rather than by position would take the
+    // wrong one, and one that rebuilt the table would drop the blank.
+    await userEvent.click(screen.getAllByRole('button', { name: 'Удалить' })[1]!)
     const remaining = onChange.mock.calls.at(-1)?.[0] as ZoneRow[]
-    expect(remaining.map((row) => row.code)).toEqual(['msk'])
+    expect(remaining.map((row) => row.code)).toEqual(['msk', ''])
   })
 
   it('offers the revert only once something has changed', async () => {

@@ -61,19 +61,35 @@ function aBreakdown(shipping: string): Breakdown {
         code: 'logistics.shipping',
         category: 'logistics',
         amount: shipping,
-        basis: { kind: 'flat', rate: shipping },
+        // Spelled out rather than cast: `Basis` carries every field on every
+        // kind, and a cast here would have hidden a fixture that no longer
+        // matches the payload the page actually renders.
+        basis: {
+          kind: 'flat',
+          quantity: null,
+          unit: null,
+          rate: shipping,
+          percent: null,
+          of_codes: [],
+          tier_min_quantity: null,
+        },
       },
     ],
     by_category: { logistics: shipping },
-  } as Breakdown
+  }
 }
 
-const CONFIG = {
+// Whole rather than cast: the summary line reads `material` and `colors` on
+// every render, and a fixture missing them fails inside React with a message
+// that names neither this file nor the field.
+const CONFIG: Config = {
+  material: 'PLA',
+  colors: ['ЧЁРНЫЙ'],
   quantity: 1,
   scale: '1',
   rush: false,
   finishes: [],
-} as unknown as Config
+}
 
 function draw() {
   render(
@@ -145,6 +161,9 @@ describe('the checkout re-price', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Курьер' }))
     await userEvent.type(await screen.findByLabelText('Индекс'), '300000')
 
-    expect(await screen.findByText(/550/)).toBeInTheDocument()
+    // Twice, and the assertion says so: the breakdown prints a flat line's
+    // rate beside its name as well as its amount, and `findByText` throws on
+    // the second match rather than picking one.
+    expect(await screen.findAllByText('550,00 ₽')).toHaveLength(2)
   })
 })
