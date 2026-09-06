@@ -53,7 +53,10 @@ def test_the_zone_table_is_filed_under_logistics_with_its_own_panel() -> None:
     spec = FIELDS[ZONES]
     assert spec.section == "logistics"
     assert spec.kind is Kind.TABLE
-    assert spec.group == "logistics.zones"
+    # No group: the editor is the panel and heads itself with the field name,
+    # the shape `pricing.discounts` and `pricing.tiers` already have. A group
+    # whose label matched the field name drew that heading twice, nested.
+    assert spec.group is None
     assert ZONES in next(section for section in SECTIONS if section.id == "logistics").fields
 
 

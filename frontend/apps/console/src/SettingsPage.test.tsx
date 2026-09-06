@@ -114,7 +114,6 @@ function aSections(): { id: string; fields: Field[] }[] {
           is_overridden: true,
           is_set: false,
           options: [],
-          group: 'logistics.zones',
         },
       ],
     },
