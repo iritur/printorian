@@ -52,7 +52,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.fleet.measure_sql import Grain, fleet_statement, printer_statement
+from printorian.contexts.fleet.measure_sql import (
+    Grain,
+    fleet_statement,
+    observed_by_printer_statement,
+    printer_statement,
+)
 from printorian.contexts.fleet.rollups import hour_start, latest_bucket
 from printorian.core.errors import ValidationError
 from printorian.core.ids import EntityId
@@ -281,6 +286,38 @@ async def printer_buckets(
     return _dense(measured, window, lambda start: PrinterBucket(bucket_start=start))
 
 
+async def observed_by_printer(db: AsyncSession, window: MetricWindow) -> dict[EntityId, Decimal]:
+    """How many seconds of this window each machine was actually watched for.
+
+    **A machine missing from this map was never summarised in the window**, and the
+    caller must render that as "no figure" rather than as zero. That is the whole
+    reason this returns a sparse mapping while everything else in the module returns
+    a dense array: the arrays are a ruler and a gap in one is an all-null bucket, but
+    a denominator has no all-null form — the only honest shapes are a number and an
+    absence, and a `dict` has exactly those two.
+
+    Serving the *denominator* of somebody else's ratio rather than a ratio, because
+    the numerator lives in another context (`contexts.service` counts failures) and
+    contexts do not import each other's internals. The division happens in
+    `api/routers/_service_reliability.py`, which is also where the roster is joined
+    on — deliberately, because a fleet-wide rate computed over the roster instead of
+    over this map is the flattering error CLAUDE.md §1 names, and it should have to
+    be written *here*, in the open, before it can happen.
+
+    No grain parameter: the question is one number per machine over one window. A
+    caller wanting it hour by hour wants `printer_buckets`, which already answers it.
+    """
+    rows = await db.execute(text(observed_by_printer_statement()), _bounds(window))
+    return {
+        row.printer_id: Decimal(row.observed_seconds)
+        for row in rows.mappings().all()
+        # Defensive rather than reachable today — see the statement's docstring on
+        # why a group cannot be NULL. Coalescing to zero instead would be the one
+        # mistake this whole function exists to make impossible.
+        if row.observed_seconds is not None
+    }
+
+
 def _bounds(window: MetricWindow) -> dict[str, Any]:
     return {"since": window.since, "until": window.until}
 
@@ -331,6 +368,7 @@ __all__ = [
     "PrinterMetrics",
     "fleet_buckets",
     "fleet_metrics",
+    "observed_by_printer",
     "printer_buckets",
     "printer_metrics",
     "resolve_window",
