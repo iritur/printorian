@@ -332,7 +332,7 @@ async def test_a_refused_delivery_leaves_nothing_behind(
     first line is a material and would otherwise have been written already — a lot
     and a receipt, flushed before the refusal. The request-scoped session rolls
     both back, and this reads the database to prove it rather than believing the
-    400.
+    status code.
     """
     headers = await auth(client)
     created = await client.post(
@@ -362,7 +362,10 @@ async def test_a_refused_delivery_leaves_nothing_behind(
         headers=headers,
     )
 
-    assert refused.status_code == 400
+    # 422, not 400: `api/errors.py` maps every `ValidationError` there, and this
+    # refusal is one. The whole suite asserts 422 for a domain refusal — this line
+    # said 400 only because it was written where it could not be run.
+    assert refused.status_code == 422
     assert refused.json()["code"] == "error.procurement.class_not_receivable"
     async with database.session_factory() as session:
         assert await session.scalar(select(func.count()).select_from(MaterialLot)) == 0
