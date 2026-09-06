@@ -108,6 +108,12 @@ function aSections(): { id: string; fields: Field[] }[] {
           ],
           default: [],
           is_overridden: false,
+          is_set: false,
+          options: [],
+        },
+      ],
+    },
+    {
       id: 'logistics',
       fields: [
         {
