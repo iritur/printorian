@@ -32,7 +32,7 @@ from another document has only moved the drift.
 
 **Eighteen of twenty-one are built.** Every public screen ships; the three that do
 not are all control-realm. `settings` was the nearest of them and is now built —
-103 parameters across fourteen sections, served and audited. What is left of it is
+104 parameters across fourteen sections, served and audited. What is left of it is
 the table-valued settings, not the screen (§2.1).
 
 | Screen | Realm | State |
@@ -59,7 +59,7 @@ references to it from the tracker and from §2.5 keep pointing at the same place
 
 **The screen exists.** [`SettingsPage.tsx`](../frontend/apps/console/src/SettingsPage.tsx)
 renders it and [`contexts/settings`](../backend/printorian/contexts/settings/) serves
-it: **103 parameters across fourteen sections**, over `GET /settings`,
+it: **104 parameters across fourteen sections**, over `GET /settings`,
 `GET /settings/sections`, `GET /settings/history` and `PUT`/`DELETE /settings/{key}`,
 gated on `MANAGE_SETTINGS`.
 
@@ -71,7 +71,7 @@ settings screen missing a rate is worse than one that never had it, because it
 looks complete.
 
 One control per `kind`, all built — `integer` 31 · `decimal` 30 · `boolean` 15 ·
-`enum` 15 · `string` 8 · `table` 3 · `secret` 1. The single secret,
+`enum` 15 · `string` 8 · `table` 4 · `secret` 1. The single secret,
 `finance.yookassa_secret_key`, is write-only: stored encrypted and never read
 back. Editing a row marks it dirty, reveals the previous value, offers a per-row
 revert and counts into a save bar; each save writes an audited «было · стало»
