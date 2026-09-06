@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import type { Locale, MessageKey } from '@printorian/ui'
 import { translate } from '@printorian/ui'
@@ -198,18 +198,19 @@ function PrefixInput(props: {
   prefixes: string[]
   onChange: (prefixes: string[]) => void
 }) {
-  const [text, setText] = useState(props.prefixes.join(', '))
-
-  // Re-sync when the row is reverted or reloaded from the server. Compared
-  // against this field's *own* parse rather than against the raw text, so an edit
-  // in progress ("101, ") is left alone while a genuine change from outside is
-  // not — and because the two agree immediately after every keystroke, listing
-  // `text` as a dependency costs nothing and keeps the list honest.
-  useEffect(() => {
-    if (parsePrefixes(text).join(' ') !== props.prefixes.join(' ')) {
-      setText(props.prefixes.join(', '))
-    }
-  }, [props.prefixes, text])
+  /*
+    The text being typed, remembered together with the parsed list it produced.
+    That pairing *is* the re-sync, and it is the shape `StaffDetail` in
+    `UsersPage.tsx` uses for the same problem: while the list coming back down
+    still parses to what this field last sent up, the raw text wins and a
+    half-typed separator survives; once the row is reverted or reloaded to
+    anything else, `against` stops matching and the server's value is shown.
+    An effect calling `setText` did this one render later, and that shape is what
+    `react-hooks/set-state-in-effect` refuses.
+  */
+  const [draft, setDraft] = useState<{ against: string; text: string } | null>(null)
+  const joined = props.prefixes.join(' ')
+  const text = draft?.against === joined ? draft.text : props.prefixes.join(', ')
 
   return (
     <input
@@ -217,8 +218,9 @@ function PrefixInput(props: {
       aria-label={props.label}
       value={text}
       onChange={(event) => {
-        setText(event.target.value)
-        props.onChange(parsePrefixes(event.target.value))
+        const parsed = parsePrefixes(event.target.value)
+        setDraft({ against: parsed.join(' '), text: event.target.value })
+        props.onChange(parsed)
       }}
     />
   )
