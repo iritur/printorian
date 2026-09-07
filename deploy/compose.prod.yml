@@ -30,7 +30,17 @@ services:
   # Root, because chowning a mount is the one thing the server itself cannot do.
   # It exits immediately and everything else waits for it to succeed.
   backup-init:
-    image: postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    # Tag and digest together, and the major is *held* rather than chosen. The
+    # backend image installs `postgresql-client-17` to match this server and
+    # `docs/RUNBOOK-BACKUP-RESTORE.md` restores with `postgres:17-alpine`, so a
+    # major here is a backup-compatibility decision rather than a dependency
+    # update: `pg_restore` refuses a dump taken by a newer server, and the drill
+    # would discover that at restore time (ADR-0019).
+    # `-alpine` is not cosmetic either — the chown below is to 70:70 because that
+    # is the uid the Alpine server runs as; the Debian variant runs as 999, and
+    # the archiver would be locked out of its own backup mount again.
+    # `backend/tests/unit/test_base_image_pins.py` makes those three agree.
+    image: postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
     user: root
     restart: "no"
     volumes:
@@ -38,7 +48,8 @@ services:
     command: sh -c "mkdir -p /backup/wal && chown -R 70:70 /backup"
 
   postgres:
-    image: postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    # The same pin as backup-init, deliberately — the two must be one server.
+    image: postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
     restart: unless-stopped
     depends_on:
       backup-init:
@@ -124,7 +135,10 @@ services:
       retries: 30
 
   redis:
-    image: redis@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
+    # `redis:7-alpine` is the major CI runs the suite against
+    # (`.github/workflows/ci.yml`); the pin test fails when the two drift, because
+    # ADR-0021's "the tests ran against the real thing" stops being true silently.
+    image: redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
