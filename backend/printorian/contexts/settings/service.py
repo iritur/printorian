@@ -20,20 +20,17 @@ credential.
 
 from __future__ import annotations
 
-import dataclasses
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.ordering import PromisePolicy
-from printorian.contexts.pricing import CustomerTier, RateSnapshot
-from printorian.contexts.scheduling import SchedulingPolicy
 from printorian.contexts.settings import catalogue
 from printorian.contexts.settings.models import Setting, SettingChange
+from printorian.contexts.settings.resolvers import SettingsResolvers
 from printorian.contexts.settings.schemas import SectionView, SettingChangeView, SettingView
-from printorian.contexts.settings.sections import FIELDS, SECTIONS, Kind, default_tiers
+from printorian.contexts.settings.sections import FIELDS, SECTIONS, Kind
 from printorian.core.clock import Clock
 from printorian.core.errors import ConfigurationError, NotFoundError
 from printorian.core.ids import EntityId
@@ -44,7 +41,7 @@ from printorian.core.secrets import SecretBox
 HISTORY_LIMIT = 100
 
 
-class SettingsService:
+class SettingsService(SettingsResolvers):
     """The settings table, read and written through the catalogue."""
 
     def __init__(
@@ -72,74 +69,6 @@ class SettingsService:
                 continue
             resolved[row.key] = catalogue.from_json(row.key, row.value)
         return resolved
-
-    async def resolve_rates(self) -> RateSnapshot:
-        """The rates a quote should be priced at right now.
-
-        Defaults with the farm's overrides laid over them. Built with
-        `dataclasses.replace` rather than by assignment because `RateSnapshot` is
-        frozen — and it is frozen so that a snapshot pinned to an order cannot be
-        edited afterwards, which is the guarantee ADR-0020 rests on.
-        """
-        overrides = await self.overrides()
-        changed = {
-            key.removeprefix(catalogue.RATE_PREFIX): value
-            for key, value in overrides.items()
-            if key.startswith(catalogue.RATE_PREFIX)
-        }
-        return dataclasses.replace(RateSnapshot(), **changed) if changed else RateSnapshot()
-
-    async def resolve_promise(self) -> PromisePolicy:
-        """The lead-time policy a quote should promise against right now.
-
-        The same read-edge shape as `resolve_rates`: defaults with the farm's
-        overrides laid over them, so an empty table promises exactly what the farm
-        always promised, and a changed `sla.min_lead_hours` moves the next quote
-        and nothing already agreed.
-        """
-        overrides = await self.overrides()
-        mapping = {
-            "sla.promise_buffer_percent": "promise_buffer_percent",
-            "sla.min_lead_hours": "min_lead_hours",
-            "sla.rush_lead_hours": "rush_lead_hours",
-        }
-        changed = {
-            field_name: overrides[key] for key, field_name in mapping.items() if key in overrides
-        }
-        return dataclasses.replace(PromisePolicy(), **changed) if changed else PromisePolicy()
-
-    async def resolve_scheduling(self) -> SchedulingPolicy:
-        """The scheduler weights a planning pass should use right now.
-
-        Derived from the dataclass's own fields, not a hand-listed set, for the
-        same reason the catalogue is: a weight added to `SchedulingPolicy`
-        appears here without a second place to remember. The other `scheduling.*`
-        keys — the tick interval and the wait-list behaviour — are not planner
-        weights and are deliberately left out.
-        """
-        overrides = await self.overrides()
-        changed = {
-            field.name: overrides[f"scheduling.{field.name}"]
-            for field in dataclasses.fields(SchedulingPolicy)
-            if f"scheduling.{field.name}" in overrides
-        }
-        return dataclasses.replace(SchedulingPolicy(), **changed) if changed else SchedulingPolicy()
-
-    async def resolve_int(self, key: str) -> int:
-        """The resolved value of one integer setting — override, else the default."""
-        overrides = await self.overrides()
-        return int(overrides.get(key, catalogue.default_for(key)))
-
-    async def resolve_tiers(self) -> dict[str, CustomerTier]:
-        """The customer tiers (discount + margin override), keyed by code.
-
-        Defaults from the loyalty ladder, with the farm's overrides laid over. The
-        `from_spend` thresholds that *earn* a tier stay in `loyalty.py` — the kit's
-        table shows the price book, not how a tier is earned.
-        """
-        overrides = await self.overrides()
-        tiers = overrides.get("pricing.tiers", default_tiers())
-        return {tier.code: tier for tier in tiers}
 
     async def listing(self) -> list[SettingView]:
         """Every known setting, in section order, with its default beside it.

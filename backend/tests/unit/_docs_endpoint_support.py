@@ -62,6 +62,13 @@ NOT_A_SCREEN_CONSUMER: dict[str, str] = {
         "the settings screen reading it would end this entry, and per the note above "
         "the entry would then be deleted rather than reworded."
     ),
+    "GET /metrics": (
+        "A scraper calls this, not a screen. A frontend consumer here would mean "
+        "the console drawing its own instrumentation from the exposition format, "
+        "which is what Grafana is for. Named rather than hidden with "
+        "`include_in_schema=False`: hiding it would also take it out of the "
+        "`openapi.json` artifact CI publishes for the frontend job."
+    ),
     "GET /settings": (
         "`SettingsPage.tsx` builds the screen from `/settings/sections` and the "
         "audit from `/settings/history`. The flat key/value dump has no caller and "

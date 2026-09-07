@@ -12,14 +12,14 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **43 tables** across twelve contexts, built
-by twenty-five Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **51 tables** across fourteen contexts, built
+by twenty-eight Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
 | `identity` | `users`, `sessions` |
 | `account` | `addresses`, `notification_prefs` |
-| `inventory` | `material_specs`, `material_lots` |
+| `inventory` | `material_specs`, `material_lots`, `storage_zones`, `storage_cells`, `material_movements` |
 | `ordering` | `orders`, `order_lines`, `order_events`, `rate_snapshots`, `sla_credit_entries` |
 | `payments` | `payments`, `refunds`, `payment_notifications` |
 | `catalog` | `model_assets`, `prepared_plates`, `catalog_models`, `catalog_model_materials` |
@@ -27,7 +27,9 @@ by twenty-five Alembic migrations on a single linear head.
 | `production` | `print_jobs`, `job_events`, `assignment_records`, `wait_list_entries`, `estimate_variances` |
 | `postproduction` | `postproduction_operations`, `postproduction_instruction_steps`, `postproduction_tasks`, `postproduction_task_steps`, `postproduction_consumables` |
 | `packaging` | `packaging_tara`, `packaging_instructions`, `packaging_instruction_steps`, `packaging_tasks`, `packaging_task_steps`, `packaging_task_tara` |
+| `procurement` | `suppliers`, `purchase_orders`, `purchase_order_lines`, `purchase_receipts` |
 | `journal` | `journal_posts`, `journal_subscribers` |
+| `service` | `printer_failures` |
 | `settings` | `settings`, `settings_audit` |
 
 `pricing` and `scheduling` own no tables at all. Both are pure functions
@@ -58,10 +60,14 @@ orders ─┬─< order_lines                  (CASCADE)
 
 printers ─┬─< ams_slots                  (CASCADE)
           ├─< service_operations         (CASCADE)
+          ├─< printer_failures           (RESTRICT)
           ├─< material_lots.printer_id   (SET NULL)
           └─< print_jobs.printer_id      (SET NULL)
 
-material_specs ──< material_lots         (CASCADE) ──< ams_slots.lot_id  (SET NULL)
+material_specs ──< material_lots         (CASCADE) ─┬─< ams_slots.lot_id       (SET NULL)
+                                                     └─< material_movements     (RESTRICT)
+
+storage_zones ──< storage_cells          (CASCADE) ──< material_lots.cell_id (SET NULL)
 
 model_assets ─┬─< order_lines.model_asset_id     (RESTRICT)
               ├─< print_jobs.model_asset_id      (RESTRICT)
@@ -140,10 +146,10 @@ second writer cannot get past them.
 
 ### Referential integrity
 
-**Forty-eight foreign keys, each with a deliberate delete rule** — 26 `CASCADE`,
-15 `SET NULL`, 7 `RESTRICT`. The enumeration is
+**Fifty-nine foreign keys, each with a deliberate delete rule** — 29 `CASCADE`,
+20 `SET NULL`, 10 `RESTRICT`. The enumeration is
 `backend/tests/test_referential_integrity.py` rather than the list below: it names
-all forty-eight as `table.column`, fails if a forty-ninth is added without somebody
+all fifty-nine as `table.column`, fails if a sixtieth is added without somebody
 deciding what it does on delete, and reads the rules back out of `pg_constraint` so
 that what the database is *holding* is what the models declare. Look there for which
 key carries which rule. What follows is why there are three groups, which is the
@@ -161,17 +167,27 @@ half a test cannot carry.
   and events, refunds, job history, the steps of a packaging or postproduction task.
   Each of them describes something *about* its parent and cannot be read alone, so
   leaving one behind produces a row nobody can interpret and nobody will delete.
-- **`SET NULL`** (15) where the child outlives the reference. Removing a member of
+- **`SET NULL`** (16) where the child outlives the reference. Removing a member of
   staff must not delete the record of what they did; decommissioning a printer must
   not destroy the jobs it ran or the lots that were loaded into it.
-- **`RESTRICT`** (7) where the parent may not go at all while a child points at it:
+  `printer_failures.recorded_by` is the newest of them and reads the same way twice:
+  NULL there also means "the sweep opened this, and no person did".
+- **`RESTRICT`** (8) where the parent may not go at all while a child points at it:
   `payments.order_id`, `orders.rate_snapshot_id`, `packaging_task_tara.tara_id`,
-  `postproduction_tasks.operation_id`, and the **three** references to `model_assets`
-  — from `order_lines`, `print_jobs` and `catalog_models`. Neither an order with
-  money against it, nor the rates a price depends on, nor geometry a job still has to
-  print may be deleted out from under it. `order_lines.model_asset_id` is load-bearing
+  `postproduction_tasks.operation_id`, `printer_failures.printer_id`, and the
+  **three** references to `model_assets` — from `order_lines`, `print_jobs` and
+  `catalog_models`. Neither an order with money against it, nor the rates a price
+  depends on, nor geometry a job still has to print may be deleted out from under it.
+  `order_lines.model_asset_id` is load-bearing
   beyond the rest: it is the *whole* of what stops model retention collecting a mesh
   an open order needs, which is why the sweep never has to ask `ordering` anything.
+  `printer_failures.printer_id` is the odd one in the group because what it guards is
+  a *history* rather than work in flight: nothing here deletes a printer — the fleet
+  retires them with `is_active` — so the rule costs nothing today and refuses the one
+  deletion that could not be undone, the one that erases the evidence a machine was
+  unreliable. `metric_rollups.printer_id` carries no key at all for the opposite
+  reason (ADR-0018 drops partitions under it), so the two are not the inconsistency
+  they look like side by side.
 
 `model_assets` carries a **fourth** reference, `prepared_plates.model_asset_id`, and
 that one is `SET NULL` deliberately. A plate is a cached slice and can be produced

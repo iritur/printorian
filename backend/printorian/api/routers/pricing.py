@@ -27,7 +27,7 @@ from printorian.api.deps import (
 from printorian.api.routers._loyalty import tier_for
 from printorian.api.routers._pricing_render import _render, _render_delta
 from printorian.api.routers._pricing_spec import _build_spec, _material_price
-from printorian.contexts.pricing import FINISH_CATALOGUE, diff, price
+from printorian.contexts.pricing import diff, price
 from printorian.core.errors import ValidationError
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
@@ -58,6 +58,10 @@ async def quote(
 ) -> dict[str, Any]:
     """Price an uploaded STL and return the full itemized structure."""
     promise = await settings_store.resolve_promise()
+    # The farm's own postprocessing catalogue, not the code constant: quoting from
+    # the constant while `POST /orders` charges from the table is exactly the split
+    # `_line_pricing.py` exists to prevent.
+    catalogue = await settings_store.resolve_finishes()
     spec, context = await _build_spec(
         db,
         cpu=cpu,
@@ -77,6 +81,7 @@ async def quote(
         uploaded_by=actor.user_id if actor else None,
         max_bytes=settings.max_upload_bytes,
         promise=promise,
+        catalogue=catalogue,
     )
     # The farm's rates, defaults underneath (`contexts.settings`).
     rates = await settings_store.resolve_rates()
@@ -137,6 +142,7 @@ async def preview_option(
     cannot disagree with the quote the customer then accepts.
     """
     promise = await settings_store.resolve_promise()
+    catalogue = await settings_store.resolve_finishes()
     spec, context = await _build_spec(
         db,
         cpu=cpu,
@@ -150,6 +156,7 @@ async def preview_option(
         rush=rush,
         include_shipping=include_shipping,
         promise=promise,
+        catalogue=catalogue,
     )
 
     changes: dict[str, Any] = {}
@@ -158,10 +165,14 @@ async def preview_option(
     if to_rush is not None:
         changes["rush"] = to_rush
     if to_finishes is not None:
-        unknown = [code for code in to_finishes if code not in FINISH_CATALOGUE]
+        # The same catalogue both sides of the diff are priced from. Reading the
+        # option from a different source than the base would put the difference
+        # between two catalogues into a delta the customer reads as the cost of
+        # the option.
+        unknown = [code for code in to_finishes if code not in catalogue]
         if unknown:
             raise ValidationError("error.pricing.unknown_finish", finishes=unknown)
-        changes["finishes"] = tuple(FINISH_CATALOGUE[code] for code in to_finishes)
+        changes["finishes"] = tuple(catalogue[code] for code in to_finishes)
     if to_material_codes or to_material_code is not None:
         changes["material"] = await _material_price(
             db, to_material_codes or [to_material_code or ""]

@@ -17,12 +17,15 @@ from printorian.contexts.account import AccountService
 from printorian.contexts.catalog import ModelLibrary, PlateLibrary
 from printorian.contexts.fleet import FleetService
 from printorian.contexts.identity import Actor, IdentityService, Permission
+from printorian.contexts.inventory import InventoryService
 from printorian.contexts.journal import JournalService
 from printorian.contexts.ordering import OrderingService
 from printorian.contexts.packaging import PackagingService, PackingCatalogue
 from printorian.contexts.payments import PaymentsService
 from printorian.contexts.postproduction import PostProductionService
+from printorian.contexts.procurement import ProcurementService
 from printorian.contexts.production import ProductionService
+from printorian.contexts.service import ServiceDesk
 from printorian.contexts.settings import SettingsService
 from printorian.core.clock import Clock
 from printorian.core.config import Settings
@@ -130,11 +133,26 @@ def throttle_key(request: Request) -> str:
     So this reads the last hop, and falls back to the socket peer when nothing is
     forwarded at all — the dev server, and the console on the LAN.
 
-    **This is exactly as trustworthy as the proxy in front of it.** It assumes one
-    trusted hop that appends rather than replaces, which is what
-    `deploy/console.Caddyfile` does and what the storefront's edge must also do
-    (INFRASTRUCTURE Stage 3). Two proxies would need a hop count rather than "the
-    last one"; when that day comes, this is the single line to change.
+    **This is exactly as trustworthy as the proxy in front of it**, and what that
+    proxy does was checked rather than assumed — an earlier version of this
+    paragraph asserted that Caddy appends, and that is only half true. Caddy's
+    `reverse_proxy` sets or augments `X-Forwarded-For`, but by default it "will
+    ignore their values from incoming requests, to prevent spoofing"; it appends
+    to a caller's chain only where `trusted_proxies` says the caller is itself a
+    proxy. Neither `deploy/console.Caddyfile` nor `deploy/storefront.Caddyfile`
+    sets `trusted_proxies`, so the header arriving here has exactly **one** entry,
+    written by Caddy, and first hop and last hop are the same address.
+
+    Which means the last-hop rule is not what protects the ceiling today — Caddy's
+    stripping is. This is written to survive the day that stops being true, and
+    `test_guards_api.py` pins it for the day somebody reads the two functions and
+    decides they ought to agree.
+
+    Setting `trusted_proxies`, or putting a second proxy in front, turns the header
+    back into a chain and would need a hop *count* rather than "the last one". Both
+    Caddyfiles carry a note pointing here, because the other reader of that
+    decision is the YooKassa webhook's source check — which reads the *first* hop,
+    and is safe only while there is exactly one.
     """
     forwarded = request.headers.get("X-Forwarded-For", "")
     if forwarded:
@@ -223,6 +241,18 @@ def get_fleet_service(
 Fleet = Annotated[FleetService, Depends(get_fleet_service)]
 
 
+def get_service_desk(db: DbSession, clock: AppClock) -> ServiceDesk:
+    return ServiceDesk(db, clock)
+
+
+#: Named `ServiceDeskDep` rather than `Service`, which every other entry here would
+#: have suggested. "Service" is the most overloaded word in this tree — there is a
+#: `FleetService`, a `SettingsService`, a `printorian.contexts.service` and a
+#: `services` relationship on `Printer` meaning the machine's service card — and a
+#: dependency called `Service` would leave a route signature saying nothing at all.
+ServiceDeskDep = Annotated[ServiceDesk, Depends(get_service_desk)]
+
+
 def get_production_service(
     db: DbSession, clock: AppClock, bus: AppEventBus, store: Storage
 ) -> ProductionService:
@@ -246,6 +276,38 @@ def get_packaging_service(db: DbSession, clock: AppClock, bus: AppEventBus) -> P
 
 
 Packaging = Annotated[PackagingService, Depends(get_packaging_service)]
+
+
+def get_inventory_service(db: DbSession) -> InventoryService:
+    """The materials catalogue and its lots.
+
+    A dependency rather than `InventoryService(db)` at each call site, because
+    procurement now needs the *same* instance the routes use — see
+    :func:`get_procurement_service`.
+    """
+    return InventoryService(db)
+
+
+Inventory = Annotated[InventoryService, Depends(get_inventory_service)]
+
+
+def get_procurement_service(db: DbSession, clock: AppClock, lots: Inventory) -> ProcurementService:
+    """Purchasing, with its one way of writing stock handed to it.
+
+    `lots` is the whole of procurement's reach into another context: receiving a
+    material line calls `InventoryService.add_lot` and nothing deeper, which is
+    what `tools/check_context_isolation.py` enforces and what `scheduling` → `fleet`
+    already does.
+
+    Injected here rather than constructed inside `ProcurementService` so that
+    api and workers stay siblings and a test can hand it a double. It is also the
+    line `test_procurement_wiring.py` exists to guard: the last collaborator wired
+    this way was deleted from `deps.py` and every test stayed green.
+    """
+    return ProcurementService(db, clock, lots=lots)
+
+
+Procurement = Annotated[ProcurementService, Depends(get_procurement_service)]
 
 
 def get_packing_catalogue(db: DbSession) -> PackingCatalogue:

@@ -18,22 +18,36 @@ services to run is a wiring test nobody runs. What it does supply is what the pa
 reads: the session it must work in, the clock, the bus, and the settings the
 tolerance comes from — because "the band is configuration and never a constant"
 is half of what this asserts.
+
+The other half is now the postprocessing catalogue, and it needs a different kind
+of assertion than the plate library does. A dropped plate library shows up as an
+order landing in `PREP`; a dropped catalogue shows up as *nothing at all*, because
+`prepared_cost` is a difference and the finish term is identical on both sides of
+it, so it cancels exactly. That cancellation is a property of `pricing.reprice`,
+not a promise `CachedPlates` may lean on — the sweep is supposed to reprice from
+the same rows the checkout charged from — so the wiring is asserted directly,
+against the argument the pass hands over.
 """
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
+from decimal import Decimal
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.catalog import PlateLibrary
 from printorian.contexts.ordering import OrderStatus
+from printorian.contexts.pricing import FinishOption
 from printorian.contexts.production import JobStatus
+from printorian.contexts.settings import SettingsService
 from printorian.core.clock import FixedClock
 from printorian.core.config import Settings
 from printorian.core.events import EventBus
+from printorian.workers import passes as passes_module
+from printorian.workers.cached_plates import CachedPlates
 from printorian.workers.passes import IntakePass
 from tests.unit._intake_cache_support import (
     a_cached_plate,
@@ -105,3 +119,56 @@ async def test_the_intake_pass_is_wired_to_the_plate_library(
     assert (await the_job(db_session, order_id)).status is JobStatus.READY
     assert await status_of(db_session, order_id) is OrderStatus.QUEUED
     assert runtime.beats == [("intake", runtime.settings.intake_sweep_seconds)]
+
+
+async def test_the_intake_pass_reprices_from_the_farms_own_finish_catalogue(
+    db_session: AsyncSession,
+    library: PlateLibrary,
+    runtime: _Runtime,
+    clock: FixedClock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The sweep gets the resolved catalogue, not the code constant.
+
+    Asserted on the argument rather than on the money, and that is deliberate
+    rather than lazy: `prepared_cost` is a difference between two prices that share
+    their finishes, so the finish term cancels exactly and no total in this sweep
+    moves when the catalogue does. There is therefore no observable figure to
+    assert — which is precisely the shape of hole HANDOFF records for `cached=`,
+    where deleting an argument left the whole suite green.
+
+    Dropping `finishes=` from the `CachedPlates(...)` call would now raise
+    `TypeError` and fail every test that runs the pass; passing
+    `FINISH_CATALOGUE` there instead of resolving would fail only this one.
+    """
+    await SettingsService(db_session, clock).set_value(
+        "postprocess.operations",
+        [
+            {"code": "raw", "labor_hours": "0", "flat_fee": "0", "extra_days": 0},
+            {"code": "sanded", "labor_hours": "0.9", "flat_fee": "0", "extra_days": 0},
+            {"code": "primed", "labor_hours": "0.6", "flat_fee": "150", "extra_days": 0},
+            {"code": "painted", "labor_hours": "1.5", "flat_fee": "400", "extra_days": 2},
+        ],
+        by=None,
+    )
+    await db_session.flush()
+
+    handed: dict[str, FinishOption] = {}
+
+    class _Capturing(CachedPlates):
+        def __init__(
+            self, db: AsyncSession, plates: PlateLibrary, *, finishes: Mapping[str, FinishOption]
+        ) -> None:
+            handed.update(finishes)
+            super().__init__(db, plates, finishes=finishes)
+
+    monkeypatch.setattr(passes_module, "CachedPlates", _Capturing)
+
+    await a_material(db_session)
+    asset_id = await an_asset(db_session)
+    await a_cached_plate(library)
+    await a_paid_order(db_session, number="WIRED-2", asset_id=asset_id)
+
+    await IntakePass(runtime).sweep()  # type: ignore[arg-type]
+
+    assert handed["sanded"].labor_hours == Decimal("0.9")

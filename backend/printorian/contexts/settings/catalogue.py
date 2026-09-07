@@ -23,7 +23,15 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Any, Final
 
-from printorian.contexts.pricing import CustomerTier, DiscountLadder, DiscountTier
+from printorian.contexts.pricing import (
+    FINISH_CATALOGUE,
+    CustomerTier,
+    DiscountLadder,
+    DiscountTier,
+    FinishOption,
+    ShippingZone,
+    ZoneTariffs,
+)
 from printorian.contexts.settings.sections import FIELDS, SECTIONS, Kind
 from printorian.core.errors import NotFoundError, ValidationError
 
@@ -71,6 +79,18 @@ def to_json(value: Any) -> Any:
             {"min_quantity": tier.min_quantity, "percent": str(tier.percent)}
             for tier in value.tiers
         ]
+    if isinstance(value, ZoneTariffs):
+        return [
+            {
+                "code": zone.code,
+                "base": str(zone.base),
+                "per_kg": str(zone.per_kg),
+                "transit_days": zone.transit_days,
+                "postcode_prefixes": list(zone.postcode_prefixes),
+                "enabled": zone.enabled,
+            }
+            for zone in value.zones
+        ]
     if isinstance(value, tuple) and value and isinstance(value[0], CustomerTier):
         return [
             {
@@ -83,6 +103,24 @@ def to_json(value: Any) -> Any:
                 ),
             }
             for tier in value
+        ]
+    if isinstance(value, tuple) and value and isinstance(value[0], FinishOption):
+        return [
+            {
+                "code": finish.code,
+                "labor_hours": str(finish.labor_hours),
+                "flat_fee": str(finish.flat_fee),
+                # Carried although no editor draws it and — checked, not assumed —
+                # nothing reads it: `grep extra_days` finds its declaration on
+                # `FinishOption`, `finishes.py`, and this round trip. It is
+                # *declared* as calendar days a finish adds to the promise, and
+                # `promised_hours` takes policy, minutes, quantity and rush, so the
+                # promise never sees it. Carried anyway because the round trip has
+                # to be lossless: the day something does read it, «Окраска» must
+                # still say 2 rather than 0 because a save dropped the column.
+                "extra_days": finish.extra_days,
+            }
+            for finish in value
         ]
     return str(value) if isinstance(value, Decimal) else value
 
@@ -174,12 +212,104 @@ def _parse_tiers(key: str, raw: Any, options: tuple[str, ...]) -> tuple[Customer
     return tiers
 
 
+def _parse_finishes(key: str, raw: Any, options: tuple[str, ...]) -> tuple[FinishOption, ...]:
+    """Parse the postprocessing catalogue — `{code, labor_hours, flat_fee, extra_days}`.
+
+    Real `FinishOption`s, not dicts, so the pricing engine's own
+    `__post_init__` refuses a negative norm-hour or flat fee with
+    `error.pricing.finish_negative` — the rule is already written down once, in
+    the context that prices with it.
+
+    **The code set is closed, and that is a decision rather than an omission.**
+    `apps/web/src/config.ts` offers exactly `raw`, `sanded`, `primed`, `painted`,
+    and `_pricing_spec` refuses any other code at the quote. A fifth row added
+    here would therefore be a finish the farm has priced, the console has shown,
+    and the storefront never offers — a setting that took and did nothing, which
+    is the failure #29 exists to remove rather than to introduce in a new place.
+    A dropped row is the mirror of it: the storefront would keep offering a
+    finish the catalogue no longer prices. So the codes must be exactly the four,
+    each once, and «Добавить операцию» from the kit is deliberately not ported —
+    the tiers editor's "code fixed, values editable" is the precedent.
+
+    Widening the set is a real feature (a public read of the catalogue, so the
+    configurator draws what the farm sells) and is the named follow-up slice, not
+    something to reach by loosening a check here.
+    """
+    if not isinstance(raw, list):
+        raise ValidationError("error.settings.not_a_table", key=key)
+    try:
+        finishes = tuple(
+            FinishOption(
+                code=str(item["code"]),
+                labor_hours=Decimal(str(item["labor_hours"])),
+                flat_fee=Decimal(str(item["flat_fee"])),
+                extra_days=int(item.get("extra_days", 0)),
+            )
+            for item in raw
+        )
+    except (KeyError, TypeError, ValueError, InvalidOperation) as exc:
+        raise ValidationError("error.settings.not_a_table", key=key) from exc
+
+    codes = [finish.code for finish in finishes]
+    duplicated = sorted({code for code in codes if codes.count(code) > 1})
+    if duplicated:
+        # Two rows for one code do not merge into one answer: `resolve_finishes`
+        # keys by code and the last row would silently win, so the row an owner
+        # edited and the price the farm charges could differ by a scroll position.
+        raise ValidationError("error.settings.finish_code_duplicate", key=key, codes=duplicated)
+    unknown = sorted(set(codes) - set(FINISH_CATALOGUE))
+    if unknown:
+        raise ValidationError("error.settings.finish_code_unknown", key=key, codes=unknown)
+    missing = sorted(set(FINISH_CATALOGUE) - set(codes))
+    if missing:
+        raise ValidationError("error.settings.finish_code_missing", key=key, codes=missing)
+    return finishes
+
+
+def _parse_zones(key: str, raw: Any, options: tuple[str, ...]) -> ZoneTariffs:
+    """Parse the shipping zone table — the rows the farm draws on the kit's «Зоны и тарифы».
+
+    Every key is required rather than defaulted. A row arriving without a base is
+    a malformed submission, and quietly reading it as «0 ₽» would put free
+    delivery into a quote nobody priced (CLAUDE.md §1) — the shape errors a
+    settings *screen* owns are re-mapped to `error.settings.not_a_table`, and the
+    pricing rules stay where they can name the offending zone: `ShippingZone` and
+    `ZoneTariffs` raise `error.pricing.zone_negative_rate`,
+    `error.pricing.zone_prefix_empty` and `error.pricing.duplicate_zone`
+    themselves, and those travel through untouched.
+    """
+    if not isinstance(raw, list):
+        raise ValidationError("error.settings.not_a_table", key=key)
+    try:
+        return ZoneTariffs(
+            zones=tuple(
+                ShippingZone(
+                    code=str(item["code"]),
+                    base=Decimal(str(item["base"])),
+                    per_kg=Decimal(str(item["per_kg"])),
+                    transit_days=int(item["transit_days"]),
+                    postcode_prefixes=tuple(str(prefix) for prefix in item["postcode_prefixes"]),
+                    enabled=bool(item["enabled"]),
+                )
+                for item in raw
+            )
+        )
+    except (KeyError, TypeError, ValueError, InvalidOperation) as exc:
+        raise ValidationError("error.settings.not_a_table", key=key) from exc
+
+
 def _parse_table(key: str, raw: Any, options: tuple[str, ...]) -> Any:
-    """The two table shapes, routed by key rather than by a second `Kind`."""
+    """The four table shapes, routed by key rather than by a second `Kind`."""
     if key == "pricing.discounts":
         return _parse_ladder(key, raw, options)
     if key == "pricing.tiers":
         return _parse_tiers(key, raw, options)
+    if key == "postprocess.operations":
+        return _parse_finishes(key, raw, options)
+    if key == "logistics.zones":
+        return _parse_zones(key, raw, options)
+    # A fifth table with no route refuses loudly rather than storing a shape
+    # nothing can read back.
     raise ValidationError("error.settings.unsupported_type", key=key)
 
 

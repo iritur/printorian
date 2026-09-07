@@ -5,7 +5,7 @@ The kit is twenty-one screens of static HTML in [`design/`](../design/README.md)
 is not a transcription of them, and deliberately no longer tries to be.
 
 What it carries instead is the part the HTML cannot: which screens exist in the
-app, what the four that do not would need from the backend, and the conventions
+app, what the two that do not would need from the backend, and the conventions
 that hold across all of them.
 
 > Replaces `DESIGN-KIT-PLAN.md`, `DESIGN-KIT-INTEGRATION.md` and
@@ -18,7 +18,7 @@ Statuses below were read off the code — routes in each app's `App.tsx`, models
 `backend/printorian/contexts/` — not off a plan. Re-verify before trusting; that
 is how all three predecessors went wrong.
 
-*Last verified 2026-08-26.* The settings counts in §1 and §2.1 come from
+*Last verified 2026-09-05.* The settings counts in §1 and §2.1 come from
 `len(SECTIONS)` and `len(FIELDS)` in
 [`contexts/settings/sections.py`](../backend/printorian/contexts/settings/sections.py)
 and from the `kind` counts over `FIELDS`, evaluated rather than transcribed; the
@@ -30,9 +30,9 @@ from another document has only moved the drift.
 
 ## 1. Where the screens stand
 
-**Seventeen of twenty-one are built.** Every public screen ships; the four that do
+**Nineteen of twenty-one are built.** Every public screen ships; the two that do
 not are all control-realm. `settings` was the nearest of them and is now built —
-102 parameters across fourteen sections, served and audited. What is left of it is
+104 parameters across fourteen sections, served and audited. What is left of it is
 the table-valued settings, not the screen (§2.1).
 
 | Screen | Realm | State |
@@ -41,25 +41,25 @@ the table-valued settings, not the screen (§2.1).
 | `dashboard` `orders` `fleet` `materials` `users` `postproduction` `packaging` | control | **built** |
 | `settings` | control | **built** — scalars and Диагностика; the tables remain, §2.1 |
 | `service` | control | **not built** — §2.2 |
-| `purchasing` | control | **not built** — §2.3 |
-| `store` | control | **not built** — §2.4 |
+| `purchasing` | control | **built** — the desk, the six stages and receiving into material stock; the deferred panels are in §2.3 |
+| `store` | control | **built** — cells, ledger and movements; §2.4 for the rest |
 | `logistics` | control | **not built** — §2.5 |
 
 `index.html` is the kit's own contents page, not a screen.
 
-## 2. Settings, and the four that are not built
+## 2. Settings, purchasing, the store, and the two that are not built
 
-For §2.2–§2.5 the kit inventories are preserved verbatim, because for those the kit
-*is* the spec, and each ends with what the backend already has. §2.1 is no longer
-one of them — settings is built, so the code is the truth for it and this document
-records only what is still owed. The numbering is kept as it was so that the
+For §2.2 and §2.5 the kit inventories are preserved verbatim, because for those the
+kit *is* the spec, and each ends with what the backend already has. §2.1, §2.3 and
+§2.4 are no longer among them — settings, purchasing and the store are built, so the
+code is the truth for them and this document records only what is still owed. The numbering is kept as it was so that the
 references to it from the tracker and from §2.5 keep pointing at the same place.
 
 ### 2.1 `settings.html` — built, minus the tables
 
 **The screen exists.** [`SettingsPage.tsx`](../frontend/apps/console/src/SettingsPage.tsx)
 renders it and [`contexts/settings`](../backend/printorian/contexts/settings/) serves
-it: **102 parameters across fourteen sections**, over `GET /settings`,
+it: **104 parameters across fourteen sections**, over `GET /settings`,
 `GET /settings/sections`, `GET /settings/history` and `PUT`/`DELETE /settings/{key}`,
 gated on `MANAGE_SETTINGS`.
 
@@ -71,7 +71,7 @@ settings screen missing a rate is worse than one that never had it, because it
 looks complete.
 
 One control per `kind`, all built — `integer` 31 · `decimal` 30 · `boolean` 15 ·
-`enum` 15 · `string` 8 · `table` 2 · `secret` 1. The single secret,
+`enum` 15 · `string` 8 · `table` 4 · `secret` 1. The single secret,
 `finance.yookassa_secret_key`, is write-only: stored encrypted and never read
 back. Editing a row marks it dirty, reveals the previous value, offers a per-row
 revert and counts into a save bar; each save writes an audited «было · стало»
@@ -85,10 +85,12 @@ removes the recorded reasons for waiting and leaves the jobs ready, the button s
 so, and which of the two is wrong is a question for a person rather than something
 the code should guess (`contexts/production/wait_list.py`).
 
-**The store is read at the edge, not only stored.** Five resolutions run per
+**The store is read at the edge, not only stored.** Six resolutions run per
 request or per worker pass rather than once at process start: `resolve_rates` and
 `resolve_tiers` (pricing and orders), `resolve_promise` (SLA), `resolve_int` for
-telemetry retention, and `resolve_scheduling` in the scheduler pass. A key with no
+telemetry retention, `resolve_scheduling` in the scheduler pass, and
+`resolve_finishes` at the four edges that price a postprocessing operation —
+the two quoting endpoints, the order/reprice pair, and the intake sweep. A key with no
 row resolves to the code default, so an empty table prices exactly as the farm
 always did, and an order keeps the rate snapshot it was agreed at (ADR-0020) —
 changing a margin moves the next quote and nothing already sold.
@@ -102,12 +104,34 @@ own `ok` / `degraded` / `failed` distinction kept intact and a fourth state,
 rather than served: `SECTION_ORDER` has fourteen entries because a read-only page
 has nothing for a settings catalogue to carry, and that is still the right call.
 
-**What is still owed.** The settings that are *tables* rather than scalars, and one
-behaviour the screen displays without wiring:
+**What is still owed.** Four of #29's six table-valued sections, two columns of the
+one just built, and one behaviour the screen displays without wiring:
 
-- [#29](https://github.com/iritur/printorian/issues/29) — the six table-valued
-  sections. The volume ladder and the customer tiers are built and are the
-  pattern to copy, not to reinvent.
+- [#29](https://github.com/iritur/printorian/issues/29) — the remaining
+  table-valued sections. **Four are built** and are the pattern to copy rather
+  than reinvent: the volume ladder, the customer tiers, `postprocess.operations`
+  — the operations catalogue, whose norm-hours and flat fees the pricing engine
+  reads at both the quote and the order — and `logistics.zones`, the shipping
+  tariff, which `resolve_rates` maps onto `RateSnapshot.zones` and which
+  therefore reaches a customer's estimate and is pinned per order. Still owed:
+  notification event×channel, API keys, webhooks and maintenance intervals. Two
+  of those are new subsystems with a security decision each, and the event matrix
+  is switches over channels that do not exist — none is a catalogue row away from
+  working.
+- **Two columns of «Каталог операций» are deliberately not ported**, and neither is
+  an oversight. «На см² поверхности» needs a surface area inside `PriceSpec`, and
+  surface area does not reach the checkout: the quote context emits `volume_cm3`
+  and `bounding_box_mm` and no `surface_area_mm2`, and `CheckoutPage.tsx` sends no
+  mesh at all — so the term would price at the configurator and not on the order.
+  Pricing an unmeasured mesh at 0 cm² is ADR-0007's forbidden move, and it is also
+  a change to the calculation's *shape*, which moves `ENGINE_VERSION` and makes
+  `CachedPlates._rates_for` refuse the cached-plate path for every order already
+  paid. «Доступна» is only honest once the configurator stops offering what the
+  farm switched off, and `FinishStep.tsx` renders a hardcoded list before any
+  quote — so it needs a public read of the catalogue: a new endpoint, a
+  regenerated client and an entry against `test_docs_endpoint_consumers.py`. The
+  same closure is why «Добавить операцию» is absent: the code set is closed to the
+  four the storefront offers, and the server refuses a fifth.
 - [#32](https://github.com/iritur/printorian/issues/32) — worker loop intervals
   still take effect only on restart.
 
@@ -129,45 +153,107 @@ Five ticket kinds: **установка · ремонт · ТО · загруз�
 - Crew badges and marks; MTTR, fleet readiness
 
 What backend exists: `ServiceOperation` with kind/interval/hours, наработка, ближайшее ТО.
+Since [#33](https://github.com/iritur/printorian/issues/33)'s first slice, also the
+**failure record** — `printer_failures`, opened automatically from a machine the driver
+reported in `ERROR`, closed by the observation that saw it working again, and read back
+through `GET /service/reliability` as отказов/1000 ч, MTTR over repaired failures only,
+and the «Причины отказов» funnel with an `uncategorised` count beside it. **No screen
+consumes any of it** (§4), which is why §1 still calls `service` not built.
 
-**What the backend still owes:** [#33](https://github.com/iritur/printorian/issues/33) — tickets as an entity with steps, assignee, elapsed, consequence; failure causes, MTTR, отказов/год, надёжность; spare parts stock.
+Two judgements in that slice are worth knowing before arguing with the numbers.
+`OFFLINE` is deliberately **not** a failure: `mark_unreachable` writes it for a poll that
+did not answer, so counting it would mint one failure per machine on every network blip
+and drive MTTR from repairs nobody made. The cost is real and unfixed — a machine that
+is unreachable half the month still contributes its `offline_seconds` to its own
+denominator and so reads as reliable. And a driver's `bambu.print_error.{code}` is
+recorded verbatim but is **not** a cause; the farm has no table mapping one to «слом
+филамента», so the funnel counts only causes a person named.
 
-### 2.3 `purchasing.html`
+**What the backend still owes:** [#33](https://github.com/iritur/printorian/issues/33) — tickets as an entity with steps, assignee, elapsed, consequence; spare parts stock; наработка on the same table as надёжность, which today would be two rulers (`Printer.printed_hours` accumulates from the live row, while надёжность divides by `metric_rollups`). «Последствия» is not merely unbuilt but partly **unmeasurable**: nothing decrements a spool, so «потеряно материала 148 г» has no source, and «Итого потеря 2 140 ₽» is money and belongs behind `VIEW_FINANCIALS` rather than on a production response.
 
-- **Структура закупок** — funnel by class
-- **Требуют заказа сейчас** — Позиция · Класс · Остаток · **Последствие**
-- **Purchase orders** — Номер · Поставщик · Состав · Статус · Заказан · Ожидается ·
-  Сумма
-- **Supplier scorecards** — Поставщик · Поставок · В срок · Брак · Оборот · Оценка
-- **Цены по ключевым позициям** — a year of price history
-- PO detail: 6-stage path, line items, **Зачем этот заказ**, **Приёмка** (receiving
-  into lots)
+### 2.3 `purchasing.html` — built, minus the panels that need receipts first
 
-**What the backend still owes:** [#34](https://github.com/iritur/printorian/issues/34) — nothing exists; `PurchaseOrder`, `Supplier`, four purchasable classes.
+**The screen exists.**
+[`purchasing/PurchasingPage.tsx`](../frontend/apps/console/src/purchasing/PurchasingPage.tsx)
+renders it and [`contexts/procurement`](../backend/printorian/contexts/procurement/)
+serves it: suppliers, purchase orders over the kit's six stages plus cancellation,
+five purchasable classes on the lines, and receiving a material line into a
+`material_lots` row carrying its lot number and the price paid. `MANAGE_INVENTORY`
+gates the desk; prices arrive from `GET /purchasing/orders/{id}/costs` behind
+`VIEW_FINANCIALS`, as a separate route rather than as blanked fields — a null
+already means "not measured" (ADR-0007) and reusing it for "not permitted" makes
+the two indistinguishable.
 
-### 2.4 `store.html`
+It also gave `inventory.low_stock_grams`, `inventory.auto_reorder` and their two
+siblings their first reader, and it replaced `material_specs.has_open_order` — a
+hand-set boolean whose own comment called it a placeholder — with a question asked
+of the order lines.
 
-- **Cell map** by zone — `.hv-node` per cell across zones A/B/C, brightness = fill
-- **Movements today** — Время · Операция · Позиция · Откуда → куда · Кол-во ·
-  Основание
-- **Batches in a cell** — FIFO, oldest first: Партия · Принята · Сушка · Остаток
-- **Turnover** — days on shelf per class; **dead stock** with the money in it
-- **Stocktake** — Позиция · Ячейка · Лежит · Стоимость
+**What is deliberately not built, and why.** Each of these is a follow-up rather
+than an omission; three of them would have to invent a number to exist at all.
 
-What backend exists: `MaterialLot` with location.
+- **«Структура закупок»** and the four KPI tiles — «Экономия за квартал» has no
+  baseline and «БЮДЖЕТ МЕСЯЦА 68%» has no source: there is no budget setting
+  anywhere in the catalogue. Dropped the way #30 dropped the uptime tile.
+- **Supplier scorecards** — «Поставок · В срок · Брак · Оборот · Оценка» needs a
+  defect record captured at receiving and a promised-versus-delivered measure. On
+  a farm with no receipts every column would be a fabricated denominator, so the
+  supplier panel carries counts and nothing else.
+- **«Цены по ключевым позициям»** — derivable from `purchase_receipts` once they
+  accumulate. Empty and honest on day one.
+- **«Зачем этот заказ»'s consumption rows**, and the months-of-cover arm of
+  «Последствие» — nothing in this system measures material consumption:
+  `material_lots.remaining_grams` is written once, at lot creation, and never
+  decremented. The reorder row's consequence is a discriminated value with no
+  coverage arm and the console draws «—». `test_procurement_reorder.py` is the
+  tripwire.
+- **Receiving into `packaging_tara` and `postproduction_consumables`** — neither
+  context offers an *increment*; `PackingCatalogue.stock_tara` restates the level
+  absolutely, so receiving into it would lose whatever a packer did in between.
+  The lines are ordered and paid for; only the arrival is refused, by code.
+- **Spare parts stock** — [#33](https://github.com/iritur/printorian/issues/33)
+  claims that table. `spare_part` is declared in the enum so adding it later is a
+  service change, and modelling stock for it here would give the farm two.
 
-**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — cells, zones, drying state, movement ledger with reason, turnover, dead stock, stocktake.
+### 2.4 `store.html` — built, minus turnover, money and stocktake
+
+**The screen exists.** [`StorePage.tsx`](../frontend/apps/console/src/StorePage.tsx)
+draws the cell map by zone and the movements feed;
+[`CellDetail.tsx`](../frontend/apps/console/src/CellDetail.tsx) is the cell popup,
+with its batches FIFO oldest-first. Behind them are `storage_zones`,
+`storage_cells` and the append-only `material_movements`, served by
+`/store/cells`, `/store/cells/{address}` and `/store/movements`.
+
+Three of the kit's four KPI tiles are **deliberately not drawn**, and this is the
+part of §2.4 worth reading before adding them. «Стоимость остатков» and
+«Залежалое» are money, and `MaterialLot.purchase_price` is written by nothing, so
+both would read `0 ₽` on a farm holding several hundred thousand roubles of
+filament. «Расхождения» needs a stocktake that does not exist. A tile with an
+invented number in it is worse than a missing tile, so «Ячеек» and «Заполнение» —
+both counted from cells that exist — are the two that ship. Same reasoning for the
+right-hand column: «Движения» is built, «Оборачиваемость», «Залежалое» and
+«Инвентаризация» are not.
+
+**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — drying state, turnover in days on shelf, dead stock in money (which needs receiving, [#34](https://github.com/iritur/printorian/issues/34), before a lot has a price at all), stocktake, and the three non-filament purchasable classes: tara, consumables and spare parts.
+
+When dead stock arrives it takes the `api/routers/jobs.py` shape — a separate
+route with `VIEW_FINANCIALS` on top of the production gate — never a value field
+appended to the cell map an operator already reads.
 
 ### 2.5 `logistics.html`
 
 - **Отгрузка сегодня** to the same cut-off as packaging
 - **Carriers** — Перевозчик · Отправлений · В срок · Повреждений · Средняя цена
-- **Зоны и тарифы** — *these land in the order's estimate*, so they are the same
-  rows as the settings zones table (§2.1). Build them once.
+- **Зоны и тарифы** — built once, in settings (§2.1), and read from there: the
+  rows are `logistics.zones`, they price the shipping lines of a real order, and
+  the whole table is archived into that order's rate snapshot. What this screen
+  still owes is the **Отправлений** column, which counts parcels — nothing counts
+  parcels until there is a `Shipment`, and a column of noughts would claim the
+  farm shipped nothing (ADR-0007), so the console's editor omits it.
 - **Сроки доставки** — Зона · Обещано · Факт · Точность
 - Shipment detail: 6-stage path, address from the cabinet, tracking history
 
-**What the backend still owes:** [#36](https://github.com/iritur/printorian/issues/36) — nothing beyond `carrier_code` on a parcel; no `Shipment`, no carrier, no zone, no tracking.
+**What the backend still owes:** [#36](https://github.com/iritur/printorian/issues/36) — zones are built (a `ZoneTariffs` on the rate snapshot, edited as `logistics.zones`); still nothing beyond `carrier_code` on a parcel, and no `Shipment`, no carrier, no tracking and no recorded arrival.
 
 ## 3. Conventions every screen honours
 
@@ -230,11 +316,18 @@ answered here rather than opened again out of completeness.
 
 ## 4. Backend capability nothing consumes
 
-**This list has moved to the issue tracker, and it is now empty.** All fourteen endpoints this section once carried have consumers. The last of them was `GET /materials/{code}`, and [#38](https://github.com/iritur/printorian/issues/38) put two ways of closing it: build the materials detail popup the route was written for, or delete the route. **The popup was built.** `frontend/apps/console/src/MaterialDetail.tsx` reads the spec by code when a row is opened, which is where the density, the tensile figure, the heat-deflection temperature and the two suitability flags come from — none of those is a column of the materials table, so before this the window had nothing to show them from and the route had no caller.
+**This list was empty and is not any more.** All fourteen endpoints it originally carried gained consumers; the last of them was `GET /materials/{code}`, and [#38](https://github.com/iritur/printorian/issues/38) put two ways of closing it — build the materials detail popup the route was written for, or delete the route. **The popup was built.** `frontend/apps/console/src/MaterialDetail.tsx` reads the spec by code when a row is opened, which is where the density, the tensile figure, the heat-deflection temperature and the two suitability flags come from.
+
+**The four that remain are the failure record**, landed backend-first and deliberately without a screen (§2.2). `service` is still **not built** in §1 and adding a partial route key to the console's `Screen` union would make `test_docs_screen_inventory.py` call it built, which would be the more expensive lie: a screen listed as done that shows one table out of seven panels.
+
+- [#33](https://github.com/iritur/printorian/issues/33) — **`GET /service/reliability`**, «Надёжность»: failures over `metric_rollups.observed_seconds` per machine, the «Причины отказов» funnel, and MTTR from closed failures only. Seconds and counts; the kit's «ПОТЕРЯ 3 820 ₽» is not here and is not owed by this route
+- [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/failures`**, a person recording that a machine stopped working; the sweep in `workers/service.py` writes the «СООБЩИЛ ДРАЙВЕР» half and no client can claim that badge
+- [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/failures/{failure_id}/restore`**, the observation in which the machine was working again, which is the only measurement of how long it was down
+- [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/failures/{failure_id}/cause`**, naming the cause of a failure the driver opened with none — the farm holds no table turning `bambu.print_error.{code}` into «слом филамента» (ADR-0007), so this route is the only way a bar of the funnel is ever written
 
 `TelemetrySample` was the headline entry here and no longer is: `metric_rollups` summarises it and `/fleet/metrics` serves it. `EstimateVariance` left the same way — `GET /jobs/variances` serves it and the order desk's «Пересмотр цены» panel reads it. So did `RateSnapshotRecord`: `GET /orders/{order_id}/rate-snapshot` serves it and «Тарифы заказа» reads it.
 
-**An empty section is not a finished one, and this one is measured from both ends.** `backend/tests/unit/test_docs_endpoint_consumers.py` fails if an entry listed here has quietly gained a consumer — the drift that took thirteen of them at once while the section sat still. It also fails in the other direction, which is the one that matters now that nothing is listed: an endpoint the API serves, with no path literal anywhere under `frontend/apps/*/src` or `frontend/packages/*/src`, has to be named here or exempted in `NOT_A_SCREEN_CONSUMER` with the reason. That list holds twenty-three routes — three no screen can ever have, and twenty that are real gaps, each naming the screen or the action that is missing. It is longer than this section ever was, so reading "nothing is listed here" as "the backend owes the console nothing" would be precisely the flattering mistake §4 exists to catch.
+**This section is measured from both ends.** `backend/tests/unit/test_docs_endpoint_consumers.py` fails if an entry listed here has quietly gained a consumer — the drift that took thirteen of them at once while the section sat still. It also fails in the other direction: an endpoint the API serves, with no path literal anywhere under `frontend/apps/*/src` or `frontend/packages/*/src`, has to be named here or exempted in `NOT_A_SCREEN_CONSUMER` with the reason. That list holds twenty-two routes — three no screen can ever have, and nineteen that are real gaps, each naming the screen or the action that is missing. (Twenty-three until `GET /health/workers` gained the settings screen's «Диагностика» section and left; the arithmetic here is ungated prose and had gone stale by one, which is the drift this section is otherwise about.) It is longer than this section has ever been, so reading a short list here as "the backend owes the console nothing" would be precisely the flattering mistake §4 exists to catch.
 
 ## 5. Order to build the rest in
 

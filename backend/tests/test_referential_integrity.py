@@ -10,13 +10,13 @@ checking it. A rule flipped to ``CASCADE`` in a model is one word, would have pa
 all six gates and the whole suite, and the first evidence of it would have been a
 retention sweep deleting an order's lines.
 
-The inventory below is all forty-eight keys rather than the interesting ones,
-because a spot check leaves the other forty unwatched and because the forty-ninth
+The inventory below is all fifty-nine keys rather than the interesting ones,
+because a spot check leaves the other fifty-one unwatched and because the sixtieth
 key should not be addable without somebody deciding what it does on delete. Rules
 are grouped by *rule* rather than listed per table: the reason for a rule is shared,
-and repeating it forty-eight times would be forty-eight places to keep in step.
-Where an individual key is load-bearing, or reads wrong beside its neighbour, it is
-called out under its group.
+and repeating it fifty-nine times would be fifty-nine places to keep in step. Where
+an individual key is load-bearing, or reads wrong beside its neighbour, it is called
+out under its group.
 
 Two comparisons follow from it, and they are not redundant. The **metadata** must
 agree with the inventory, which is a millisecond and catches the edit. The
@@ -81,10 +81,13 @@ CASCADE: frozenset[str] = frozenset(
         "postproduction_task_steps.task_id",
         "postproduction_tasks.order_id",
         "print_jobs.order_id",
+        "purchase_order_lines.order_id",
+        "purchase_receipts.line_id",
         "refunds.payment_id",
         "service_operations.printer_id",
         "sessions.user_id",
         "sla_credit_entries.order_id",
+        "storage_cells.zone_id",
         "wait_list_entries.job_id",
         "wait_list_entries.order_id",
     }
@@ -104,7 +107,12 @@ CASCADE: frozenset[str] = frozenset(
 SET_NULL: frozenset[str] = frozenset(
     {
         "ams_slots.lot_id",
+        # Retiring a cell unplaces the spool; it does not destroy it. The history
+        # of that cell survives the column going null, because a movement copies
+        # the address as text rather than pointing at the row.
+        "material_lots.cell_id",
         "material_lots.printer_id",
+        "material_movements.actor_id",
         "model_assets.uploaded_by",
         "order_events.actor_id",
         "orders.customer_id",
@@ -116,6 +124,13 @@ SET_NULL: frozenset[str] = frozenset(
         "prepared_plates.sliced_by",
         "print_jobs.prepared_plate_id",
         "print_jobs.printer_id",
+        # The sweep opens most of these, and NULL there already means "no person
+        # did". A member of staff leaving must not take the record of what broke
+        # while they were here with them — `contexts/service/models.py` says so
+        # beside the column.
+        "printer_failures.recorded_by",
+        "purchase_receipts.material_lot_id",
+        "purchase_receipts.received_by",
         "settings.updated_by",
         "settings_audit.changed_by",
     }
@@ -132,15 +147,35 @@ SET_NULL: frozenset[str] = frozenset(
 #: ``order_lines.model_asset_id`` is the one to preserve above all. It is the whole
 #: of what stops `catalog.assets`' retention sweep collecting a mesh an open order
 #: depends on — which is why that sweep does not, and must not, consult `ordering`.
+#:
+#: ``purchase_orders.supplier_id`` carries the same argument in the other direction:
+#: deleting a supplier must not erase what was bought from it, because the receipts
+#: hanging off those orders are the farm's only record of what a thing cost on the
+#: day it arrived. `suppliers.is_active` is the ordinary way to retire one, and it
+#: exists because this rule refuses the alternative.
 RESTRICT: frozenset[str] = frozenset(
     {
         "catalog_models.model_asset_id",
+        # The ledger is what stock history is computed from, so deleting the spool
+        # it describes would silently rewrite the record. The cost is written at
+        # the column: a spec whose lot has moved can no longer be ORM-deleted,
+        # because `MaterialSpec.lots` cascades.
+        "material_movements.lot_id",
         "order_lines.model_asset_id",
         "orders.rate_snapshot_id",
         "packaging_task_tara.tara_id",
         "payments.order_id",
         "postproduction_tasks.operation_id",
         "print_jobs.model_asset_id",
+        # The one key here that guards a *history* rather than work in flight.
+        # Nothing in this tree deletes a printer — the fleet retires them with
+        # `is_active` — so RESTRICT costs nothing today and refuses the single
+        # deletion that could not be undone: the one that erases the evidence a
+        # machine was unreliable. `metric_rollups.printer_id` carries no key at
+        # all for the opposite reason (ADR-0018 drops partitions under it), so
+        # the two are not the inconsistency they look like side by side.
+        "printer_failures.printer_id",
+        "purchase_orders.supplier_id",
     }
 )
 
