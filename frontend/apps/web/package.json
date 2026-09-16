@@ -13,11 +13,11 @@
     "@printorian/api-client": "*",
     "@printorian/events": "*",
     "@printorian/ui": "*",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "three": "^0.185.1"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "three": "^0.186.0"
   },
   "devDependencies": {
-    "@types/three": "^0.185.4"
+    "@types/three": "^0.186.0"
   }
 }
