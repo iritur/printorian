@@ -30,8 +30,8 @@ from another document has only moved the drift.
 
 ## 1. Where the screens stand
 
-**Nineteen of twenty-one are built.** Every public screen ships; the two that do
-not are all control-realm. `settings` was the nearest of them and is now built —
+**Twenty of twenty-one are built.** Every public screen ships; the one that does
+not is control-realm. `settings` was the nearest of them and is now built —
 105 parameters across fourteen sections, served and audited. What is left of it is
 three of the table-valued settings, not the screen (§2.1).
 
@@ -40,7 +40,7 @@ three of the table-valued settings, not the screen (§2.1).
 | `promo` `catalog` `configurator` `checkout` `cabinet` `account` `auth` `blog` `blog-post` | public | **built** — all nine |
 | `dashboard` `orders` `fleet` `materials` `users` `postproduction` `packaging` | control | **built** |
 | `settings` | control | **built** — scalars and Диагностика; the tables remain, §2.1 |
-| `service` | control | **not built** — §2.2 |
+| `service` | control | **built** — the ticket board, the work order and the reliability table; §2.2 for the rest |
 | `purchasing` | control | **built** — the desk, the six stages and receiving into material stock; the deferred panels are in §2.3 |
 | `store` | control | **built** — cells, ledger and movements; §2.4 for the rest |
 | `logistics` | control | **not built** — §2.5 |
@@ -160,8 +160,17 @@ Since [#33](https://github.com/iritur/printorian/issues/33)'s first slice, also 
 **failure record** — `printer_failures`, opened automatically from a machine the driver
 reported in `ERROR`, closed by the observation that saw it working again, and read back
 through `GET /service/reliability` as отказов/1000 ч, MTTR over repaired failures only,
-and the «Причины отказов» funnel with an `uncategorised` count beside it. **No screen
-consumes any of it** (§4), which is why §1 still calls `service` not built.
+and the «Причины отказов» funnel with an `uncategorised` count beside it. The second
+slice ([#33](https://github.com/iritur/printorian/issues/33) again) is the **ticket
+board**: `service_tickets` and their steps, raised by a person or — for a
+driver-reported failure — by the sweep, worked through «Порядок работ» and closed;
+`ServicePage.tsx` draws the five lanes, the work order and the reliability table,
+which is why §1 now calls `service` built.
+
+**Still owed, and why each waits:** «Последствия» is money and needs a route behind
+`VIEW_FINANCIALS`; «Запчасти на посту» needs a spare-parts stock that inventory does
+not hold; crew badges need a crew record; maintenance tickets raised from running
+hours need the service card to open tickets, with its own idempotence question.
 
 Two judgements in that slice are worth knowing before arguing with the numbers.
 `OFFLINE` is deliberately **not** a failure: `mark_unreachable` writes it for a poll that
@@ -321,12 +330,12 @@ answered here rather than opened again out of completeness.
 
 **This list was empty and is not any more.** All fourteen endpoints it originally carried gained consumers; the last of them was `GET /materials/{code}`, and [#38](https://github.com/iritur/printorian/issues/38) put two ways of closing it — build the materials detail popup the route was written for, or delete the route. **The popup was built.** `frontend/apps/console/src/MaterialDetail.tsx` reads the spec by code when a row is opened, which is where the density, the tensile figure, the heat-deflection temperature and the two suitability flags come from.
 
-**The four that remain are the failure record**, landed backend-first and deliberately without a screen (§2.2). `service` is still **not built** in §1 and adding a partial route key to the console's `Screen` union would make `test_docs_screen_inventory.py` call it built, which would be the more expensive lie: a screen listed as done that shows one table out of seven panels.
+**The four that remain are three writes to the failure record and one ticket action.** The failure record's reads are consumed now — `ServicePage.tsx` draws «Надёжность» from `GET /service/reliability` and the ticket board from `GET /service/tickets` — but the screen records nothing by hand: a failure is opened by the sweep from a driver-reported state, and the three routes below are the person's half (recording one, closing one, naming its cause), which the board does not yet expose. Assigning a ticket to a *named* person needs a staff picker the board does not have; «Взять в работу» assigns it to whoever presses it.
 
-- [#33](https://github.com/iritur/printorian/issues/33) — **`GET /service/reliability`**, «Надёжность»: failures over `metric_rollups.observed_seconds` per machine, the «Причины отказов» funnel, and MTTR from closed failures only. Seconds and counts; the kit's «ПОТЕРЯ 3 820 ₽» is not here and is not owed by this route
 - [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/failures`**, a person recording that a machine stopped working; the sweep in `workers/service.py` writes the «СООБЩИЛ ДРАЙВЕР» half and no client can claim that badge
 - [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/failures/{failure_id}/restore`**, the observation in which the machine was working again, which is the only measurement of how long it was down
 - [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/failures/{failure_id}/cause`**, naming the cause of a failure the driver opened with none — the farm holds no table turning `bambu.print_error.{code}` into «слом филамента» (ADR-0007), so this route is the only way a bar of the funnel is ever written
+- [#33](https://github.com/iritur/printorian/issues/33) — **`POST /service/tickets/{ticket_id}/assign`**, handing a ticket to a named person; the board assigns to whoever starts the work and has no staff picker yet
 
 `TelemetrySample` was the headline entry here and no longer is: `metric_rollups` summarises it and `/fleet/metrics` serves it. `EstimateVariance` left the same way — `GET /jobs/variances` serves it and the order desk's «Пересмотр цены» panel reads it. So did `RateSnapshotRecord`: `GET /orders/{order_id}/rate-snapshot` serves it and «Тарифы заказа» reads it.
 

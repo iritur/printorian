@@ -16,8 +16,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.fleet.models import Printer
-from printorian.contexts.service import FailureOrigin, ServiceDesk
-from printorian.contexts.service.models import PrinterFailure
+from printorian.contexts.service import FailureOrigin, ServiceDesk, TicketDesk, TicketKind
+from printorian.contexts.service.models import PrinterFailure, ServiceTicket
 from printorian.core.clock import FixedClock
 from printorian.core.ids import EntityId
 from printorian.drivers import PrinterState
@@ -239,3 +239,37 @@ async def test_a_failure_a_person_recorded_is_not_closed_by_the_machine(
     assert outcome.closed == 0
     (failure,) = await failures_of(db_session, printer)
     assert failure.restored_at is None
+
+
+async def test_a_driver_opened_failure_raises_one_repair_ticket_and_a_second_pass_raises_none(
+    db_session: AsyncSession, desk: ServiceDesk, clock: FixedClock
+) -> None:
+    """«АВАРИЙНЫЕ — ПО СОБЫТИЮ ДРАЙВЕРА», and idempotent across passes.
+
+    The sweep with a ticket desk raises the repair beside the failure; the next
+    pass sees the same open failure and must not mint a second SV number.
+    """
+    tickets = TicketDesk(db_session, clock)
+    with_tickets = ServiceSweep(db_session, desk, tickets)
+    printer = await a_printer(
+        db_session,
+        state=PrinterState.ERROR,
+        last_seen_at=HOUR,
+        error_code="bambu.print_error.0300_8003",
+    )
+
+    first = await with_tickets.sweep()
+    second = await with_tickets.sweep()
+
+    assert (first.opened, second.opened) == (1, 0)
+    rows = list(
+        await db_session.scalars(select(ServiceTicket).where(ServiceTicket.printer_id == printer))
+    )
+    assert len(rows) == 1
+    assert rows[0].kind is TicketKind.REPAIR
+    assert rows[0].origin is FailureOrigin.DRIVER
+    assert rows[0].opened_at == HOUR
+    failure = await db_session.scalar(
+        select(PrinterFailure).where(PrinterFailure.printer_id == printer)
+    )
+    assert failure is not None and rows[0].failure_id == failure.id

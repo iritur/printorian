@@ -195,7 +195,13 @@ def test_the_stated_counts_match_the_table() -> None:
         f'{DOC} §1 should open "{headline}"; the table says {built} of {total} are built.'
     )
 
-    owed = f"the {_word(len(not_built))} that do not are all control-realm"
+    # Singular when one screen is left: the sentence is checked as the string an
+    # author would type, and "the one that do not are" is not one anybody would.
+    owed = (
+        "the one that does not is control-realm"
+        if len(not_built) == 1
+        else f"the {_word(len(not_built))} that do not are all control-realm"
+    )
     assert owed in section, (
         f'{DOC} §1 should say "{owed}"; the table has {len(not_built)} not-built rows.'
     )

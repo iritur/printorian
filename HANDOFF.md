@@ -95,6 +95,37 @@ mutations to the fold each fail its tests (run and reverted): unpriced receipts
 priced at zero (3 fail), the fold trusting input order (1), a single point
 reported as a movement (1).
 
+**#33's second slice: tickets, and the service screen that calls `service`
+built.** `service_tickets` and `service_ticket_steps` (migration
+`0027_service_tickets`, sequence `sv_number_seq`): a ticket is the *work* —
+raised by a person or, for a driver-reported failure, by the sweep; assigned;
+walked through «Порядок работ»; closed — and it is a different row from the
+failure, which stays the *measurement* `reliability.py` reads. `TicketDesk` in
+`contexts/service/tickets.py`; the five lanes are `lanes_of`, a pure function
+where status wins over kind (a repair being worked is «В работе», not
+«Аварийные»). `open_for_failure` is idempotent per failure, so a sweep that has
+not seen its own commit cannot mint a second SV number — `test_service_sweep.py`
+drives two passes and `test_service_pass_wiring.py` pins that `ServicePass`
+supplies the desk. Closing refuses an unticked step (`error.service.steps_pending`
+with the positions) rather than ticking it for you. A ticket closed without
+ever being started keeps `started_at` null: nobody measured when the work began,
+and stamping the close there would make a job that waited twelve minutes read as
+one that took none — its elapsed is then the span it was open. Routes under
+`/service/tickets` take the failure record's two gates and carry minutes and
+counts only; `ServicePage.tsx` draws the board, the work order and «Надёжность»
+from `GET /service/reliability`, so DESIGN-KIT §1 now reads twenty of
+twenty-one. Deliberately not built, each with its reason in the code:
+«Последствия» (money), «Запчасти на посту» (no spare-parts stock), crew badges
+(no crew record), maintenance tickets raised from running hours (the service
+card's job, with an idempotence question of its own), and a staff picker for
+`POST …/assign`, which is the one ticket route no screen consumes and is listed
+in §4 as such. `alembic upgrade`, `check`, `downgrade` and re-`upgrade` were run
+against the dev database; `DATABASE-REVIEW.md` §1 moved to 53 tables and
+twenty-nine migrations because `test_docs_table_inventory.py` reads it. Two doc
+gates needed care: the screen-inventory test's "the N that do not are" template
+had no singular, and it now says "the one that does not is" when one screen
+remains.
+
 **#29's maintenance-intervals table is built, and it is the one of the six
 with a consumer.** `service.maintenance_defaults` is the fifth `Kind.TABLE`
 field: rows of `{code, interval_hours}`, one per `MaintenanceKind`, default

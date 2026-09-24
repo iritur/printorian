@@ -48,6 +48,37 @@ class FailureOrigin(StrEnum):
     PERSON = "person"
 
 
+class TicketKind(StrEnum):
+    """The kit's five ticket kinds: «УСТАНОВКА · РЕМОНТ · ТО · ЗАГРУЗКА · ПЕРЕМЕЩЕНИЕ».
+
+    A closed set for the reason `FailureCause` is one: the board is grouped by
+    kind, and a group over free text is a group over spelling.
+    """
+
+    INSTALL = "install"
+    REPAIR = "repair"
+    MAINTENANCE = "maintenance"
+    MATERIAL_LOAD = "material_load"
+    MOVE = "move"
+
+
+class TicketStatus(StrEnum):
+    """Where a ticket is: raised, being worked, or done. Nothing steps backwards."""
+
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    CLOSED = "closed"
+
+
+#: The kit's lanes, as a function of kind. A repair is «Аварийные» whoever
+#: opened it — a machine somebody walked to and found broken is not less urgent
+#: for having been noticed by a person. The two shop-logistics kinds share a lane
+#: because the kit draws them in one.
+EMERGENCY_KINDS: frozenset[TicketKind] = frozenset({TicketKind.REPAIR})
+PLANNED_KINDS: frozenset[TicketKind] = frozenset({TicketKind.INSTALL, TicketKind.MAINTENANCE})
+LOGISTICS_KINDS: frozenset[TicketKind] = frozenset({TicketKind.MATERIAL_LOAD, TicketKind.MOVE})
+
+
 class FailureCause(StrEnum):
     """The «Причины отказов» funnel, as a closed set.
 

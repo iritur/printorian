@@ -27,7 +27,7 @@ from printorian.contexts.ordering import OrderingService
 from printorian.contexts.packaging import PackagingService
 from printorian.contexts.postproduction import PostProductionService
 from printorian.contexts.production import ProductionService
-from printorian.contexts.service import ServiceDesk
+from printorian.contexts.service import ServiceDesk, TicketDesk
 from printorian.contexts.settings import SettingsService
 from printorian.core.secrets import SecretBox
 from printorian.workers import (
@@ -167,7 +167,8 @@ class ServicePass:
     async def sweep(self) -> service.SweepOutcome:
         async with self._runtime.session() as session:
             desk = ServiceDesk(session, self._runtime.clock)
-            outcome = await service.ServiceSweep(session, desk).sweep()
+            tickets = TicketDesk(session, self._runtime.clock)
+            outcome = await service.ServiceSweep(session, desk, tickets).sweep()
         await self._runtime.record_beat("service", self._runtime.settings.service_sweep_seconds)
         return outcome
 
