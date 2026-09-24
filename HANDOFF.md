@@ -79,6 +79,22 @@ composite nobody has defined. The board row carries the counts beside the share
 was split at the responsibility seam: `_purchasing_support.py` (helpers, no
 fixtures — the `_catalog_support.py` rule), `test_purchasing_scorecard_api.py`.
 
+**#34's last row — price history per position — is a read over receipts, and
+that closes the issue.** `contexts/procurement/prices.py`: one query joining
+`purchase_receipts` to their lines over a window (a year by default), and a
+pure fold that picks each position's earliest and latest *priced* receipt. A
+receipt with no `unit_price_paid` is counted (`unpriced_receipts`, and the panel
+footer says «приёмок без записанной цены: N») and moves no figure — averaging it
+in as `0` would drag every position towards free. A position with one priced
+receipt has `earliest = change = null`: a price, not a stable price, and not
+`0%`. The kit's «Средневзвешенно −9% за год» slab is not served (weights nobody
+chose). Money, so `GET /purchasing/prices` sits behind `VIEW_FINANCIALS` like
+`/costs`, and `PurchasingPage` never requests it without the permission — the
+screen test pins that in the network log, not just in what renders. Three
+mutations to the fold each fail its tests (run and reverted): unpriced receipts
+priced at zero (3 fail), the fold trusting input order (1), a single point
+reported as a movement (1).
+
 **The three worker intervals now say on the screen that they wait for a
 restart** ([#32](https://github.com/iritur/printorian/issues/32), the half the
 issue says should be done regardless). `scheduler_tick_seconds`,
