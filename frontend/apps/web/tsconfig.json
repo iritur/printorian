@@ -5,7 +5,7 @@
     "rootDir": "src",
     "types": ["vite/client", "@testing-library/jest-dom"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../../types/*.d.ts"],
   "references": [
     { "path": "../../packages/ui" },
     { "path": "../../packages/api-client" },

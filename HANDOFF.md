@@ -88,6 +88,30 @@ only place the difference is stated, and `SettingsPage.test.tsx` pins that each 
 the three carries it in its own section. Reverting the catalogue change fails that
 test (run). The hot reload itself stays deferred, as the issue says.
 
+**`main` was red twice over, and the second break was hidden behind the first.**
+CI runs the frontend job only after the backend job passes, so once the pin
+above went in, the frontend job ran on `main`'s tree for the first time since
+[#105](https://github.com/iritur/printorian/pull/105) (vitest 4.1.11 → 5.0.0,
+merged 2026-09-09 with its frontend check **red**) — and failed `Types` with 208
+`TS2339` errors, «Property 'toBeInTheDocument' does not exist», in every test
+file. Vitest 5 made `Assertion<T>` into `Assertion<R, T>`; jest-dom 7.0.1's
+one-parameter augmentation no longer merges with it, `skipLibCheck` hides the
+mismatch in jest-dom's own `.d.ts`, and the suite itself runs green because the
+runtime `expect.extend` half still works. jest-dom's fix is
+testing-library/jest-dom#742, open and unreleased. The bridge is
+`frontend/types/jest-dom-vitest.d.ts`, which augments vitest's documented
+`Matchers<R, T>` extension point with jest-dom's matchers in the order #742
+uses; the four project `tsconfig.json` files `include` it. Delete the file and
+the four `include` entries when a jest-dom release carries #742.
+
+**`npm run typecheck` said this tree was fine, and it was wrong.** `tsc --build`
+trusts `*.tsbuildinfo`, and the build info in this worktree predated `npm ci`
+with the vitest 5 lockfile, so the incremental build re-checked nothing and
+reported success — the same tree fails 208 times under `tsc --build --force`,
+which is what a fresh CI runner does. After any dependency change, run the
+forced build once, or delete the build info. This is the frontend's version of
+§4's piping trap: a green result from a check that did not run.
+
 **What the suite run cost, so the next person budgets for it:** the full suite
 here took 1 688 s (0:28:07) rather than the ~950 s recorded below. It was started
 while `npm run typecheck`, `npm run lint`, two `vitest` runs and an `alembic
