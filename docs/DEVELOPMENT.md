@@ -54,14 +54,26 @@ other staff account.
 That is the whole of it for a real farm too, minus the address —
 [RUNBOOK-FIRST-BOOT.md](RUNBOOK-FIRST-BOOT.md) has the rest of first boot.
 
+So the two accounts are these, and neither has a password this document can
+publish, because nothing in the repository sets one:
+
 | Account | Password | Role |
 |---|---|---|
-| `boss@printorian.example` | `owner-pass-12345` | owner — the console, every screen |
-| `floor@printorian.example` | `shop-floor-pass-1` | operator — production screens only |
+| `boss@printorian.example` | whatever you typed at the prompt (ten characters or more) | owner — the console, every screen |
+| the second one you make in «Сотрудники» | whatever you gave it there | `operator` for the production screens only, `engineer` to also get the prep queue |
+
+An earlier revision of this table listed `floor@printorian.example` with a
+password and a role. Nothing creates that account — not the migrations, not
+`provision_owner.py`, not the `seed_*.py` scripts — so on a database you have
+just built it does not exist, and a sign-in as it fails with
+`invalid_credentials`, which reads like broken auth and is only an absent row.
+Where it *does* exist, it came in with a restored dump, and its password and
+role are whatever the author of that dump chose.
 
 Two roles rather than one on purpose: most authorization bugs only show up when
 somebody who *should not* see a screen opens it, and that needs an account that
-cannot.
+cannot. Which of `operator` and `engineer` you make depends on which gate you
+are checking — the prep queue is an engineer's, and an operator cannot open it.
 
 Content for the catalogue, materials and journal comes from
 `backend/scripts/seed_*.py`, each idempotent.
