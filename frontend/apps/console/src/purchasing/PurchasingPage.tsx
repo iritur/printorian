@@ -4,6 +4,7 @@ import { FilterChips, api, translate, useChrome, useSession } from '@printorian/
 import type { FilterChip, Locale, MessageKey } from '@printorian/ui'
 
 import { OrderDetail } from './OrderDetail'
+import { PriceMovements } from './PriceMovements'
 import {
   NOT_MEASURED,
   formatDay,
@@ -17,6 +18,7 @@ import type {
   PurchasableKind,
   PurchaseOrderView,
   PurchaseStatus,
+  PurchasePrices,
   PurchasingBoard,
   ReorderRow,
   SupplierScore,
@@ -59,6 +61,7 @@ export function PurchasingPage({ locale }: { locale: Locale }) {
 
   const [board, setBoard] = useState<PurchasingBoard | null>(null)
   const [suppliers, setSuppliers] = useState<SupplierView[]>([])
+  const [prices, setPrices] = useState<PurchasePrices | null>(null)
   const [open, setOpen] = useState<PurchaseOrderView | null>(null)
   const [status, setStatus] = useState<PurchaseStatus | null>(null)
   const [query, setQuery] = useState('')
@@ -77,7 +80,18 @@ export function PurchasingPage({ locale }: { locale: Locale }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+    // The prices are a second request behind `VIEW_FINANCIALS`, refetched with
+    // the board because a delivery received from the detail popup is a new
+    // point on the panel. Never asked for without the permission: the route
+    // would refuse, and a refused request in the network log is still a request
+    // for money by somebody who may not see it.
+    if (!maySeeMoney) return
+    try {
+      setPrices(await api.get<PurchasePrices>('/purchasing/prices'))
+    } catch (exc: unknown) {
+      console.warn('purchasing prices refresh failed', exc)
+    }
+  }, [maySeeMoney])
 
   useEffect(() => {
     if (!ready || !entitled) return
@@ -327,6 +341,8 @@ export function PurchasingPage({ locale }: { locale: Locale }) {
           <span>{t('pu.scores.foot')}</span>
         </div>
       </section>
+
+      {maySeeMoney && prices && <PriceMovements prices={prices} locale={locale} />}
 
       {open && (
         <OrderDetail

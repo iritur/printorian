@@ -24,9 +24,10 @@ rule (ARCHITECTURE §layering).
 
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from printorian.api.deps import (
     AppClock,
@@ -46,6 +47,7 @@ from printorian.contexts.procurement import (
     CreateSupplier,
     PurchaseOrderCost,
     PurchaseOrderView,
+    PurchasePrices,
     PurchasingBoard,
     ReceiveDelivery,
     ReorderRow,
@@ -53,6 +55,7 @@ from printorian.contexts.procurement import (
     material_items,
     order_rows,
     ordered_codes,
+    price_movements,
     reorder_rows,
     seed_lines,
     status_counts,
@@ -179,6 +182,23 @@ async def costs(po_id: EntityId, procurement: Procurement) -> PurchaseOrderCost:
     See the module docstring.
     """
     return await procurement.costs(po_id)
+
+
+@router.get("/prices", dependencies=[_MONEY])
+async def prices(
+    clock: AppClock, db: DbSession, days: int = Query(365, ge=1, le=3660)
+) -> PurchasePrices:
+    """«Цены по ключевым позициям» — what each position cost at receiving, over a
+    window that defaults to the kit's year.
+
+    The second route in this module carrying rubles, gated like `/costs`: a
+    caller without `VIEW_FINANCIALS` is refused whole. The figures are picked
+    from receipts only — no table of typed-in prices exists to drift from them
+    (`contexts/procurement/prices.py` says why the unpriced ones count for
+    nothing and the kit's weighted average is not served).
+    """
+    until = clock.now()
+    return await price_movements(db, since=until - timedelta(days=days), until=until)
 
 
 @router.post("/orders/{po_id}/supplier")

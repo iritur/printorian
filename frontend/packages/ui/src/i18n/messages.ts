@@ -1480,6 +1480,16 @@ export const ru = {
   'pu.scores.of_dated': '{on_time} из {dated}',
   'pu.scores.foot': '«В СРОК» СЧИТАЕТСЯ ТОЛЬКО ПО ПОСТАВКАМ С УКАЗАННОЙ ДАТОЙ — ПРОЧЕРК, ЕСЛИ ТАКИХ НЕ БЫЛО',
 
+  // «Цены по ключевым позициям». Every figure is a receipt's `unit_price_paid`;
+  // there is no price table. «БЫЛО» is an earlier priced receipt in the window
+  // or a dash, and the kit's weighted-average slab is not drawn (no weights).
+  'pu.prices.title': 'Цены по ключевым позициям',
+  'pu.prices.aside': 'ПО ПРИЁМКАМ ЗА ГОД',
+  'pu.prices.empty': 'За год не было приёмок с записанной ценой',
+  'pu.prices.was': 'БЫЛО {price} · {change}',
+  'pu.prices.unpriced': 'ПРИЁМОК БЕЗ ЗАПИСАННОЙ ЦЕНЫ: {count} — В ЦИФРАХ ВЫШЕ ИХ НЕТ',
+  'pu.prices.foot': 'ЦЕНА — ТО, ЧТО ЗАПИСАНО ПРИ ПРИЁМКЕ; ТАБЛИЦЫ ЦЕН НЕТ',
+
   'pu.supplier.title': 'Поставщик',
   // Counts only in this slice. «Поставок · В срок · Брак · Оценка» needs a
   // defect record captured at receiving and a promised-versus-delivered
@@ -2913,6 +2923,13 @@ export const en: Messages = {
   'pu.scores.empty': 'No suppliers yet',
   'pu.scores.of_dated': '{on_time} of {dated}',
   'pu.scores.foot': '«ON TIME» COUNTS ONLY DELIVERIES THAT CARRIED A DATE — A DASH WHEN NONE DID',
+
+  'pu.prices.title': 'Prices by key position',
+  'pu.prices.aside': 'FROM A YEAR OF DELIVERIES',
+  'pu.prices.empty': 'No delivery in the last year carried a recorded price',
+  'pu.prices.was': 'WAS {price} · {change}',
+  'pu.prices.unpriced': 'DELIVERIES WITHOUT A RECORDED PRICE: {count} — NOT IN THE FIGURES ABOVE',
+  'pu.prices.foot': 'A PRICE IS WHAT RECEIVING RECORDED; THERE IS NO PRICE TABLE',
 
   'pu.supplier.title': 'Supplier',
   'pu.supplier.aside': 'A SCORE NEEDS RECEIPTS FIRST',

@@ -50,7 +50,12 @@ const net = vi.hoisted(() => {
 import type * as UiModule from '@printorian/ui'
 
 import { PurchasingPage } from './PurchasingPage'
-import type { PurchaseOrderView, PurchasingBoard, PurchaseStatus } from './types'
+import type {
+  PurchaseOrderView,
+  PurchasePrices,
+  PurchasingBoard,
+  PurchaseStatus,
+} from './types'
 
 const session = vi.hoisted(() => ({ permissions: ['manage_inventory', 'view_financials'] }))
 
@@ -155,9 +160,46 @@ function jsonOk(body: unknown): Response {
   return { ok: true, status: 200, json: () => Promise.resolve(body) } as unknown as Response
 }
 
+function somePrices(): PurchasePrices {
+  return {
+    since: '2025-09-05T09:00:00Z',
+    until: '2026-09-05T09:00:00Z',
+    positions: [
+      {
+        kind: 'material',
+        item_code: 'PETG-CF',
+        item_name: 'PETG-CF',
+        unit: 'gram',
+        latest: '2.94',
+        latest_at: '2026-08-20T09:00:00Z',
+        earliest: '3.24',
+        earliest_at: '2025-10-01T09:00:00Z',
+        change: '-0.0926',
+        priced_receipts: 4,
+        unpriced_receipts: 1,
+      },
+      {
+        kind: 'spare_part',
+        item_code: 'NOZZLE-HARD',
+        item_name: 'Сопло закалённое',
+        unit: 'piece',
+        latest: '1200',
+        latest_at: '2026-07-01T09:00:00Z',
+        // One priced receipt in the window: a price, not a movement.
+        earliest: null,
+        earliest_at: null,
+        change: null,
+        priced_receipts: 1,
+        unpriced_receipts: 0,
+      },
+    ],
+  }
+}
+
 function serve(board: PurchasingBoard, order: PurchaseOrderView = anOrder()) {
   net.handler = (url: string) => {
     if (url.includes('/purchasing/board')) return Promise.resolve(jsonOk(board))
+    if (url.includes('/purchasing/prices')) return Promise.resolve(jsonOk(somePrices()))
     if (url.includes('/purchasing/suppliers')) return Promise.resolve(jsonOk([]))
     if (url.includes('/costs'))
       return Promise.resolve(
@@ -386,5 +428,39 @@ describe('the supplier scorecard', () => {
     expect(cells[1]?.textContent).toBe('0')
     expect(cells[2]?.textContent).toBe('—')
     expect(cells[3]?.textContent).toBe('—')
+  })
+})
+
+describe('the price panel', () => {
+  // Issue #34's last row: price history per position falls out of receiving.
+  // The screen's half is that it draws what receiving recorded and nothing
+  // else — «БЫЛО» only where an earlier priced receipt exists, and the count
+  // of unpriced arrivals where the kit would draw an average.
+  it('draws the earlier price and the change, and a dash where there is one point', async () => {
+    render(<PurchasingPage locale="ru" />)
+
+    const petg = (await screen.findByText(/PETG-CF/)).closest('li')
+    expect(petg?.textContent).toMatch(/БЫЛО 3,24/)
+    expect(petg?.textContent).toMatch(/−9%|-9%/)
+    expect(petg?.getAttribute('data-tone')).toBe('good')
+
+    const nozzle = screen.getByText(/Сопло закалённое/).closest('li')
+    expect(nozzle?.textContent).toMatch(/1\s?200/)
+    expect(nozzle?.textContent).not.toMatch(/БЫЛО/)
+    expect(nozzle?.textContent).not.toMatch(/0%/)
+    expect(nozzle?.getAttribute('data-tone')).toBeNull()
+
+    // The one arrival nobody priced is stated, not averaged in as free.
+    expect(screen.getByText(/БЕЗ ЗАПИСАННОЙ ЦЕНЫ: 1/)).toBeInTheDocument()
+  })
+
+  it('never requests the prices for a manager without view_financials', async () => {
+    session.permissions = ['manage_inventory']
+
+    render(<PurchasingPage locale="ru" />)
+
+    await screen.findByText('Требуют заказа сейчас')
+    expect(net.seen.some((call) => call.url.includes('/purchasing/prices'))).toBe(false)
+    expect(screen.queryByText('Цены по ключевым позициям')).toBeNull()
   })
 })

@@ -208,3 +208,32 @@ export const PIPE: readonly PurchaseStatus[] = [
 
 /** Every stage the chips can filter on, cancellation included. */
 export const ALL_STATUSES: readonly PurchaseStatus[] = [...PIPE, 'cancelled']
+
+/**
+ * One line of «Цены по ключевым позициям», and the panel around it. Money —
+ * they arrive from `/purchasing/prices` behind `VIEW_FINANCIALS`, like
+ * `PurchaseOrderCost`, and the page never asks for them without it.
+ *
+ * `earliest` and `change` are null when the window holds one priced receipt:
+ * a price, not a movement. `unpriced_receipts` counts arrivals whose price was
+ * never recorded; they are in no figure, and the panel says how many there were.
+ */
+export interface PositionPrice {
+  kind: PurchasableKind
+  item_code: string
+  item_name: string
+  unit: string
+  latest: string
+  latest_at: string
+  earliest: string | null
+  earliest_at: string | null
+  change: string | null
+  priced_receipts: number
+  unpriced_receipts: number
+}
+
+export interface PurchasePrices {
+  since: string
+  until: string
+  positions: PositionPrice[]
+}
