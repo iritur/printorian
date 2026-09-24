@@ -156,3 +156,24 @@ def needs_reorder(
     if not auto_reorder or on_order or low_at <= 0:
         return False
     return remaining <= low_at
+
+
+def on_time_share(*, dated: int, on_time: int) -> Decimal | None:
+    """«В срок» on the supplier scorecard: the share of dated deliveries that kept
+    their date, or ``None`` when nothing was dated.
+
+    The denominator is the deliveries that *carried* an ``expected_at``, never
+    the deliveries — an order raised without a date was neither punctual nor
+    late, and counting it in the denominator would make a supplier look worse
+    for every date the buyer forgot to type. Counting it in the numerator would
+    do the opposite. So it is in neither, and a supplier with deliveries but no
+    dates reads «—» rather than 0% or 100% (CLAUDE.md §1).
+
+    Four places, so ``1/3`` survives the trip to a percentage with one decimal
+    without two suppliers at 33.3% and 33.4% sorting as equals.
+    """
+    if dated <= 0:
+        return None
+    if on_time < 0 or on_time > dated:
+        raise ValueError(f"on_time={on_time} is outside 0..dated={dated}")
+    return (Decimal(on_time) / Decimal(dated)).quantize(Decimal("0.0001"))

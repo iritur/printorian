@@ -34,6 +34,18 @@
 # whenever a pin is redundant: an ignore silences the symptom, removing the
 # redundant pin removes the thing that could go wrong.
 #
+# **A bump can break through a neighbour, and the fix is to raise the neighbour,
+# not to mute the warning.** `pytest` runs with `filterwarnings = ["error"]`, so a
+# `DeprecationWarning` raised while a test module is *imported* is a collection
+# error that fails the whole suite. `anyio` 4.15 deprecated `anyio.abc.BlockingPortal`;
+# `starlette` 1.6 still imported it from there, in `testclient.py`, which
+# `tests/api/test_events_ws.py` pulls in. Dependabot raised `anyio` on its own
+# because nothing in the pair says they move together, `main` went red, and every
+# later pull request failed the backend job before it ran a single test. The
+# answer was `starlette==1.7.0`, which imports the portal from
+# `anyio.from_thread`; a `filterwarnings` ignore would have passed the same gate
+# while leaving the farm on a version that the next `anyio` will actually break.
+#
 # **A constraint applies only if the package is installed at all**, so this file
 # does not have to know about platforms: `uvloop` is pulled by `uvicorn[standard]`
 # on Linux and not on Windows, and is simply absent here rather than wrong. The
@@ -96,7 +108,7 @@ python-multipart==0.0.32
 redis==8.1.0
 rich==15.0.0
 ruff==0.16.6
-starlette==1.6.0
+starlette==1.7.0
 structlog==26.1.0
 truststore==0.10.4
 typing-inspection==0.4.4

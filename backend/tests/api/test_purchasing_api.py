@@ -25,22 +25,15 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from decimal import Decimal
-from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
 
 from printorian.api.app import create_app
 from printorian.api.deps import get_current_actor
-from printorian.contexts.identity import Actor, CreateUser, IdentityService, Permission, Role
-from printorian.contexts.inventory import (
-    CreateMaterialLot,
-    CreateMaterialSpec,
-    InventoryService,
-)
+from printorian.contexts.identity import Actor, Permission, Role
+from printorian.contexts.inventory import CreateMaterialLot, InventoryService
 from printorian.contexts.inventory.models import MaterialLot
 from printorian.contexts.procurement import PurchaseOrderView, PurchasingBoard
 from printorian.contexts.procurement.models import PurchaseReceipt
@@ -51,43 +44,23 @@ from printorian.core.db import Base
 from printorian.core.events import EventBus
 from printorian.core.ids import new_id
 from printorian.core.storage import InMemoryObjectStore
+from tests.api._purchasing_support import (
+    MATERIAL,
+    PurchasingDatabase,
+    an_order,
+    auth,
+    seed_desk,
+)
 from tests.conftest import wire_app
-
-PASSWORD = "correct-horse-battery"
-MATERIAL = "PLA-BLACK"
 
 #: Every field name on the two responses a production role may read. Money must
 #: not appear in any of them, at any depth.
 _MONEY_WORDS = ("price", "cost", "total_rub", "amount", "rub", "sum", "spend", "budget")
 
 
-class _TestDatabase:
-    """Stands in for `core.db.Database`, per the idiom the API tests use.
-
-    The rollback in `session` is not incidental here: it is the thing
-    `test_a_refused_delivery_leaves_nothing_behind` is about.
-    """
-
-    def __init__(self, url: str) -> None:
-        self.engine = create_async_engine(url, poolclass=NullPool)
-        self.session_factory = async_sessionmaker(self.engine, expire_on_commit=False)
-
-    async def session(self) -> AsyncIterator[AsyncSession]:
-        async with self.session_factory() as session:
-            try:
-                yield session
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
-
-    async def dispose(self) -> None:
-        await self.engine.dispose()
-
-
 @pytest.fixture
-async def database(settings: Settings, clean_database: None) -> AsyncIterator[_TestDatabase]:
-    database = _TestDatabase(settings.database_url)
+async def database(settings: Settings, clean_database: None) -> AsyncIterator[PurchasingDatabase]:
+    database = PurchasingDatabase(settings.database_url)
     async with database.engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
     yield database
@@ -100,25 +73,11 @@ async def client(
     settings: Settings,
     clock: FixedClock,
     bus: EventBus,
-    database: _TestDatabase,
+    database: PurchasingDatabase,
 ) -> AsyncIterator[AsyncClient]:
     app = create_app(settings)
-
     async with database.session_factory() as session:
-        identity = IdentityService(session, settings, clock, bus)
-        for email, role in (
-            ("boss@example.com", Role.MANAGER),
-            # No `MANAGE_INVENTORY` at all: the floor does not decide what the
-            # farm buys.
-            ("floor@example.com", Role.OPERATOR),
-        ):
-            await identity.create_user(
-                CreateUser(email=email, display_name=email, password=PASSWORD, role=role)
-            )
-        await InventoryService(session).create_spec(
-            CreateMaterialSpec(code=MATERIAL, name="PLA Black", family="PLA")
-        )
-        await session.commit()
+        await seed_desk(session, settings, clock, bus)
 
     wire_app(
         app,
@@ -132,24 +91,6 @@ async def client(
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as http:
         http.app = app  # type: ignore[attr-defined]
         yield http
-
-
-async def auth(client: AsyncClient, email: str = "boss@example.com") -> dict[str, str]:
-    response = await client.post("/auth/sign-in", json={"email": email, "password": PASSWORD})
-    return {"Authorization": f"Bearer {response.json()['token']}"}
-
-
-async def an_order(client: AsyncClient, **line: Any) -> dict[str, Any]:
-    """One paid order with one material line, as the buyer would raise it."""
-    headers = await auth(client)
-    body = {"kind": "material", "item_code": MATERIAL, "quantity": "1000", "unit": "gram", **line}
-    created = await client.post("/purchasing/orders", json={"lines": [body]}, headers=headers)
-    order = created.json()
-    for stage in ("approved", "paid"):
-        await client.post(
-            f"/purchasing/orders/{order['id']}/status", json={"to": stage}, headers=headers
-        )
-    return dict(order)
 
 
 def _money_fields(model: type) -> set[str]:
@@ -244,7 +185,7 @@ async def test_the_board_is_not_swallowed_by_the_order_route(client: AsyncClient
 
 
 async def test_the_reorder_list_uses_the_farms_threshold_and_not_a_constant(
-    client: AsyncClient, database: _TestDatabase, clock: FixedClock
+    client: AsyncClient, database: PurchasingDatabase, clock: FixedClock
 ) -> None:
     """Move `inventory.low_stock_grams` and the same shelf changes side.
 
@@ -275,7 +216,7 @@ async def test_the_reorder_list_uses_the_farms_threshold_and_not_a_constant(
 
 
 async def test_a_reorder_row_says_not_measured_where_nothing_measures_consumption(
-    client: AsyncClient, database: _TestDatabase
+    client: AsyncClient, database: PurchasingDatabase
 ) -> None:
     """The ADR-0007 tripwire, at the screen.
 
@@ -298,7 +239,7 @@ async def test_a_reorder_row_says_not_measured_where_nothing_measures_consumptio
 
 
 async def test_receiving_puts_the_delivery_on_the_shelf(
-    client: AsyncClient, database: _TestDatabase
+    client: AsyncClient, database: PurchasingDatabase
 ) -> None:
     order = await an_order(client)
 
@@ -324,7 +265,7 @@ async def test_receiving_puts_the_delivery_on_the_shelf(
 
 
 async def test_a_refused_delivery_leaves_nothing_behind(
-    client: AsyncClient, database: _TestDatabase
+    client: AsyncClient, database: PurchasingDatabase
 ) -> None:
     """One transaction, read back rather than trusting the status code.
 

@@ -7,6 +7,128 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
+## 2026-09-24 — `main` had been red for two weeks, and the fix was one pin
+
+**As of:** 2026-09-24 · **1 619 passed, 7 skipped, `exit=0` in 1687.95s (0:28:07) — pytest's own trailing summary line, read out of the redirect** on
+`claude/printorian-pr-fixes-1a9039`, which is `main` at
+[#107](https://github.com/iritur/printorian/pull/107) (`b64a664`) plus this
+session. The six backend gates each ran separately and each `exit=0`: `ruff
+check`, `ruff format --check`, `mypy --strict` over **255** source files,
+`lint-imports` (6 kept, 0 broken), `check_context_isolation.py`,
+`check_file_length.py`. Frontend: `typecheck` and `lint` `exit=0`; the two
+screen test files this session touched ran green (`SettingsPage.test.tsx`
+21 passed, `PurchasingPage.test.tsx` 9 passed); the whole frontend suite and
+`build` were **not** run here, and CI on the pull request is what will.
+
+**Why `main` was red.** [#106](https://github.com/iritur/printorian/pull/106)
+(2026-09-09) raised `anyio` to 4.15.1, which deprecates `anyio.abc.BlockingPortal`.
+`starlette` 1.6.0 still imports it from there, in `testclient.py`, which
+`tests/api/test_events_ws.py` pulls in; `filterwarnings = ["error"]` makes that
+import a collection error, and pytest exits 2 before running a single test. The
+backend job has failed on that line on every push since, including both open
+Dependabot pull requests — the *frontend* one too
+([#110](https://github.com/iritur/printorian/pull/110)), which is what gave it
+away as a `main` problem rather than a PR problem. #106 merged with its backend
+check red because branch protection
+([#67](https://github.com/iritur/printorian/issues/67)) is not on; that issue is
+the thing that would have caught this, and it still needs a person with admin.
+The fix is `starlette==1.7.0` in `backend/constraints.txt`, which imports the
+portal from `anyio.from_thread`; the comment there says why a `filterwarnings`
+ignore was refused. Once this merges, #110 and #111 need `@dependabot rebase`.
+
+**The suite above ran before the scorecard tests existed** (it was started first); the nine unit and two API tests for the scorecard, the split `test_purchasing_api.py`, and #58's two intake files were then run in one further session: **28 passed, `exit=0` in 54.63s**. Four mutations were applied to the scorecard, run and reverted, and each failed at least one of its nine unit tests: counting `RECEIVING` as a delivery (1 failed), using deliveries as the denominator (2), returning `0` for an undated share (3), treating every dated delivery as on time (1).
+
+**Verified on a fresh database, not against the document:** `docs/DEVELOPMENT.md`
+listed `floor@printorian.example` / `shop-floor-pass-1`
+([#12](https://github.com/iritur/printorian/issues/12)). Reproduction:
+`CREATE DATABASE printorian_fresh` → `alembic upgrade head` (0001 → 0026) →
+`provision_with(...)` with the password `owner-pass-12345` → `POST /auth/sign-in`
+through Starlette's `TestClient`: `boss@` **200**, `floor@` **401
+`error.identity.invalid_credentials`**, and `SELECT email, role FROM users` on that
+database returns the one owner row. Nothing in the repository creates `floor@`, so
+the table now says what the tool does — the owner's password is whatever was typed
+at the prompt, the second account is made in «Сотрудники» with the role the gate
+being checked needs. The role *decision* the issue flagged as needs-person is not
+made here: the document no longer asserts one.
+
+**Issue [#58](https://github.com/iritur/printorian/issues/58) was built by
+[#92](https://github.com/iritur/printorian/pull/92)** — the PR did not say
+`Closes #58`, so it stayed open with the `Backend capability with no consumer`
+milestone. The tests it names (`tests/unit/test_intake_cache_hit.py`,
+`test_intake_pass_wiring.py`) are re-run in this session and the output is on the
+issue. Two other issues describe less than the code has: `#29` lists the delivery
+zones and postprocess operations tables as unbuilt and both exist
+(`settings/declared.py`, `frontend/apps/console/src/settings/*Editor.tsx`); `#34`
+predates [#96](https://github.com/iritur/printorian/pull/96). Neither is closed —
+maintenance intervals, the event matrix, API keys and webhooks are still not
+built, and #34's scorecard is what this session adds.
+
+**The supplier scorecard (`#34`'s last clause) is computed, and three of the
+kit's six columns are deliberately not there.** `procurement.reads.supplier_scores`
+groups `purchase_orders` by supplier with three `FILTER` counts on one join:
+`deliveries` (reached `STORED`), `dated` (of those, the ones with an `expected_at`),
+`on_time` (`stored_at <= expected_at`). `policies.on_time_share` is
+`on_time / dated`, and **null when nothing was dated** — an undated delivery is in
+`deliveries` and in nothing else, because putting it under the line marks a
+supplier down for every date the buyer forgot to type and putting it over the line
+marks them up. «Брак» needs a rejected quantity no receipt records and would read
+`0%` for everyone; «Оборот» is money the board never carries; «Оценка» is a
+composite nobody has defined. The board row carries the counts beside the share
+(«1 из 2») so a 100% from one delivery reads as what it is.
+`test_purchasing_api.py` crossed the 400-line gate with the API test for this and
+was split at the responsibility seam: `_purchasing_support.py` (helpers, no
+fixtures — the `_catalog_support.py` rule), `test_purchasing_scorecard_api.py`.
+
+**The three worker intervals now say on the screen that they wait for a
+restart** ([#32](https://github.com/iritur/printorian/issues/32), the half the
+issue says should be done regardless). `scheduler_tick_seconds`,
+`sla_sweep_seconds` and `telemetry_poll_seconds` are passed to their loops once
+in `workers/runner.py`; their neighbours resolve at the read edge. The hint is the
+only place the difference is stated, and `SettingsPage.test.tsx` pins that each of
+the three carries it in its own section. Reverting the catalogue change fails that
+test (run). The hot reload itself stays deferred, as the issue says.
+
+**`main` was red twice over, and the second break was hidden behind the first.**
+CI runs the frontend job only after the backend job passes, so once the pin
+above went in, the frontend job ran on `main`'s tree for the first time since
+[#105](https://github.com/iritur/printorian/pull/105) (vitest 4.1.11 → 5.0.0,
+merged 2026-09-09 with its frontend check **red**) — and failed `Types` with 208
+`TS2339` errors, «Property 'toBeInTheDocument' does not exist», in every test
+file. Vitest 5 made `Assertion<T>` into `Assertion<R, T>`; jest-dom 7.0.1's
+one-parameter augmentation no longer merges with it, `skipLibCheck` hides the
+mismatch in jest-dom's own `.d.ts`, and the suite itself runs green because the
+runtime `expect.extend` half still works. jest-dom's fix is
+testing-library/jest-dom#742, open and unreleased. The bridge is
+`frontend/types/jest-dom-vitest.d.ts`, which augments vitest's documented
+`Matchers<R, T>` extension point with jest-dom's matchers in the order #742
+uses; the four project `tsconfig.json` files `include` it. Delete the file and
+the four `include` entries when a jest-dom release carries #742.
+
+**`npm run typecheck` said this tree was fine, and it was wrong.** `tsc --build`
+trusts `*.tsbuildinfo`, and the build info in this worktree predated `npm ci`
+with the vitest 5 lockfile, so the incremental build re-checked nothing and
+reported success — the same tree fails 208 times under `tsc --build --force`,
+which is what a fresh CI runner does. After any dependency change, run the
+forced build once, or delete the build info. This is the frontend's version of
+§4's piping trap: a green result from a check that did not run.
+
+**What the suite run cost, so the next person budgets for it:** the full suite
+here took 1 688 s (0:28:07) rather than the ~950 s recorded below. It was started
+while `npm run typecheck`, `npm run lint`, two `vitest` runs and an `alembic
+upgrade head` against a scratch database were also running on the same machine,
+and Postgres is a Docker Desktop container; the pace roughly quadrupled once
+those finished. Run it alone.
+
+**Not done, and why.** `#67` (branch protection) is a repository setting and an
+owner's action. `#17`'s remaining half is the reboot timer, which
+`deploy/systemd/README.md` says needs a Debian host and a real print to prove.
+`#50` was re-checked: `openapi-typescript` 7.13.0 still peers on `typescript
+^5.x`, so the hold stands. `#48` and `#49` are on the backend `CLAUDE.md`'s
+do-not-fix list. `#29`'s four remaining tables, `#33`'s tickets, `#35` and `#36`
+are screen-sized pieces of work that did not fit beside the above.
+
+---
+
 **As of:** 2026-09-01 · **1 383 passed, 8 skipped, `exit=0` in 951.82s
 (0:15:51)** on `feat/58-reprice-cache-hit` with `main` merged in through
 [#91](https://github.com/iritur/printorian/pull/91), alongside the six backend

@@ -33,6 +33,7 @@ from printorian.contexts.procurement.policies import (
     PurchasableKind,
     PurchaseStatus,
     needs_reorder,
+    on_time_share,
 )
 from printorian.contexts.procurement.schemas import (
     ConsequenceKind,
@@ -41,6 +42,7 @@ from printorian.contexts.procurement.schemas import (
     PurchaseStatusCount,
     ReorderConsequence,
     ReorderRow,
+    SupplierScore,
 )
 
 #: Grams are how filament is stocked, priced and queued everywhere else in this
@@ -246,6 +248,55 @@ async def status_counts(db: AsyncSession) -> list[PurchaseStatusCount]:
     ]
 
 
+async def supplier_scores(db: AsyncSession) -> list[SupplierScore]:
+    """«Поставщики» — every supplier, scored from the orders that reached the shelf.
+
+    One grouped query rather than a read per supplier, and the three counts are
+    `FILTER` clauses on the same join rather than three joins: `reliability.py`
+    takes the same shape for the same reason, that the counts must describe one
+    set of rows read at one instant, or «3 поставки · 4 в срок» becomes possible.
+
+    Only `STORED` is a delivery. `RECEIVING` is a box being counted and may still
+    be refused; `CANCELLED` never arrived. Both are in the orders table with their
+    own status and are not this supplier's record either way.
+
+    Punctuality compares `stored_at` with `expected_at` — the date the buyer typed
+    when raising the order, against the moment the last line went on the shelf.
+    An order with no date is a delivery and nothing else; `on_time_share` says why
+    it is in neither the numerator nor the denominator.
+    """
+    delivered = PurchaseOrder.status == PurchaseStatus.STORED
+    dated = delivered & PurchaseOrder.expected_at.is_not(None)
+    kept = dated & (PurchaseOrder.stored_at <= PurchaseOrder.expected_at)
+    rows = await db.execute(
+        select(
+            Supplier,
+            func.count(PurchaseOrder.id).filter(delivered).label("deliveries"),
+            func.count(PurchaseOrder.id).filter(dated).label("dated"),
+            func.count(PurchaseOrder.id).filter(kept).label("on_time"),
+            func.max(PurchaseOrder.stored_at).filter(delivered).label("last_delivery_at"),
+        )
+        .outerjoin(PurchaseOrder, PurchaseOrder.supplier_id == Supplier.id)
+        .group_by(Supplier.id)
+        .order_by(Supplier.name, Supplier.code)
+    )
+    return [
+        SupplierScore(
+            id=supplier.id,
+            code=supplier.code,
+            name=supplier.name,
+            kinds=list(supplier.kinds),
+            is_active=supplier.is_active,
+            deliveries=int(deliveries or 0),
+            dated=int(dated_count or 0),
+            on_time=int(on_time or 0),
+            on_time_share=on_time_share(dated=int(dated_count or 0), on_time=int(on_time or 0)),
+            last_delivery_at=last_delivery_at,
+        )
+        for supplier, deliveries, dated_count, on_time, last_delivery_at in rows.all()
+    ]
+
+
 __all__ = [
     "MATERIAL_UNIT",
     "StockedItem",
@@ -255,4 +306,5 @@ __all__ = [
     "reorder_rows",
     "seed_lines",
     "status_counts",
+    "supplier_scores",
 ]
