@@ -104,6 +104,24 @@ testing-library/jest-dom#742, open and unreleased. The bridge is
 uses; the four project `tsconfig.json` files `include` it. Delete the file and
 the four `include` entries when a jest-dom release carries #742.
 
+**A third one, from the pair vitest 5.0.1 + jsdom 30.1.0 that #110 brings in
+together.** Rebased onto the fixed `main`, the frontend patch group still failed
+`Tests`: 24 configurator cases with `TypeError: Cannot read properties of
+undefined (reading '_buffer')` out of `URL.createObjectURL`. Vitest 5.0.1's
+jsdom compatibility layer builds a Node `Blob` by reading a private `_buffer`
+off jsdom's `Blob`; jsdom 30.1 renamed it (vitest-dev/vitest#11336, fixed by
+#11295, unreleased). `frontend/vitest.setup.ts` had a counter-based
+`createObjectURL` double guarded by "only if nothing provides one" — vitest
+5.0.1 provides one, so the guard handed the tests the broken implementation.
+The guard is gone: the double is unconditional, because no test dereferences
+the URL (the 3D view's loader fails on `blob:test/…` and settles as `failed`,
+as it did under vitest 4 when the double was all there was). Reproduced from
+#110's lockfile: 24 failed before, 25 passed after, and the four frontend gates
+on that dependency set each `exit=0`. This is the same shape as the anyio /
+starlette pair above — Dependabot groups by semver, not by which packages
+share a private field — and the answer was again to stop depending on the
+pair rather than to hold either half back.
+
 **`npm run typecheck` said this tree was fine, and it was wrong.** `tsc --build`
 trusts `*.tsbuildinfo`, and the build info in this worktree predated `npm ci`
 with the vitest 5 lockfile, so the incremental build re-checked nothing and
