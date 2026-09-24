@@ -14,10 +14,12 @@ import {
 } from './format'
 import { ALL_STATUSES } from './types'
 import type {
+  PurchasableKind,
   PurchaseOrderView,
   PurchaseStatus,
   PurchasingBoard,
   ReorderRow,
+  SupplierScore,
   SupplierView,
 } from './types'
 
@@ -282,6 +284,50 @@ export function PurchasingPage({ locale }: { locale: Locale }) {
         </table>
       </div>
 
+      {/* --------------------------------------------------- «Поставщики» */}
+      <section className="hv-panel">
+        <div className="hv-panel__head">
+          <span>{t('pu.scores.title')}</span>
+          <span className="hv-panel__aside">{t('pu.scores.aside')}</span>
+        </div>
+        <div className="hv-panel__body--none">
+          <table className="hv-table">
+            <thead>
+              <tr>
+                <th>{t('pu.scores.supplier')}</th>
+                <th data-align="end">{t('pu.scores.deliveries')}</th>
+                <th data-align="end">{t('pu.scores.on_time')}</th>
+                <th>{t('pu.scores.last')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {board.suppliers.map((score) => (
+                <tr key={score.id}>
+                  <td>
+                    <b>{score.name}</b>
+                    <div className="hv-micro">
+                      {score.kinds.map((kind) => t(kindKey(kind as PurchasableKind))).join(' · ')}
+                    </div>
+                  </td>
+                  {/* Zero deliveries is a measurement, and draws as `0`. */}
+                  <td data-align="end">{score.deliveries}</td>
+                  <td data-align="end">{onTime(score, locale)}</td>
+                  <td>{formatDay(score.last_delivery_at, locale)}</td>
+                </tr>
+              ))}
+              {board.suppliers.length === 0 && (
+                <tr>
+                  <td colSpan={4}>{t('pu.scores.empty')}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="hv-panel__foot">
+          <span>{t('pu.scores.foot')}</span>
+        </div>
+      </section>
+
       {open && (
         <OrderDetail
           order={open}
@@ -315,4 +361,23 @@ function consequence(row: ReorderRow, locale: Locale): string {
     })
   }
   return NOT_MEASURED
+}
+
+/**
+ * The «В срок» cell: the share as a percentage, and beside it the two counts
+ * it was made from, so a 100% earned by one dated delivery reads as «1 из 1».
+ *
+ * Null is an em dash and nothing else. The server sends null when no delivery
+ * carried a date, which is a supplier with no punctuality record — not a
+ * supplier at 0%, and not one at 100%. Drawing either would be the flattering
+ * (or damning) number CLAUDE.md §1 exists to keep off the screen.
+ */
+function onTime(score: SupplierScore, locale: Locale): string {
+  if (score.on_time_share === null) return NOT_MEASURED
+  const percent = Math.round(Number(score.on_time_share) * 100)
+  const counts = translate(locale, 'pu.scores.of_dated', {
+    on_time: score.on_time,
+    dated: score.dated,
+  })
+  return `${percent}% · ${counts}`
 }

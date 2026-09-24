@@ -85,12 +85,38 @@ export interface PurchaseOrderRow {
   created_at: string
 }
 
+/**
+ * One row of «Поставщики», computed on the server from the orders that reached
+ * the shelf. Nothing in it was typed in.
+ *
+ * `on_time_share` is `on_time / dated` — the denominator is the deliveries that
+ * *carried* a date, never the deliveries — and it is null, not `0`, when nothing
+ * was dated: a supplier whose orders were all raised without a date has a
+ * delivery record and no punctuality record, and the screen draws an em dash
+ * for the second (ADR-0007). The kit's «Брак», «Оборот» and «Оценка» columns are
+ * not here: the first is unmeasured, the second is money the board never
+ * carries, the third is a policy nobody has written.
+ */
+export interface SupplierScore {
+  id: string
+  code: string
+  name: string
+  kinds: string[]
+  is_active: boolean
+  deliveries: number
+  dated: number
+  on_time: number
+  on_time_share: string | null
+  last_delivery_at: string | null
+}
+
 export interface PurchasingBoard {
   at: string
   reorder: ReorderRow[]
   orders: PurchaseOrderRow[]
   counts: PurchaseStatusCount[]
   total: number
+  suppliers: SupplierScore[]
 }
 
 export interface PurchaseStageView {

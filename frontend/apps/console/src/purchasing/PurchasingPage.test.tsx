@@ -104,6 +104,7 @@ function aBoard(overrides: Partial<PurchasingBoard> = {}): PurchasingBoard {
       { status: 'cancelled', count: 0 },
     ],
     total: 1,
+    suppliers: [],
     ...overrides,
   }
 }
@@ -301,5 +302,89 @@ describe('a stage this build has never heard of', () => {
     const row = (await screen.findByRole('button', { name: 'PO-000094' })).closest('tr')
     expect(row?.textContent).toMatch(/Неизвестный этап/)
     expect(row?.textContent).not.toMatch(/На складе/)
+  })
+})
+
+describe('the supplier scorecard', () => {
+  // Issue #34: computed from delivered orders, never typed in. The screen's
+  // half of that is that it draws what the server measured and nothing more —
+  // a share only where deliveries carried a date, and a dash where none did.
+  it('draws the share from dated deliveries and an em dash where none was dated', async () => {
+    serve(
+      aBoard({
+        suppliers: [
+          {
+            id: 's1',
+            code: 'PLASTIC-YUG',
+            name: 'Пластик-Юг',
+            kinds: ['material'],
+            is_active: true,
+            deliveries: 3,
+            dated: 2,
+            on_time: 1,
+            on_time_share: '0.5000',
+            last_delivery_at: '2026-09-15T09:00:00Z',
+          },
+          {
+            id: 's2',
+            code: 'UNDATED',
+            name: 'Без дат',
+            kinds: [],
+            is_active: true,
+            deliveries: 2,
+            dated: 0,
+            on_time: 0,
+            on_time_share: null,
+            last_delivery_at: '2026-09-10T09:00:00Z',
+          },
+        ],
+      }),
+    )
+
+    render(<PurchasingPage locale="ru" />)
+
+    const dated = (await screen.findByText('Пластик-Юг')).closest('tr')
+    expect(dated).not.toBeNull()
+    const datedCells = within(dated as HTMLElement).getAllByRole('cell')
+    expect(datedCells[1]?.textContent).toBe('3')
+    // The percentage, and the two counts it was made from, in the same cell.
+    expect(datedCells[2]?.textContent).toMatch(/50%/)
+    expect(datedCells[2]?.textContent).toMatch(/1 из 2/)
+
+    const undated = screen.getByText('Без дат').closest('tr')
+    const undatedCells = within(undated as HTMLElement).getAllByRole('cell')
+    // Two deliveries is a measurement; a punctuality nobody dated is not.
+    expect(undatedCells[1]?.textContent).toBe('2')
+    expect(undatedCells[2]?.textContent).toBe('—')
+    expect(undated?.textContent).not.toMatch(/0%|100%/)
+  })
+
+  it('lists a supplier nothing has come from, with zeros rather than a gap', async () => {
+    serve(
+      aBoard({
+        suppliers: [
+          {
+            id: 's3',
+            code: 'NEW-ONE',
+            name: 'Новый поставщик',
+            kinds: ['spare_part'],
+            is_active: true,
+            deliveries: 0,
+            dated: 0,
+            on_time: 0,
+            on_time_share: null,
+            last_delivery_at: null,
+          },
+        ],
+      }),
+    )
+
+    render(<PurchasingPage locale="ru" />)
+
+    const row = (await screen.findByText('Новый поставщик')).closest('tr')
+    const cells = within(row as HTMLElement).getAllByRole('cell')
+    expect(cells[1]?.textContent).toBe('0')
+    expect(cells[2]?.textContent).toBe('—')
+    expect(cells[3]?.textContent).toBe('—')
   })
 })

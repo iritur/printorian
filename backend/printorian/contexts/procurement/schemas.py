@@ -34,6 +34,45 @@ class SupplierView(BaseModel):
     is_active: bool = True
 
 
+class SupplierScore(BaseModel):
+    """One row of «Поставщики» — a scorecard *computed* from delivered orders.
+
+    The kit's aside says it: «НАКОПЛЕННАЯ ОЦЕНКА ПО ФАКТУ ПОСТАВОК». Nothing here is
+    typed in, so nothing here can go stale or flatter. Three of the kit's six
+    columns are missing on purpose, and each for a different reason:
+
+    * **«Брак»** — a defect share needs a rejected quantity, and `PurchaseReceipt`
+      records only what was accepted. Serving it would read `0%` for every
+      supplier: measured nothing, and flattering all of them (CLAUDE.md §1).
+    * **«Оборот»** is money. The board carries none; it belongs behind
+      `VIEW_FINANCIALS` on its own route, the way `/costs` is.
+    * **«Оценка»** — a composite score is a policy nobody has written down. The
+      on-time share is the fact it would be built from, and is what is served.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: EntityId
+    code: str
+    name: str
+    kinds: list[str] = Field(default_factory=list)
+    is_active: bool = True
+    #: Orders from this supplier that reached «На складе». Cancelled and open
+    #: orders are neither delivered nor late; they are simply not here.
+    deliveries: int = 0
+    #: Of those, the ones that carried an `expected_at` — the denominator of
+    #: «В срок». Observed, never the roster: an undated delivery is in
+    #: `deliveries` and in nothing below.
+    dated: int = 0
+    #: How many of `dated` were on the shelf by their date.
+    on_time: int = 0
+    #: `on_time / dated` to four places, and null — not `0` — when nothing was
+    #: dated. `policies.on_time_share` is the rule.
+    on_time_share: Decimal | None = None
+    #: When the most recent delivery reached the shelf. Null while there is none.
+    last_delivery_at: datetime | None = None
+
+
 class CreateSupplier(BaseModel):
     code: str = Field(min_length=1, max_length=80)
     name: str = Field(min_length=1, max_length=200)
@@ -134,6 +173,10 @@ class PurchasingBoard(BaseModel):
     orders: list[PurchaseOrderRow] = Field(default_factory=list)
     counts: list[PurchaseStatusCount] = Field(default_factory=list)
     total: int = 0
+    #: The scorecard: every supplier, including the ones nothing has arrived
+    #: from yet, because a supplier missing from this table is a supplier the
+    #: buyer cannot compare — the same rule as the chips.
+    suppliers: list[SupplierScore] = Field(default_factory=list)
 
 
 # ----------------------------------------------------------------- one order

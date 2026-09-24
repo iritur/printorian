@@ -56,6 +56,7 @@ from printorian.contexts.procurement import (
     reorder_rows,
     seed_lines,
     status_counts,
+    supplier_scores,
 )
 from printorian.contexts.production import committed_material
 from printorian.core.ids import EntityId
@@ -122,6 +123,7 @@ async def board(
         orders=orders,
         counts=await status_counts(db),
         total=len(orders),
+        suppliers=await supplier_scores(db),
     )
 
 
