@@ -23,6 +23,11 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Any, Final
 
+from printorian.contexts.fleet import (
+    MaintenanceDefaults,
+    maintenance_to_json,
+    parse_maintenance_defaults,
+)
 from printorian.contexts.pricing import (
     FINISH_CATALOGUE,
     CustomerTier,
@@ -79,6 +84,8 @@ def to_json(value: Any) -> Any:
             {"min_quantity": tier.min_quantity, "percent": str(tier.percent)}
             for tier in value.tiers
         ]
+    if isinstance(value, MaintenanceDefaults):
+        return maintenance_to_json(value)
     if isinstance(value, ZoneTariffs):
         return [
             {
@@ -308,6 +315,13 @@ def _parse_table(key: str, raw: Any, options: tuple[str, ...]) -> Any:
         return _parse_finishes(key, raw, options)
     if key == "logistics.zones":
         return _parse_zones(key, raw, options)
+    if key == "service.maintenance_defaults":
+        # Shape errors are the screen's; the fleet's own codes (an unknown
+        # kind, a duplicate, a non-interval) travel through untouched.
+        try:
+            return parse_maintenance_defaults(raw)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValidationError("error.settings.not_a_table", key=key) from exc
     # A fifth table with no route refuses loudly rather than storing a shape
     # nothing can read back.
     raise ValidationError("error.settings.unsupported_type", key=key)

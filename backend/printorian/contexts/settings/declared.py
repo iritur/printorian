@@ -28,6 +28,7 @@ from dataclasses import fields
 from decimal import Decimal
 from typing import Final
 
+from printorian.contexts.fleet import default_maintenance
 from printorian.contexts.pricing import RateSnapshot
 from printorian.contexts.scheduling import SchedulingPolicy
 from printorian.contexts.settings.spec import FieldSpec, Kind, cfg, default_finishes, default_tiers
@@ -174,6 +175,14 @@ def manual_specs() -> list[FieldSpec]:
         FieldSpec("service.driver_send_retries", "service", Kind.INTEGER, 3),
         FieldSpec("service.pause_on_hms_error", "service", Kind.BOOLEAN, True),
         FieldSpec("service.allow_mock_driver", "service", Kind.BOOLEAN, False),
+        # The kit's «Периодичность по умолчанию» — the fifth `Kind.TABLE` field.
+        # Its shape and its default live in `fleet.maintenance`, because the
+        # fleet is what consumes it: `POST /printers` seeds a new machine's
+        # service card from these rows, and an operation added without a
+        # periodicity takes its kind's row. The default is every kind at the
+        # 500 hours the code always assumed, so an untouched table changes
+        # nothing — the context's rule.
+        FieldSpec("service.maintenance_defaults", "service", Kind.TABLE, default_maintenance()),
         # 08 — Постобработка
         # 08 — Постобработка. The operations catalogue the farm sells, in the same
         # table shape as the tiers: a code the storefront already knows, with the

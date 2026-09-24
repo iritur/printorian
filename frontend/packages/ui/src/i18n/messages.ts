@@ -1156,6 +1156,9 @@ export const ru = {
   'settings.field.service.driver_send_retries': 'Повторных попыток отправки задания',
   'settings.field.service.pause_on_hms_error': 'Автоматическая пауза при ошибке HMS',
   'settings.field.service.pause_on_hms_error.hint': 'Останавливает печать и вызывает оператора вместо продолжения с браком.',
+  'settings.field.service.maintenance_defaults': 'Периодичность по умолчанию',
+  'settings.field.service.maintenance_defaults.hint':
+    'Применяется к новым машинам: карта обслуживания заполняется этими строками при регистрации. Операция без строки на новую машину не ставится.',
   'settings.field.service.allow_mock_driver': 'Разрешить драйвер mock в продакшене',
   'settings.field.service.allow_mock_driver.hint': 'Mock-драйвер отказывается работать в продакшене by design. Переключатель существует только для стенда.',
 
@@ -1332,6 +1335,11 @@ export const ru = {
   'settings.field.postprocess.operations': 'Каталог операций',
   'settings.field.postprocess.operations.hint':
     'Нормо-часы умножаются на ставку постобработки из раздела «Ценообразование»; фиксированная плата добавляется поверх. Набор кодов закрыт — витрина предлагает ровно эти четыре операции.',
+  'settings.maintenance.operation': 'Операция',
+  'settings.maintenance.code': 'Код',
+  'settings.maintenance.interval': 'Периодичность',
+  'settings.maintenance.remove': 'Не ставить',
+  'settings.maintenance.restore': 'Вернуть в таблицу',
   'settings.operations.operation': 'Операция',
   'settings.operations.code': 'Код',
   'settings.operations.hours': 'Нормо-часы · база',
@@ -2613,6 +2621,9 @@ export const en: Messages = {
   'settings.field.service.driver_send_retries': 'Job send retries',
   'settings.field.service.pause_on_hms_error': 'Auto-pause on HMS error',
   'settings.field.service.pause_on_hms_error.hint': 'Stops the print and calls an operator instead of continuing with scrap.',
+  'settings.field.service.maintenance_defaults': 'Default service intervals',
+  'settings.field.service.maintenance_defaults.hint':
+    'Applies to new machines: the service card is seeded from these rows at registration. An operation without a row is not put on a new machine.',
   'settings.field.service.allow_mock_driver': 'Allow the mock driver in production',
   'settings.field.service.allow_mock_driver.hint': 'The mock driver refuses production by design. The switch exists only for the bench.',
 
@@ -2789,6 +2800,11 @@ export const en: Messages = {
   'settings.field.postprocess.operations': 'Operations catalogue',
   'settings.field.postprocess.operations.hint':
     'Norm hours multiply by the post-processing rate from «Pricing»; the flat fee is added on top. The code set is closed — the storefront offers exactly these four operations.',
+  'settings.maintenance.operation': 'Operation',
+  'settings.maintenance.code': 'Code',
+  'settings.maintenance.interval': 'Every',
+  'settings.maintenance.remove': 'Do not seed',
+  'settings.maintenance.restore': 'Put back',
   'settings.operations.operation': 'Operation',
   'settings.operations.code': 'Code',
   'settings.operations.hours': 'Norm hours · base',

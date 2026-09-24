@@ -95,6 +95,26 @@ mutations to the fold each fail its tests (run and reverted): unpriced receipts
 priced at zero (3 fail), the fold trusting input order (1), a single point
 reported as a movement (1).
 
+**#29's maintenance-intervals table is built, and it is the one of the six
+with a consumer.** `service.maintenance_defaults` is the fifth `Kind.TABLE`
+field: rows of `{code, interval_hours}`, one per `MaintenanceKind`, default
+every kind at the 500 hours `CreateServiceOperation` always assumed — so an
+untouched table changes nothing. Its shape, validation and the seeding live in
+`contexts/fleet/maintenance.py` (the consumer owns what a valid row is, as
+pricing owns `ZoneTariffs`); settings stores, audits and resolves it
+(`resolve_maintenance_defaults`). Two readers, both at the API edge:
+`POST /printers` seeds a new machine's card from the table — a machine used to
+be registered with an *empty* card — and `POST /printers/{id}/services` gives
+an operation sent without a periodicity its kind's row, told apart from an
+explicit `500` by `model_fields_set`. Removing a kind from the table means a
+new machine does not get that operation; the editor draws it with a dash and
+«Вернуть в таблицу». The kit's «Простой» and «Расход» columns are not stored:
+`ServiceOperation` carries neither and nothing prices a service, so they would
+be rows nothing reads. Mutating either reader to ignore the table fails the
+API tests (3 and 1). The three remaining rows of #29 — event matrix, API keys,
+webhooks — each need a channel or a credential store that does not exist, and
+are left.
+
 **The three worker intervals now say on the screen that they wait for a
 restart** ([#32](https://github.com/iritur/printorian/issues/32), the half the
 issue says should be done regardless). `scheduler_tick_seconds`,

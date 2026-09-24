@@ -32,8 +32,8 @@ from another document has only moved the drift.
 
 **Nineteen of twenty-one are built.** Every public screen ships; the two that do
 not are all control-realm. `settings` was the nearest of them and is now built —
-104 parameters across fourteen sections, served and audited. What is left of it is
-the table-valued settings, not the screen (§2.1).
+105 parameters across fourteen sections, served and audited. What is left of it is
+three of the table-valued settings, not the screen (§2.1).
 
 | Screen | Realm | State |
 |---|---|---|
@@ -59,7 +59,7 @@ references to it from the tracker and from §2.5 keep pointing at the same place
 
 **The screen exists.** [`SettingsPage.tsx`](../frontend/apps/console/src/SettingsPage.tsx)
 renders it and [`contexts/settings`](../backend/printorian/contexts/settings/) serves
-it: **104 parameters across fourteen sections**, over `GET /settings`,
+it: **105 parameters across fourteen sections**, over `GET /settings`,
 `GET /settings/sections`, `GET /settings/history` and `PUT`/`DELETE /settings/{key}`,
 gated on `MANAGE_SETTINGS`.
 
@@ -71,7 +71,7 @@ settings screen missing a rate is worse than one that never had it, because it
 looks complete.
 
 One control per `kind`, all built — `integer` 31 · `decimal` 30 · `boolean` 15 ·
-`enum` 15 · `string` 8 · `table` 4 · `secret` 1. The single secret,
+`enum` 15 · `string` 8 · `table` 5 · `secret` 1. The single secret,
 `finance.yookassa_secret_key`, is write-only: stored encrypted and never read
 back. Editing a row marks it dirty, reveals the previous value, offers a per-row
 revert and counts into a save bar; each save writes an audited «было · стало»
@@ -104,20 +104,23 @@ own `ok` / `degraded` / `failed` distinction kept intact and a fourth state,
 rather than served: `SECTION_ORDER` has fourteen entries because a read-only page
 has nothing for a settings catalogue to carry, and that is still the right call.
 
-**What is still owed.** Four of #29's six table-valued sections, two columns of the
-one just built, and one behaviour the screen displays without wiring:
+**What is still owed.** Three of #29's six table-valued sections, two columns of
+«Каталог операций», and one behaviour the screen displays without wiring:
 
 - [#29](https://github.com/iritur/printorian/issues/29) — the remaining
-  table-valued sections. **Four are built** and are the pattern to copy rather
+  table-valued sections. **Five are built** and are the pattern to copy rather
   than reinvent: the volume ladder, the customer tiers, `postprocess.operations`
   — the operations catalogue, whose norm-hours and flat fees the pricing engine
   reads at both the quote and the order — and `logistics.zones`, the shipping
   tariff, which `resolve_rates` maps onto `RateSnapshot.zones` and which
-  therefore reaches a customer's estimate and is pinned per order. Still owed:
-  notification event×channel, API keys, webhooks and maintenance intervals. Two
-  of those are new subsystems with a security decision each, and the event matrix
-  is switches over channels that do not exist — none is a catalogue row away from
-  working.
+  therefore reaches a customer's estimate and is pinned per order — and
+  `service.maintenance_defaults`, the maintenance intervals, which
+  `POST /printers` seeds a new machine's service card from and which an
+  operation added without a periodicity takes its interval from; its «Простой»
+  and «Расход» columns are not stored, because nothing reads them. Still owed:
+  notification event×channel, API keys and webhooks. Two of those are new
+  subsystems with a security decision each, and the event matrix is switches
+  over channels that do not exist — none is a catalogue row away from working.
 - **Two columns of «Каталог операций» are deliberately not ported**, and neither is
   an oversight. «На см² поверхности» needs a surface area inside `PriceSpec`, and
   surface area does not reach the checkout: the quote context emits `volume_cm3`
