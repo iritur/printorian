@@ -1102,7 +1102,8 @@ export const ru = {
   'settings.field.scheduling.comfortable_headroom': 'Комфортный запас материала',
   'settings.field.scheduling.comfortable_headroom.hint': 'Во сколько раз остаток должен превышать потребность задания, чтобы перестать быть риском.',
   'settings.field.scheduling.scheduler_tick_seconds': 'Такт планировщика',
-  'settings.field.scheduling.scheduler_tick_seconds.hint': 'Как часто пересматривается очередь.',
+  'settings.field.scheduling.scheduler_tick_seconds.hint':
+    'Как часто пересматривается очередь. Применяется после перезапуска воркеров.',
   'settings.field.scheduling.waitlist.no_capable_printer': 'Нет подходящего принтера',
   'settings.field.scheduling.waitlist.no_capable_printer.hint': 'Требуется решение инженера. Заказчику срок не называется.',
   'settings.field.scheduling.waitlist.awaiting_capacity': 'Ждёт освобождения принтера',
@@ -1120,7 +1121,8 @@ export const ru = {
   'settings.field.sla.max_percent': 'Потолок скидки',
   'settings.field.sla.max_percent.hint': 'Дальше начисление останавливается — заказ не может стать бесплатным.',
   'settings.field.sla.sla_sweep_seconds': 'Проверка просрочек',
-  'settings.field.sla.sla_sweep_seconds.hint': 'Как часто система обходит заказы и начисляет компенсацию.',
+  'settings.field.sla.sla_sweep_seconds.hint':
+    'Как часто система обходит заказы и начисляет компенсацию. Применяется после перезапуска воркеров.',
   'settings.field.sla.sla_auto_refund': 'Возвращать деньги сразу',
   'settings.field.sla.sla_auto_refund.hint': 'Иначе компенсация вычитается из суммы к доплате.',
   'settings.field.sla.price_variance_tolerance': 'Допустимое отклонение факта от расчёта',
@@ -1147,6 +1149,8 @@ export const ru = {
 
   // -- service
   'settings.field.service.telemetry_poll_seconds': 'Опрос телеметрии',
+  'settings.field.service.telemetry_poll_seconds.hint':
+    'Как часто драйверы опрашивают машины. Применяется после перезапуска воркеров.',
   'settings.field.service.driver_timeout_seconds': 'Таймаут связи',
   'settings.field.service.driver_timeout_seconds.hint': 'Без ответа дольше этого — машина переходит в «не в сети».',
   'settings.field.service.driver_send_retries': 'Повторных попыток отправки задания',
@@ -1459,6 +1463,22 @@ export const ru = {
   'pu.lines.add_code': 'Код позиции',
   'pu.lines.add_quantity': 'Количество',
   'pu.lines.add': 'Добавить позицию',
+
+  // The scorecard. Three of the kit's columns are not drawn, and the aside
+  // says which figure the two that are drawn come from: «Брак» would need a
+  // rejected quantity no receipt records, «Оборот» is money the board never
+  // carries, and «Оценка» is a composite nobody has defined.
+  'pu.scores.title': 'Поставщики',
+  'pu.scores.aside': 'ПО ФАКТУ ПОСТАВОК — НИЧЕГО НЕ ВВОДИТСЯ ВРУЧНУЮ',
+  'pu.scores.supplier': 'Поставщик',
+  'pu.scores.deliveries': 'Поставок',
+  'pu.scores.on_time': 'В срок',
+  'pu.scores.last': 'Последняя',
+  'pu.scores.empty': 'Поставщиков пока нет',
+  // «1 из 2» beside the percentage, so a 100% from one dated delivery is read
+  // as what it is.
+  'pu.scores.of_dated': '{on_time} из {dated}',
+  'pu.scores.foot': '«В СРОК» СЧИТАЕТСЯ ТОЛЬКО ПО ПОСТАВКАМ С УКАЗАННОЙ ДАТОЙ — ПРОЧЕРК, ЕСЛИ ТАКИХ НЕ БЫЛО',
 
   'pu.supplier.title': 'Поставщик',
   // Counts only in this slice. «Поставок · В срок · Брак · Оценка» needs a
@@ -2529,7 +2549,8 @@ export const en: Messages = {
   'settings.field.scheduling.comfortable_headroom': 'Comfortable material headroom',
   'settings.field.scheduling.comfortable_headroom.hint': 'How many times the remaining stock must exceed the job need to stop being a risk.',
   'settings.field.scheduling.scheduler_tick_seconds': 'Scheduler tick',
-  'settings.field.scheduling.scheduler_tick_seconds.hint': 'How often the queue is reconsidered.',
+  'settings.field.scheduling.scheduler_tick_seconds.hint':
+    'How often the queue is reconsidered. Takes effect after the workers restart.',
   'settings.field.scheduling.waitlist.no_capable_printer': 'No capable printer',
   'settings.field.scheduling.waitlist.no_capable_printer.hint': 'Needs an engineer decision. The customer is not given a date.',
   'settings.field.scheduling.waitlist.awaiting_capacity': 'Waiting for a printer',
@@ -2547,7 +2568,8 @@ export const en: Messages = {
   'settings.field.sla.max_percent': 'Credit ceiling',
   'settings.field.sla.max_percent.hint': 'Accrual stops here — an order cannot become free.',
   'settings.field.sla.sla_sweep_seconds': 'Lateness check',
-  'settings.field.sla.sla_sweep_seconds.hint': 'How often the system sweeps orders and accrues compensation.',
+  'settings.field.sla.sla_sweep_seconds.hint':
+    'How often the system sweeps orders and accrues compensation. Takes effect after the workers restart.',
   'settings.field.sla.sla_auto_refund': 'Refund immediately',
   'settings.field.sla.sla_auto_refund.hint': 'Otherwise the compensation is deducted from the balance due.',
   'settings.field.sla.price_variance_tolerance': 'Allowed fact-vs-estimate variance',
@@ -2574,6 +2596,8 @@ export const en: Messages = {
 
   // -- service
   'settings.field.service.telemetry_poll_seconds': 'Telemetry poll',
+  'settings.field.service.telemetry_poll_seconds.hint':
+    'How often the drivers poll the machines. Takes effect after the workers restart.',
   'settings.field.service.driver_timeout_seconds': 'Link timeout',
   'settings.field.service.driver_timeout_seconds.hint': 'Unanswered longer than this — the machine goes «offline».',
   'settings.field.service.driver_send_retries': 'Job send retries',
@@ -2879,6 +2903,16 @@ export const en: Messages = {
   'pu.lines.add_code': 'Item code',
   'pu.lines.add_quantity': 'Quantity',
   'pu.lines.add': 'Add line',
+
+  'pu.scores.title': 'Suppliers',
+  'pu.scores.aside': 'FROM DELIVERIES AS THEY HAPPENED — NOTHING TYPED IN',
+  'pu.scores.supplier': 'Supplier',
+  'pu.scores.deliveries': 'Deliveries',
+  'pu.scores.on_time': 'On time',
+  'pu.scores.last': 'Latest',
+  'pu.scores.empty': 'No suppliers yet',
+  'pu.scores.of_dated': '{on_time} of {dated}',
+  'pu.scores.foot': '«ON TIME» COUNTS ONLY DELIVERIES THAT CARRIED A DATE — A DASH WHEN NONE DID',
 
   'pu.supplier.title': 'Supplier',
   'pu.supplier.aside': 'A SCORE NEEDS RECEIPTS FIRST',

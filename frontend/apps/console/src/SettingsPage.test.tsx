@@ -703,3 +703,54 @@ describe('the panels', () => {
     expect(screen.getAllByText('Ферма')).toHaveLength(2)
   })
 })
+
+describe('the three intervals the workers read once', () => {
+  // `scheduler_tick_seconds`, `sla_sweep_seconds` and `telemetry_poll_seconds`
+  // are passed to their loops at worker start-up and never re-read (issue #32).
+  // Their neighbours on the same screen resolve at the read edge and take
+  // effect on save, so a row that saves with a proper «было · стало» audit line
+  // and then silently does nothing until `docker compose restart workers` is
+  // the one thing this screen must not let an owner conclude. The hint is the
+  // only place the difference is stated; this pins that each of the three
+  // carries it, in the section it actually sits in.
+  it('says on each of them that the change waits for a restart', async () => {
+    const interval = (section: string, key: string, value: number): Field => ({
+      key,
+      section,
+      kind: 'integer',
+      value,
+      default: value,
+      is_overridden: false,
+      is_set: false,
+      options: [],
+    })
+    const sections = [
+      {
+        id: 'scheduling',
+        fields: [interval('scheduling', 'scheduling.scheduler_tick_seconds', 30)],
+      },
+      { id: 'sla', fields: [interval('sla', 'sla.sla_sweep_seconds', 300)] },
+      { id: 'service', fields: [interval('service', 'service.telemetry_poll_seconds', 5)] },
+    ]
+    net.handler = (url: string) => {
+      if (url.endsWith('/settings/sections')) return Promise.resolve(jsonOk(sections))
+      if (url.endsWith('/settings/history')) return Promise.resolve(jsonOk([]))
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+
+    // The selected tab carries a chevron in its accessible name, so the name is
+    // matched by prefix rather than whole — the same tab is asked for before and
+    // after it is selected.
+    for (const [tab, label] of [
+      [/^Планировщик/, 'Такт планировщика'],
+      [/^Сроки и SLA/, 'Проверка просрочек'],
+      [/^Оборудование и сервис/, 'Опрос телеметрии'],
+    ] as const) {
+      await userEvent.click(await screen.findByRole('tab', { name: tab }))
+      expect(await screen.findByText(label)).toBeInTheDocument()
+      expect(screen.getByText(/после перезапуска воркеров/)).toBeInTheDocument()
+    }
+  })
+})
