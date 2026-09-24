@@ -95,6 +95,33 @@ mutations to the fold each fail its tests (run and reverted): unpriced receipts
 priced at zero (3 fail), the fold trusting input order (1), a single point
 reported as a movement (1).
 
+**#36: a parcel now has a life after the post, and the logistics screen calls
+`logistics` built — twenty-one of twenty-one.** New context
+`contexts/logistics` (migration `0028_shipments`: `shipments`,
+`shipment_events`). A `Shipment` opens at the API edge when
+`POST /packaging/parcels/{id}/ship` succeeds, pinning `zone_code` and
+`promised_days` from the order's *own* rate snapshot
+(`rates_from_dict(snapshot.payload).zones` → `zone_for(postcode)`), so a zone
+edited afterwards moves the next promise and never this one (ADR-0020 for a
+promise); an order with no pinned rates, or a postcode no zone claims, gets a
+shipment with a transit time and no promise — null, never nought days. Every
+change of state is a `shipment_events` row and the status is what the last
+event says (`policies.STATUS_AFTER`); `delivered_at` is written by the
+`delivered` event alone, an arrival dated before the dispatch is refused, and a
+delivered or returned parcel takes no more events. `on_time` is
+`transit_days <= promised_days` in tenths of a day, and **the denominator of
+«В срок» and «Точность» is the delivered parcels that carried a promise** —
+«Точность» groups by the *pinned* promise, so a zone whose transit days changed
+mid-window is two rows, not one blurred average. «Повреждений» counts recorded
+`damaged` events, and the foot says so. Not served, each with its reason in the
+code: «Средняя цена» and «Что и почём» (money behind a production gate),
+«Оценка» (no chosen weights), «Отгрузка сегодня» (the packaging board's),
+«Куда» (the address is on the order), «Возвраты»/«География». The docs
+screen-inventory gate gained its zero case ("Every screen ships, public and
+control"); `DATABASE-REVIEW.md` §1 moved to 55 tables, fifteen contexts and
+thirty migrations. `alembic upgrade`, `check`, `downgrade`, re-`upgrade` were
+run against the dev database.
+
 **#33's second slice: tickets, and the service screen that calls `service`
 built.** `service_tickets` and `service_ticket_steps` (migration
 `0027_service_tickets`, sequence `sv_number_seq`): a ticket is the *work* —

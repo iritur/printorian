@@ -12,8 +12,8 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **53 tables** across fourteen contexts, built
-by twenty-nine Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **55 tables** across fifteen contexts, built
+by thirty Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
@@ -29,6 +29,7 @@ by twenty-nine Alembic migrations on a single linear head.
 | `packaging` | `packaging_tara`, `packaging_instructions`, `packaging_instruction_steps`, `packaging_tasks`, `packaging_task_steps`, `packaging_task_tara` |
 | `procurement` | `suppliers`, `purchase_orders`, `purchase_order_lines`, `purchase_receipts` |
 | `journal` | `journal_posts`, `journal_subscribers` |
+| `logistics` | `shipments`, `shipment_events` |
 | `service` | `printer_failures`, `service_tickets`, `service_ticket_steps` |
 | `settings` | `settings`, `settings_audit` |
 

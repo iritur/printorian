@@ -85,6 +85,8 @@ CASCADE: frozenset[str] = frozenset(
         "purchase_receipts.line_id",
         # A step is not a record of anything without the ticket it belongs to.
         "service_ticket_steps.ticket_id",
+        # An event is one line of a parcel's history and nothing without it.
+        "shipment_events.shipment_id",
         "refunds.payment_id",
         "service_operations.printer_id",
         "sessions.user_id",
@@ -138,6 +140,9 @@ SET_NULL: frozenset[str] = frozenset(
         "service_tickets.assignee_id",
         "service_tickets.failure_id",
         "service_tickets.opened_by",
+        "shipment_events.recorded_by",
+        # The packing row is the shipment's origin, not its identity.
+        "shipments.pack_task_id",
         "purchase_receipts.material_lot_id",
         "purchase_receipts.received_by",
         "settings.updated_by",
@@ -186,6 +191,8 @@ RESTRICT: frozenset[str] = frozenset(
         "printer_failures.printer_id",
         # The same rule, for the same reason: a ticket is part of the evidence.
         "service_tickets.printer_id",
+        # An order delete must not erase how its parcel travelled.
+        "shipments.order_id",
         "purchase_orders.supplier_id",
     }
 )

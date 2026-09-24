@@ -23,12 +23,14 @@ from printorian.api.deps import (
     CurrentActor,
     DbSession,
     Identity,
+    Ordering,
     Packaging,
     PackingShelf,
     requires,
 )
+from printorian.api.routers.logistics import Logistics
 from printorian.contexts.identity import Permission
-from printorian.contexts.ordering import numbers_for
+from printorian.contexts.ordering import numbers_for, rate_snapshot_for
 from printorian.contexts.ordering.models import OrderLine
 from printorian.contexts.packaging import (
     ChooseTara,
@@ -52,6 +54,8 @@ from printorian.contexts.packaging import (
     shift_kpi,
     tara_rows,
 )
+from printorian.contexts.pricing import rates_from_dict
+from printorian.core.errors import NotFoundError
 from printorian.core.ids import EntityId
 
 router = APIRouter(
@@ -178,9 +182,31 @@ async def ready(task_id: EntityId, service: Packaging) -> PackView:
 
 
 @router.post("/parcels/{task_id}/ship", dependencies=[_PACK])
-async def ship(task_id: EntityId, service: Packaging) -> PackView:
+async def ship(
+    task_id: EntityId, service: Packaging, orders: Ordering, logistics: Logistics, db: DbSession
+) -> PackView:
     """Handed to the carrier."""
-    return await service.ship(task_id)
+    view = await service.ship(task_id)
+    # The shipment opens here, at the edge, with the order's *pinned* zone table:
+    # the promise recorded is the one the customer was quoted against, not what
+    # the settings screen says today (ADR-0020, applied to a promise). An order
+    # that predates rate snapshots gets a shipment with no zone and no promise,
+    # which is the honest record of a transit time nobody was told.
+    order = await orders.get(view.order_id)
+    try:
+        zones = rates_from_dict((await rate_snapshot_for(db, order.id)).payload).zones
+    except NotFoundError:
+        zones = None
+    await logistics.open_shipment(
+        order_id=order.id,
+        order_number=order.number,
+        pack_task_id=view.id,
+        carrier_code=view.carrier_code,
+        postcode=order.delivery_postcode,
+        zones=zones,
+        shipped_at=view.shipped_at,
+    )
+    return view
 
 
 @router.post("/parcels/{task_id}/hold", dependencies=[_PACK])

@@ -30,8 +30,8 @@ from another document has only moved the drift.
 
 ## 1. Where the screens stand
 
-**Twenty of twenty-one are built.** Every public screen ships; the one that does
-not is control-realm. `settings` was the nearest of them and is now built —
+**Twenty-one of twenty-one are built.** Every screen ships, public and control;
+what each still owes is in its §2 entry. `settings` was the nearest of them and is now built —
 105 parameters across fourteen sections, served and audited. What is left of it is
 three of the table-valued settings, not the screen (§2.1).
 
@@ -43,7 +43,7 @@ three of the table-valued settings, not the screen (§2.1).
 | `service` | control | **built** — the ticket board, the work order and the reliability table; §2.2 for the rest |
 | `purchasing` | control | **built** — the desk, the six stages and receiving into material stock; the deferred panels are in §2.3 |
 | `store` | control | **built** — cells, ledger and movements; §2.4 for the rest |
-| `logistics` | control | **not built** — §2.5 |
+| `logistics` | control | **built** — shipments, carriers and delivery accuracy; §2.5 for the rest |
 
 `index.html` is the kit's own contents page, not a screen.
 
@@ -265,7 +265,9 @@ appended to the cell map an operator already reads.
 - **Сроки доставки** — Зона · Обещано · Факт · Точность
 - Shipment detail: 6-stage path, address from the cabinet, tracking history
 
-**What the backend still owes:** [#36](https://github.com/iritur/printorian/issues/36) — zones are built (a `ZoneTariffs` on the rate snapshot, edited as `logistics.zones`); still nothing beyond `carrier_code` on a parcel, and no `Shipment`, no carrier, no tracking and no recorded arrival.
+**What exists** ([#36](https://github.com/iritur/printorian/issues/36)): a `Shipment` opens when packaging ships a parcel, pinning the zone and its transit days from the order's own rate snapshot; every later change is a `shipment_events` row; `delivered_at` is set by the `delivered` event alone. `GET /logistics/board`, `/scorecards` and `/shipments/{id}` serve the lanes, «Перевозчики» (Отправлений · В срок over promised deliveries · Повреждений as recorded) and «Сроки доставки» per zone *and* per pinned promise. `LogisticsPage.tsx` draws them.
+
+**Still owed, and why each waits:** «Отгрузка сегодня» is the packaging board's and is not copied; «Средняя цена» and «Что и почём» are money for a `VIEW_FINANCIALS` route; «Оценка» is a composite with no chosen weights; «Куда» needs the address off the order on a logistics read; «Возвраты» and «География» are a rate the scorecard already implies and a map.
 
 ## 3. Conventions every screen honours
 

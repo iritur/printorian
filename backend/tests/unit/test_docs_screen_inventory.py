@@ -197,11 +197,12 @@ def test_the_stated_counts_match_the_table() -> None:
 
     # Singular when one screen is left: the sentence is checked as the string an
     # author would type, and "the one that do not are" is not one anybody would.
-    owed = (
-        "the one that does not is control-realm"
-        if len(not_built) == 1
-        else f"the {_word(len(not_built))} that do not are all control-realm"
-    )
+    if not not_built:
+        owed = "Every screen ships, public and control"
+    elif len(not_built) == 1:
+        owed = "the one that does not is control-realm"
+    else:
+        owed = f"the {_word(len(not_built))} that do not are all control-realm"
     assert owed in section, (
         f'{DOC} §1 should say "{owed}"; the table has {len(not_built)} not-built rows.'
     )
