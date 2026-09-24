@@ -11,6 +11,7 @@ import { CellDetail } from './CellDetail'
 // the map, so either file could have owned them and only one ordering is acyclic.
 import type { Cell, Movement } from './CellDetail'
 import { Field } from './FleetAdmin'
+import { StoreMeasures } from './StoreMeasures'
 
 /**
  * The store (design/store.html): the cell map by zone, and the movement ledger.
@@ -172,6 +173,9 @@ export function StorePage({ locale }: { locale: Locale }) {
           <MovementTable rows={movements} locale={locale} />
         </div>
       </section>
+
+      {/* Turnover for everybody; dead stock only asked for behind view_financials. */}
+      <StoreMeasures locale={locale} />
 
       {open && (
         <CellDetail

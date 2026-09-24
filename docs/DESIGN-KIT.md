@@ -227,7 +227,7 @@ than an omission; three of them would have to invent a number to exist at all.
   claims that table. `spare_part` is declared in the enum so adding it later is a
   service change, and modelling stock for it here would give the farm two.
 
-### 2.4 `store.html` — built, minus turnover, money and stocktake
+### 2.4 `store.html` — built, minus drying and stocktake
 
 **The screen exists.** [`StorePage.tsx`](../frontend/apps/console/src/StorePage.tsx)
 draws the cell map by zone and the movements feed;
@@ -236,17 +236,21 @@ with its batches FIFO oldest-first. Behind them are `storage_zones`,
 `storage_cells` and the append-only `material_movements`, served by
 `/store/cells`, `/store/cells/{address}` and `/store/movements`.
 
-Three of the kit's four KPI tiles are **deliberately not drawn**, and this is the
-part of §2.4 worth reading before adding them. «Стоимость остатков» and
-«Залежалое» are money, and `MaterialLot.purchase_price` is written by nothing, so
-both would read `0 ₽` on a farm holding several hundred thousand roubles of
-filament. «Расхождения» needs a stocktake that does not exist. A tile with an
-invented number in it is worse than a missing tile, so «Ячеек» and «Заполнение» —
-both counted from cells that exist — are the two that ship. Same reasoning for the
-right-hand column: «Движения» is built, «Оборачиваемость», «Залежалое» and
-«Инвентаризация» are not.
+Two of the kit's four KPI tiles are **deliberately not drawn**. «Стоимость
+остатков» would sum `MaterialLot.purchase_price` over every lot, and receiving
+([#34](https://github.com/iritur/printorian/issues/34)) is the only writer of that
+column, so on a farm that has not received through it the tile would read `0 ₽` on
+several hundred thousand roubles of filament. «Расхождения» needs a stocktake that
+does not exist. «Ячеек» and «Заполнение» — counted from cells that exist — are the
+two that ship. Of the right-hand column, «Движения», «Оборачиваемость» and
+«Залежалое» are built (`StoreMeasures.tsx`, over `/store/turnover` and
+`/store/dead-stock`): turnover is the mean days on shelf over lots that *left*, with
+the ones still there counted beside it; dead stock is costed only where receiving
+recorded a price, the unpriced lots counted rather than costed at nought, and the
+whole panel sits behind `VIEW_FINANCIALS` and is never requested without it.
+«Инвентаризация» is not built.
 
-**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — drying state, turnover in days on shelf, dead stock in money (which needs receiving, [#34](https://github.com/iritur/printorian/issues/34), before a lot has a price at all), stocktake, and the three non-filament purchasable classes: tara, consumables and spare parts.
+**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — drying state, stocktake, and the three non-filament purchasable classes: tara, consumables and spare parts.
 
 When dead stock arrives it takes the `api/routers/jobs.py` shape — a separate
 route with `VIEW_FINANCIALS` on top of the production gate — never a value field

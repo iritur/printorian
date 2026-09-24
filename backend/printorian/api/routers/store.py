@@ -18,9 +18,10 @@ where it goes and what leaves the reel.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from printorian.api.deps import AppClock, CurrentActor, DbSession, requires
 from printorian.contexts.identity import Permission
@@ -30,13 +31,18 @@ from printorian.contexts.inventory import (
     CellView,
     CreateStorageCell,
     CreateStorageZone,
+    DeadStockReport,
     LotView,
     MovementView,
     PlaceLot,
     PlacementService,
     StoreViews,
+    TurnoverReport,
     WriteOffLot,
     ZoneView,
+    dead_stock,
+    lot_histories,
+    turnover,
 )
 from printorian.core.ids import EntityId
 
@@ -50,6 +56,11 @@ router = APIRouter(
 #: route, because the router-level dependency above is the *read* gate and a
 #: second router just for four POSTs would put the prefix in two places.
 _MANAGES = Depends(requires(Permission.MANAGE_INVENTORY))
+#: The second gate on the one route here that carries rubles. On top of the
+#: router's `VIEW_PRODUCTION`, never instead of it, and never as a nulled field
+#: on a response an operator already reads — the shape `api/routers/jobs.py`
+#: set for `/jobs/variances`.
+_MONEY = Depends(requires(Permission.VIEW_FINANCIALS))
 
 
 @router.get("/cells")
@@ -139,3 +150,37 @@ async def write_off_lot(
         actor_id=actor.user_id,
         note=data.note,
     )
+
+
+@router.get("/turnover")
+async def turnover_report(
+    db: DbSession,
+    clock: AppClock,
+    days: Annotated[int, Query(ge=1, le=3660)] = 90,
+) -> TurnoverReport:
+    """«Оборачиваемость» — days between a lot arriving and leaving, per family.
+
+    Over lots that *left* the shelf in the window; the ones still there are
+    counted beside the mean and never inside it (`store_measures.turnover`).
+    Grams and days only — the money half of the same ledger is `/dead-stock`.
+    """
+    until = clock.now()
+    since = until - timedelta(days=days)
+    return TurnoverReport(
+        since=since, until=until, rows=turnover(await lot_histories(db), since=since, until=until)
+    )
+
+
+@router.get("/dead-stock", dependencies=[_MONEY])
+async def dead_stock_report(
+    db: DbSession,
+    clock: AppClock,
+    idle_days: Annotated[int, Query(ge=1, le=3660)] = 60,
+) -> DeadStockReport:
+    """«Залежалое» — what is on the shelf that nothing has touched, and what it cost.
+
+    Behind `VIEW_FINANCIALS` because it carries a value per lot. The value is
+    `purchase_price` pro rata to what is left, and only where receiving recorded a
+    price; the unpriced lots are counted, not costed at nought.
+    """
+    return dead_stock(await lot_histories(db), now=clock.now(), idle_days=idle_days)
