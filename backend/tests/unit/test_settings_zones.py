@@ -73,6 +73,9 @@ def test_the_zone_table_is_the_fourth_table_valued_setting() -> None:
     assert tables == [
         "pricing.discounts",
         "pricing.tiers",
+        # Section 07 sits before 08 and 09 in the rail, so the maintenance table
+        # lands here in declaration order (#29; `test_settings_maintenance.py`).
+        "service.maintenance_defaults",
         "postprocess.operations",
         ZONES,
     ]

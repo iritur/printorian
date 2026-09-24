@@ -754,3 +754,72 @@ describe('the three intervals the workers read once', () => {
     }
   })
 })
+
+describe('the maintenance table', () => {
+  // Issue #29's maintenance-intervals row. The editor is fixed to the six kinds
+  // the fleet knows; an interval is edited in place, and a kind can be taken
+  // out of the table — which is what stops a new machine getting that
+  // operation — and put back. What is saved is exactly the rows the server
+  // parses: `{code, interval_hours}`, and nothing the kit draws that nothing reads.
+  it('edits an interval, drops a kind, and saves the rows the server keys by code', async () => {
+    const put: [string, unknown][] = []
+    const sections = [
+      {
+        id: 'service',
+        fields: [
+          {
+            key: 'service.maintenance_defaults',
+            section: 'service',
+            kind: 'table',
+            value: [
+              { code: 'nozzle_change', interval_hours: 500 },
+              { code: 'belt_tension', interval_hours: 500 },
+              { code: 'lubrication', interval_hours: 500 },
+            ],
+            default: [],
+            is_overridden: false,
+            is_set: false,
+            options: [],
+          },
+        ],
+      },
+    ]
+    net.handler = (url: string, init?: RequestInit) => {
+      if (url.endsWith('/settings/sections')) return Promise.resolve(jsonOk(sections))
+      if (url.endsWith('/settings/history')) return Promise.resolve(jsonOk([]))
+      if (init?.method === 'PUT') {
+        put.push([url, JSON.parse(String(init.body))])
+        return Promise.resolve(jsonOk({}))
+      }
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+
+    expect(await screen.findByText('Периодичность по умолчанию')).toBeInTheDocument()
+    // No «Добавить»: the code set is closed on the server.
+    expect(screen.queryByRole('button', { name: /Добавить/ })).not.toBeInTheDocument()
+    // A kind the table does not carry is drawn, with a dash and a way back in —
+    // not hidden, and not «0 ч».
+    const bedLevel = screen.getByText('bed_level').closest('tr')
+    expect(bedLevel?.textContent).toContain('—')
+    expect(screen.getByRole('button', { name: 'Вернуть в таблицу bed_level' })).toBeInTheDocument()
+
+    const nozzle = screen.getByLabelText('Периодичность nozzle_change')
+    await userEvent.clear(nozzle)
+    await userEvent.type(nozzle, '300')
+    await userEvent.click(screen.getByRole('button', { name: 'Не ставить belt_tension' }))
+
+    expect(screen.getByText('ИЗМЕНЕНИЙ :: 1')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    await waitFor(() => expect(put.length).toBe(1))
+    expect(put[0]?.[0]?.endsWith('/settings/service.maintenance_defaults')).toBe(true)
+    expect(put[0]?.[1]).toEqual({
+      value: [
+        { code: 'nozzle_change', interval_hours: 300 },
+        { code: 'lubrication', interval_hours: 500 },
+      ],
+    })
+  })
+})

@@ -15,6 +15,7 @@ import {
 } from '@printorian/ui'
 
 import { DiagnosticsPanel } from './DiagnosticsPanel'
+import { MaintenanceEditor } from './settings/MaintenanceEditor'
 import { OperationsEditor } from './settings/OperationsEditor'
 import type { ZoneRow } from './settings/ZonesEditor'
 import { ZonesEditor } from './settings/ZonesEditor'
@@ -34,6 +35,22 @@ import { ZonesEditor } from './settings/ZonesEditor'
  * One section of the rail is not backed by the catalogue at all — see
  * `DIAGNOSTICS` below.
  */
+
+/**
+ * The six kinds of service operation, in the order the kit's «Периодичность по
+ * умолчанию» lists them. Mirrors `fleet.policies.MaintenanceKind` by hand, the
+ * way the dashboard types mirror `GET /dashboard`: the server refuses a code
+ * outside this set (`error.fleet.maintenance_kind_unknown`), so a kind added
+ * there and not here is a row the editor cannot draw rather than a wrong one.
+ */
+const MAINTENANCE_KINDS = [
+  'nozzle_change',
+  'belt_tension',
+  'lubrication',
+  'bed_level',
+  'filter_change',
+  'deep_clean',
+] as const
 
 const MANAGE_SETTINGS = 'manage_settings'
 
@@ -397,6 +414,27 @@ export function SettingsPage({ locale }: { locale: Locale }) {
         hoursUnit={t('settings.unit.hour')}
         feeUnit={t('settings.unit.rub')}
         rowLabel={(code) => text(`settings.finish.${code}`) || code}
+      />
+    ),
+    'service.maintenance_defaults': (field) => (
+      <MaintenanceEditor
+        key={field.key}
+        field={field}
+        draft={drafts[field.key]}
+        onChange={(value) => setDraft(field.key, value)}
+        onRevert={() => revert(field.key)}
+        dirty={drafts[field.key] !== undefined && !sameValue(drafts[field.key], field.value)}
+        name={fieldName(field.key)}
+        hint={fieldHint(field.key)}
+        revertLabel={t('settings.revert')}
+        operationLabel={t('settings.maintenance.operation')}
+        codeLabel={t('settings.maintenance.code')}
+        intervalLabel={t('settings.maintenance.interval')}
+        hoursUnit={t('settings.unit.hour')}
+        removeLabel={t('settings.maintenance.remove')}
+        restoreLabel={t('settings.maintenance.restore')}
+        kinds={MAINTENANCE_KINDS}
+        rowLabel={(code) => text(`fleet.service.${code}`) || code}
       />
     ),
     'logistics.zones': (field) => {

@@ -20,6 +20,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any
 
+from printorian.contexts.fleet import MaintenanceDefaults, default_maintenance
 from printorian.contexts.ordering import PromisePolicy
 from printorian.contexts.pricing import CustomerTier, FinishOption, RateSnapshot
 from printorian.contexts.scheduling import SchedulingPolicy
@@ -137,6 +138,22 @@ class SettingsResolvers:
         """
         overrides = await self.overrides()
         return bool(overrides.get(key, catalogue.default_for(key)))
+
+    async def resolve_maintenance_defaults(self) -> MaintenanceDefaults:
+        """The service intervals a new machine starts with, right now.
+
+        The same read-edge shape as `resolve_finishes`: the stored table if the
+        farm has one, else `fleet.default_maintenance()` — every kind at the 500
+        hours `CreateServiceOperation` always defaulted to. Read by `POST
+        /printers` when it seeds a card and by `POST /printers/{id}/services`
+        when an operation arrives without a periodicity, so this is the one
+        place the literal has been replaced rather than a second copy of it.
+        """
+        overrides = await self.overrides()
+        defaults: MaintenanceDefaults = overrides.get(
+            "service.maintenance_defaults", default_maintenance()
+        )
+        return defaults
 
     async def resolve_tiers(self) -> dict[str, CustomerTier]:
         """The customer tiers (discount + margin override), keyed by code.

@@ -9,7 +9,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
 
-from printorian.api.deps import AppClock, CurrentActor, DbSession, Fleet, requires
+from printorian.api.deps import (
+    AppClock,
+    CurrentActor,
+    DbSession,
+    FarmSettings,
+    Fleet,
+    requires,
+)
 from printorian.contexts.fleet import (
     CreatePrinter,
     CreateServiceOperation,
@@ -17,6 +24,7 @@ from printorian.contexts.fleet import (
     PrinterTable,
     PrinterView,
     SetAccessCode,
+    seed_service_card,
 )
 from printorian.contexts.identity import Permission
 from printorian.contexts.inventory import InventoryService
@@ -57,9 +65,25 @@ async def get_printer(printer_id: EntityId, fleet: Fleet) -> PrinterView:
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(requires(Permission.MANAGE_FLEET))],
 )
-async def register_printer(data: CreatePrinter, fleet: Fleet) -> PrinterView:
-    """Add a machine. Any access code supplied is encrypted before it is stored."""
-    return await fleet.register(data)
+async def register_printer(
+    data: CreatePrinter, fleet: Fleet, farm: FarmSettings, db: DbSession
+) -> PrinterView:
+    """Add a machine, with the service card the farm's own table says a new one gets.
+
+    Any access code supplied is encrypted before it is stored. The card is
+    seeded here, at the edge, rather than inside `FleetService.register`: the
+    intervals are a settings read, and composition across contexts is this
+    layer's job. One request-scoped session carries both writes, so a machine
+    is never on the floor with half a card.
+    """
+    view = await fleet.register(data)
+    await seed_service_card(
+        db,
+        printer_id=view.id,
+        printed_hours=view.printed_hours,
+        defaults=await farm.resolve_maintenance_defaults(),
+    )
+    return await fleet.get(view.id)
 
 
 @router.put(
@@ -151,9 +175,20 @@ async def unmount_lot(
     dependencies=[Depends(requires(Permission.MANAGE_FLEET))],
 )
 async def add_service_operation(
-    printer_id: EntityId, data: CreateServiceOperation, fleet: Fleet
+    printer_id: EntityId, data: CreateServiceOperation, fleet: Fleet, farm: FarmSettings
 ) -> PrinterView:
-    """Add an operation to the service card, with its periodicity."""
+    """Add an operation to the service card, with its periodicity.
+
+    A body that names no periodicity gets its kind's row from
+    `service.maintenance_defaults` — `model_fields_set` is what tells an
+    omitted field from an explicit `500`, which the schema's default cannot.
+    A kind the table does not carry keeps the schema's default; the table
+    seeds, it does not forbid.
+    """
+    if "interval_hours" not in data.model_fields_set:
+        hours = (await farm.resolve_maintenance_defaults()).hours_for(data.kind)
+        if hours is not None:
+            data = data.model_copy(update={"interval_hours": hours})
     return await fleet.add_service_operation(printer_id, data)
 
 

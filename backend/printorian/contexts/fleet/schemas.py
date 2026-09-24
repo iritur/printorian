@@ -159,6 +159,11 @@ class MountLot(BaseModel):
 
 class CreateServiceOperation(BaseModel):
     kind: MaintenanceKind
+    #: Omitted, the periodicity comes from the farm's own table
+    #: (`service.maintenance_defaults`), which the API router resolves before
+    #: the service sees this. The literal below is only what that table's
+    #: default row also says, kept so a caller that bypasses the router gets
+    #: the historical figure rather than a validation error.
     interval_hours: int = Field(default=500, ge=1)
     materials_used: list[str] = Field(default_factory=list)
     notes: str | None = None
