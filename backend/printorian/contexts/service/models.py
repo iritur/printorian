@@ -22,11 +22,25 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    Integer,
+    Sequence,
+    String,
+    UniqueConstraint,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from printorian.contexts.service.policies import FailureCause, FailureOrigin
-from printorian.core.db import Entity, UtcDateTime, enum_column
+from printorian.contexts.service.policies import (
+    FailureCause,
+    FailureOrigin,
+    TicketKind,
+    TicketStatus,
+)
+from printorian.core.db import Base, Entity, UtcDateTime, enum_column
 from printorian.core.ids import EntityId
 
 
@@ -100,4 +114,121 @@ class PrinterFailure(Entity):
     )
 
 
-__all__ = ["PrinterFailure"]
+#: Sequential, human-quotable ticket numbers — «SV-000412» on the kit's cards.
+#: A sequence rather than ``count(*) + 1`` for the reason `po_number_seq` is one:
+#: two people raising tickets in the same second would otherwise share a number.
+TICKET_NUMBER_SEQUENCE = Sequence("sv_number_seq", start=1, metadata=Base.metadata)
+
+
+class ServiceTicket(Entity):
+    """One piece of work on the shop floor: raised, worked through its steps, closed.
+
+    A ticket is not a failure. The failure record is the *measurement* — when a
+    machine stopped working and when it was seen working again — and a ticket is
+    the *work*: who is fixing it, what the steps are, how long it has been going.
+    A driver-opened failure gets a repair ticket raised beside it (`failure_id`),
+    and the kit's «СООБЩИЛ ДРАЙВЕР» badge is that link plus `origin`.
+
+    The kit's «Последствия» panel — what the ticket has cost in rubles — is not
+    a column here and not a view over this table. It is money, behind
+    `VIEW_FINANCIALS`, composed elsewhere; `schemas.py` opens with the reason.
+    """
+
+    __tablename__ = "service_tickets"
+    __table_args__ = (
+        UniqueConstraint("number", name="uq_service_tickets_number"),
+        # The board: everything not closed, then what closed recently. Both reads
+        # lead with status; `closed_at` serves the «Закрыто сегодня» lane.
+        Index("ix_service_tickets_status_opened", "status", "opened_at"),
+        Index("ix_service_tickets_closed_at", "closed_at"),
+        # PostgreSQL does not index a foreign key for you; each is checked on the
+        # parent's delete.
+        Index("ix_service_tickets_printer_id", "printer_id"),
+        Index("ix_service_tickets_failure_id", "failure_id"),
+        Index("ix_service_tickets_assignee_id", "assignee_id"),
+        Index("ix_service_tickets_opened_by", "opened_by"),
+        # Time only moves forward through a ticket. Held here rather than only in
+        # `TicketDesk`, because a hand-run UPDATE would otherwise put a negative
+        # elapsed time on the board.
+        CheckConstraint(
+            "started_at IS NULL OR started_at >= opened_at", name="started_after_opened"
+        ),
+        CheckConstraint("closed_at IS NULL OR closed_at >= opened_at", name="closed_after_opened"),
+        CheckConstraint("norm_minutes IS NULL OR norm_minutes > 0", name="norm_positive"),
+    )
+
+    number: Mapped[str] = mapped_column(String(16), nullable=False)
+    kind: Mapped[TicketKind] = mapped_column(enum_column(TicketKind), nullable=False)
+    status: Mapped[TicketStatus] = mapped_column(
+        enum_column(TicketStatus), nullable=False, default=TicketStatus.OPEN
+    )
+    #: Who raised it — the sweep, from a state the machine reported, or a person.
+    origin: Mapped[FailureOrigin] = mapped_column(enum_column(FailureOrigin), nullable=False)
+    #: ``RESTRICT`` like `printer_failures.printer_id`, and nullable because a
+    #: move («Снять партию с P-01 → пост PP-01») is about an order rather than a
+    #: machine.
+    printer_id: Mapped[EntityId | None] = mapped_column(
+        ForeignKey("printers.id", ondelete="RESTRICT"), nullable=True
+    )
+    #: The failure a driver-opened repair is about. ``SET NULL`` rather than
+    #: cascade: the failure record is the measurement and outlives the work.
+    failure_id: Mapped[EntityId | None] = mapped_column(
+        ForeignKey("printer_failures.id", ondelete="SET NULL"), nullable=True
+    )
+    #: The shop's own words — «замена сопла», «Загрузить TPU 95A в P-05». Empty
+    #: for a driver-opened ticket: the backend emits no prose about itself
+    #: (ADR-0012), so the client draws those from `origin` and the failure's code.
+    title: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    #: The kit's «НОРМА» — how long this work should take. ``NULL`` is "no norm
+    #: set", never zero minutes.
+    norm_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    opened_at: Mapped[datetime] = mapped_column(UtcDateTime, nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    #: ``SET NULL``, as everywhere a person is named: leaving the farm does not
+    #: erase the tickets they raised or worked.
+    opened_by: Mapped[EntityId | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    assignee_id: Mapped[EntityId | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    steps: Mapped[list[ServiceTicketStep]] = relationship(
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+        order_by="ServiceTicketStep.position",
+        lazy="selectin",
+    )
+
+
+class ServiceTicketStep(Entity):
+    """One line of «Порядок работ»: what to do, how long it should take, when it was done."""
+
+    __tablename__ = "service_ticket_steps"
+    __table_args__ = (
+        # `position` is the order the kit lists the steps in; two steps cannot
+        # share a rung, which is what `POST …/steps/{position}/done` addresses.
+        UniqueConstraint("ticket_id", "position", name="uq_service_ticket_steps_position"),
+        Index("ix_service_ticket_steps_done_by", "done_by"),
+        CheckConstraint("position >= 1", name="position_positive"),
+        CheckConstraint("norm_minutes IS NULL OR norm_minutes > 0", name="step_norm_positive"),
+    )
+
+    ticket_id: Mapped[EntityId] = mapped_column(
+        ForeignKey("service_tickets.id", ondelete="CASCADE"), nullable=False
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    norm_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    done_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    done_by: Mapped[EntityId | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    ticket: Mapped[ServiceTicket] = relationship(back_populates="steps")
+
+
+__all__ = ["TICKET_NUMBER_SEQUENCE", "PrinterFailure", "ServiceTicket", "ServiceTicketStep"]

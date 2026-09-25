@@ -25,7 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.service import FailureOrigin
-from printorian.contexts.service.models import PrinterFailure
+from printorian.contexts.service.models import PrinterFailure, ServiceTicket
 from printorian.core.clock import FixedClock
 from printorian.core.config import Settings
 from printorian.drivers import PrinterState
@@ -88,3 +88,11 @@ async def test_the_service_sweep_is_actually_wired_into_the_worker(
     assert failure is not None
     assert failure.origin is FailureOrigin.DRIVER
     assert runtime.beats == [("service", runtime.settings.service_sweep_seconds)]
+    # The ticket half is wired too. `ServiceSweep` takes the ticket desk as an
+    # optional collaborator, so dropping `TicketDesk(...)` from `ServicePass.sweep`
+    # would leave every other assertion green and the board empty — this is the
+    # one line that notices.
+    ticket = await db_session.scalar(
+        select(ServiceTicket).where(ServiceTicket.failure_id == failure.id)
+    )
+    assert ticket is not None

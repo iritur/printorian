@@ -16,6 +16,7 @@ import { PrepPage } from './PrepPage'
 import { PurchasingPage } from './purchasing/PurchasingPage'
 import { SettingsPage } from './SettingsPage'
 import { StorePage } from './StorePage'
+import { ServicePage } from './service/ServicePage'
 import { UsersPage } from './UsersPage'
 
 type Screen =
@@ -30,6 +31,7 @@ type Screen =
   | 'materials'
   | 'purchasing'
   | 'store'
+  | 'service'
   | 'users'
   | 'settings'
 
@@ -268,6 +270,22 @@ function Shell() {
       shape: 'nodes',
     },
     {
+      /*
+        The same read gate as the store: `api/routers/service.py` serves the
+        board and the reliability table under VIEW_PRODUCTION, and the controls
+        that raise, tick and close are hidden behind `mayOperate` inside the
+        screen. Placed after the store so the supply screens stay together.
+      */
+      key: 'service',
+      label: t('svc.title'),
+      note: 'ЗАЯВКИ · ОТКАЗЫ · НАДЁЖНОСТЬ',
+      permission: VIEW_PRODUCTION,
+      mark: 'SVC',
+      kicker: 'C:/SERVICE/TICKETS',
+      text: 'Заявки по пяти видам работ, аварийные — от драйвера. Отказы считаются над наблюдавшимися часами, а не над списочными.',
+      shape: 'nodes',
+    },
+    {
       key: 'users',
       label: t('users.title'),
       note: 'ДОСТУП · РОЛИ · СЕАНСЫ',
@@ -322,6 +340,7 @@ function Shell() {
     materials: '/INVENTORY/MATERIALS',
     purchasing: '/SUPPLY/PURCHASING/ORDERS',
     store: '/SUPPLY/STORE/LOCATIONS',
+    service: '/SERVICE/TICKETS',
     users: '/IDENTITY/USERS.DB',
     settings: '/SYSTEM/SETTINGS/FARM.CONFIG',
   }
@@ -357,6 +376,7 @@ function Shell() {
       {active === 'materials' && <MaterialsPage locale={locale} />}
       {active === 'purchasing' && <PurchasingPage locale={locale} />}
       {active === 'store' && <StorePage locale={locale} />}
+      {active === 'service' && <ServicePage locale={locale} />}
       {active === 'users' && <UsersPage locale={locale} />}
       {active === 'settings' && <SettingsPage locale={locale} />}
     </AppShell>

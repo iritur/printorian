@@ -44,7 +44,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.fleet.models import Printer
-from printorian.contexts.service import FailureOrigin, FailureView, ServiceDesk
+from printorian.contexts.service import FailureOrigin, FailureView, ServiceDesk, TicketDesk
 from printorian.core.errors import PrintorianError
 from printorian.drivers import PrinterState
 
@@ -84,9 +84,19 @@ class SweepOutcome:
 class ServiceSweep:
     """One reconciling pass over what the machines last reported about themselves."""
 
-    def __init__(self, db: AsyncSession, desk: ServiceDesk) -> None:
+    def __init__(
+        self, db: AsyncSession, desk: ServiceDesk, tickets: TicketDesk | None = None
+    ) -> None:
         self._db = db
         self._desk = desk
+        # The other half of the kit's foot note — «АВАРИЙНЫЕ — ПО СОБЫТИЮ
+        # ДРАЙВЕРА»: a driver-opened failure gets a repair ticket raised beside
+        # it. Optional so the failure record keeps working for a caller that
+        # has no ticket desk, which is exactly why
+        # `tests/unit/test_service_pass_wiring.py` pins that the worker
+        # supplies one: withholding it here would be a silent return to a
+        # board nothing writes to.
+        self._tickets = tickets
 
     async def sweep(self) -> SweepOutcome:
         """Open what broke and close what came back, from the registry's own rows.
@@ -146,7 +156,7 @@ class ServiceSweep:
             logger.warning("service_sweep_undated_error", printer_id=str(printer.id))
             return 0
 
-        await self._desk.record(
+        failure = await self._desk.record(
             printer.id,
             FailureOrigin.DRIVER,
             # Verbatim, and no `cause`: `bambu.print_error.{code}` is what the
@@ -155,6 +165,10 @@ class ServiceSweep:
             error_code=self._error_code(printer),
             detected_at=printer.last_seen_at,
         )
+        if self._tickets is not None:
+            # Idempotent per failure inside the desk, so a pass that has not
+            # seen its own commit cannot raise the same repair twice.
+            await self._tickets.open_for_failure(failure)
         return 1
 
     async def _close(self, printer: Printer, existing: FailureView) -> int:

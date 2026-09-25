@@ -83,6 +83,8 @@ CASCADE: frozenset[str] = frozenset(
         "print_jobs.order_id",
         "purchase_order_lines.order_id",
         "purchase_receipts.line_id",
+        # A step is not a record of anything without the ticket it belongs to.
+        "service_ticket_steps.ticket_id",
         "refunds.payment_id",
         "service_operations.printer_id",
         "sessions.user_id",
@@ -129,6 +131,13 @@ SET_NULL: frozenset[str] = frozenset(
         # while they were here with them — `contexts/service/models.py` says so
         # beside the column.
         "printer_failures.recorded_by",
+        # The people on a ticket, and the failure it is about: a person leaving
+        # the farm does not erase the work they raised or did, and the failure
+        # record outlives the ticket that was opened beside it.
+        "service_ticket_steps.done_by",
+        "service_tickets.assignee_id",
+        "service_tickets.failure_id",
+        "service_tickets.opened_by",
         "purchase_receipts.material_lot_id",
         "purchase_receipts.received_by",
         "settings.updated_by",
@@ -175,6 +184,8 @@ RESTRICT: frozenset[str] = frozenset(
         # all for the opposite reason (ADR-0018 drops partitions under it), so
         # the two are not the inconsistency they look like side by side.
         "printer_failures.printer_id",
+        # The same rule, for the same reason: a ticket is part of the evidence.
+        "service_tickets.printer_id",
         "purchase_orders.supplier_id",
     }
 )

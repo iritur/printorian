@@ -31,10 +31,16 @@ apart from every production permission, and the kit's «ПОТЕРЯ 3 820 ₽»
 composition for a different route behind a different gate.
 """
 
+from printorian.contexts.service.models import ServiceTicket, ServiceTicketStep
 from printorian.contexts.service.policies import (
+    EMERGENCY_KINDS,
+    LOGISTICS_KINDS,
+    PLANNED_KINDS,
     SECONDS_PER_1000_HOURS,
     FailureCause,
     FailureOrigin,
+    TicketKind,
+    TicketStatus,
     failures_per_1000_hours,
     mttr_minutes,
 )
@@ -45,15 +51,27 @@ from printorian.contexts.service.reliability import (
     failure_summary,
 )
 from printorian.contexts.service.schemas import (
+    AddStep,
+    AssignTicket,
     FailureView,
     NameCause,
+    RaiseTicket,
     RecordFailure,
     RestoreFailure,
+    TicketBoard,
+    TicketStepView,
+    TicketView,
 )
 from printorian.contexts.service.service import ServiceDesk
+from printorian.contexts.service.tickets import TicketDesk, lanes_of, view_of
 
 __all__ = [
+    "EMERGENCY_KINDS",
+    "LOGISTICS_KINDS",
+    "PLANNED_KINDS",
     "SECONDS_PER_1000_HOURS",
+    "AddStep",
+    "AssignTicket",
     "CauseCount",
     "FailureCause",
     "FailureOrigin",
@@ -61,10 +79,21 @@ __all__ = [
     "FailureTally",
     "FailureView",
     "NameCause",
+    "RaiseTicket",
     "RecordFailure",
     "RestoreFailure",
     "ServiceDesk",
+    "ServiceTicket",
+    "ServiceTicketStep",
+    "TicketBoard",
+    "TicketDesk",
+    "TicketKind",
+    "TicketStatus",
+    "TicketStepView",
+    "TicketView",
     "failure_summary",
     "failures_per_1000_hours",
+    "lanes_of",
     "mttr_minutes",
+    "view_of",
 ]
