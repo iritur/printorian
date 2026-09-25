@@ -95,6 +95,28 @@ mutations to the fold each fail its tests (run and reverted): unpriced receipts
 priced at zero (3 fail), the fold trusting input order (1), a single point
 reported as a movement (1).
 
+**#35's second slice: «Оборачиваемость» and «Залежалое», folded from the
+movement ledger.** `contexts/inventory/store_measures.py`: one query joins each
+lot to three instants from `material_movements` — its `stock.received` row, its
+first outbound row (mounted, issued or written off; a cell-to-cell move is not
+outbound) and its last row of any kind — and two pure folds do the rest.
+Turnover is the mean days between arrival and first outbound **over lots that
+left**, per family, with the ones still on the shelf counted beside the mean and
+never inside it. Dead stock is lots in `STOCK` with mass left and no movement for
+`idle_days`, costed as `purchase_price × remaining / initial` **only where
+receiving recorded a price** (`procurement.receiving._lot_price` is the only
+writer of that column); unpriced lots are counted and add nothing. Served as
+`GET /store/turnover` (the router's `VIEW_PRODUCTION`) and `GET /store/dead-stock`
+behind `VIEW_FINANCIALS` on top — the `/jobs/variances` shape §2.4 asked for —
+and `StoreMeasures.tsx` never requests the second without the permission; the
+screen test reads the network log to prove it. Two traps met on the way and worth
+knowing: `record_movement` does not flush and `next_sequence` reads the ledger,
+so two rows written before one flush claim the same rung (`uq_material_movements_
+lot_id_sequence`); and `lint-imports` reported a broken contract twice this
+session while another process was writing files, and kept all six when re-run
+alone — run it by itself before believing it. Still owed on #35: drying state,
+stocktake, and the three non-filament classes.
+
 **#36: a parcel now has a life after the post, and the logistics screen calls
 `logistics` built — twenty-one of twenty-one.** New context
 `contexts/logistics` (migration `0028_shipments`: `shipments`,
