@@ -17,6 +17,7 @@ import { PurchasingPage } from './purchasing/PurchasingPage'
 import { SettingsPage } from './SettingsPage'
 import { StorePage } from './StorePage'
 import { ServicePage } from './service/ServicePage'
+import { LogisticsPage } from './logistics/LogisticsPage'
 import { UsersPage } from './UsersPage'
 
 type Screen =
@@ -32,6 +33,7 @@ type Screen =
   | 'purchasing'
   | 'store'
   | 'service'
+  | 'logistics'
   | 'users'
   | 'settings'
 
@@ -286,6 +288,22 @@ function Shell() {
       shape: 'nodes',
     },
     {
+      /*
+        Read gate as on the packaging desk (`api/routers/logistics.py`): the
+        board and the scorecards are VIEW_PRODUCTION, and recording an event is
+        hidden behind `mayPack` inside the screen. After service, before users:
+        the floor's screens stay together.
+      */
+      key: 'logistics',
+      label: t('lg.title'),
+      note: 'ОТПРАВЛЕНИЯ · ПЕРЕВОЗЧИКИ · СРОКИ',
+      permission: VIEW_PRODUCTION,
+      mark: 'SHIP',
+      kicker: 'C:/LOGISTICS/SHIPMENTS',
+      text: 'Посылки после передачи перевозчику, «в срок» по вручённым с обещанием, точность по зонам. Обещание фиксируется при отправке.',
+      shape: 'nodes',
+    },
+    {
       key: 'users',
       label: t('users.title'),
       note: 'ДОСТУП · РОЛИ · СЕАНСЫ',
@@ -341,6 +359,7 @@ function Shell() {
     purchasing: '/SUPPLY/PURCHASING/ORDERS',
     store: '/SUPPLY/STORE/LOCATIONS',
     service: '/SERVICE/TICKETS',
+    logistics: '/LOGISTICS/SHIPMENTS',
     users: '/IDENTITY/USERS.DB',
     settings: '/SYSTEM/SETTINGS/FARM.CONFIG',
   }
@@ -377,6 +396,7 @@ function Shell() {
       {active === 'purchasing' && <PurchasingPage locale={locale} />}
       {active === 'store' && <StorePage locale={locale} />}
       {active === 'service' && <ServicePage locale={locale} />}
+      {active === 'logistics' && <LogisticsPage locale={locale} />}
       {active === 'users' && <UsersPage locale={locale} />}
       {active === 'settings' && <SettingsPage locale={locale} />}
     </AppShell>
