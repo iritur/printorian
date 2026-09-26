@@ -138,7 +138,26 @@ def _parse(data: bytes) -> NDArray[np.float64]:
     if len(data) < _BINARY_HEADER_BYTES + _BINARY_COUNT_BYTES:
         raise ValidationError("error.catalog.mesh_truncated", size=len(data))
 
-    return _parse_ascii(data) if _looks_ascii(data) else _parse_binary(data)
+    triangles = _parse_ascii(data) if _looks_ascii(data) else _parse_binary(data)
+    # Two refusals that used to be a bare 500, found by the security review
+    # (#27). A NaN or an infinity anywhere in the coordinates survives the
+    # float32 read and the ASCII regex, and then `Decimal(str(nan))` raises
+    # `InvalidOperation` out of the volume sum — not a `PrintorianError`, so
+    # the handler let it through as a traceback. Anonymous, one 134-byte file.
+    if not np.isfinite(triangles).all():
+        raise ValidationError("error.catalog.mesh_non_finite")
+    # Finite but absurd — `3e38` coordinates parse cleanly, price cleanly and
+    # then overflow `Numeric(10, 2)` at the flush *after* the bytes are stored,
+    # leaving an orphan object on disk per request. Refused here, before any
+    # write, because the refusal has to come before the thing it refuses.
+    if triangles.size:
+        points = triangles.reshape(-1, 3)
+        extent = float((points.max(axis=0) - points.min(axis=0)).max())
+        if extent > _MAX_EXTENT_MM:
+            raise ValidationError(
+                "error.catalog.mesh_oversized", extent_mm=f"{extent:.0f}", limit_mm=_MAX_EXTENT_MM
+            )
+    return triangles
 
 
 def _looks_ascii(data: bytes) -> bool:
@@ -169,6 +188,11 @@ def _parse_binary(data: bytes) -> NDArray[np.float64]:
     )
     return np.asarray(parsed["vertices"], dtype=np.float64)
 
+
+#: The longest edge a part may have, in millimetres. Ten metres is far past any
+#: bed the farm will ever own and far short of what the columns can hold, so
+#: nothing real is refused and nothing absurd reaches the database.
+_MAX_EXTENT_MM = 10_000
 
 _VERTEX = re.compile(rb"vertex\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)", re.IGNORECASE)
 

@@ -219,6 +219,170 @@ person's decision.
 
 ---
 
+## 2b. Second pass — 2026-09-26, the seams between the first pass's decisions
+
+[#27](https://github.com/iritur/printorian/issues/27) asks for the whole to be
+read with an attacker's assumptions, not the parts. This pass took three
+surfaces — the upload path, the payment flow, and authentication with its abuse
+controls — and read each as somebody holding what an attacker actually holds: an
+anonymous connection, a customer account, or a *stolen session*. Every finding
+below was verified against the code before it was written down; each is either
+fixed on this branch with the test named, or recorded in §5 as a decision. The
+edge and the tunnel are still unbuilt (Stage 3) and are still not reviewed.
+
+### F6 — The YooKassa idempotency key was the event *type*, so the first settlement blocked every later one
+
+*Fixed on this branch.* **Critical**, and correctness rather than confidentiality:
+it would have been found on the first day of live payments, as an order paid for
+and never marked paid.
+
+`contexts/payments/providers/yookassa.py` built `event_id` from the body's
+`event` field. In YooKassa's notification shape that field is a *type* —
+`payment.succeeded` — not an identifier. `PaymentsService._already_seen` keys
+`payment_notifications` on `(provider, event_key)` with a unique constraint, so
+once the first `payment.succeeded` had committed, every later
+`payment.succeeded` — for every other customer's payment — was answered `200
+duplicate`, never settled, and never retried, because the gateway had been told it
+was received. The existing duplicate test used the mock provider, whose event ids
+are per payment, and so could not see it.
+
+**Fixed by** keying on the event type *and* the provider's payment id
+(`payment.succeeded:<id>`); a body with no `event` falls back to the service's
+digest of the bytes, as before. Proved by
+`tests/unit/test_yookassa_provider.py::test_two_settlements_for_two_payments_are_two_events_not_one`,
+which also asserts the same notification delivered twice is still one event.
+
+### F7 — A manager could settle a card payment by hand, marking the order paid with no money moved
+
+*Fixed on this branch.* **High.** The refund path closed this exact hole in F2
+and the settlement path still had it.
+
+`POST /payments/{id}/settle-manually` is gated on `VIEW_FINANCIALS`, which MANAGER
+holds, and `PaymentsService.settle_manually` ran `_settle` on *any* payment — a
+pending YooKassa card payment included. `providers/manual.py` says in its own
+docstring that this needs refund-level authority; the code did not check.
+
+**Fixed by** refusing, in the service, any payment whose `provider` is not
+`manual` with the same `error.payments.provider_mismatch` the refund guard uses.
+Proved by `tests/unit/test_payments.py::test_a_gateway_payment_cannot_be_settled_by_hand`,
+which also asserts the order still reads `awaiting_payment`.
+
+### F8 — A stolen session was a free oracle for the password behind it
+
+*Fixed on this branch.* **Medium.**
+
+`POST /account/password` verifies the *current* password and carried neither the
+`auth` rate ceiling nor the sign-in lockout — both live on `auth.router` alone.
+Somebody holding a cookie (a shared kiosk, a copied header) could guess the
+current password at whatever rate Argon2 allows, and on the hit would own a
+credential that survives every revocation the victim can perform.
+
+**Fixed by** giving the route the `auth` bucket's ceiling and the sign-in lockout
+on a key of its own (`password|<user>|<last hop>`), cleared only by a successful
+change. Proved by
+`tests/api/test_account_doors_api.py::test_guessing_the_current_password_is_locked_out_like_a_sign_in`,
+which asserts that after the limit even the *right* password is refused with
+`error.identity.locked_out`.
+
+### F9 — An owner's cookie could deactivate the farm's only `manage_users` holder with one request
+
+*Fixed on this branch.* **Medium.**
+
+`POST /account/close` called `set_active(actor, is_active=False)` without the
+`actor_id` that makes `/users` refuse self-deactivation. No password, no
+confirmation: the sole owner goes dark, every session is revoked, and
+`manage_users` is unreachable until somebody edits the database — the failure the
+`/users` guard exists to prevent.
+
+**Fixed by** refusing the route to staff roles
+(`error.identity.staff_account_closed_by_owner`); staff accounts are closed by the
+owner from «Пользователи», and this door stays the customer's. Proved by
+`tests/api/test_account_doors_api.py::test_staff_cannot_close_their_own_account_through_the_customer_door`;
+the existing `test_closing_the_account_stops_the_login_and_keeps_the_orders` still
+proves a customer can.
+
+### F10 — A NaN in an anonymous upload was an unhandled 500
+
+*Fixed on this branch.* **Medium**, availability and hygiene.
+
+`mesh._parse` accepted any float the binary reader or the ASCII regex produced.
+`Decimal(str(nan))` then raised `InvalidOperation` out of the volume sum — not a
+`PrintorianError`, so the handler let it through as a traceback. Reachable from
+`POST /pricing/quote` anonymously with a 134-byte file, once per rate-limit slot.
+
+**Fixed by** refusing non-finite coordinates with
+`error.catalog.mesh_non_finite` before any measurement. Proved by
+`tests/unit/test_mesh_analysis.py::test_a_non_finite_coordinate_is_refused_with_a_code_not_a_traceback`
+(NaN, +inf, −inf) and `test_an_ascii_overflow_is_refused_the_same_way`.
+
+### F11 — An absurdly large part was refused *after* its bytes were stored, and never collected
+
+*Fixed on this branch.* **Medium.**
+
+Coordinates around `3e38` parse and price cleanly; the row then overflows
+`Numeric(10, 2)` at the flush, which is *after* `ModelLibrary.ingest` has written
+the object. `purge_unused` collects only digests that once had a row, so every
+such request left a full-size orphan on disk — a disk-fill an anonymous caller
+could drive at the quote ceiling.
+
+**Fixed by** refusing any part with an extent over ten metres
+(`error.catalog.mesh_oversized`) in the parser, before anything is written.
+Proved by `test_a_part_longer_than_ten_metres_is_refused_before_anything_is_stored`,
+which also asserts a metre-long part still prices. The ordering rule this restores
+is the repository's own: a refusal that happens after the write is not a refusal.
+
+### F12 — The public catalogue popup re-parsed a stored model on every request
+
+*Fixed on this branch.* **Medium**, availability.
+
+`GET /catalog/{slug}` is public and unthrottled, and `_catalog_panels._price_ladder`
+ran `analyse_stl` afresh on the model's stored bytes each time. A loop over one
+published model just under the manifold-check ceiling held every `CpuGate` slot the
+farm has, and every quote, preview and console request that needs the gate queued
+behind it.
+
+**Fixed by** routing the popup through the digest-keyed analysis cache the quote
+path already uses (`analyse_cached`). The cache's own three tests in
+`test_mesh_analysis.py` cover the behaviour; no separate route test was added,
+because the change is which function is called and the cache is what is proved.
+
+### Recorded, not fixed here
+
+Each of these is real and small, and each is a decision or a change that belongs
+to a different owner than this branch. They are listed in §5 for filing.
+
+* **Websocket handshake has no `Origin` check** (`api/ws.py`). Safe today only
+  because the cookie is `SameSite=Lax`; one attribute away from cross-site
+  hijacking of the production stream.
+* **Session cookie is never `Secure`** — `request.url.scheme` is always `http`
+  behind Caddy because uvicorn is not told which proxy to trust. Harmless on a
+  plain-HTTP LAN; wrong the day the edge terminates TLS.
+* **Registration enumerates accounts** (409 with the address, and no hashing on
+  conflict). Bounded to the `auth` ceiling. No clean fix without outbound mail.
+* **`/health/workers` and `/metrics` describe the fleet to an anonymous caller**,
+  and the storefront rehearsal Caddyfile forwards all of `/api/*`. Already owed to
+  Stage 3 (§1 of this document).
+* **Journal unsubscribe token travels in the path**, so it lands in the access
+  log; subscribe is unthrottled.
+* **A payment cancelled or expired at the gateway is never recorded**, so the
+  customer's `start()` returns a dead pending payment for ever; and a late
+  settlement of an order the farm already cancelled is accepted silently.
+* **Two concurrent `POST /payments` create two live gateway payments** (no partial
+  unique index on the order's open payment).
+* **Currency is never reconciled**, and refunds hard-code `RUB`.
+* **Malformed webhook bodies are 500s** (`TypeError`, `InvalidOperation` escape),
+  reachable only from the allow-listed networks.
+* **The console's `finance.payment_provider` settings are dead** — only the
+  environment is read, and `tbank` is declared but unknown to `build_provider`.
+* **`payment_notifications.payment_id` is never populated**, so the runbook's
+  reconciliation join is empty.
+* **Plate upload validates after `storage.put`** and answers 422 rather than 413
+  for an oversize part; staff-only.
+* **`CreateOrderLine.model_asset_id` is accepted and dropped**, with no ownership
+  check anywhere on it — latent, and the day it is wired through it is an IDOR.
+
+---
+
 ## 3. Defences confirmed sound
 
 A review that only finds fault is not falsifiable in both directions. These were
@@ -293,6 +457,14 @@ measured ratios above. A separate, smaller `max_upload_bytes` for the anonymous 
 is one answer; requiring an actor for uploads over some size is another; leaving it
 at 200 MiB because the farm is behind a LAN today is a third and is a legitimate
 answer as long as it is a chosen one.
+
+**(d) `type:security` — the second pass's unfixed list.** Everything under
+"Recorded, not fixed here" in §2b: the websocket `Origin` check and the `Secure`
+cookie flag are one small change each and want a test against a TLS-terminating
+edge that does not exist yet; the payment-lifecycle gaps (cancelled at the gateway,
+late settlement of a cancelled order, two concurrent starts, currency) are one
+issue with four bullets and a state-machine decision in it; the rest are hygiene.
+File them, then replace this paragraph with the numbers.
 
 ---
 
