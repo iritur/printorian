@@ -16,6 +16,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from printorian.contexts.inventory.drying import DryingPolicy, drying_of
 from printorian.contexts.inventory.models import MaterialLot, StorageCell, StorageZone
 from printorian.contexts.inventory.movements import MaterialMovement
 from printorian.contexts.inventory.placement import cell_view, fill_percent
@@ -24,6 +25,7 @@ from printorian.contexts.inventory.schemas import (
     CellMap,
     LotView,
     MovementView,
+    StoredLot,
     ZoneView,
 )
 from printorian.core.errors import NotFoundError
@@ -90,12 +92,16 @@ class StoreViews:
             )
         return CellMap(zones=views, cells_total=cells_total, occupied_total=occupied_total)
 
-    async def cell_detail(self, address: str) -> CellDetail:
+    async def cell_detail(self, address: str, *, now: datetime, drying: DryingPolicy) -> CellDetail:
         """One cell, its live lots oldest-first, and what has happened to it.
 
         An unknown address is a 404 rather than an empty map. An all-null response
         reads as "this cell holds nothing", which is a claim about a cell that does
         not exist — CLAUDE.md §1, third bullet.
+
+        ``now`` and ``drying`` are handed in rather than looked up: the drying
+        state is one stored instant against the clock and the farm's settings,
+        and taking both as arguments is what lets a test pin the answer.
         """
         cell = await self._db.scalar(
             select(StorageCell)
@@ -108,7 +114,7 @@ class StoreViews:
         lots = list(
             await self._db.scalars(
                 select(MaterialLot)
-                .options(selectinload(MaterialLot.cell))
+                .options(selectinload(MaterialLot.cell), selectinload(MaterialLot.spec))
                 .where(MaterialLot.cell_id == cell.id, MaterialLot.remaining_grams > 0)
                 # FIFO, oldest first: the spool that has been sitting longest is
                 # the one that should leave next, which is the whole reason the
@@ -131,7 +137,22 @@ class StoreViews:
         )
         return CellDetail(
             cell=cell_view(cell, zone_code=cell.zone.code, lot_count=len(lots)),
-            lots=[LotView.model_validate(lot) for lot in lots],
+            lots=[
+                StoredLot(
+                    **LotView.model_validate(lot).model_dump(),
+                    family=lot.spec.family,
+                    received_at=lot.created_at,
+                    drying=drying_of(
+                        family=lot.spec.family,
+                        location_kind=lot.location_kind,
+                        dried_at=lot.dried_at,
+                        now=now,
+                        policy=drying,
+                    ),
+                )
+                for lot in lots
+            ],
+            drying_valid_hours=drying.valid_hours if drying.required else None,
             movements=[MovementView.model_validate(row) for row in movements],
         )
 

@@ -33,6 +33,25 @@ class LocationKind(StrEnum):
     CONSUMED = "consumed"
 
 
+class DryingState(StrEnum):
+    """Whether a spool may be printed from, as far as moisture goes.
+
+    Derived by `drying.drying_of` from one stored instant and the clock, never
+    stored itself. ``UNKNOWN`` and ``EXPIRED`` are kept apart on purpose: the
+    first spool was never measured, the second was and the mark lapsed, and
+    drawing both as «просрочена» would claim a measurement the farm never took.
+    """
+
+    #: The rule is off, or the family does not take on water.
+    NOT_REQUIRED = "not_required"
+    #: In the dryer this minute.
+    DRYING = "drying"
+    #: Never marked dried. Not measured, which is not the same as lapsed.
+    UNKNOWN = "unknown"
+    DRY = "dry"
+    EXPIRED = "expired"
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Location:
     """Where a physical lot is right now.

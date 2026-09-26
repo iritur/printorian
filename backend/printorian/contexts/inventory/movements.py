@@ -54,6 +54,10 @@ MOVED_WRITTEN_OFF = "stock.written_off"
 MOVED_MOUNTED = "stock.mounted"
 #: Taken back out of a printer.
 MOVED_UNMOUNTED = "stock.unmounted"
+#: Into the dryer, keeping its cell — it is coming back to the same place.
+MOVED_TO_DRYER = "stock.to_dryer"
+#: Out of the dryer with a fresh mark; the only writer of `MaterialLot.dried_at`.
+MOVED_DRIED = "stock.dried"
 
 #: Every reason a row may carry. Machine-readable, rendered by the client
 #: (ADR-0012); the column is a `String` rather than an enum because the set grows
@@ -67,6 +71,8 @@ MOVEMENT_REASONS: frozenset[str] = frozenset(
         MOVED_WRITTEN_OFF,
         MOVED_MOUNTED,
         MOVED_UNMOUNTED,
+        MOVED_TO_DRYER,
+        MOVED_DRIED,
     }
 )
 

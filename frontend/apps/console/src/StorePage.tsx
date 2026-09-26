@@ -17,16 +17,17 @@ import { StoreMeasures } from './StoreMeasures'
  * The store (design/store.html): the cell map by zone, and the movement ledger.
  *
  * **Two KPI tiles, where the kit draws four, and the two that are missing are the
- * point.** «Стоимость остатков» and «Залежалое» are money, and nothing in the
- * system writes `MaterialLot.purchase_price` — so both would read `0 ₽` over a
- * farm holding several hundred thousand roubles of filament, which is an invented
- * number in a nicer font (ADR-0007). «Расхождения» needs a stocktake that does not
- * exist. `DiagnosticsPanel` made the same call when it dropped «Версии» and
+ * point.** «Стоимость остатков» is money, and only receiving writes
+ * `MaterialLot.purchase_price` — so on a farm that has not received through it the
+ * tile would read `0 ₽` over several hundred thousand roubles of filament, which is
+ * an invented number in a nicer font (ADR-0007). «Расхождения» needs a stocktake
+ * that does not exist. `DiagnosticsPanel` made the same call when it dropped «Версии» and
  * «Журнал» rather than filling them with placeholders. «Ячеек» and «Заполнение»
  * are both counted from cells that exist, so they ship.
  *
- * The right-hand column is «Движения» alone for the same reason: turnover, dead
- * stock and stocktake are still owed by the backend (DESIGN-KIT §2.4).
+ * Of the kit's right-hand column, «Движения» is drawn here and «Оборачиваемость»
+ * and «Залежалое» by `StoreMeasures` beneath it; «Инвентаризация» is still owed
+ * by the backend (DESIGN-KIT §2.4).
  */
 
 const MANAGE_INVENTORY = 'manage_inventory'

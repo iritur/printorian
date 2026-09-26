@@ -1,15 +1,19 @@
-"""The warehouse: the cell map, one cell, and the movement ledger.
+"""The warehouse: the cell map, one cell, the movement ledger, and its two measures.
 
-**Nothing on this router carries money, and that is a decision rather than an
-omission.** `design/store.html` draws «Стоимость остатков» and «Залежалое» beside
-the fill figure, and both are unmeasurable today: `MaterialLot.purchase_price`
-exists and is written by nothing, so a value tile would read `0 ₽` on a farm
-holding several hundred thousand roubles of filament — an invented number in a
-nicer font (ADR-0007). When dead stock arrives it takes the shape
-`api/routers/jobs.py` uses for its financial route: a separate endpoint with
-`VIEW_FINANCIALS` on top of the production gate, never a field appended to a
-response an operator already reads. That is the split `VIEW_FINANCIALS` exists to
-make, and money has reached the floor through a second door here before.
+**One route here carries money, and it is the only one.** `design/store.html`
+draws «Стоимость остатков» and «Залежалое» beside the fill figure. The second is
+`/dead-stock`, in the shape `api/routers/jobs.py` uses for its financial route: a
+separate endpoint with `VIEW_FINANCIALS` on top of the production gate, never a
+field appended to a response an operator already reads. The first is still not
+drawn — `MaterialLot.purchase_price` is written by receiving alone, so on a farm
+that has not received through it the tile would read `0 ₽` over several hundred
+thousand roubles of filament, an invented number in a nicer font (ADR-0007).
+That is the split `VIEW_FINANCIALS` exists to make, and money has reached the
+floor through a second door here before.
+
+Drying is the other read-time figure on this router: a spool's state is one
+stored instant (`dried_at`) against the clock and two settings, resolved per
+request in `_drying_policy`, never stored on the row.
 
 Reads need `VIEW_PRODUCTION` and writes need `MANAGE_INVENTORY`, both declared on
 the router rather than per route — an operator finds the spool, a manager decides
@@ -23,7 +27,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
-from printorian.api.deps import AppClock, CurrentActor, DbSession, requires
+from printorian.api.deps import AppClock, CurrentActor, DbSession, FarmSettings, requires
 from printorian.contexts.identity import Permission
 from printorian.contexts.inventory import (
     CellDetail,
@@ -32,6 +36,9 @@ from printorian.contexts.inventory import (
     CreateStorageCell,
     CreateStorageZone,
     DeadStockReport,
+    DryingPolicy,
+    DryingService,
+    DryLot,
     LotView,
     MovementView,
     PlaceLot,
@@ -90,15 +97,36 @@ async def movements(
     return await StoreViews(db).movements(since=since, address=address, lot_id=lot_id)
 
 
+async def _drying_policy(farm: FarmSettings) -> DryingPolicy:
+    """The two drying settings, resolved — the first reader either has had.
+
+    Composed here rather than as a `resolve_drying` on the settings context,
+    because the two scalar resolvers already exist and a settings-side import
+    of `inventory` would be a new edge in the layering for one dataclass.
+    """
+    return DryingPolicy(
+        required=await farm.resolve_bool("inventory.require_drying"),
+        valid_hours=await farm.resolve_int("inventory.drying_valid_hours"),
+    )
+
+
 @router.get("/cells/{address}")
-async def cell_detail(address: str, db: DbSession) -> CellDetail:
+async def cell_detail(
+    address: str, db: DbSession, clock: AppClock, farm: FarmSettings
+) -> CellDetail:
     """One cell: its live lots oldest-first, and what has happened to it.
 
     An unknown address is a 404. Answering an empty map instead would say "this
     cell holds nothing" about a cell that does not exist, and the two readings are
     indistinguishable to whoever is standing in the aisle (CLAUDE.md §1).
+
+    Each lot carries its drying state, computed against the clock and the farm's
+    `inventory.drying_valid_hours` at this moment — never stored, so a spool
+    nobody looked at cannot go on reading as dry.
     """
-    return await StoreViews(db).cell_detail(address)
+    return await StoreViews(db).cell_detail(
+        address, now=clock.now(), drying=await _drying_policy(farm)
+    )
 
 
 @router.post("/zones", status_code=status.HTTP_201_CREATED, dependencies=[_MANAGES])
@@ -149,6 +177,39 @@ async def write_off_lot(
         at=clock.now(),
         actor_id=actor.user_id,
         note=data.note,
+    )
+
+
+@router.post("/lots/{lot_id}/dry", dependencies=[_MANAGES])
+async def send_to_dryer(
+    lot_id: EntityId,
+    data: DryLot,
+    db: DbSession,
+    actor: CurrentActor,
+    clock: AppClock,
+) -> LotView:
+    """«Отправить на сушку» — into the dryer, keeping its cell for the way back.
+
+    Only from stock: a spool in a machine is unmounted first, through the path
+    that records which machine it left.
+    """
+    return await DryingService(db).send_to_dryer(
+        lot_id, at=clock.now(), actor_id=actor.user_id, note=data.note
+    )
+
+
+@router.post("/lots/{lot_id}/dried", dependencies=[_MANAGES])
+async def mark_dried(
+    lot_id: EntityId,
+    data: DryLot,
+    db: DbSession,
+    actor: CurrentActor,
+    clock: AppClock,
+) -> LotView:
+    """Out of the dryer with a fresh mark. Refused for a spool that was never sent,
+    which is what keeps `dried_at` meaning what its name says."""
+    return await DryingService(db).mark_dried(
+        lot_id, at=clock.now(), actor_id=actor.user_id, note=data.note
     )
 
 

@@ -14,13 +14,14 @@ of no interest to anything.
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from printorian.contexts.inventory.policies import LocationKind
-from printorian.core.db import Entity, enum_column
+from printorian.core.db import Entity, UtcDateTime, enum_column
 from printorian.core.ids import EntityId
 
 
@@ -178,6 +179,13 @@ class MaterialLot(Entity):
     #: The supplier's batch number, copied off the receipt. The thread a recall is
     #: pulled by, and the reason this column is worth filling in at all.
     lot_number: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    #: When this spool last came out of a dryer. Written by `drying.mark_dried`
+    #: and by nothing else; null for a spool never marked, which the read path
+    #: reports as *unknown* rather than as expired — nothing was measured, so
+    #: nothing lapsed (ADR-0007). The state itself is never stored: it is this
+    #: instant against the clock and `inventory.drying_valid_hours` at read time,
+    #: so shortening the window on the settings screen shortens every mark.
+    dried_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
 
     # -- location (see policies.Location)
     location_kind: Mapped[LocationKind] = mapped_column(
