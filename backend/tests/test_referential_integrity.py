@@ -92,6 +92,7 @@ CASCADE: frozenset[str] = frozenset(
         "sessions.user_id",
         "sla_credit_entries.order_id",
         "storage_cells.zone_id",
+        "stocktake_lines.stocktake_id",
         "wait_list_entries.job_id",
         "wait_list_entries.order_id",
     }
@@ -115,6 +116,9 @@ SET_NULL: frozenset[str] = frozenset(
         # of that cell survives the column going null, because a movement copies
         # the address as text rather than pointing at the row.
         "material_lots.cell_id",
+        "stocktakes.opened_by",
+        "stocktakes.closed_by",
+        "stocktake_lines.counted_by",
         "material_lots.printer_id",
         "material_movements.actor_id",
         "model_assets.uploaded_by",
@@ -175,6 +179,7 @@ RESTRICT: frozenset[str] = frozenset(
         # the column: a spec whose lot has moved can no longer be ORM-deleted,
         # because `MaterialSpec.lots` cascades.
         "material_movements.lot_id",
+        "stocktake_lines.lot_id",
         "order_lines.model_asset_id",
         "orders.rate_snapshot_id",
         "packaging_task_tara.tara_id",

@@ -52,6 +52,13 @@ class DryingState(StrEnum):
     EXPIRED = "expired"
 
 
+class StocktakeStatus(StrEnum):
+    """Open while people are counting; closed once the book was corrected to the count."""
+
+    OPEN = "open"
+    CLOSED = "closed"
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Location:
     """Where a physical lot is right now.

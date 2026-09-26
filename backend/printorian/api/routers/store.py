@@ -167,9 +167,9 @@ async def write_off_lot(
 ) -> LotView:
     """Take mass off a reel for good.
 
-    The irreversible one, and the only path in the system that decrements
-    `remaining_grams`. The bound is checked before the row is touched, so a
-    refusal leaves the reel exactly as it was.
+    The irreversible one, and — with a stocktake's close — one of the two paths
+    in the system that change `remaining_grams`. The bound is checked before the
+    row is touched, so a refusal leaves the reel exactly as it was.
     """
     return await PlacementService(db).write_off(
         lot_id,

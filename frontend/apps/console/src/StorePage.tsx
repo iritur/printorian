@@ -10,24 +10,28 @@ import { CellDetail } from './CellDetail'
 // nothing back. Both shapes appear in `GET /store/cells/{address}` as well as in
 // the map, so either file could have owned them and only one ordering is acyclic.
 import type { Cell, Movement } from './CellDetail'
-import { Field } from './FleetAdmin'
+// Split out at the seam: the map is a map, and declaring places is a form. It
+// also keeps this file under the console's four-hundred-line convention.
+import { DeclareForms } from './DeclareForms'
+import { StocktakePanel, StocktakeTile } from './Stocktake'
+import type { StocktakeSummary } from './Stocktake'
 import { StoreMeasures } from './StoreMeasures'
 
 /**
  * The store (design/store.html): the cell map by zone, and the movement ledger.
  *
- * **Two KPI tiles, where the kit draws four, and the two that are missing are the
+ * **Three KPI tiles, where the kit draws four, and the one that is missing is the
  * point.** «Стоимость остатков» is money, and only receiving writes
  * `MaterialLot.purchase_price` — so on a farm that has not received through it the
  * tile would read `0 ₽` over several hundred thousand roubles of filament, which is
- * an invented number in a nicer font (ADR-0007). «Расхождения» needs a stocktake
- * that does not exist. `DiagnosticsPanel` made the same call when it dropped «Версии» and
- * «Журнал» rather than filling them with placeholders. «Ячеек» and «Заполнение»
- * are both counted from cells that exist, so they ship.
+ * an invented number in a nicer font (ADR-0007). `DiagnosticsPanel` made the same
+ * call when it dropped «Версии» and «Журнал» rather than filling them with
+ * placeholders. «Ячеек» and «Заполнение» are counted from cells that exist, and
+ * «Расхождения» from the last closed stocktake's lines, so the three ship.
  *
- * Of the kit's right-hand column, «Движения» is drawn here and «Оборачиваемость»
- * and «Залежалое» by `StoreMeasures` beneath it; «Инвентаризация» is still owed
- * by the backend (DESIGN-KIT §2.4).
+ * Of the kit's right-hand column, «Движения» is drawn here, «Оборачиваемость»
+ * and «Залежалое» by `StoreMeasures` beneath it, and «Инвентаризация» by
+ * `StocktakePanel` (DESIGN-KIT §2.4).
  */
 
 const MANAGE_INVENTORY = 'manage_inventory'
@@ -67,6 +71,7 @@ export function StorePage({ locale }: { locale: Locale }) {
 
   const [map, setMap] = useState<CellMap | null>(null)
   const [movements, setMovements] = useState<Movement[]>([])
+  const [stocktakes, setStocktakes] = useState<StocktakeSummary[]>([])
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
 
@@ -85,12 +90,14 @@ export function StorePage({ locale }: { locale: Locale }) {
 
   const load = useCallback(async () => {
     try {
-      const [cells, feed] = await Promise.all([
+      const [cells, feed, counts] = await Promise.all([
         api.get<CellMap>('/store/cells'),
         api.get<Movement[]>('/store/movements'),
+        api.get<StocktakeSummary[]>('/store/stocktakes'),
       ])
       setMap(cells)
       setMovements(feed)
+      setStocktakes(counts)
       setError(null)
     } catch (exc: unknown) {
       setError(
@@ -147,6 +154,7 @@ export function StorePage({ locale }: { locale: Locale }) {
           <span className="hv-kpi__v">{overall ?? t('common.none')}</span>
           <span className="hv-micro">{overall ? '' : t('store.fill.unknown')}</span>
         </div>
+        <StocktakeTile history={stocktakes} locale={locale} />
       </div>
 
       <section className="hv-panel">
@@ -177,6 +185,8 @@ export function StorePage({ locale }: { locale: Locale }) {
 
       {/* Turnover for everybody; dead stock only asked for behind view_financials. */}
       <StoreMeasures locale={locale} />
+
+      <StocktakePanel history={stocktakes} locale={locale} mayManage={mayManage} onChanged={load} />
 
       {open && (
         <CellDetail
@@ -288,104 +298,5 @@ function MovementTable({ rows, locale }: { rows: Movement[]; locale: Locale }) {
         ))}
       </tbody>
     </table>
-  )
-}
-
-/**
- * Declaring a zone and a cell, in the map panel's foot.
- *
- * Without this the two POST routes have no path literal anywhere under
- * `frontend/apps/<app>/src` and the endpoint-consumer gate fails — but the gate is
- * the symptom. The real point is that a warehouse screen with no way to declare a
- * cell is a mechanism the product cannot reach, which is the #58 finding HANDOFF
- * records in as many words.
- *
- * `capacity_lots` is left blank by default and sent as absent when blank. That is
- * the whole ADR-0007 decision reaching the form: an operator who does not know how
- * many spools fit must be able to say nothing rather than be made to guess.
- */
-function DeclareForms({ locale, onDone }: { locale: Locale; onDone: () => Promise<void> }) {
-  const t = (key: MessageKey) => translate(locale, key)
-  const [zoneCode, setZoneCode] = useState('')
-  const [zoneName, setZoneName] = useState('')
-  const [cellZone, setCellZone] = useState('')
-  const [address, setAddress] = useState('')
-  const [capacity, setCapacity] = useState('')
-  const [failed, setFailed] = useState<string | null>(null)
-
-  const send = async (run: () => Promise<unknown>) => {
-    try {
-      await run()
-      setFailed(null)
-      await onDone()
-    } catch (exc: unknown) {
-      setFailed(
-        exc instanceof ApiError
-          ? translateError(locale, { code: exc.code, details: exc.details })
-          : translate(locale, 'error.internal'),
-      )
-    }
-  }
-
-  return (
-    <div className="hv-stack">
-      {failed && <p className="hv-hint hv-bad">{failed}</p>}
-      <form
-        className="hv-row"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void send(async () => {
-            await api.post('/store/zones', { code: zoneCode, name: zoneName })
-            setZoneCode('')
-            setZoneName('')
-          })
-        }}
-      >
-        <Field label={t('store.zone.code')}>
-          <input value={zoneCode} onChange={(event) => setZoneCode(event.target.value)} required />
-        </Field>
-        <Field label={t('store.zone.name')}>
-          <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} />
-        </Field>
-        <button className="hv-btn hv-btn--sm" type="submit">
-          {t('store.add_zone')}
-        </button>
-      </form>
-      <form
-        className="hv-row"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void send(async () => {
-            await api.post('/store/cells', {
-              zone_code: cellZone,
-              address,
-              // Blank means "nobody has said", and the backend answers no fill for
-              // it. Sending 0 or 1 here would be the invented number.
-              capacity_lots: capacity === '' ? null : Number(capacity),
-            })
-            setAddress('')
-            setCapacity('')
-          })
-        }}
-      >
-        <Field label={t('store.zone.code')}>
-          <input value={cellZone} onChange={(event) => setCellZone(event.target.value)} required />
-        </Field>
-        <Field label={t('store.cell.address')}>
-          <input value={address} onChange={(event) => setAddress(event.target.value)} required />
-        </Field>
-        <Field label={t('store.cell.capacity_lots')} hint={t('store.fill.unknown')}>
-          <input
-            type="number"
-            min={1}
-            value={capacity}
-            onChange={(event) => setCapacity(event.target.value)}
-          />
-        </Field>
-        <button className="hv-btn hv-btn--sm" type="submit">
-          {t('store.add_cell')}
-        </button>
-      </form>
-    </div>
   )
 }
