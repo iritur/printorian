@@ -62,7 +62,7 @@ _ANALYSIS_CACHE_SIZE = 32
 _analysis_cache: OrderedDict[str, MeshAnalysis] = OrderedDict()
 
 
-def _analyse_cached(data: bytes) -> MeshAnalysis:
+def analyse_cached(data: bytes) -> MeshAnalysis:
     """Analyse a mesh, remembering the answer for identical bytes.
 
     Every hover in the configurator re-uploads the same model and asks for a
@@ -162,7 +162,7 @@ async def _build_spec(
     # process is the only one serving the storefront, the console and the health
     # check — see `core.cpu` for the measurements that make that a bug rather than
     # a preference.
-    analysis = await cpu.run(_analyse_cached, data)
+    analysis = await cpu.run(analyse_cached, data)
     if not analysis.is_priceable:
         # An unclosed mesh has no defined volume. Quoting one anyway would be
         # presenting a guess as a fact.

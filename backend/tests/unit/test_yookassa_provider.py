@@ -233,3 +233,29 @@ async def test_webhook_rejects_untrusted_or_missing_sources() -> None:
 async def test_missing_credentials_are_refused_at_construction() -> None:
     with pytest.raises(PaymentProviderError):
         YooKassaProvider("", "")
+
+
+async def test_two_settlements_for_two_payments_are_two_events_not_one() -> None:
+    """`event` is a type, not an id. Keyed on it alone, the first `payment.succeeded`
+    the farm ever received made every later one a duplicate — for everybody."""
+    provider = YooKassaProvider("123456", "live_secret")
+
+    def body(payment_id: str) -> bytes:
+        return json.dumps(
+            {
+                "event": "payment.succeeded",
+                "object": {
+                    "id": payment_id,
+                    "status": "succeeded",
+                    "amount": {"value": "10.00", "currency": "RUB"},
+                },
+            }
+        ).encode()
+
+    first = provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body("p1"))
+    second = provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body("p2"))
+    again = provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body("p1"))
+
+    assert first.event_id != second.event_id
+    # The same notification delivered twice is still the same event.
+    assert first.event_id == again.event_id

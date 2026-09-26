@@ -216,8 +216,8 @@ def test_the_same_model_is_analysed_once() -> None:
 
     pricing.analyse_stl = counting  # type: ignore[assignment]
     try:
-        first = pricing._analyse_cached(data)
-        second = pricing._analyse_cached(data)
+        first = pricing.analyse_cached(data)
+        second = pricing.analyse_cached(data)
     finally:
         pricing.analyse_stl = original  # type: ignore[assignment]
 
@@ -231,8 +231,8 @@ def test_a_different_model_is_never_served_from_the_cache() -> None:
     from printorian.api.routers import _pricing_spec as pricing
 
     pricing._analysis_cache.clear()
-    small = pricing._analyse_cached(to_binary_stl(cube_triangles(10.0)))
-    large = pricing._analyse_cached(to_binary_stl(cube_triangles(40.0)))
+    small = pricing.analyse_cached(to_binary_stl(cube_triangles(10.0)))
+    large = pricing.analyse_cached(to_binary_stl(cube_triangles(40.0)))
 
     assert small.volume.cubic_centimetres != large.volume.cubic_centimetres
 
@@ -243,6 +243,45 @@ def test_the_cache_does_not_grow_without_bound() -> None:
 
     pricing._analysis_cache.clear()
     for size in range(1, pricing._ANALYSIS_CACHE_SIZE + 6):
-        pricing._analyse_cached(to_binary_stl(cube_triangles(float(size))))
+        pricing.analyse_cached(to_binary_stl(cube_triangles(float(size))))
 
     assert len(pricing._analysis_cache) <= pricing._ANALYSIS_CACHE_SIZE
+
+
+# ------------------------------------------------- the two refusals from #27
+
+
+def _one_triangle(*vertices: tuple[float, float, float]) -> bytes:
+    return to_binary_stl([vertices])  # type: ignore[list-item]
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf")])
+def test_a_non_finite_coordinate_is_refused_with_a_code_not_a_traceback(bad: float) -> None:
+    """`Decimal(str(nan))` used to raise `InvalidOperation` out of the volume sum —
+    an unhandled 500 from an anonymous 134-byte upload."""
+    with pytest.raises(ValidationError) as raised:
+        analyse_stl(_one_triangle((bad, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)))
+    assert raised.value.code == "error.catalog.mesh_non_finite"
+
+
+def test_an_ascii_overflow_is_refused_the_same_way() -> None:
+    data = (
+        b"solid x\nfacet normal 0 0 0\nouter loop\n"
+        b"vertex 1e400 0 0\nvertex 0 1 0\nvertex 0 0 1\n"
+        b"endloop\nendfacet\nendsolid x\n"
+    )
+    with pytest.raises(ValidationError) as raised:
+        analyse_stl(data)
+    assert raised.value.code == "error.catalog.mesh_non_finite"
+
+
+def test_a_part_longer_than_ten_metres_is_refused_before_anything_is_stored() -> None:
+    """Finite but absurd coordinates used to parse and price cleanly and then
+    overflow `Numeric(10, 2)` at the flush — after the bytes were on disk."""
+    with pytest.raises(ValidationError) as raised:
+        analyse_stl(to_binary_stl(cube_triangles(size=20_000.0)))
+    assert raised.value.code == "error.catalog.mesh_oversized"
+    assert raised.value.details["limit_mm"] == 10_000
+
+    # And a big-but-real part is not: a metre-long bracket prices as before.
+    assert analyse_stl(to_binary_stl(cube_triangles(size=1_000.0))).is_priceable

@@ -9,10 +9,22 @@ has to spare it. `deps.session_token` is that one reader.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, Response, status
+from datetime import timedelta
 
-from printorian.api.deps import SESSION_COOKIE, CurrentActor, Identity, session_token
+from fastapi import APIRouter, Depends, Request, Response, status
+
+from printorian.api.deps import (
+    SESSION_COOKIE,
+    AppSettings,
+    CurrentActor,
+    Identity,
+    SignInLockout,
+    rate_limited,
+    session_token,
+    throttle_key,
+)
 from printorian.contexts.identity import ChangePassword, SessionView
+from printorian.core.errors import UnauthenticatedError
 from printorian.core.ids import EntityId
 
 router = APIRouter()
@@ -55,13 +67,21 @@ async def end_other_sessions(
     return {"ended": await identity.revoke_others(actor.user_id, keep=session_token(request))}
 
 
-@router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    # The same per-address ceiling `/auth/*` carries. This route verifies a
+    # password too, and a verifier with no ceiling is a verifier.
+    dependencies=[Depends(rate_limited("auth", lambda s: s.auth_rate_per_minute))],
+)
 async def change_password(
     data: ChangePassword,
     request: Request,
     response: Response,
     actor: CurrentActor,
     identity: Identity,
+    lockout: SignInLockout,
+    settings: AppSettings,
 ) -> None:
     """Change the password, which ends every session including this one.
 
@@ -74,8 +94,26 @@ async def change_password(
     token the server has already revoked, and the next request fails as
     *unauthenticated* rather than as *signed out* — the same outcome dressed as
     an error.
+
+    **The lockout is the sign-in lockout, on a key of its own.** Somebody holding
+    a stolen session could otherwise guess the *current* password here at whatever
+    rate the hasher allows, with nothing counting — and on the hit they would own a
+    password that survives every revocation the victim can perform. Keyed on the
+    account and the address, as `sign_in` is, and the count is cleared only by a
+    successful change (the security review, #27).
     """
-    await identity.change_password(
-        actor.user_id, current=data.current, replacement=data.replacement
-    )
+    key = f"password|{actor.user_id}|{throttle_key(request)}"
+    lockout.guard(key)
+    try:
+        await identity.change_password(
+            actor.user_id, current=data.current, replacement=data.replacement
+        )
+    except UnauthenticatedError:
+        lockout.record_failure(
+            key,
+            limit=settings.signin_max_attempts,
+            penalty=timedelta(minutes=settings.signin_lockout_minutes),
+        )
+        raise
+    lockout.clear(key)
     response.delete_cookie(SESSION_COOKIE, secure=request.url.scheme == "https")

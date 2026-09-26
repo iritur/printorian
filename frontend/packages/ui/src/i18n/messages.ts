@@ -113,6 +113,8 @@ export const ru = {
   'warning.catalog.manifold_check_skipped': 'Проверка герметичности пропущена',
   'error.catalog.mesh_not_priceable': 'По этой модели нельзя рассчитать цену',
   'error.catalog.mesh_truncated': 'Файл повреждён или обрезан',
+  'error.catalog.mesh_non_finite': 'В файле есть координаты, которые не являются числом',
+  'error.catalog.mesh_oversized': 'Деталь длиннее {limit_mm} мм ({extent_mm} мм) — это не модель для печати',
   'error.catalog.upload_too_large': 'Файл слишком большой',
   'error.catalog.model_not_found': 'Модель для этого задания не найдена',
   'error.catalog.plate_not_parsed':
@@ -1817,6 +1819,8 @@ export const en: Messages = {
   'warning.catalog.manifold_check_skipped': 'Watertightness check skipped',
   'error.catalog.mesh_not_priceable': 'This model cannot be priced',
   'error.catalog.mesh_truncated': 'The file is damaged or truncated',
+  'error.catalog.mesh_non_finite': 'The file has coordinates that are not numbers',
+  'error.catalog.mesh_oversized': 'The part is longer than {limit_mm} mm ({extent_mm} mm) — not a printable model',
   'error.catalog.upload_too_large': 'That file is too large',
   'error.catalog.model_not_found': 'No model found for this job',
   'error.catalog.plate_not_parsed':

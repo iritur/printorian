@@ -165,6 +165,29 @@ keep it under the console's four-hundred-line convention. Still owed on #35:
 the three non-filament classes — tara, consumables, spare parts — which need a
 purchasable class beside filament and are a design question before they are code.
 
+**#27, second pass of the security review — seven fixes with tests, twelve
+things recorded.** `docs/SECURITY-REVIEW.md` §2b. Three surfaces were read as an
+attacker holding what an attacker holds — an anonymous connection, a customer
+account, a *stolen session* — and every finding was verified against the code
+before it was written. Fixed here, each with its test named in the document:
+the YooKassa webhook idempotency key was the event *type*, so the first
+`payment.succeeded` the farm ever received made every later one a "duplicate" for
+every other customer (critical, would have surfaced on day one of live
+payments); a manager could settle a pending *card* payment through the manual
+door and mark the order paid with no money moved; `POST /account/password`
+verified a password with no lockout and no ceiling; `POST /account/close` let an
+owner's stolen cookie deactivate the farm's only `manage_users` holder; a NaN in
+an anonymous upload was a bare 500; a ten-kilometre part was refused *after* its
+bytes were stored and never collected; the public catalogue popup re-parsed a
+stored model on every request, unthrottled. Not fixed and listed for filing in
+§5(d): the websocket `Origin` check, the `Secure` cookie flag behind the proxy,
+the payment lifecycle gaps (cancelled at the gateway, late settlement of a
+cancelled order, two concurrent starts, currency), and the hygiene items. Traps
+met: the test database keeps tables from whichever branch ran last, so a branch
+without those models cannot `drop_all` — `DROP TABLE … CASCADE` them by hand
+before the first run; and `tests/api/test_account_api.py` was two tests past the
+400-line gate, so the abuse tests live in `test_account_doors_api.py`.
+
 **#36: a parcel now has a life after the post, and the logistics screen calls
 `logistics` built — twenty-one of twenty-one.** New context
 `contexts/logistics` (migration `0028_shipments`: `shipments`,

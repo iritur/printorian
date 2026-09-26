@@ -39,9 +39,9 @@ from printorian.api.routers._account_security import router as security_router
 from printorian.api.routers._account_views import Overview, Receipt, Shelf, ShelvedModel
 from printorian.api.routers.catalog import safe_filename
 from printorian.contexts.account import NotificationSettings, UpdateNotifications, tier_of
-from printorian.contexts.identity import UpdateProfile, UserView
+from printorian.contexts.identity import STAFF_ROLES, UpdateProfile, UserView
 from printorian.contexts.ordering import lifetime, lines_per_asset, order_numbers, spent
-from printorian.core.errors import NotFoundError
+from printorian.core.errors import DomainRuleViolationError, NotFoundError
 from printorian.core.ids import EntityId
 
 router = APIRouter(prefix="/account", tags=["account"])
@@ -296,7 +296,15 @@ async def close_account(actor: CurrentActor, identity: Identity) -> None:
     Deactivation revokes every live session as a side effect, so the tab this was
     pressed in stops working on its next request. That is the intended outcome and
     the reason there is no confirmation step here — the screen asks.
+
+    **Not for staff.** `/users` refuses to let an owner deactivate themselves,
+    because the farm's only `manage_users` holder going dark is recovered only by
+    editing the database — and this route, reached with a stolen owner cookie and
+    no password, used to do exactly that with one request. Staff accounts are
+    closed by the owner from «Пользователи»; this door is the customer's (#27).
     """
+    if actor.role in STAFF_ROLES:
+        raise DomainRuleViolationError("error.identity.staff_account_closed_by_owner")
     await identity.set_active(actor.user_id, is_active=False)
 
 

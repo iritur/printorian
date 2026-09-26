@@ -18,7 +18,8 @@ from decimal import Decimal
 from sqlalchemy import distinct, func, select
 
 from printorian.api.deps import DbSession, FarmSettings, Models
-from printorian.contexts.catalog import EstimationProfile, analyse_stl, estimate
+from printorian.api.routers._pricing_spec import analyse_cached
+from printorian.contexts.catalog import EstimationProfile, estimate
 from printorian.contexts.catalog.catalogue import CatalogModel
 from printorian.contexts.catalog.catalogue_schemas import (
     ModelHistory,
@@ -148,7 +149,11 @@ async def _price_ladder(
         data, _ = await models.content(model.model_asset_id)
         # Off the loop: this runs while a customer opens a catalogue popup, and a
         # large stored model would otherwise stall every other request (`core.cpu`).
-        analysis = await cpu.run(analyse_stl, data)
+        # Through the digest cache the quote path uses, not a fresh parse: this
+        # route is public and unthrottled, and a loop over one published model
+        # just under the manifold-check ceiling used to hold every CPU slot the
+        # farm has for as long as the caller cared to keep asking (#27).
+        analysis = await cpu.run(analyse_cached, data)
         if not analysis.is_priceable:
             return [], ""
         prediction = estimate(

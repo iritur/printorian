@@ -216,11 +216,20 @@ class YooKassaProvider:
         except (ValueError, KeyError) as exc:
             raise WebhookVerificationError("error.payments.webhook_malformed") from exc
 
+        # The idempotency key is the event *and* the payment it is about. YooKassa's
+        # `event` is a type — `payment.succeeded` — not an id, and keying on it
+        # alone meant the first settlement the farm ever received made every later
+        # `payment.succeeded`, for every other customer, a "duplicate": answered 200,
+        # never settled, never retried. Money taken, order left awaiting payment
+        # (security review, second pass). A body with no `event` falls back to the
+        # service's digest of the bytes, which is what an empty key means to it.
+        event_type = str(payload.get("event", ""))
+        provider_payment_id = str(obj["id"])
         return WebhookEvent(
-            provider_payment_id=str(obj["id"]),
+            provider_payment_id=provider_payment_id,
             status=_STATUS_MAP.get(str(obj.get("status")), PaymentStatus.PENDING),
             amount=Decimal(str(obj.get("amount", {}).get("value", "0"))),
-            event_id=str(payload.get("event", "")),
+            event_id=f"{event_type}:{provider_payment_id}" if event_type else "",
             raw=payload,
         )
 

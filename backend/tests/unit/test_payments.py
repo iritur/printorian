@@ -26,6 +26,7 @@ from printorian.contexts.payments import (
     StartPayment,
     WebhookVerificationError,
 )
+from printorian.contexts.payments.providers import ManualPaymentProvider
 from printorian.contexts.payments.providers.mock import SIGNATURE_HEADER, VALID_SIGNATURE
 from printorian.contexts.pricing import (
     MaterialPrice,
@@ -381,3 +382,19 @@ async def test_settling_the_sla_credit_twice_returns_nothing_extra(
     once = await payments.refund_sla_credit(payment.id, gateway)
     twice = await payments.refund_sla_credit(payment.id, gateway)
     assert once.refunded_amount == twice.refunded_amount
+
+
+async def test_a_gateway_payment_cannot_be_settled_by_hand(
+    payments: PaymentsService, ordering: OrderingService, gateway: MockPaymentProvider
+) -> None:
+    """The manual door is for bank transfers and cash. A card payment still pending
+    at its gateway used to go through it too — order paid, no money moved."""
+    order = await an_order(ordering)
+    payment = await payments.start(StartPayment(order_id=order.id), gateway)
+    event = ManualPaymentProvider.settlement(f"manual-{payment.id}", payment.amount)
+
+    with pytest.raises(ConflictError) as raised:
+        await payments.settle_manually(payment.id, event)
+    assert raised.value.code == "error.payments.provider_mismatch"
+    assert (await payments.get(payment.id)).status is not PaymentStatus.SUCCEEDED
+    assert (await ordering.get(order.id)).status is OrderStatus.AWAITING_PAYMENT

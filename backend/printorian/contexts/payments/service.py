@@ -45,6 +45,10 @@ from printorian.core.errors import ConflictError, NotFoundError
 from printorian.core.events import EventBus
 from printorian.core.ids import EntityId
 
+#: `ManualPaymentProvider.name`. Spelled here rather than imported, because the
+#: adapters import this module's schemas and the other direction would be a cycle.
+MANUAL_PROVIDER = "manual"
+
 
 class PaymentsService:
     """Collecting and returning money for orders."""
@@ -172,6 +176,16 @@ class PaymentsService:
         payment = await self._db.get(Payment, payment_id)
         if payment is None:
             raise NotFoundError("error.payments.not_found", payment_id=str(payment_id))
+        # Only a payment the *manual* provider owns. The route is a manager's
+        # (`VIEW_FINANCIALS`), and until this check it would mark a pending card
+        # payment succeeded and the order paid with no money moved — the hole the
+        # refund path closed with the same guard, still open on the way in.
+        if payment.provider != MANUAL_PROVIDER:
+            raise ConflictError(
+                "error.payments.provider_mismatch",
+                expected=MANUAL_PROVIDER,
+                actual=payment.provider,
+            )
         return await self._settle(payment, event.amount, actor_id=actor_id)
 
     async def _settle(
