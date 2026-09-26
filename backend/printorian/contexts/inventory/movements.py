@@ -58,6 +58,9 @@ MOVED_UNMOUNTED = "stock.unmounted"
 MOVED_TO_DRYER = "stock.to_dryer"
 #: Out of the dryer with a fresh mark; the only writer of `MaterialLot.dried_at`.
 MOVED_DRIED = "stock.dried"
+#: The book corrected to a stocktake's count. `grams` is the size of the
+#: correction either way; `remaining_after` says which way it went.
+MOVED_COUNTED = "stock.counted"
 
 #: Every reason a row may carry. Machine-readable, rendered by the client
 #: (ADR-0012); the column is a `String` rather than an enum because the set grows
@@ -73,6 +76,7 @@ MOVEMENT_REASONS: frozenset[str] = frozenset(
         MOVED_UNMOUNTED,
         MOVED_TO_DRYER,
         MOVED_DRIED,
+        MOVED_COUNTED,
     }
 )
 

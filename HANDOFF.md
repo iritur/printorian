@@ -139,8 +139,31 @@ families the rule is about is `HYGROSCOPIC_FAMILIES` in `drying.py` — the thre
 the setting's own hint names plus the nylon/PVA spellings — because a per-spec
 flag nothing sets would leave the whole panel reading «не требуется». Trap met:
 `FixedClock.advance` past the session lifetime expires every token, so an API
-test that jumps the clock signs in again. Still owed on #35: stocktake, and the
-three non-filament classes.
+test that jumps the clock signs in again.
+
+**#35's fourth slice: the stocktake, and «Расхождения» with it.** Migration
+`0030_stocktakes`: `stocktakes` and `stocktake_lines`, plus `st_number_seq`.
+`contexts/inventory/stocktake.py` is the write half — `open` snapshots the book
+(`expected_grams`) for every spool **in a cell** (a spool in a machine or the
+dryer is not on a shelf to count; a lot in stock with no address is nowhere
+anybody could be sent), one open count at a time farm-wide; `count` writes what
+was found, refusing anything above the spool's `initial_grams` before the row is
+touched; `close` corrects `remaining_grams` to the count **against the book as it
+is at close**, not the snapshot — a write-off between opening and close is not a
+shortage and applying `counted − expected` would take it twice — with one
+`stock.counted` ledger row per spool that differed, carrying the stocktake's
+number in its note. This is the second and last path that changes
+`remaining_grams`; `placement.write_off`'s docstring now says so. An uncounted
+line keeps a **null** `counted_grams`, stays at its book value and is reported as
+not checked — never zeroed. `stocktake_reads.py` folds the panel's figures over
+the lines that exist and costs «Недостача»/«Излишек» only where a price was
+recorded, behind `VIEW_FINANCIALS` on `/store/stocktakes/{id}/value`; the floor's
+routes are guarded by a money-word scan in the API test. «Следующая» is not
+drawn: no setting says how often the farm counts. Frontend: `Stocktake.tsx`
+(tile + panel), `DeclareForms.tsx` split out of `StorePage.tsx` at the seam to
+keep it under the console's four-hundred-line convention. Still owed on #35:
+the three non-filament classes — tara, consumables, spare parts — which need a
+purchasable class beside filament and are a design question before they are code.
 
 **#36: a parcel now has a life after the post, and the logistics screen calls
 `logistics` built — twenty-one of twenty-one.** New context

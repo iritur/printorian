@@ -230,8 +230,9 @@ class PlacementService:
         after the file had already been stored: a refusal that happens after the
         write has changed something is not a refusal.
 
-        This is the first and only code path in the system that decrements
-        `remaining_grams`. Everything else reads it.
+        This and the stocktake close (`stocktake.py`) are the only code paths in
+        the system that change `remaining_grams`, and this is the only one that
+        takes mass off without a count behind it. Everything else reads it.
         """
         lot = await self._lot(lot_id)
         if grams > lot.remaining_grams:

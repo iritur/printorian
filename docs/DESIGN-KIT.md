@@ -227,7 +227,7 @@ than an omission; three of them would have to invent a number to exist at all.
   claims that table. `spare_part` is declared in the enum so adding it later is a
   service change, and modelling stock for it here would give the farm two.
 
-### 2.4 `store.html` — built, minus stocktake
+### 2.4 `store.html` — built
 
 **The screen exists.** [`StorePage.tsx`](../frontend/apps/console/src/StorePage.tsx)
 draws the cell map by zone and the movements feed;
@@ -236,19 +236,29 @@ with its batches FIFO oldest-first. Behind them are `storage_zones`,
 `storage_cells` and the append-only `material_movements`, served by
 `/store/cells`, `/store/cells/{address}` and `/store/movements`.
 
-Two of the kit's four KPI tiles are **deliberately not drawn**. «Стоимость
+One of the kit's four KPI tiles is **deliberately not drawn**. «Стоимость
 остатков» would sum `MaterialLot.purchase_price` over every lot, and receiving
 ([#34](https://github.com/iritur/printorian/issues/34)) is the only writer of that
 column, so on a farm that has not received through it the tile would read `0 ₽` on
-several hundred thousand roubles of filament. «Расхождения» needs a stocktake that
-does not exist. «Ячеек» and «Заполнение» — counted from cells that exist — are the
-two that ship. Of the right-hand column, «Движения», «Оборачиваемость» and
+several hundred thousand roubles of filament. «Ячеек» and «Заполнение» — counted
+from cells that exist — ship, and so does «Расхождения»: the lines of the last
+*closed* stocktake whose count differed from the book, or a dash when the farm has
+never counted. Of the right-hand column, «Движения», «Оборачиваемость» and
 «Залежалое» are built (`StoreMeasures.tsx`, over `/store/turnover` and
 `/store/dead-stock`): turnover is the mean days on shelf over lots that *left*, with
 the ones still there counted beside it; dead stock is costed only where receiving
 recorded a price, the unpriced lots counted rather than costed at nought, and the
 whole panel sits behind `VIEW_FINANCIALS` and is never requested without it.
-«Инвентаризация» is not built.
+«Инвентаризация» is built (`Stocktake.tsx`, over `/store/stocktakes`): a count
+opens by snapshotting the book for every spool *in a cell* (a spool in a machine or
+the dryer is not on a shelf to count), lines are filled in one spool at a time, and
+closing corrects `remaining_grams` to the count with one `stock.counted` ledger row
+per spool that differed — the second and last path in the system that changes that
+column. An uncounted line stays at its book value and is reported as not checked;
+nothing is defaulted to zero. «Недостача» and «Излишек» in money are
+`/store/stocktakes/{id}/value`, behind `VIEW_FINANCIALS`, costed only where a
+price was recorded. «Следующая» is not drawn: no setting says how often the farm
+counts, and a date from an interval nobody chose is a promise nobody made.
 
 **Drying is a state computed at read time, from one stored instant.**
 `MaterialLot.dried_at` is written by `POST /store/lots/{id}/dried` and by nothing
@@ -260,7 +270,7 @@ was measured, so nothing lapsed. PLA and the rule switched off read as a dash. T
 trip to the dryer is two ledger rows (`stock.to_dryer`, `stock.dried`) and the
 spool keeps its cell meanwhile, so the map does not offer its slot to anybody.
 
-**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — stocktake, and the three non-filament purchasable classes: tara, consumables and spare parts.
+**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — the three non-filament purchasable classes: tara, consumables and spare parts.
 
 When dead stock arrives it takes the `api/routers/jobs.py` shape — a separate
 route with `VIEW_FINANCIALS` on top of the production gate — never a value field

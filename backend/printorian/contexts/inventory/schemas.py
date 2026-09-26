@@ -7,7 +7,12 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from printorian.contexts.inventory.policies import DryingState, LocationKind, MaterialStatus
+from printorian.contexts.inventory.policies import (
+    DryingState,
+    LocationKind,
+    MaterialStatus,
+    StocktakeStatus,
+)
 from printorian.core.ids import EntityId
 
 
@@ -262,6 +267,72 @@ class DryLot(BaseModel):
     """Into the dryer, or out of it. The note is the «Основание» either way."""
 
     note: str | None = Field(default=None, max_length=200)
+
+
+# -- the stocktake -----------------------------------------------------------
+
+
+class OpenStocktake(BaseModel):
+    """Start counting — the whole store, or one zone by its code."""
+
+    zone_code: str | None = Field(default=None, min_length=1, max_length=16)
+    note: str | None = Field(default=None, max_length=200)
+
+
+class CountLine(BaseModel):
+    """What was found on one spool. Zero is a count; absent is not."""
+
+    counted_grams: Decimal = Field(ge=0)
+
+
+class StocktakeLineView(BaseModel):
+    lot_id: EntityId
+    label: str
+    family: str
+    cell_address: str | None = None
+    #: The book when the count opened.
+    expected_grams: Decimal
+    #: Null until somebody counted this spool — never zero by default.
+    counted_grams: Decimal | None = None
+    counted_at: datetime | None = None
+    #: Written at close, signed: negative is a shortage. Null while open or uncounted.
+    variance_grams: Decimal | None = None
+
+
+class StocktakeSummary(BaseModel):
+    """The panel's figures. Every count here is over the lines that exist."""
+
+    id: EntityId
+    number: str
+    status: StocktakeStatus
+    zone_code: str | None = None
+    opened_at: datetime
+    closed_at: datetime | None = None
+    #: Lines lined up at opening — the denominator of «проверено».
+    positions: int
+    counted: int
+    matched: int
+    short: int
+    over: int
+
+
+class StocktakeDetail(StocktakeSummary):
+    note: str | None = None
+    lines: list[StocktakeLineView] = Field(default_factory=list)
+
+
+class StocktakeValue(BaseModel):
+    """The shortage and the surplus in money — behind `VIEW_FINANCIALS`, on its own route.
+
+    Costed only where receiving recorded a price on the spool; the lines it could
+    not cost are counted, not costed at nought.
+    """
+
+    id: EntityId
+    number: str
+    short_value: Decimal
+    over_value: Decimal
+    unpriced_lines: int
 
 
 class WriteOffLot(BaseModel):

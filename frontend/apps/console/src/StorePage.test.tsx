@@ -147,6 +147,7 @@ beforeEach(() => {
   net.handler = (url: string) => {
     if (url.endsWith('/store/cells')) return Promise.resolve(jsonOk(map))
     if (url.endsWith('/store/movements')) return Promise.resolve(jsonOk(movements))
+    if (url.endsWith('/store/stocktakes')) return Promise.resolve(jsonOk([]))
     if (url.endsWith('/store/cells/A1-1')) return Promise.resolve(jsonOk(detail))
     return Promise.reject(new Error('unexpected request: ' + url))
   }
