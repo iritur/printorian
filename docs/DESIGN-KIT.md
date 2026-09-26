@@ -227,7 +227,7 @@ than an omission; three of them would have to invent a number to exist at all.
   claims that table. `spare_part` is declared in the enum so adding it later is a
   service change, and modelling stock for it here would give the farm two.
 
-### 2.4 `store.html` — built, minus drying and stocktake
+### 2.4 `store.html` — built, minus stocktake
 
 **The screen exists.** [`StorePage.tsx`](../frontend/apps/console/src/StorePage.tsx)
 draws the cell map by zone and the movements feed;
@@ -250,7 +250,17 @@ recorded a price, the unpriced lots counted rather than costed at nought, and th
 whole panel sits behind `VIEW_FINANCIALS` and is never requested without it.
 «Инвентаризация» is not built.
 
-**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — drying state, stocktake, and the three non-filament purchasable classes: tara, consumables and spare parts.
+**Drying is a state computed at read time, from one stored instant.**
+`MaterialLot.dried_at` is written by `POST /store/lots/{id}/dried` and by nothing
+else; the cell panel's «Сушка» column is `inventory.drying_state` folded from
+that instant, the clock and the two settings `inventory.require_drying` and
+`inventory.drying_valid_hours` — which nothing read before this slice. A spool
+never marked is *unknown* («не сушилась»), not *expired* («просрочена»): nothing
+was measured, so nothing lapsed. PLA and the rule switched off read as a dash. The
+trip to the dryer is two ledger rows (`stock.to_dryer`, `stock.dried`) and the
+spool keeps its cell meanwhile, so the map does not offer its slot to anybody.
+
+**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — stocktake, and the three non-filament purchasable classes: tara, consumables and spare parts.
 
 When dead stock arrives it takes the `api/routers/jobs.py` shape — a separate
 route with `VIEW_FINANCIALS` on top of the production gate — never a value field

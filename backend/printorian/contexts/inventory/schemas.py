@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from printorian.contexts.inventory.policies import LocationKind, MaterialStatus
+from printorian.contexts.inventory.policies import DryingState, LocationKind, MaterialStatus
 from printorian.core.ids import EntityId
 
 
@@ -195,13 +195,44 @@ class MovementView(BaseModel):
     note: str | None = None
 
 
+class DryingView(BaseModel):
+    """One spool's drying state, computed at read time (`drying.drying_of`).
+
+    ``valid_until`` and ``hours_left`` are set only where there is a mark to
+    measure from. A spool never marked carries neither — a null here means "not
+    measured", and the console draws a dash rather than a countdown from nowhere.
+    """
+
+    state: DryingState
+    dried_at: datetime | None = None
+    valid_until: datetime | None = None
+    hours_left: Decimal | None = None
+
+
+class StoredLot(LotView):
+    """A lot as the cell panel lists it: the lot, plus what the shelf needs to know.
+
+    A subclass rather than fields on `LotView`, because `LotView` is also the
+    row `GET /materials` serves without a session, and the drying state needs a
+    clock and the farm's settings to compute — neither of which that route has
+    or should go and fetch for a catalogue read.
+    """
+
+    family: str
+    received_at: datetime
+    drying: DryingView
+
+
 class CellDetail(BaseModel):
     """One cell: what is in it, oldest first, and how it got that way."""
 
     cell: CellView
     #: FIFO, oldest first — what the kit's «Партии в ячейке» panel shows, because
     #: the oldest spool is the one that should leave next.
-    lots: list[LotView] = Field(default_factory=list)
+    lots: list[StoredLot] = Field(default_factory=list)
+    #: The window a drying mark is good for, so the panel can say «72 ч» beside
+    #: the states. ``None`` when the rule is switched off, and the panel says so.
+    drying_valid_hours: int | None = None
     movements: list[MovementView] = Field(default_factory=list)
 
 
@@ -224,6 +255,12 @@ class CreateStorageCell(BaseModel):
 
 class PlaceLot(BaseModel):
     address: str = Field(min_length=1, max_length=24)
+    note: str | None = Field(default=None, max_length=200)
+
+
+class DryLot(BaseModel):
+    """Into the dryer, or out of it. The note is the «Основание» either way."""
+
     note: str | None = Field(default=None, max_length=200)
 
 

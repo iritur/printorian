@@ -13,7 +13,7 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 ## 1. Shape
 
 One PostgreSQL database (ADR-0001, D1). **55 tables** across fifteen contexts, built
-by thirty Alembic migrations on a single linear head.
+by thirty-one Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|

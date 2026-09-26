@@ -117,6 +117,31 @@ session while another process was writing files, and kept all six when re-run
 alone — run it by itself before believing it. Still owed on #35: drying state,
 stocktake, and the three non-filament classes.
 
+**#35's third slice: drying state, and the first reader the two drying settings
+have had.** `inventory.require_drying` and `inventory.drying_valid_hours` sat in
+the catalogue since the settings screen was built with nothing reading either —
+the "settings row nothing reads" failure #29 names. Migration `0029_lot_dried_at`
+adds one nullable column, `material_lots.dried_at`, and `contexts/inventory/
+drying.py` computes the state from it **at read time**: `not_required` (PLA, or
+the rule off), `drying` (in the dryer), `unknown` (never marked — not measured,
+so not lapsed), `dry` with hours left, `expired`. Never stored, so a spool nobody
+looked at cannot go on reading as dry, and shortening the window on the settings
+screen shortens every mark at once — the API test proves that by editing the
+setting mid-test. Two writes, `POST /store/lots/{id}/dry` and `/dried`, both
+ledger rows (`stock.to_dryer`, `stock.dried`); the second is the only writer of
+`dried_at` and is refused for a spool that was never sent. The spool **keeps its
+cell** in the dryer so the map does not offer its slot. `GET /store/cells/{a}`
+now serves `StoredLot` (a `LotView` plus family, receipt and the state) and
+`drying_valid_hours`; `CellDetail.tsx` draws the kit's «Сушка» column and the
+two buttons, and «Высушена» is offered for anything physically in the dryer even
+after the rule is switched off, or the spool would be stuck there. Which
+families the rule is about is `HYGROSCOPIC_FAMILIES` in `drying.py` — the three
+the setting's own hint names plus the nylon/PVA spellings — because a per-spec
+flag nothing sets would leave the whole panel reading «не требуется». Trap met:
+`FixedClock.advance` past the session lifetime expires every token, so an API
+test that jumps the clock signs in again. Still owed on #35: stocktake, and the
+three non-filament classes.
+
 **#36: a parcel now has a life after the post, and the logistics screen calls
 `logistics` built — twenty-one of twenty-one.** New context
 `contexts/logistics` (migration `0028_shipments`: `shipments`,

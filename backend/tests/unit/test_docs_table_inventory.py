@@ -76,6 +76,7 @@ NUMBER_WORDS: dict[int, str] = {index + 1: word for index, word in enumerate(_UN
 NUMBER_WORDS[20] = "twenty"
 NUMBER_WORDS.update({20 + n: f"twenty-{_UNITS[n - 1]}" for n in range(1, 10)})
 NUMBER_WORDS[30] = "thirty"
+NUMBER_WORDS.update({30 + n: f"thirty-{_UNITS[n - 1]}" for n in range(1, 10)})
 
 
 def _section() -> str:

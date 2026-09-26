@@ -128,12 +128,16 @@ const detail = {
     {
       id: 'lot-1',
       label: 'PLA-001',
+      family: 'PLA',
       remaining_grams: '1000.00',
       location_kind: 'stock',
       cell: 'A1-1',
       shelf: null,
+      received_at: '2026-03-02T09:00:00Z',
+      drying: { state: 'not_required', dried_at: null, valid_until: null, hours_left: null },
     },
   ],
+  drying_valid_hours: 72,
   movements,
 }
 
