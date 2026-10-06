@@ -7,6 +7,36 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
+## 2026-10-06 (later) — code scanning: four alerts fixed, one left for a person to dismiss
+
+**As of:** 2026-10-06 · on `claude/trusting-brown-hfc1pu`, `main` at
+[#125](https://github.com/iritur/printorian/pull/125) (`aea1723`) plus this
+session. The alert list was not readable from here — no tool reaches the
+code-scanning API — so it was **reproduced**: CodeQL 2.27.1 (the version CI's
+default setup ran), the default `*-code-scanning.qls` suite per language (the
+default setup's config names no other), over a clean `git archive` of `main`.
+Five results; after the fixes, the same scan gives **python 1, javascript 0,
+actions 0**. Frontend: `typecheck`, `lint`, `build` `exit=0`, tests **348
+passed in 39 files** (nine new).
+
+- **`js/xss-through-dom`, `design/js/kit.js`** — the catalogue's filter chips
+  were an HTML string built from each checkbox's id and label. Built as
+  elements now. Checked in Chromium against `main`'s copy and this one: the
+  same chip, the same un-ticking; a label planted with
+  `<img onerror=...>` *ran* on `main` and renders as text here.
+- **`js/polynomial-redos`, `frontend/packages/ui/src/journal/blocks.ts`** —
+  `slugify` trimmed `^-+|-+$` after a replace that already collapses every run
+  to one hyphen, so it was never slow; it trims `^-|-$` now, which states the
+  invariant. `blocks.test.ts` pins `slugify` and `anchorOf` with values produced
+  by `policies.py::slugify`; the old pattern passes it too (equivalence), and
+  breaking the collapse fails three cases.
+- **`actions/missing-workflow-permissions`, `ci.yml` ×2** — `backend` and
+  `frontend` ran with the repository's default token grant. The workflow
+  defaults to `contents: read`; `image` keeps its own block.
+- **Left: `py/bind-socket-all-network-interfaces`, `backend/tools/bambu_spike.py`**
+  — see §5. Binding every interface is what lets `discover` hear UDP
+  broadcasts at all; the comment at the bind says so.
+
 ## 2026-10-06 — both Dependabot pull requests red, for two different reasons
 
 **As of:** 2026-10-06 · **1 736 passed, 7 skipped, `exit=0` in 598.22s (0:09:58) — pytest's own trailing summary line, read out of the redirect** on
@@ -1945,6 +1975,13 @@ What exists now so that proving it is one command rather than a project:
 
 ## 5. Needs a person, not an agent
 
+- **Dismiss the code-scanning alert on `backend/tools/bambu_spike.py` as
+  "Won't fix".** `py/bind-socket-all-network-interfaces` on `discover`'s
+  `sock.bind(("", port))`: a UDP socket bound to one address does not receive
+  broadcasts on Linux, and broadcasts are all discovery listens for, so binding
+  narrower breaks the tool rather than securing it. It is a hand-run listener
+  that prints what it hears for `--timeout` seconds. Dismissing needs the
+  Security tab; nothing an agent here can reach writes to it.
 - **`farm_stats.on_time_percent` measures dispatch and calls it arrival.**
   `backend/printorian/api/farm_stats.py:53` documents it as "Share of delivered
   orders that arrived by the date promised"; the query at :117-118 compares
