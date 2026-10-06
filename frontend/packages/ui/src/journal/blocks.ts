@@ -128,9 +128,15 @@ export function slugify(title: string): string {
   const lowered = title.trim().toLowerCase()
   let latin = ''
   for (const char of lowered) latin += TRANSLITERATION[char] ?? char
+  // One hyphen trimmed at each end, not `-+`: the first replace has already
+  // collapsed every run, hyphens included, so no two can be adjacent. `-+$` was
+  // never slow here for that reason, but a scanner cannot see the invariant and
+  // flags it as polynomial backtracking (CodeQL js/polynomial-redos). One hyphen
+  // states what the input actually is. `policies.py` gets the same result from
+  // `.strip("-")`.
   return latin
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/^-|-$/g, '')
     .slice(0, 120)
 }
 
