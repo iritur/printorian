@@ -65,6 +65,11 @@ def discover(timeout: float) -> int:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
+            # Every interface, on purpose. A UDP socket bound to one address does not
+            # receive broadcast datagrams on Linux, and broadcasts are all discovery
+            # listens for. CodeQL flags this (py/bind-socket-all-network-interfaces);
+            # the risk it names is a service reachable from any network, and this is
+            # a hand-run listener that prints what it hears for `--timeout` seconds.
             sock.bind(("", port))
         except OSError as exc:
             print(f"  cannot bind {port}: {exc}")
