@@ -390,12 +390,19 @@
       if (countEl) countEl.textContent = shown;
       if (emptyEl) emptyEl.hidden = shown > 0;
 
+      // Chips are built as elements, not as an HTML string. A label is text: put
+      // through innerHTML, a quote in an id or a `<` in a label would be parsed
+      // as markup (CodeQL js/xss-through-dom).
       if (chipBox) {
-        chipBox.innerHTML = facets.filter(function (f) { return f.checked; })
-          .map(function (f) {
-            return '<button class="hv-chip" type="button" data-chip-for="' + f.id + '">' +
-                   (f.dataset.label || f.value) + '</button>';
-          }).join('');
+        chipBox.textContent = '';
+        facets.filter(function (f) { return f.checked; }).forEach(function (f) {
+          var chip = document.createElement('button');
+          chip.className = 'hv-chip';
+          chip.type = 'button';
+          chip.setAttribute('data-chip-for', f.id);
+          chip.textContent = f.dataset.label || f.value;
+          chipBox.appendChild(chip);
+        });
       }
     }
 
