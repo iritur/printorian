@@ -94,8 +94,13 @@ def _ensure_test_database() -> None:
     run inside a transaction, and `AUTOCOMMIT` is simplest to reach for here. This
     is the same approach `test_migrations.py` already takes for its own scratch
     database.
+
+    The driver is named, not left to SQLAlchemy's default. A bare `postgresql://`
+    meant psycopg2 until 2.1 and means psycopg 3 from then on, so stripping
+    `+asyncpg` silently switched to a driver this project does not install, and
+    every database test errored at setup with `No module named 'psycopg'`.
     """
-    admin_url = _configured_root().replace("+asyncpg", "") + "/postgres"
+    admin_url = _configured_root().replace("+asyncpg", "+psycopg2") + "/postgres"
     engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
     try:
         with engine.connect() as connection:

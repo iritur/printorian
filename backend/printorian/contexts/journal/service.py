@@ -261,7 +261,7 @@ class JournalService:
         section: Section | None = None,
         text: str = "",
         include_drafts: bool = False,
-    ) -> Select[tuple[JournalPost]]:
+    ) -> Select[JournalPost]:
         query = select(JournalPost)
         if not include_drafts:
             query = query.where(JournalPost.is_published.is_(True))

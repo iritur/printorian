@@ -161,12 +161,10 @@ async def order_numbers(db: AsyncSession, customer_id: EntityId) -> dict[EntityI
         # vestigial rather than a promise to anybody.
         .order_by(Order.created_at.desc())
     )
-    # `t.tuple()` rather than a bare `dict(rows)`: a SQLAlchemy `Row` is a
-    # sequence of two and converts happily, but its declared type is not
-    # `tuple[UUID, str]`, so the plain form needs a `type: ignore` and the
-    # comprehension form is what `ruff` objects to. Asking for tuples is the
-    # version both tools agree with.
-    return dict(rows.tuples().all())
+    # A bare `dict(rows.all())`: since SQLAlchemy 2.1 a `Row` is typed as the
+    # tuple it is, so mypy accepts it. The 2.0 workaround, `rows.tuples()`, is
+    # deprecated in 2.1, and the suite's `filterwarnings = ["error"]` fails on it.
+    return dict(rows.all())
 
 
 def _saved_on(breakdown: dict[str, Any]) -> Decimal:

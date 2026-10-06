@@ -130,7 +130,7 @@ class IdentityService:
         else:
             query = query.where(User.role.in_(STAFF_ROLES))
         rows = await self._db.execute(query)
-        return dict(rows.all())  # type: ignore[arg-type]
+        return dict(rows.all())
 
     async def set_role(
         self, user_id: EntityId, role: Role, *, actor_id: EntityId | None = None

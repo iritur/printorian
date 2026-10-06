@@ -164,7 +164,7 @@ class ModelCatalogue:
                 difficulties=frozenset() if drop == "diff" else facets.difficulties,
             )
 
-        def scoped(drop: str) -> Select[tuple[CatalogModel]]:
+        def scoped(drop: str) -> Select[CatalogModel]:
             query = select(CatalogModel)
             if not include_unpublished:
                 query = query.where(CatalogModel.is_published.is_(True))
@@ -207,9 +207,7 @@ class ModelCatalogue:
         ]
         return counts
 
-    async def _count_by(
-        self, query: Select[tuple[CatalogModel]], column_name: str
-    ) -> list[FacetCount]:
+    async def _count_by(self, query: Select[CatalogModel], column_name: str) -> list[FacetCount]:
         """`GROUP BY` one column of the scoped set.
 
         Takes a *name* and resolves it against the subquery's own columns rather
@@ -239,7 +237,7 @@ def _facet_value(value: object) -> str:
     return str(value)
 
 
-def _apply_text(query: Select[tuple[CatalogModel]], text: str) -> Select[tuple[CatalogModel]]:
+def _apply_text(query: Select[CatalogModel], text: str) -> Select[CatalogModel]:
     """Free-text search over title, code and tags.
 
     Matches the pre-folded `search_text` column rather than calling `lower()` in
@@ -259,9 +257,7 @@ def _apply_text(query: Select[tuple[CatalogModel]], text: str) -> Select[tuple[C
     return query.where(CatalogModel.search_text.like(f"%{needle}%"))
 
 
-def _apply_facets(
-    query: Select[tuple[CatalogModel]], facets: Facets
-) -> Select[tuple[CatalogModel]]:
+def _apply_facets(query: Select[CatalogModel], facets: Facets) -> Select[CatalogModel]:
     """OR within a group, AND across groups."""
     if facets.categories:
         query = query.where(CatalogModel.category.in_(facets.categories))
@@ -349,8 +345,8 @@ _SORT_EXPRESSIONS: dict[SortKey, Callable[[], Any]] = {
 
 
 def _apply_sort(
-    query: Select[tuple[CatalogModel]], sort: SortKey, descending: bool | None
-) -> Select[tuple[CatalogModel]]:
+    query: Select[CatalogModel], sort: SortKey, descending: bool | None
+) -> Select[CatalogModel]:
     """Order by one of the eight keys.
 
     `descending=None` means "however this key opens" — see

@@ -86,6 +86,7 @@ async def scorecards(
 
     found: dict[EntityId, _Row] = {}
     for operator_id, kind, completed, returns, norm, actual in rows:
+        assert operator_id is not None  # narrowed by `is_not(None)` in the query above
         row = found.setdefault(operator_id, _Row(operator_id, (names or {}).get(operator_id, "")))
         row.completed += int(completed or 0)
         row.returns += int(returns or 0)

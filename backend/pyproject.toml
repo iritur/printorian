@@ -10,7 +10,9 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
-    "sqlalchemy[asyncio]>=2.0.36",
+    # 2.1, not 2.0: the code is typed for 2.1's `Select[Model]` and tuple-typed
+    # `Row`, and `mypy --strict` fails against 2.0's `Select[tuple[Model]]`.
+    "sqlalchemy[asyncio]>=2.1",
     "asyncpg>=0.30",
     "alembic>=1.14",
     "pydantic>=2.10",
@@ -72,7 +74,10 @@ dev = [
     "mypy>=1.14",
     "import-linter>=2.1",
     "aiosqlite>=0.20",
-    # Sync driver, used only by the migration test to inspect the schema.
+    # Sync driver for the test harness: `CREATE DATABASE` cannot run inside the
+    # async driver's transaction, and the migration test inspects the schema with
+    # it. Every URL that uses it names `+psycopg2` — since SQLAlchemy 2.1 a bare
+    # `postgresql://` selects psycopg 3, which is not installed (tests/conftest.py).
     "psycopg2-binary>=2.9",
 ]
 
