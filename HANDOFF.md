@@ -7,6 +7,64 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
+## 2026-10-06 — both Dependabot pull requests red, for two different reasons
+
+**As of:** 2026-10-06 · **1 736 passed, 7 skipped, `exit=0` in 598.22s (0:09:58) — pytest's own trailing summary line, read out of the redirect** on
+`claude/trusting-brown-hfc1pu`, which is `main` at
+[#122](https://github.com/iritur/printorian/pull/122) (`5142305`) plus this
+session, against PostgreSQL 16 (CI runs 17). The six backend gates each
+`exit=0`: `ruff check`, `ruff format --check`, `mypy --strict` over **272**
+source files, `lint-imports` (6 kept, 0 broken), `check_context_isolation.py`,
+`check_file_length.py`; `alembic upgrade head` on an empty database and
+`alembic check` `exit=0`; `pip-audit` found nothing. Frontend, on Node 22 (CI
+runs 24): `npm ci`, `npm audit --audit-level=high`, `generate:api`,
+`typecheck`, `lint`, `build` each `exit=0`, and the suite **339 passed in 38
+files**.
+
+**[#123](https://github.com/iritur/printorian/pull/123) (frontend) was red
+because of `main`.** Four advisories were published after `main`'s last green
+run (2026-09-26) — three against `brace-expansion`, one against
+`source-map-js` — and the audit step fails on them. #123 touches neither
+package; `npm audit` on `main` fails identically. Fixed in the lockfile alone
+(`npm audit fix` under npm 11, the major CI runs): `brace-expansion` 5.0.9 →
+5.0.12 and 2.1.4 → 2.1.7, `source-map-js` 1.2.1 → 1.2.2, each inside the range
+its parent already declares. The same three-package change on #123's own head
+audits clean. Once this merges, #123 needs `@dependabot rebase`.
+
+**[#124](https://github.com/iritur/printorian/pull/124) (backend) was red
+because of itself: SQLAlchemy 2.0.54 → 2.1.1.** Three separate breaks, and CI
+showed only the first, because `mypy` runs before the tests:
+
+1. **Typing.** `Select` and `Row` are variadic generics in 2.1, so
+   `Select[tuple[Model]]` now means "one column of type tuple" — it is
+   `Select[Model]` (catalogue browse, journal). Unpacked rows are typed now,
+   which made two `type: ignore[arg-type]` unused and surfaced the
+   scorecard's `operator_id` as `UUID | None` (narrowed with an `assert`; the
+   query filters nulls, the `procurement/prices.py` precedent). `select()` on a
+   `dict[str, Any]` column falls through to the untyped overload, so the
+   finance read annotates its result.
+2. **`Result.tuples()` is deprecated in 2.1**, and `filterwarnings =
+   ["error"]` fails every caller. Three call sites are `dict(rows.all())` now,
+   which is what 2.1's typed `Row` allows.
+3. **A bare `postgresql://` selects psycopg 3 in 2.1**, not psycopg2. The test
+   harness built its sync admin URL by stripping `+asyncpg`, so every database
+   test errored at setup with `No module named 'psycopg'`. It names
+   `+psycopg2` now — what `test_migrations.py` already did for its other
+   engines. Application code is asyncpg-only and was never affected, and
+   `scripts/restore_drill.py` already kept its driver suffix for a reason of
+   the same shape.
+
+The branch carries #124's seven pins with these fixes, and the `pyproject.toml`
+floor is `>=2.1` because the annotations no longer type-check against 2.0. So
+#124 is superseded: once this merges, a rebase leaves it empty and Dependabot
+closes it, or it can be closed by hand. Nothing was pushed to either Dependabot
+branch — a push there stops Dependabot maintaining the pull request.
+
+**Trap met: `addopts` already carries `-q`.** Passing `-q` again makes it `-qq`,
+which drops pytest's trailing summary line — the line this file quotes as
+evidence. Run `pytest` bare (or with `-rfE`) and read the summary out of the
+redirect.
+
 ## 2026-09-24 — `main` had been red for two weeks, and the fix was one pin
 
 **As of:** 2026-09-24 · **1 619 passed, 7 skipped, `exit=0` in 1687.95s (0:28:07) — pytest's own trailing summary line, read out of the redirect** on

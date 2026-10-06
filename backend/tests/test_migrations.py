@@ -43,9 +43,12 @@ EXPECTED_TABLES = {"users", "sessions", "alembic_version"}
 
 
 def _admin_url() -> str:
-    """Sync URL to the maintenance database, derived from configured settings."""
+    """Sync URL to the maintenance database, derived from configured settings.
+
+    `+psycopg2` named for the reason `conftest._ensure_test_database` gives.
+    """
     configured = Settings().database_url
-    return configured.replace("+asyncpg", "").rsplit("/", 1)[0] + "/postgres"
+    return configured.replace("+asyncpg", "+psycopg2").rsplit("/", 1)[0] + "/postgres"
 
 
 def _test_url() -> str:

@@ -51,11 +51,11 @@
 # on Linux and not on Windows, and is simply absent here rather than wrong. The
 # set below was resolved on Windows; anything Linux-only resolves freely until it
 # is added, which is a gap this file narrows rather than closes.
-Mako==1.4.1
+Mako==1.4.3
 MarkupSafe==3.0.3
 PyYAML==6.0.3
 Pygments==2.21.0
-SQLAlchemy==2.0.54
+SQLAlchemy==2.1.1
 aiosqlite==0.22.1
 alembic==1.20.0
 annotated-doc==0.0.5
@@ -69,7 +69,7 @@ certifi==2026.7.22
 cffi==2.1.1
 click==8.5.0
 colorama==0.4.6
-coverage==7.16.1
+coverage==7.16.2
 cryptography==50.0.1
 dnspython==2.8.0
 email-validator==2.3.0
@@ -77,10 +77,10 @@ fastapi==0.141.1
 greenlet==3.5.6
 grimp==3.17
 h11==0.16.0
-httpcore2==2.13.0
+httpcore2==2.13.1
 httpcore==1.0.9
 httptools==0.8.0
-httpx2==2.13.0
+httpx2==2.13.1
 httpx==0.28.1
 idna==3.20
 import-linter==2.15
@@ -107,13 +107,13 @@ python-dotenv==1.2.3
 python-multipart==0.0.32
 redis==8.1.0
 rich==15.0.0
-ruff==0.16.8
+ruff==0.16.9
 starlette==1.7.0
 structlog==26.1.0
 truststore==0.10.4
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.4
-uvicorn==0.53.0
+uvicorn==0.54.0
 watchfiles==1.3.0
 websockets==17.1

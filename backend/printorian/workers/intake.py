@@ -179,7 +179,7 @@ class IntakeSweep:
         rows = await self._db.execute(
             select(ModelAsset.id, ModelAsset.sha256).where(ModelAsset.id.in_(wanted))
         )
-        return dict(rows.tuples().all())
+        return dict(rows.all())
 
     def _job_for(self, line: OrderLine, order: Order, hashes: dict[EntityId, str]) -> CreateJob:
         """One line's work, in the terms production understands.

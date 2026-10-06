@@ -70,7 +70,8 @@ def admin_engine(url: str) -> Any:
 
 
 def _admin_url() -> str:
-    return Settings().database_url.replace("+asyncpg", "").rsplit("/", 1)[0] + "/postgres"
+    """`+psycopg2` named for the reason `conftest._ensure_test_database` gives."""
+    return Settings().database_url.replace("+asyncpg", "+psycopg2").rsplit("/", 1)[0] + "/postgres"
 
 
 def postgres_reachable() -> bool:

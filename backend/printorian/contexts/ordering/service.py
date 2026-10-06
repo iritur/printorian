@@ -220,7 +220,7 @@ class OrderingService:
         if customer_id is not None:
             query = query.where(Order.customer_id == customer_id)
         rows = await self._db.execute(query)
-        return dict(rows.tuples().all())
+        return dict(rows.all())
 
     # -- transitions -----------------------------------------------------
 

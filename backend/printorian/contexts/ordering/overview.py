@@ -105,7 +105,7 @@ async def numbers_for(db: AsyncSession, ids: Sequence[EntityId]) -> dict[EntityI
     if not ids:
         return {}
     rows = await db.execute(select(Order.id, Order.number).where(Order.id.in_(set(ids))))
-    return dict(rows.all())  # type: ignore[arg-type]
+    return dict(rows.all())
 
 
 async def _tally(db: AsyncSession) -> dict[OrderStatus, int]:

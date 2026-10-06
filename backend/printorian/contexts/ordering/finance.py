@@ -16,7 +16,7 @@ from decimal import Decimal
 from typing import Any
 
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import ScalarResult, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from printorian.contexts.ordering.measures import (
@@ -132,7 +132,10 @@ async def _spend_between(db: AsyncSession, start: datetime, end: datetime) -> _S
     SQL version buys nothing and costs the ability to read the query — and the
     row count is the orders in a quarter, which is a screenful of work, not a scan.
     """
-    rows = await db.scalars(
+    # Annotated because SQLAlchemy cannot infer it: a column typed with `Any` inside
+    # (`dict[str, Any]`) matches more than one `select()` overload, and mypy then
+    # falls back to the untyped one. The annotation is the model's own type.
+    rows: ScalarResult[dict[str, Any]] = await db.scalars(
         select(Order.price_breakdown).where(
             Order.paid_at.is_not(None), Order.paid_at >= start, Order.paid_at < end
         )
