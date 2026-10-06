@@ -9,6 +9,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The token is read-only unless a job asks for more. Only `image` does, and its own
+# block says what for; `backend` and `frontend` check out, cache and hand an
+# artifact across, none of which writes through the token. Without this they ran
+# with the repository's default grant, which can be write-all (CodeQL
+# actions/missing-workflow-permissions).
+permissions:
+  contents: read
+
 env:
   PRINTORIAN_ENVIRONMENT: test
   PRINTORIAN_DATABASE_URL: postgresql+asyncpg://printorian:printorian@localhost:5432/printorian
