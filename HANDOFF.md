@@ -9,7 +9,7 @@ status documents that described built features as missing.
 
 ## 2026-10-06 — both Dependabot pull requests red, for two different reasons
 
-**As of:** 2026-10-06 · **full backend suite: not yet finished at this commit** (running; the account, intake, checkout and order API files that failed under 2.1 pass in isolation, 70 tests) on
+**As of:** 2026-10-06 · **1 736 passed, 7 skipped, `exit=0` in 598.22s (0:09:58) — pytest's own trailing summary line, read out of the redirect** on
 `claude/trusting-brown-hfc1pu`, which is `main` at
 [#122](https://github.com/iritur/printorian/pull/122) (`5142305`) plus this
 session, against PostgreSQL 16 (CI runs 17). The six backend gates each
