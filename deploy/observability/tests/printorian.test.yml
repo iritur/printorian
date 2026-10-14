@@ -1,0 +1,427 @@
+# The proofs for `../rules/printorian.yml`, run by `promtool test rules` in CI
+# (job `alerts`). Locally, from the repository root:
+#
+#   docker run --rm -v "$PWD/deploy/observability:/obs" --entrypoint promtool \
+#     prom/prometheus:v3.5.0 test rules /obs/tests/printorian.test.yml
+#
+# The exit criterion of #22 is two sentences, and each has its tests here:
+# *each failure produces exactly one correct alert* — so every test below breaks
+# one thing and asserts that its own alert fires **and that the alerts that
+# would fire on a careless `absent()` do not** — and *normal operation produces
+# none*, which is the first test: thirty healthy hours, every alert asserted
+# silent but the heartbeat.
+#
+# Annotations are asserted too, because promtool compares them and because the
+# templated ones (`humanizeDuration`, `humanizePercentage`) are what the phone
+# shows: a template that renders wrong is a page nobody can read.
+
+rule_files:
+  - ../rules/printorian.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ---------------------------------------------------------------- normal
+  # Thirty hours, so the nightly backup comes round once and the 26-hour line is
+  # crossed by the *old* stamp's age but not the new one's. Every condition that
+  # looks alarming in isolation and is normal on a farm is in here: WAL failures
+  # from months ago that are not increasing, a payment notification the gateway
+  # settles inside twenty minutes, a job in DISPATCHING for two minutes, a full
+  # tmpfs, and a variance mean inside the band.
+  - name: normal operation pages nobody
+    interval: 5m
+    input_series:
+      - series: 'up{job="printorian-api", instance="api:8000"}'
+        values: '1x360'
+      - series: 'printorian_printers_offline{printer="p1", brand="bambu"}'
+        values: '0x360'
+      - series: 'printorian_job_stuck_seconds{state="assigned"}'
+        values: '0x360'
+      - series: 'printorian_job_stuck_seconds{state="dispatching"}'
+        values: '0x100 120 0x259'
+      - series: 'printorian_estimate_variance_ratio'
+        values: '1.08x360'
+      - series: 'printorian_orders_awaiting_prep'
+        values: '3x360'
+      - series: 'printorian_payment_notifications_unreconciled'
+        values: '0x100 1x4 0x255'
+      - series: 'printorian_backup_last_success_timestamp'
+        values: '0x288 86400x71'
+      - series: 'printorian_restore_drill_last_success_timestamp'
+        values: '0x360'
+      - series: 'printorian_wal_archive_failures_total'
+        values: '7x360'
+      - series: 'printorian_telemetry_partition_months_ahead'
+        values: '2x360'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/", fstype="ext4"}'
+        values: '40x360'
+      - series: 'node_filesystem_size_bytes{mountpoint="/", fstype="ext4"}'
+        values: '100x360'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/run", fstype="tmpfs"}'
+        values: '1x360'
+      - series: 'node_filesystem_size_bytes{mountpoint="/run", fstype="tmpfs"}'
+        values: '100x360'
+    alert_rule_test:
+      - eval_time: 30h
+        alertname: Watchdog
+        exp_alerts:
+          - exp_labels:
+              severity: heartbeat
+            exp_annotations:
+              summary: The alerting pipeline is alive.
+              description: >-
+                Always firing. Routed to the external heartbeat watcher, never to a
+                person; when it stops arriving, the farm host or its monitoring is gone.
+      - {eval_time: 30h, alertname: PrintorianApiDown, exp_alerts: []}
+      - {eval_time: 30h, alertname: PrintorianDatabaseUnreadable, exp_alerts: []}
+      - {eval_time: 30h, alertname: PrinterOffline, exp_alerts: []}
+      - {eval_time: 30h, alertname: PrintorianJobStuck, exp_alerts: []}
+      - {eval_time: 30h, alertname: EstimateVarianceOutsideBand, exp_alerts: []}
+      - {eval_time: 30h, alertname: BackupStale, exp_alerts: []}
+      - {eval_time: 30h, alertname: RestoreDrillStale, exp_alerts: []}
+      - {eval_time: 30h, alertname: WalArchiveFailing, exp_alerts: []}
+      - {eval_time: 30h, alertname: TelemetryPartitionsRunningOut, exp_alerts: []}
+      - {eval_time: 30h, alertname: PaymentNotSettled, exp_alerts: []}
+      - {eval_time: 30h, alertname: DiskFilling, exp_alerts: []}
+      - {eval_time: 30h, alertname: DiskNearlyFull, exp_alerts: []}
+      # Mid-run too: the payment was non-zero and the dispatch was two minutes
+      # old here, and neither is a page.
+      - {eval_time: 8h40m, alertname: PaymentNotSettled, exp_alerts: []}
+      - {eval_time: 8h20m, alertname: PrintorianJobStuck, exp_alerts: []}
+
+  # ---------------------------------------------------------------- one cause, one alert
+  # The API stops answering at minute 10. Every `printorian_*` series goes stale
+  # five minutes later, which is exactly when a naive `absent()` would page
+  # "never backed up" and "database unreadable" beside the real failure.
+  - name: the API going down is one alert, not four
+    interval: 1m
+    input_series:
+      - series: 'up{job="printorian-api", instance="api:8000"}'
+        values: '1x10 0x30'
+      - series: 'printorian_printers_offline{printer="p1", brand="bambu"}'
+        values: '0x10'
+      - series: 'printorian_orders_awaiting_prep'
+        values: '3x10'
+      - series: 'printorian_backup_last_success_timestamp'
+        values: '0x10'
+      - series: 'printorian_restore_drill_last_success_timestamp'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: PrintorianApiDown
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              job: printorian-api
+              instance: api:8000
+            exp_annotations:
+              summary: The API is not answering its metrics scrape.
+              description: >-
+                api:8000 has failed every scrape for two minutes. Every
+                other Printorian alert is blind while this fires, which is why none of
+                them fires beside it.
+      - {eval_time: 25m, alertname: PrintorianDatabaseUnreadable, exp_alerts: []}
+      - {eval_time: 25m, alertname: BackupStale, exp_alerts: []}
+      - {eval_time: 25m, alertname: RestoreDrillStale, exp_alerts: []}
+      - {eval_time: 25m, alertname: PrinterOffline, exp_alerts: []}
+
+  # The API answers but the database does not: the printer readings (Redis) go
+  # on, and every database-backed reading stops together.
+  - name: an unreadable database is one alert, not a missing backup
+    interval: 1m
+    input_series:
+      - series: 'up{job="printorian-api", instance="api:8000"}'
+        values: '1x40'
+      - series: 'printorian_printers_offline{printer="p1", brand="bambu"}'
+        values: '0x40'
+      - series: 'printorian_orders_awaiting_prep'
+        values: '3x10'
+      - series: 'printorian_job_stuck_seconds{state="assigned"}'
+        values: '0x10'
+      - series: 'printorian_backup_last_success_timestamp'
+        values: '0x10'
+      - series: 'printorian_restore_drill_last_success_timestamp'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: PrintorianDatabaseUnreadable
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: The API is up but cannot read the database.
+              description: >-
+                The metrics scrape answers without any database-backed reading. Check
+                `GET /health/ready` and the postgres container.
+      - {eval_time: 25m, alertname: PrintorianApiDown, exp_alerts: []}
+      - {eval_time: 25m, alertname: BackupStale, exp_alerts: []}
+      - {eval_time: 25m, alertname: RestoreDrillStale, exp_alerts: []}
+      - {eval_time: 25m, alertname: PrintorianJobStuck, exp_alerts: []}
+      - {eval_time: 25m, alertname: PrinterOffline, exp_alerts: []}
+
+  # ---------------------------------------------------------------- the farm
+  # p1 is killed at minute 6; p2 is fine; p3 the worker stopped reporting on —
+  # an absent reading, which ADR-0007 says must not page.
+  - name: a killed printer pages within five minutes, and only for itself
+    interval: 1m
+    input_series:
+      - series: 'printorian_printers_offline{printer="p1", brand="bambu"}'
+        values: '0x5 1x20'
+      - series: 'printorian_printers_offline{printer="p2", brand="bambu"}'
+        values: '0x25'
+      - series: 'printorian_printers_offline{printer="p3", brand="bambu"}'
+        values: '0x2'
+    alert_rule_test:
+      - {eval_time: 8m, alertname: PrinterOffline, exp_alerts: []}
+      - eval_time: 10m
+        alertname: PrinterOffline
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              printer: p1
+              brand: bambu
+            exp_annotations:
+              summary: Printer p1 (bambu) is unreachable.
+              description: >-
+                The worker has been unable to connect to this printer for three
+                minutes. Whatever it was printing is not being watched.
+
+  - name: a job assigned and never sent is stuck after ten scheduler passes
+    interval: 1m
+    input_series:
+      - series: 'printorian_job_stuck_seconds{state="assigned"}'
+        values: '0+60x10'
+      - series: 'printorian_job_stuck_seconds{state="dispatching"}'
+        values: '0x10'
+    alert_rule_test:
+      - {eval_time: 5m, alertname: PrintorianJobStuck, exp_alerts: []}
+      - eval_time: 6m
+        alertname: PrintorianJobStuck
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              state: assigned
+            exp_annotations:
+              summary: A job has been assigned for 6m 0s.
+              description: >-
+                Work is waiting while the machine it was meant for is not printing it.
+                Check `GET /health/workers` for the scheduler loop, then the job's
+                events.
+
+  - name: a dispatch that never confirms is stuck after fifteen minutes
+    interval: 1m
+    input_series:
+      - series: 'printorian_job_stuck_seconds{state="assigned"}'
+        values: '0x20'
+      - series: 'printorian_job_stuck_seconds{state="dispatching"}'
+        values: '0+60x20'
+    alert_rule_test:
+      - {eval_time: 15m, alertname: PrintorianJobStuck, exp_alerts: []}
+      - eval_time: 16m
+        alertname: PrintorianJobStuck
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              state: dispatching
+            exp_annotations:
+              summary: A job has been dispatching for 16m 0s.
+              description: >-
+                Work is waiting while the machine it was meant for is not printing it.
+                Check `GET /health/workers` for the scheduler loop, then the job's
+                events.
+
+  # Both directions: quoting low loses money, quoting high loses customers.
+  - name: a variance mean outside the band is a digest, in either direction
+    interval: 1m
+    input_series:
+      - series: 'printorian_estimate_variance_ratio'
+        values: '1.1x5 1.2x5 0.8x5'
+    alert_rule_test:
+      - {eval_time: 3m, alertname: EstimateVarianceOutsideBand, exp_alerts: []}
+      - eval_time: 8m
+        alertname: EstimateVarianceOutsideBand
+        exp_alerts:
+          - exp_labels:
+              severity: digest
+            exp_annotations:
+              summary: Slicer cost runs 20% away from the quotes.
+              description: >-
+                The mean of prepared over quoted cost across the last 30 days is
+                outside ADR-0013's tolerance band. The estimator wants recalibrating;
+                `printorian_estimate_variance_samples` says how many jobs the mean
+                stands on.
+      - eval_time: 13m
+        alertname: EstimateVarianceOutsideBand
+        exp_alerts:
+          - exp_labels:
+              severity: digest
+            exp_annotations:
+              summary: Slicer cost runs 20% away from the quotes.
+              description: >-
+                The mean of prepared over quoted cost across the last 30 days is
+                outside ADR-0013's tolerance band. The estimator wants recalibrating;
+                `printorian_estimate_variance_samples` says how many jobs the mean
+                stands on.
+
+  # ---------------------------------------------------------------- backups
+  - name: a backup that stops succeeding pages after 26 hours
+    interval: 1h
+    input_series:
+      - series: 'printorian_orders_awaiting_prep'
+        values: '3x30'
+      - series: 'printorian_backup_last_success_timestamp'
+        values: '0x30'
+      - series: 'printorian_restore_drill_last_success_timestamp'
+        values: '0x30'
+    alert_rule_test:
+      - {eval_time: 25h, alertname: BackupStale, exp_alerts: []}
+      - eval_time: 27h
+        alertname: BackupStale
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations: &backup_stale
+              summary: No backup has succeeded in the last 26 hours.
+              description: >-
+                `scripts/backup.sh` leaves a row in `maintenance_runs` only when it
+                succeeds, so this is a backup that failed, never ran, or never
+                existed. Its journal is `journalctl -u printorian-backup`.
+              runbook: docs/RUNBOOK-BACKUP-RESTORE.md
+      - {eval_time: 27h, alertname: RestoreDrillStale, exp_alerts: []}
+
+  # No stamp at all — a farm that has never backed up. Not a zero and not the
+  # epoch: an absent series, and the rule has to say `absent()` to see it.
+  - name: a farm that has never backed up pages at once
+    interval: 1m
+    input_series:
+      - series: 'printorian_orders_awaiting_prep'
+        values: '3x10'
+      - series: 'printorian_restore_drill_last_success_timestamp'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: BackupStale
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations: *backup_stale
+
+  - name: a restore drill that stops passing pages after a week
+    interval: 1h
+    input_series:
+      - series: 'printorian_orders_awaiting_prep'
+        values: '3x175'
+      - series: 'printorian_backup_last_success_timestamp'
+        values: '0+3600x175'
+      - series: 'printorian_restore_drill_last_success_timestamp'
+        values: '0x175'
+    alert_rule_test:
+      - {eval_time: 169h, alertname: RestoreDrillStale, exp_alerts: []}
+      - eval_time: 171h
+        alertname: RestoreDrillStale
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: No restore drill has passed in the last week.
+              description: >-
+                The newest backup has not been proven restorable. Its journal is
+                `journalctl -u printorian-drill`.
+              runbook: docs/RUNBOOK-BACKUP-RESTORE.md
+      - {eval_time: 171h, alertname: BackupStale, exp_alerts: []}
+
+  # Seven old failures sit in the counter throughout; the archiver starts
+  # failing at minute 10 and is fixed at minute 20.
+  - name: WAL archiving pages while it is failing, not for ever after
+    interval: 1m
+    input_series:
+      - series: 'printorian_wal_archive_failures_total'
+        values: '7x10 8+1x10 18x30'
+    alert_rule_test:
+      - {eval_time: 9m, alertname: WalArchiveFailing, exp_alerts: []}
+      - eval_time: 15m
+        alertname: WalArchiveFailing
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: PostgreSQL is failing to archive WAL.
+              description: >-
+                Segments that cannot be archived cannot be recycled, so `pg_wal` grows
+                until the data disk fills. Check the backup mount's ownership and free
+                space.
+              runbook: docs/RUNBOOK-BACKUP-RESTORE.md
+      - {eval_time: 35m, alertname: WalArchiveFailing, exp_alerts: []}
+
+  - name: only this month partitioned pages
+    interval: 1m
+    input_series:
+      - series: 'printorian_telemetry_partition_months_ahead'
+        values: '2x3 1x3 0x3'
+    alert_rule_test:
+      - {eval_time: 7m, alertname: TelemetryPartitionsRunningOut, exp_alerts: []}
+      - eval_time: 9m
+        alertname: TelemetryPartitionsRunningOut
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: No telemetry partition exists for next month.
+              description: >-
+                The maintenance sweep is not provisioning partitions. Check
+                `GET /health/workers` for the maintenance loop.
+
+  # ---------------------------------------------------------------- money
+  - name: a paid payment left unsettled for half an hour pages
+    interval: 1m
+    input_series:
+      - series: 'printorian_payment_notifications_unreconciled'
+        values: '2x40'
+    alert_rule_test:
+      - {eval_time: 25m, alertname: PaymentNotSettled, exp_alerts: []}
+      - eval_time: 31m
+        alertname: PaymentNotSettled
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: 2 paid payment(s) are not settled.
+              description: >-
+                The gateway reported these payments succeeded and they are still not
+                booked. The customer has paid; the order is not moving.
+
+  # ---------------------------------------------------------------- the machine
+  # A disk filling from 60 % to 85 % at minute 10 and 95 % at minute 40: the
+  # digest first, and the page only past 90 % — one thing on the phone.
+  - name: a filling disk is a digest at 80 per cent and a page at 90
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/srv", fstype="ext4"}'
+        values: '40x10 15x30 5x10'
+      - series: 'node_filesystem_size_bytes{mountpoint="/srv", fstype="ext4"}'
+        values: '100x50'
+    alert_rule_test:
+      - {eval_time: 20m, alertname: DiskFilling, exp_alerts: []}
+      - eval_time: 26m
+        alertname: DiskFilling
+        exp_alerts:
+          - exp_labels:
+              severity: digest
+              mountpoint: /srv
+              fstype: ext4
+            exp_annotations:
+              summary: /srv is 85% full.
+              description: Past §5's 80 % warning line. Not urgent yet; it will be.
+      - {eval_time: 26m, alertname: DiskNearlyFull, exp_alerts: []}
+      - eval_time: 44m
+        alertname: DiskNearlyFull
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              mountpoint: /srv
+              fstype: ext4
+            exp_annotations:
+              summary: /srv is 95% full.
+              description: >-
+                Past §5's 90 % line. On the data disk PostgreSQL stops at 100 %; on the
+                backup disk the archiver starts failing first.

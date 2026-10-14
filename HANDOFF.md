@@ -89,10 +89,26 @@ were paid that are not settled — a *refused* settlement rolls back with its
 notification and cannot be counted there). The two ADR-0019 stamps come from
 `maintenance_runs`, one row per *success* that `backup.sh` (through `psql`) and
 `restore_drill.py` write; a job that never succeeded has no sample, so an alert on
-them must say `absent()` as well as "too old". What remains of #22 is the money
-series (waits for the scrape to have an identity), the worker exporter, and the
-whole VictoriaMetrics/Grafana/Alertmanager stack — which is what would actually
-page anybody, so none of the nine alerts yet.
+them must say `absent()` as well as "too old". **And the alert rules are written and proven** —
+`deploy/observability/rules/printorian.yml`, thirteen rules, with
+`promtool test rules` in a new CI job `alerts`. Each test breaks one thing and
+asserts its own alert fires and the others stay quiet, and thirty healthy hours
+page nobody. Every rule that fires on a *missing* series is fenced by the series
+proving its source was reachable (`up{job="printorian-api"}`, or
+`printorian_orders_awaiting_prep` for the database readings). Without that, one
+outage pages four times. `backend/tests/unit/test_alert_rules.py` fails if a rule
+reads a name `metrics.SERVED` does not hold, and `scrape.yml` defines the job
+names the rules select. Each threshold says where it came from; the two that are
+judgements (DISPATCHING for fifteen minutes, a payment unsettled for thirty) say
+so. What remains of #22: the money series, which waits for the scrape to have an
+identity; the worker exporter; the VictoriaMetrics/vmalert/Alertmanager/
+node-exporter services themselves; the Telegram bot and chat, which are a
+person's; and the dead-man's watcher. **Corrupting a backup cannot page within
+five minutes on the stamps alone**, because a failed backup leaves no row and
+the stamp only goes stale after 26 hours. Meeting that exit criterion needs the
+systemd units' `OnFailure=` to post straight to Alertmanager. When running
+promtool locally from Git Bash, set `MSYS_NO_PATHCONV=1` and mount
+`$(pwd -W)`, or the volume path is mangled.
 
 **Trap: override `get_caller`, not `get_current_actor`.** Since the API keys,
 `requires(...)` and `CurrentActor` both sit on `api/deps.get_caller`. A test that

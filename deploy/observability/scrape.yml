@@ -1,0 +1,36 @@
+# What the farm's metrics store scrapes (INFRASTRUCTURE Stage 5).
+#
+# Prometheus scrape-config format, which VictoriaMetrics single-node reads with
+# `-promscrape.config` — and only `global` and `scrape_configs`, nothing it
+# would have to ignore. Checked in CI with `promtool check config`.
+#
+# **The job names are an interface.** `rules/printorian.yml` selects
+# `up{job="printorian-api"}` to tell "the API is down" apart from "a reading is
+# missing", so renaming a job here would silently disarm that fence and let one
+# outage page four times. `backend/tests/unit/test_alert_rules.py` fails if a
+# rule names a job this file does not define.
+#
+# The targets are compose service names: the monitoring stack joins the farm's
+# compose network (`deploy/compose.prod.yml`, project `printorian`) rather than
+# reaching the API through the edge, where the storefront answers `/metrics`
+# 404 on purpose (security review F20).
+
+global:
+  # The `for:` clauses spend most of the exit criterion's five minutes; a
+  # 30-second scrape keeps detection a small part of the rest.
+  scrape_interval: 30s
+  scrape_timeout: 10s
+
+scrape_configs:
+  # The domain series INFRASTRUCTURE §5 lists, from `GET /metrics`.
+  - job_name: printorian-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]
+
+  # The host's own facts: the disk thresholds in `rules/printorian.yml` read
+  # `node_filesystem_*`, which only the host can report — the API cannot
+  # report on a disk it may be the thing filling.
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
