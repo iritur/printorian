@@ -93,6 +93,13 @@ ORDERS_AWAITING_PREP: Final = "printorian_orders_awaiting_prep"
 #: (`payments.reconciliation`, which says what it cannot count).
 PAYMENT_NOTIFICATIONS_UNRECONCILED: Final = "printorian_payment_notifications_unreconciled"
 
+#: ADR-0019. The newest row `scripts/backup.sh` left in `maintenance_runs`;
+#: absent when it never left one. The alert is staleness, `absent()` included.
+BACKUP_LAST_SUCCESS: Final = "printorian_backup_last_success_timestamp"
+
+#: ADR-0019 — a failing drill is an incident. The same table, the drill's rows.
+RESTORE_DRILL_LAST_SUCCESS: Final = "printorian_restore_drill_last_success_timestamp"
+
 #: The series this process measures today. Named as a set so the doc-drift test
 #: iterates it rather than repeating the list, and so a series added here cannot
 #: skip that check.
@@ -105,6 +112,8 @@ SERVED: Final = (
     ESTIMATE_VARIANCE_SAMPLES,
     ORDERS_AWAITING_PREP,
     PAYMENT_NOTIFICATIONS_UNRECONCILED,
+    BACKUP_LAST_SUCCESS,
+    RESTORE_DRILL_LAST_SUCCESS,
 )
 
 _Family = GaugeMetricFamily | CounterMetricFamily

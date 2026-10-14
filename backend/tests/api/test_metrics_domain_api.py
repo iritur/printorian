@@ -32,6 +32,7 @@ from printorian.contexts.payments.models import Payment, PaymentNotification
 from printorian.contexts.payments.policies import PaymentStatus
 from printorian.contexts.production.models import EstimateVariance, JobEvent
 from printorian.contexts.production.policies import JobStatus
+from printorian.contexts.settings import RunKind, record_success
 from printorian.core import metrics
 from printorian.core.clock import FixedClock
 from printorian.core.config import Settings
@@ -216,3 +217,20 @@ async def test_a_payment_the_gateway_said_was_paid_and_we_did_not_settle_is_coun
 
     # The pending one is money the gateway says it took; the settled one is booked.
     assert (await scrape(client))[metrics.PAYMENT_NOTIFICATIONS_UNRECONCILED] == [({}, 1.0)]
+
+
+async def test_the_backup_stamps_are_the_newest_successes_and_absent_when_there_are_none(
+    client: AsyncClient, database: _TestDatabase
+) -> None:
+    """ADR-0019. A job that never succeeded has no sample: "never" is not a timestamp."""
+    series = await scrape(client)
+    assert metrics.BACKUP_LAST_SUCCESS not in series
+    assert metrics.RESTORE_DRILL_LAST_SUCCESS not in series
+
+    async for db in database.session():
+        await record_success(db, RunKind.BACKUP, detail="printorian-20261014T030000Z.dump")
+
+    series = await scrape(client)
+    [(_, stamp)] = series[metrics.BACKUP_LAST_SUCCESS]
+    assert abs(stamp - datetime.now(UTC).timestamp()) < 300
+    assert metrics.RESTORE_DRILL_LAST_SUCCESS not in series

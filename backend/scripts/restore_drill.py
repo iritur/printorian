@@ -38,9 +38,10 @@ import sys
 from pathlib import Path
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from printorian.contexts.settings import RunKind, record_success
 from printorian.core.config import Settings
 
 #: The scratch database. Dropped and recreated on every run, never reused.
@@ -211,7 +212,26 @@ async def _drill(args: argparse.Namespace) -> int:
         return 1
 
     print("restore drill passed")
+    # The stamp the scrape reads as printorian_restore_drill_last_success_timestamp,
+    # written into the *live* database — the drill database is dropped and
+    # recreated on every run. Its failure is reported and not fatal, for the
+    # reason `backup.sh` gives: the drill passed, and the stamp going stale is
+    # what sends somebody to look.
+    try:
+        await _record_success(live, args.dump.name)
+        print("recorded in maintenance_runs")
+    except Exception as exc:
+        print(f"WARNING: the drill passed but recording it failed: {exc}", file=sys.stderr)
     return 0
+
+
+async def _record_success(url: str, dump_name: str) -> None:
+    engine = create_async_engine(url, poolclass=NullPool)
+    try:
+        async with AsyncSession(engine) as session, session.begin():
+            await record_success(session, RunKind.RESTORE_DRILL, detail=dump_name)
+    finally:
+        await engine.dispose()
 
 
 def main() -> int:

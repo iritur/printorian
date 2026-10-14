@@ -81,6 +81,25 @@ console against a throwaway owner (created, used, deleted): the key shows once
 on its own line, «не использовался» rather than a dash, revoke stops it. Still
 owed on #29: the notification event matrix and webhooks.
 
+**#22: `/metrics` serves nine of INFRASTRUCTURE §5's ten series.** The four
+database-backed ones are `production.vitals` (the oldest job wedged in ASSIGNED or
+DISPATCHING, the prep queue's depth, the variance band's 30-day mean with its
+sample count beside it) and `payments.reconciliation` (payments the gateway said
+were paid that are not settled — a *refused* settlement rolls back with its
+notification and cannot be counted there). The two ADR-0019 stamps come from
+`maintenance_runs`, one row per *success* that `backup.sh` (through `psql`) and
+`restore_drill.py` write; a job that never succeeded has no sample, so an alert on
+them must say `absent()` as well as "too old". What remains of #22 is the money
+series (waits for the scrape to have an identity), the worker exporter, and the
+whole VictoriaMetrics/Grafana/Alertmanager stack — which is what would actually
+page anybody, so none of the nine alerts yet.
+
+**Trap: override `get_caller`, not `get_current_actor`.** Since the API keys,
+`requires(...)` and `CurrentActor` both sit on `api/deps.get_caller`. A test that
+substitutes the caller by overriding `get_current_actor` alone leaves every
+`requires` gate reading the real token, and the request arrives as a 401 instead
+of the 403 the test expects — that is how #133's first CI run failed.
+
 ## 2026-10-06 (later) — code scanning: four alerts fixed, one left for a person to dismiss
 
 **As of:** 2026-10-06 · on `claude/trusting-brown-hfc1pu`, `main` at
@@ -1892,7 +1911,7 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 |---|---|
 | `customer_storage_quota_bytes` displayed, not enforced | Refusing a quote mid-configuration is the wrong UX. Growth is bounded by `model_retention_days` instead. |
 | Rate limiting and sign-in lockout are in-process | Correct for one API process (ADR-0003). Counters reset on restart; a second replica would get its own allowance. `docs/DATABASE-REVIEW.md` §9. |
-| `/metrics` serves seven of INFRASTRUCTURE §5's ten series | The four database-backed collectors arrived 2026-10-14 (`production.vitals`, `payments.reconciliation`). The worker exporter, the two backup stamps and the money series remain, and so does the whole VictoriaMetrics/Grafana/Alertmanager host stack; `/health/workers` remains the liveness signal, reading beats each loop records at the *end* of a pass. |
+| `/metrics` serves nine of INFRASTRUCTURE §5's ten series | The four database-backed collectors and the two backup stamps arrived 2026-10-14 (`production.vitals`, `payments.reconciliation`, `settings.maintenance_runs` — `backup.sh` and `restore_drill.py` write a row there when they succeed). The worker exporter and the money series remain, and so does the whole VictoriaMetrics/Grafana/Alertmanager host stack; `/health/workers` remains the liveness signal, reading beats each loop records at the *end* of a pass. |
 | `printorian_sla_credit_accrued_rub` is held back rather than unbuilt | `/metrics` is unauthenticated, so `VIEW_FINANCIALS` has no caller to check. The money series waits for the scrape to have an identity — a token in Settings, or mTLS — and that is a decision for a person, not a query somebody has not written. A test forbids any `_rub` or `sla_credit` name on the endpoint meanwhile. |
 | Off-site backup sync has a recipe, no committed job | Needs farm-specific credentials. |
 | `assignment_records` is not partitioned | ADR-0018's deferral still holds — bounded by planning frequency, not by the clock. `/health/ready` now reports when the trigger fires; [#44](https://github.com/iritur/printorian/issues/44) stays open until it does. |

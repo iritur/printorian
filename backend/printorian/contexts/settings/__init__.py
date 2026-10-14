@@ -23,6 +23,7 @@ from printorian.contexts.settings.catalogue import (
     kind_of,
     to_json,
 )
+from printorian.contexts.settings.maintenance_runs import RunKind, last_successes, record_success
 from printorian.contexts.settings.models import Setting, SettingChange
 from printorian.contexts.settings.schemas import (
     SectionView,
@@ -43,6 +44,7 @@ __all__ = [
     "SECTION_ORDER",
     "FieldSpec",
     "Kind",
+    "RunKind",
     "Section",
     "SectionView",
     "Setting",
@@ -55,5 +57,7 @@ __all__ = [
     "from_json",
     "is_known",
     "kind_of",
+    "last_successes",
+    "record_success",
     "to_json",
 ]

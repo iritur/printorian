@@ -112,6 +112,25 @@ fi
 
 log "backup complete"
 
+# ---------------------------------------------------------------- the stamp
+#
+# The row `GET /metrics` reads as printorian_backup_last_success_timestamp
+# (contexts/settings/maintenance_runs.py). Written last, so it exists only
+# when everything above did; written by the job itself, because a backup that
+# has stopped succeeding cannot be relied on to say so, and staleness is the
+# alert.
+#
+# Its own failure is reported and NOT fatal. The backup on disk is good at this
+# point, and a unit marked failed would send somebody to look at the wrong
+# thing; the stamp going stale sends them to the right one.
+if psql --host="${DB_HOST}" --port="${DB_PORT}" --username="${DB_USER}" \
+    --dbname="${DATABASE}" --no-psqlrc --quiet --set ON_ERROR_STOP=1 \
+    --command="INSERT INTO maintenance_runs (kind, detail) VALUES ('backup', '$(basename "${DUMP}")')"; then
+  log "recorded in maintenance_runs"
+else
+  log "WARNING: the backup is complete but recording it failed; printorian_backup_last_success_timestamp will go stale"
+fi
+
 # ------------------------------------------------------------- off-site
 #
 # NOT done here, and that is a deliberate gap rather than an omission: an on-prem
