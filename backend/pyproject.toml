@@ -79,6 +79,10 @@ dev = [
     # it. Every URL that uses it names `+psycopg2` — since SQLAlchemy 2.1 a bare
     # `postgresql://` selects psycopg 3, which is not installed (tests/conftest.py).
     "psycopg2-binary>=2.9",
+    # `tests/unit/test_alert_rules.py` reads `deploy/observability` as YAML. It was
+    # already installed — `uvicorn[standard]` pulls it in — but a test that leans
+    # on another package's optional extra breaks the day that extra changes.
+    "pyyaml>=6.0",
 ]
 
 [tool.setuptools.packages.find]

@@ -170,6 +170,45 @@ jobs:
         run: npm run build
 
   # ------------------------------------------------------------------------
+  # The alert rules (INFRASTRUCTURE §5, issue #22).
+  #
+  # `promtool test rules` feeds each rule synthetic series and asserts what
+  # fires: every failure pages exactly once, and thirty healthy hours page
+  # nobody. A rule is code whose only output is a phone ringing at three in the
+  # morning, so it is tested like code. `check config` holds the scrape file to
+  # the format VictoriaMetrics reads.
+  #
+  # promtool from the Prometheus image rather than a downloaded binary: one
+  # pinned digest, the same supply-chain shape as every other image here. The
+  # rules are vmalert's too — they keep to PromQL so this tool can prove them.
+  # `backend/tests/unit/test_alert_rules.py` is the other half: it ties the
+  # names in the rules to what `GET /metrics` serves, which promtool cannot see.
+  # ------------------------------------------------------------------------
+  alerts:
+    name: alerts
+    runs-on: ubuntu-latest
+    env:
+      PROMTOOL_IMAGE: prom/prometheus:v3.5.0@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Rules are valid
+        run: >-
+          docker run --rm -v "$PWD/deploy/observability:/obs" --entrypoint promtool
+          "$PROMTOOL_IMAGE" check rules /obs/rules/printorian.yml
+
+      - name: Rules do what their tests say
+        run: >-
+          docker run --rm -v "$PWD/deploy/observability:/obs" --entrypoint promtool
+          "$PROMTOOL_IMAGE" test rules /obs/tests/printorian.test.yml
+
+      - name: Scrape config is valid
+        run: >-
+          docker run --rm -v "$PWD/deploy/observability:/obs" --entrypoint promtool
+          "$PROMTOOL_IMAGE" check config /obs/scrape.yml
+
+  # ------------------------------------------------------------------------
   # The artifact.
   #
   # The two jobs above test the *source tree*. Nothing there proves the thing

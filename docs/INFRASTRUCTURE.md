@@ -39,7 +39,7 @@ does not exist, and nothing watches any of it.**
 | Off-site copy | ADR-0019 | **Still nothing.** `backup.sh` names this as a deliberate gap and stops at the local disk; every copy of the farm's data is on one machine — [#16](https://github.com/iritur/printorian/issues/16) |
 | Restore drill | ADR-0019 "a failing drill is an incident" | **Scheduled.** `printorian-drill.timer`, Sundays 04:00, running `restore_drill.py` in the api container. A *failing* drill still reaches nobody — that is the alerting row |
 | Observability | ARCHITECTURE §10, which now claims only what runs: "metrics are stubbed", drivers deliberately outside readiness | **Partly, and §10 says so.** `/health/ready` reports `database`, `telemetry_partitions`, `assignment_records`, `printers_listing`, `materials_listing`, `wal_archiving`, and `event_relay` **only where a relay is configured** — with no relay the key is absent rather than `ok`, so a count of seven is a count of a full deployment. **Drivers are still not covered** — [#21](https://github.com/iritur/printorian/issues/21); §10 records why the API process cannot cover them. Prometheus metrics: still zero — [#20](https://github.com/iritur/printorian/issues/20) |
-| Alerting | — | **None.** The only monitor is a person looking at a screen — [#22](https://github.com/iritur/printorian/issues/22) |
+| Alerting | — | **None running.** The rules are written and tested (`deploy/observability`, CI job `alerts`), but nothing evaluates them and nothing routes to a phone, so the only monitor is still a person looking at a screen — [#22](https://github.com/iritur/printorian/issues/22) |
 
 Two of these deserve to be named as more than gaps.
 
@@ -290,7 +290,7 @@ below detects a specific failure and does something about it without you.
 | Deploy gate | A release that starts but does not become ready | Automatic rollback to the previous digest, then alert |
 | Backup | Dump missing, empty, or old | `printorian_backup_last_success_timestamp` older than 26 h → alert |
 | Restore drill | A backup that has been quietly useless for weeks | Weekly `restore_drill.py`; failure is a **page**, per ADR-0019 |
-| WAL archive | `archive_command` failing, filling the data disk | `pg_stat_archiver` failure count > 0 → alert *before* the disk fills |
+| WAL archive | `archive_command` failing, filling the data disk | `pg_stat_archiver` failure count *increasing* → alert *before* the disk fills (the count is cumulative, so "> 0" would page for ever about one old failure) |
 | Disk | Data, backup or storage volume filling | 80 % warn, 90 % page |
 | Fleet | A printer offline, a job stuck in `dispatching` | Domain metrics → alert. ADR-0007 guarantees offline is real, never fabricated |
 | Partitions | The maintenance sweep failing silently — the case `config.py` already names | `telemetry_partition_months_ahead` gauge < 1 → alert |
@@ -312,6 +312,21 @@ response is "nothing", it is deleted or turned into a dashboard the same week.
 
 Routing: Alertmanager → Telegram bot (free, on the phone, works in Russia) with
 a secondary email path.
+
+**The rules are written; nothing evaluates them yet.**
+`deploy/observability/rules/printorian.yml` holds thirteen, each labelled
+`severity: page`, `digest` or `heartbeat`, and each saying where its threshold
+came from. They keep to PromQL, so `promtool test rules` can run them against
+`deploy/observability/tests/printorian.test.yml` in CI. Those tests break one
+thing at a time and assert two things: that failure's own alert fires, and the
+alerts a careless `absent()` would add beside it do not. A thirty-hour healthy
+run pages nobody. The fence that makes "exactly one" hold is the
+series that proves the thing behind a reading was reachable — the API's `up`, or
+`printorian_orders_awaiting_prep` for the database-backed readings, which the
+scrape drops together. `backend/tests/unit/test_alert_rules.py` ties every
+`printorian_*` name in a rule to what `GET /metrics` serves, so a renamed series
+fails a test instead of disarming an alert in silence. Not an alert, on purpose:
+the prep queue's depth, because ADR-0006 gives no number for "saturated".
 
 ### The metrics that matter here are domain metrics
 
@@ -590,7 +605,9 @@ ARCHITECTURE §10 marks **stubbed**.
   one box), Grafana, Alertmanager, Loki + Alloy for the structlog JSON stream.
 * Three dashboards, no more: *Farm* (printers, jobs, queue), *Money* (orders, SLA
   credits, payment reconciliation), *Machine* (disk, WAL, backups, containers).
-* Alert rules and Telegram routing, written to the discipline in §5.
+* Alert rules and Telegram routing, written to the discipline in §5. The rules
+  and the scrape config are done (`deploy/observability`, above); the routing
+  waits on a Telegram bot and a chat, which are a person's to create.
 
 **Exit criterion:** killing a printer, filling a disk, and corrupting a backup each
 produce exactly one correct alert on the phone within five minutes — and normal

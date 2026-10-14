@@ -1,0 +1,281 @@
+# The farm's alert rules (INFRASTRUCTURE §5, issue #22).
+#
+# Prometheus rule format, which vmalert reads unchanged — the expressions keep to
+# PromQL rather than MetricsQL so that `promtool test rules` can prove them, and
+# a rule that is never proven is the retention clamp again: it passes every
+# check of its shape and nobody knows what it does. The proofs are
+# `../tests/printorian.test.yml`, run in CI (`.github/workflows/ci.yml`, job
+# `alerts`), and `backend/tests/unit/test_alert_rules.py` holds two more things
+# true: every `printorian_*` name below is one `GET /metrics` actually serves,
+# and every alert has a test in which it fires.
+#
+# **Two severities, and the difference is the whole discipline.** `page` is a
+# condition a person must act on within the hour; it goes to the phone. `digest`
+# is something worth knowing today; it goes to the daily mail. §5: alert fatigue
+# is how a single maintainer ends up muting the phone, and a muted phone is a farm
+# with no monitoring. So an alert whose correct response turns out to be
+# "nothing" is deleted or demoted the same week, not tolerated. `heartbeat` is
+# the third label and is not an alert at all — see `Watchdog`.
+#
+# **One cause, one alert.** The exit criterion is *exactly one* correct alert per
+# failure, and the trap is `absent()`. When the API stops answering, every
+# `printorian_*` series goes stale at once, and an `absent()` rule written
+# naively would page "the backup has never run" beside "the API is down". So
+# every rule that fires on a missing series is fenced by the series that proves
+# the thing *behind* it was reachable: the API's `up`, or — for the
+# database-backed readings — `printorian_orders_awaiting_prep`, which the scrape
+# publishes whenever, and only when, it could read the database
+# (`api/routers/metrics.py` drops all of those readings together). The tests
+# take each failure in turn and assert that only its own alert fires.
+#
+# **Where a threshold came from.** None of these is a measurement, so ADR-0007
+# does not forbid choosing them — but a threshold nobody can trace is one nobody
+# dares to change. Each says what it was derived from; the ones that are a
+# judgement say so, and belong to whoever carries the phone.
+#
+# **What is deliberately not an alert.** `printorian_orders_awaiting_prep` as a
+# depth: ADR-0006 says to watch it and act "if it saturates", without a number,
+# and a page on an invented depth is the alert §5 says to delete. It is a
+# dashboard series until the farm has run long enough to say what saturated
+# looks like.
+
+groups:
+  # ------------------------------------------------------------------ reachability
+  - name: printorian-reachability
+    interval: 30s
+    rules:
+      # The dead-man's switch's input. It always fires, and Alertmanager routes
+      # it to the external watcher (§5): the farm host cannot report its own
+      # death, so silence from *this* is what pages, from the other side.
+      - alert: Watchdog
+        expr: vector(1)
+        labels:
+          severity: heartbeat
+        annotations:
+          summary: The alerting pipeline is alive.
+          description: >-
+            Always firing. Routed to the external heartbeat watcher, never to a
+            person; when it stops arriving, the farm host or its monitoring is gone.
+
+      # Two minutes: a deploy restarts the API, and `docker compose up --wait`
+      # has it ready again well inside that (CI's image job waits for it).
+      - alert: PrintorianApiDown
+        expr: up{job="printorian-api"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: The API is not answering its metrics scrape.
+          description: >-
+            {{ $labels.instance }} has failed every scrape for two minutes. Every
+            other Printorian alert is blind while this fires, which is why none of
+            them fires beside it.
+
+      # The API answers, but the readings that come from PostgreSQL are all
+      # missing — the scrape could not read the database. `/health/ready` says
+      # the same thing to whoever asks; this is the one that asks.
+      - alert: PrintorianDatabaseUnreadable
+        expr: absent(printorian_orders_awaiting_prep) and on() (up{job="printorian-api"} == 1)
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: The API is up but cannot read the database.
+          description: >-
+            The metrics scrape answers without any database-backed reading. Check
+            `GET /health/ready` and the postgres container.
+
+  # ------------------------------------------------------------------ the farm
+  - name: printorian-farm
+    interval: 30s
+    rules:
+      # `1` is an *observed* failure to connect (ADR-0007). A printer the worker
+      # has stopped reporting on publishes no sample and stays quiet — the
+      # opposite would page about machines nobody has looked at.
+      #
+      # Three minutes, from the exit criterion's budget: a killed printer must
+      # reach the phone within five, and three plus a scrape, an evaluation and
+      # Alertmanager's group wait (30 s each) leaves margin. It is also longer
+      # than a printer takes to come back from a firmware restart.
+      - alert: PrinterOffline
+        expr: printorian_printers_offline == 1
+        for: 3m
+        labels:
+          severity: page
+        annotations:
+          summary: "Printer {{ $labels.printer }} ({{ $labels.brand }}) is unreachable."
+          description: >-
+            The worker has been unable to connect to this printer for three
+            minutes. Whatever it was printing is not being watched.
+
+      # One alert for both states, so a worker that dies mid-dispatch is one
+      # notification rather than two (Alertmanager groups by alert name).
+      #
+      # ASSIGNED: the scheduler plans and dispatches in the same pass
+      # (`workers/scheduler.py`), so a job sits here for seconds. Five minutes is
+      # ten missed passes at the default `scheduler_tick_seconds` of 30 — the
+      # scheduler has stopped. DISPATCHING lasts as long as the upload and the
+      # start, and every refusal returns the job to the queue, so a job *stays*
+      # here only if the process died or a driver call hung. Fifteen minutes is a
+      # judgement: well past any upload over a farm's LAN.
+      - alert: PrintorianJobStuck
+        expr: >-
+          printorian_job_stuck_seconds{state="assigned"} > 300
+          or printorian_job_stuck_seconds{state="dispatching"} > 900
+        labels:
+          severity: page
+        annotations:
+          summary: "A job has been {{ $labels.state }} for {{ $value | humanizeDuration }}."
+          description: >-
+            Work is waiting while the machine it was meant for is not printing it.
+            Check `GET /health/workers` for the scheduler loop, then the job's
+            events.
+
+      # ADR-0013's band, on the mean rather than on one job: a single job outside
+      # it is already held for price review by the system itself. A *mean*
+      # outside it is the estimator being systematically wrong, which no single
+      # review shows. 0.15 is `price_variance_tolerance`'s default and must move
+      # with it. A digest, because it is a calibration question, not an outage.
+      - alert: EstimateVarianceOutsideBand
+        expr: abs(printorian_estimate_variance_ratio - 1) > 0.15
+        labels:
+          severity: digest
+        annotations:
+          summary: "Slicer cost runs {{ $value | humanizePercentage }} away from the quotes."
+          description: >-
+            The mean of prepared over quoted cost across the last 30 days is
+            outside ADR-0013's tolerance band. The estimator wants recalibrating;
+            `printorian_estimate_variance_samples` says how many jobs the mean
+            stands on.
+
+  # ------------------------------------------------------------------ backups
+  - name: printorian-backups
+    interval: 30s
+    rules:
+      # §5's 26 hours: a nightly job, plus the timer's randomised delay and a
+      # long dump. `absent()` is half the rule, because a farm that has never
+      # backed up has no stamp at all (ADR-0007: "never" is not a timestamp).
+      # Fenced by the database-backed series so that a database the scrape cannot
+      # read is reported once, as itself, rather than as a missing backup.
+      - alert: BackupStale
+        expr: >-
+          (
+            absent(printorian_backup_last_success_timestamp)
+            or (time() - printorian_backup_last_success_timestamp) > 26 * 3600
+          )
+          and on() printorian_orders_awaiting_prep
+        labels:
+          severity: page
+        annotations:
+          summary: No backup has succeeded in the last 26 hours.
+          description: >-
+            `scripts/backup.sh` leaves a row in `maintenance_runs` only when it
+            succeeds, so this is a backup that failed, never ran, or never
+            existed. Its journal is `journalctl -u printorian-backup`.
+          runbook: docs/RUNBOOK-BACKUP-RESTORE.md
+
+      # Weekly (Sunday 04:00), so a week plus the same two hours of slack the
+      # nightly backup gets. ADR-0019: a failing drill is an incident, so it pages.
+      # A new farm has no drill until its first Sunday — run one by hand on the
+      # day it is installed (the runbook), rather than live with a page all week.
+      - alert: RestoreDrillStale
+        expr: >-
+          (
+            absent(printorian_restore_drill_last_success_timestamp)
+            or (time() - printorian_restore_drill_last_success_timestamp) > 170 * 3600
+          )
+          and on() printorian_orders_awaiting_prep
+        labels:
+          severity: page
+        annotations:
+          summary: No restore drill has passed in the last week.
+          description: >-
+            The newest backup has not been proven restorable. Its journal is
+            `journalctl -u printorian-drill`.
+          runbook: docs/RUNBOOK-BACKUP-RESTORE.md
+
+      # `pg_stat_archiver.failed_count` is cumulative since the statistics were
+      # reset, so "greater than zero" would page for ever about one failure in
+      # March. The *increase* is the failure happening now — and the archiver
+      # retries a failing segment continuously, so a real failure increases it
+      # every minute. A page, because §5's point is to be told *before* `pg_wal`
+      # fills the data disk, which is how the disk-full incident went.
+      - alert: WalArchiveFailing
+        expr: increase(printorian_wal_archive_failures_total[10m]) > 0
+        labels:
+          severity: page
+        annotations:
+          summary: PostgreSQL is failing to archive WAL.
+          description: >-
+            Segments that cannot be archived cannot be recycled, so `pg_wal` grows
+            until the data disk fills. Check the backup mount's ownership and free
+            space.
+          runbook: docs/RUNBOOK-BACKUP-RESTORE.md
+
+      # Below 1, only the current month has a partition: at the turn of the
+      # month telemetry has nowhere to go, and the hourly maintenance sweep has
+      # been failing for weeks without saying so. `fleet.retention` names this
+      # reading as the one that should page.
+      - alert: TelemetryPartitionsRunningOut
+        expr: printorian_telemetry_partition_months_ahead < 1
+        labels:
+          severity: page
+        annotations:
+          summary: No telemetry partition exists for next month.
+          description: >-
+            The maintenance sweep is not provisioning partitions. Check
+            `GET /health/workers` for the maintenance loop.
+
+  # ------------------------------------------------------------------ money
+  - name: printorian-money
+    interval: 30s
+    rules:
+      # Transiently non-zero is the gateway answering "not yet" for a moment;
+      # its next notification settles the payment. Persistently non-zero is a
+      # customer who has paid for an order the farm still shows as unpaid. Thirty
+      # minutes is a judgement between the two.
+      - alert: PaymentNotSettled
+        expr: printorian_payment_notifications_unreconciled > 0
+        for: 30m
+        labels:
+          severity: page
+        annotations:
+          summary: "{{ $value }} paid payment(s) are not settled."
+          description: >-
+            The gateway reported these payments succeeded and they are still not
+            booked. The customer has paid; the order is not moving.
+
+  # ------------------------------------------------------------------ the machine
+  - name: printorian-machine
+    interval: 30s
+    rules:
+      # §5's two thresholds. These read node_exporter, not the API: a disk is
+      # the host's fact, and the API cannot report on a disk it may be the
+      # thing filling. Pseudo filesystems are excluded because they are not
+      # where anything durable lives.
+      - alert: DiskFilling
+        expr: >-
+          1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|devtmpfs"}
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|devtmpfs"}
+          > 0.80
+        for: 15m
+        labels:
+          severity: digest
+        annotations:
+          summary: "{{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full."
+          description: Past §5's 80 % warning line. Not urgent yet; it will be.
+
+      # Two minutes, from the exit criterion's five-minute budget, as above.
+      - alert: DiskNearlyFull
+        expr: >-
+          1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|devtmpfs"}
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|devtmpfs"}
+          > 0.90
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "{{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full."
+          description: >-
+            Past §5's 90 % line. On the data disk PostgreSQL stops at 100 %; on the
+            backup disk the archiver starts failing first.
