@@ -306,6 +306,11 @@ async def get_caller(request: Request, identity: Identity, db: DbSession, clock:
     Cached per request by FastAPI, so a route that asks for both `requires(...)`
     and `CurrentActor` resolves the token once. Which of the two a route may be
     called with is decided by the two dependencies below, not here.
+
+    **The one to override in a test.** `requires` and `CurrentActor` both sit on
+    it, so substituting the caller here reaches both; overriding
+    `get_current_actor` alone leaves every `requires` gate resolving the real
+    token, and the request arrives unauthenticated.
     """
     token = session_token(request)
     if is_api_key(token):
