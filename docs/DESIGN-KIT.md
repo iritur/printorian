@@ -117,10 +117,14 @@ has nothing for a settings catalogue to carry, and that is still the right call.
   `service.maintenance_defaults`, the maintenance intervals, which
   `POST /printers` seeds a new machine's service card from and which an
   operation added without a periodicity takes its interval from; its «Простой»
-  and «Расход» columns are not stored, because nothing reads them. Still owed:
-  notification event×channel, API keys and webhooks. Two of those are new
-  subsystems with a security decision each, and the event matrix is switches
-  over channels that do not exist — none is a catalogue row away from working.
+  and «Расход» columns are not stored, because nothing reads them. **API keys
+  are built** (`identity.api_keys`, `/api-keys`, `settings/ApiKeysPanel.tsx`): a
+  key is shown once, stored as a hash, holds read permissions only and never more
+  than its owner holds now, is refused by every route that acts as a person, and
+  is accepted by the live stream so the kit's floor screen can use one. Still
+  owed: notification event×channel and webhooks. Webhooks are a new subsystem
+  with delivery, signing and retry, and the event matrix is switches over
+  channels that do not exist — neither is a catalogue row away from working.
 - **Two columns of «Каталог операций» are deliberately not ported**, and neither is
   an oversight. «На см² поверхности» needs a surface area inside `PriceSpec`, and
   surface area does not reach the checkout: the quote context emits `volume_cm3`

@@ -63,6 +63,12 @@ export const ru = {
   'error.identity.email_taken': 'Эта почта уже зарегистрирована',
   'error.identity.session_expired': 'Сессия истекла, войдите заново',
   'error.identity.account_disabled': 'Учётная запись отключена',
+  'error.identity.api_key_not_accepted': 'Ключ API не может действовать от имени человека',
+  'error.identity.api_key_read_only': 'Ключ API только читает',
+  'error.identity.invalid_api_key': 'Ключ API недействителен или отозван',
+  'error.identity.api_key_not_found': 'Ключ не найден',
+  'error.identity.api_key_permission_not_allowed': 'Ключу нельзя выдать права {permissions}',
+  'error.identity.api_key_exceeds_owner': 'У вас самих нет прав {permissions}',
   'error.identity.password_too_short': 'Пароль слишком короткий',
   'error.identity.locked_out':
     'Слишком много неудачных попыток. Повторите через {retry_after_seconds} с',
@@ -116,6 +122,7 @@ export const ru = {
   'error.catalog.mesh_non_finite': 'В файле есть координаты, которые не являются числом',
   'error.catalog.mesh_oversized': 'Деталь длиннее {limit_mm} мм ({extent_mm} мм) — это не модель для печати',
   'error.catalog.upload_too_large': 'Файл слишком большой',
+  'error.catalog.plate_invalid': 'Пластина не записана: неверные поля {fields}',
   'error.catalog.model_not_found': 'Модель для этого задания не найдена',
   'error.catalog.plate_not_parsed':
     'В файле не указаны время печати и вес — сохраните пластину вручную',
@@ -1372,9 +1379,19 @@ export const ru = {
   'settings.field.finance.prices_include_tax.hint': 'Влияет на то, как разложена смета, но не на итог.',
   'settings.field.finance.rounding_step': 'Округление итога',
   'settings.field.finance.payment_provider': 'Провайдер',
+  // The three payment fields are stored and audited but not yet read: the API
+  // takes the provider and its credentials from the environment
+  // (docs/RUNBOOK-PAYMENTS.md). Saying so here is the whole fix until they are
+  // wired — an owner who saves a key here and sees «было · стало» would
+  // otherwise reasonably believe the farm now takes money through it (#27).
+  'settings.field.finance.payment_provider.hint':
+    'Пока не действует: провайдер задаётся переменной окружения PRINTORIAN_PAYMENT_PROVIDER (RUNBOOK-PAYMENTS).',
   'settings.field.finance.yookassa_shop_id': 'Идентификатор магазина',
+  'settings.field.finance.yookassa_shop_id.hint':
+    'Пока не действует: берётся из PRINTORIAN_YOOKASSA_SHOP_ID.',
   'settings.field.finance.yookassa_secret_key': 'Секретный ключ',
-  'settings.field.finance.yookassa_secret_key.hint': 'Хранится зашифрованным. Показать значение обратно невозможно — только заменить.',
+  'settings.field.finance.yookassa_secret_key.hint':
+    'Пока не действует: берётся из PRINTORIAN_YOOKASSA_SECRET_KEY. Здесь хранится зашифрованным и обратно не показывается.',
   'settings.field.finance.prepayment_percent': 'Предоплата',
   'settings.field.finance.prepayment_percent.hint': '100% — заказ не уходит в производство до полной оплаты.',
   'settings.field.finance.invoice_payment': 'Оплата по счёту для юрлиц',
@@ -1557,6 +1574,24 @@ export const ru = {
   'settings.section.finance.desc': 'Налоги, приём платежей и возвраты. Реквизиты провайдера хранятся зашифрованными и никогда не показываются обратно.',
   'settings.section.notify.desc': 'Матрица «событие × канал». Строки — то, что происходит в системе; столбцы — куда об этом сообщать.',
   'settings.section.security.desc': 'Сессии, пароли и ключи API. Права проверяются на сервере.',
+  // «Ключи API». The key itself is on screen once, in the box after creation;
+  // «не использовался» is a measurement — every use is recorded.
+  'settings.keys': 'Ключи API',
+  'settings.keys.live': 'АКТИВНЫХ: {count}',
+  'settings.keys.name': 'Название',
+  'settings.keys.prefix': 'Префикс',
+  'settings.keys.permissions': 'Права',
+  'settings.keys.created': 'Создан',
+  'settings.keys.used': 'Использован',
+  'settings.keys.never': 'не использовался',
+  'settings.keys.revoke': 'Отозвать',
+  'settings.keys.revoked': 'отозван {when}',
+  'settings.keys.empty': 'Ключей ещё нет',
+  'settings.keys.create': 'Создать ключ',
+  'settings.keys.foot': 'КЛЮЧ ПОКАЗЫВАЕТСЯ ОДИН РАЗ ПРИ СОЗДАНИИ · КЛЮЧ ТОЛЬКО ЧИТАЕТ',
+  'settings.keys.secret': 'Новый ключ',
+  'settings.keys.secret_once': 'Скопируйте его сейчас: сервер хранит только отпечаток, и показать ключ снова нельзя.',
+  'settings.keys.done': 'Готово',
   'settings.section.integrations.desc': 'Внешние системы, от которых зависит ферма. Каждая показывает своё фактическое состояние.',
   'settings.section.diagnostics.desc': 'Фактическое состояние подсистем, прочитанное у самой фермы. Ничего из этого не настраивается — раздел показывает, что система думает о себе прямо сейчас.',
   'settings.section.maintenance.desc': 'Резервные копии, хранение данных и необратимые операции.',
@@ -1773,6 +1808,12 @@ export const en: Messages = {
   'error.identity.email_taken': 'That email is already registered',
   'error.identity.session_expired': 'Your session expired — sign in again',
   'error.identity.account_disabled': 'This account is disabled',
+  'error.identity.api_key_not_accepted': 'An API key cannot act as a person',
+  'error.identity.api_key_read_only': 'An API key only reads',
+  'error.identity.invalid_api_key': 'The API key is invalid or revoked',
+  'error.identity.api_key_not_found': 'Key not found',
+  'error.identity.api_key_permission_not_allowed': 'A key cannot be given {permissions}',
+  'error.identity.api_key_exceeds_owner': 'You do not hold {permissions} yourself',
   'error.identity.password_too_short': 'That password is too short',
   'error.identity.locked_out': 'Too many failed attempts. Try again in {retry_after_seconds} s',
 
@@ -1822,6 +1863,7 @@ export const en: Messages = {
   'error.catalog.mesh_non_finite': 'The file has coordinates that are not numbers',
   'error.catalog.mesh_oversized': 'The part is longer than {limit_mm} mm ({extent_mm} mm) — not a printable model',
   'error.catalog.upload_too_large': 'That file is too large',
+  'error.catalog.plate_invalid': 'The plate was not recorded: invalid fields {fields}',
   'error.catalog.model_not_found': 'No model found for this job',
   'error.catalog.plate_not_parsed':
     'The file does not state print time and weight — save the plate by hand',
@@ -3011,9 +3053,14 @@ export const en: Messages = {
   'settings.field.finance.prices_include_tax.hint': 'Changes how the estimate is laid out, not the total.',
   'settings.field.finance.rounding_step': 'Total rounding',
   'settings.field.finance.payment_provider': 'Provider',
+  'settings.field.finance.payment_provider.hint':
+    'Not in effect yet: the provider comes from PRINTORIAN_PAYMENT_PROVIDER (RUNBOOK-PAYMENTS).',
   'settings.field.finance.yookassa_shop_id': 'Shop id',
+  'settings.field.finance.yookassa_shop_id.hint':
+    'Not in effect yet: taken from PRINTORIAN_YOOKASSA_SHOP_ID.',
   'settings.field.finance.yookassa_secret_key': 'Secret key',
-  'settings.field.finance.yookassa_secret_key.hint': 'Stored encrypted. The value can never be shown back — only replaced.',
+  'settings.field.finance.yookassa_secret_key.hint':
+    'Not in effect yet: taken from PRINTORIAN_YOOKASSA_SECRET_KEY. Stored here encrypted, never shown back.',
   'settings.field.finance.prepayment_percent': 'Prepayment',
   'settings.field.finance.prepayment_percent.hint': '100% — an order does not enter production until fully paid.',
   'settings.field.finance.invoice_payment': 'Invoice payment for companies',
@@ -3196,6 +3243,22 @@ export const en: Messages = {
   'settings.section.finance.desc': 'Tax, payment collection and refunds. Provider credentials are stored encrypted and never shown back.',
   'settings.section.notify.desc': 'The «event × channel» matrix. Rows are what happens; columns are where it is reported.',
   'settings.section.security.desc': 'Sessions, passwords and API keys. Permissions are enforced server-side.',
+  'settings.keys': 'API keys',
+  'settings.keys.live': 'ACTIVE: {count}',
+  'settings.keys.name': 'Name',
+  'settings.keys.prefix': 'Prefix',
+  'settings.keys.permissions': 'Permissions',
+  'settings.keys.created': 'Created',
+  'settings.keys.used': 'Last used',
+  'settings.keys.never': 'never used',
+  'settings.keys.revoke': 'Revoke',
+  'settings.keys.revoked': 'revoked {when}',
+  'settings.keys.empty': 'No keys yet',
+  'settings.keys.create': 'Create key',
+  'settings.keys.foot': 'A KEY IS SHOWN ONCE, WHEN CREATED · A KEY ONLY READS',
+  'settings.keys.secret': 'New key',
+  'settings.keys.secret_once': 'Copy it now: the server keeps only a fingerprint and cannot show the key again.',
+  'settings.keys.done': 'Done',
   'settings.section.integrations.desc': 'The external systems the farm depends on. Each shows its actual state, not its settings.',
   'settings.section.diagnostics.desc': 'The actual state of the subsystems, read from the farm itself. Nothing here is a setting — the section shows what the system thinks of itself right now.',
   'settings.section.maintenance.desc': 'Backups, data retention and irreversible operations.',

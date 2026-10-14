@@ -13,6 +13,7 @@ from printorian.api.errors import install_error_handlers
 from printorian.api.middleware import BodySizeLimitMiddleware, CorrelationIdMiddleware
 from printorian.api.routers import (
     account,
+    api_keys,
     auth,
     catalog,
     dashboard,
@@ -194,6 +195,7 @@ def _install_routers(app: FastAPI) -> None:
     app.include_router(auth.router)
     app.include_router(account.router)
     app.include_router(users.router)
+    app.include_router(api_keys.router)
     app.include_router(catalog.router)
     app.include_router(dashboard.router)
     app.include_router(journal.router)

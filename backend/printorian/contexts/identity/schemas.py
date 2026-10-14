@@ -25,6 +25,10 @@ class Actor(BaseModel):
     role: Role
     locale: str
     permissions: frozenset[Permission]
+    #: Set when the caller is a machine holding an API key rather than a person
+    #: with a session. `user_id` is then the key's owner — for attribution, not
+    #: for acting as them — and `CurrentActor` refuses the caller outright.
+    api_key_id: EntityId | None = None
 
     def can(self, permission: Permission) -> bool:
         return permission in self.permissions
@@ -108,3 +112,37 @@ class SessionGranted(BaseModel):
     token: str
     expires_at: datetime
     actor: Actor
+
+
+# -- API keys ----------------------------------------------------------------
+
+
+class CreateApiKey(BaseModel):
+    """«Создать ключ»: a name somebody will recognise, and what the key may read."""
+
+    name: str = Field(min_length=1, max_length=80)
+    permissions: list[Permission] = Field(min_length=1)
+
+
+class ApiKeyView(BaseModel):
+    """One row of «Ключи API». Never the key, never its hash — the prefix only."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: EntityId
+    name: str
+    prefix: str
+    permissions: list[str]
+    created_at: datetime
+    #: Null when the key has never been used. Every use is recorded (to five
+    #: minutes, as sessions are), so null is a measurement: "never", not "unknown".
+    last_used_at: datetime | None = None
+    revoked_at: datetime | None = None
+
+
+class IssuedApiKey(BaseModel):
+    """The one response that carries the key itself. It is not stored, and cannot
+    be shown again — the screen says so, as the kit does."""
+
+    key: ApiKeyView
+    secret: str

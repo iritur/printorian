@@ -31,7 +31,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 
 from printorian.api.app import create_app
-from printorian.api.deps import get_current_actor
+from printorian.api.deps import get_caller
 from printorian.contexts.identity import Actor, Permission, Role
 from printorian.contexts.inventory import CreateMaterialLot, InventoryService
 from printorian.contexts.inventory.models import MaterialLot
@@ -140,7 +140,7 @@ async def test_costs_are_refused_without_view_financials(
     """
     order = await an_order(client)
     app = client.app  # type: ignore[attr-defined]
-    app.dependency_overrides[get_current_actor] = lambda: Actor(
+    app.dependency_overrides[get_caller] = lambda: Actor(
         user_id=new_id(),
         email="buyer@example.com",
         display_name="buyer",

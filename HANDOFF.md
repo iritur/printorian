@@ -43,6 +43,14 @@ logged as `{token}`, and subscribing has the `auth` ceiling. Registration
 enumeration is recorded as accepted in the review's §4 until outbound mail
 exists.
 
+**And the plate upload (F22).** `POST /jobs/{id}/plate/file` builds its
+`RecordPlate` before `storage.put` now, so a refused plate leaves nothing in
+the object store, and answers an oversize part with 413. Of the second pass's
+recorded list, three items remain: money arriving for a cancelled order (a
+decision), `DraftLine.model_asset_id` (waits on the decision to wire it
+through — the review says what that change must carry), and the console's
+dead `finance.payment_provider` settings.
+
 **Three traps from this session.** After a dependency pull request merges, the
 local virtualenv is stale until it is reinstalled the way CI does it —
 `pip install -e ".[dev]" -c constraints.txt` — and the symptom is two dozen mypy
@@ -53,6 +61,25 @@ the file specified" on the engine pipe until it is launched, and Postgres answer
 And a bare `python -` in a Git Bash command, with no heredoc after it, waits
 on stdin for ever; the tool times out at ten minutes and the rest of the
 command never runs. Write multi-line scripts to a file and run that.
+
+**#29: API keys are built.** `identity.api_keys`, migration `0032_api_keys`,
+`/api-keys`, and `settings/ApiKeysPanel.tsx` on «Доступ и безопасность». A key
+is shown once and stored as a SHA-256, like a session token; it may hold only
+`KEY_PERMISSIONS` (the four `view_*` reads) and never more than its owner holds
+*now* — demote the owner and it shrinks, deactivate them or revoke it and it
+stops. **The one design decision to know before touching `api/deps.py`:** a key
+is resolved by `get_caller`, which both `requires(...)` and `CurrentActor` sit
+on, and `CurrentActor` *refuses* a key. So a key works only on a route that asks
+for nothing but `requires(<read permission>)`, and every route that acts as a
+person — `/account/*`, `/auth/me`, `/orders/mine` — refuses it by default; a
+route that wants keys must not ask for `CurrentActor`. `requires` also refuses a
+key on any non-read method, so a write gated only by a `view_*` permission is
+still not a write a leaked key can make. The live stream takes a key too, which
+is the kit's floor-screen example. `throttle_key` and `client_ip` moved to
+`api/client_address.py` to give `deps.py` the room. Checked in the running
+console against a throwaway owner (created, used, deleted): the key shows once
+on its own line, «не использовался» rather than a dash, revoke stops it. Still
+owed on #29: the notification event matrix and webhooks.
 
 ## 2026-10-06 (later) — code scanning: four alerts fixed, one left for a person to dismiss
 

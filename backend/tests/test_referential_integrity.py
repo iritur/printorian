@@ -90,6 +90,8 @@ CASCADE: frozenset[str] = frozenset(
         "refunds.payment_id",
         "service_operations.printer_id",
         "sessions.user_id",
+        # A key is a credential of the person who issued it; it must not outlive them.
+        "api_keys.owner_id",
         "sla_credit_entries.order_id",
         "storage_cells.zone_id",
         "stocktake_lines.stocktake_id",
