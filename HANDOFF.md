@@ -43,6 +43,14 @@ logged as `{token}`, and subscribing has the `auth` ceiling. Registration
 enumeration is recorded as accepted in the review's §4 until outbound mail
 exists.
 
+**And the plate upload (F22).** `POST /jobs/{id}/plate/file` builds its
+`RecordPlate` before `storage.put` now, so a refused plate leaves nothing in
+the object store, and answers an oversize part with 413. Of the second pass's
+recorded list, three items remain: money arriving for a cancelled order (a
+decision), `DraftLine.model_asset_id` (waits on the decision to wire it
+through — the review says what that change must carry), and the console's
+dead `finance.payment_provider` settings.
+
 **Three traps from this session.** After a dependency pull request merges, the
 local virtualenv is stale until it is reinstalled the way CI does it —
 `pip install -e ".[dev]" -c constraints.txt` — and the symptom is two dozen mypy

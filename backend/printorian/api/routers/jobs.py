@@ -15,6 +15,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
+from pydantic import ValidationError as PydanticValidationError
 
 from printorian.api.deps import (
     AppSettings,
@@ -36,8 +37,9 @@ from printorian.contexts.production import (
     WaitListEntryView,
     estimate_variances,
 )
-from printorian.core.errors import NotFoundError, ValidationError
+from printorian.core.errors import NotFoundError, PayloadTooLargeError, ValidationError
 from printorian.core.ids import EntityId
+from printorian.core.storage import digest_of
 
 router = APIRouter(
     prefix="/jobs",
@@ -224,7 +226,14 @@ async def upload_plate_file(
     """
     content = await plate.read()
     if len(content) > settings.max_upload_bytes:
-        raise ValidationError("error.catalog.upload_too_large", size=len(content))
+        # 413, as `/catalog/geometry` and the quote path answer the same refusal.
+        # This route said 422 — "your fields are wrong" — about a body that was
+        # simply too big, and a client branching on the status could not tell.
+        raise PayloadTooLargeError(
+            "error.catalog.upload_too_large",
+            size=len(content),
+            limit=settings.max_upload_bytes,
+        )
 
     numbers = read_plate(content)
     if not numbers.parsed:
@@ -235,11 +244,19 @@ async def upload_plate_file(
         )
 
     job = await production.get(job_id)
-    stored = await storage.put(content, suffix="3mf")
+    digest = digest_of(content)
 
-    recorded = await plates.record(
-        RecordPlate(
-            model_hash=job.model_hash or stored.digest,
+    # The record is built — and so validated — **before** the bytes are stored,
+    # for the reason the `copies` bound above was added: a refusal after
+    # `storage.put` leaves an object no row will ever reference. Only `copies`
+    # had been moved ahead of the write; a filename past 300 characters or an
+    # empty `printer_profile` still failed here, after it, as a bare pydantic
+    # error — an uncoded 500 with an orphan behind it (security review, #27).
+    # The three storage fields are the only ones the write decides, and they
+    # are filled in below from what the store reports.
+    try:
+        draft = RecordPlate(
+            model_hash=job.model_hash or digest,
             model_name=job.plate_filename or plate.filename or "",
             scale=job.scale,
             material_code=job.material_type,
@@ -251,11 +268,24 @@ async def upload_plate_file(
             print_minutes=Decimal(numbers.print_minutes or 0),
             filament_grams=dict(numbers.filament_grams),
             filename=plate.filename or "plate.3mf",
-            content_sha256=stored.digest,
-            storage_path=stored.path,
-            size_bytes=stored.size_bytes,
+            content_sha256=digest,
             model_asset_id=job.model_asset_id,
             sliced_by=actor.user_id,
+        )
+    except PydanticValidationError as exc:
+        raise ValidationError(
+            "error.catalog.plate_invalid",
+            fields=sorted({str(error["loc"][0]) for error in exc.errors() if error["loc"]}),
+        ) from exc
+
+    stored = await storage.put(content, suffix="3mf")
+    recorded = await plates.record(
+        draft.model_copy(
+            update={
+                "content_sha256": stored.digest,
+                "storage_path": stored.path,
+                "size_bytes": stored.size_bytes,
+            }
         )
     )
     return await production.attach_prepared_plate(
