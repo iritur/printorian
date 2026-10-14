@@ -81,6 +81,25 @@ console against a throwaway owner (created, used, deleted): the key shows once
 on its own line, «не использовался» rather than a dash, revoke stops it. Still
 owed on #29: the notification event matrix and webhooks.
 
+**#22: `/metrics` serves nine of INFRASTRUCTURE §5's ten series.** The four
+database-backed ones are `production.vitals` (the oldest job wedged in ASSIGNED or
+DISPATCHING, the prep queue's depth, the variance band's 30-day mean with its
+sample count beside it) and `payments.reconciliation` (payments the gateway said
+were paid that are not settled — a *refused* settlement rolls back with its
+notification and cannot be counted there). The two ADR-0019 stamps come from
+`maintenance_runs`, one row per *success* that `backup.sh` (through `psql`) and
+`restore_drill.py` write; a job that never succeeded has no sample, so an alert on
+them must say `absent()` as well as "too old". What remains of #22 is the money
+series (waits for the scrape to have an identity), the worker exporter, and the
+whole VictoriaMetrics/Grafana/Alertmanager stack — which is what would actually
+page anybody, so none of the nine alerts yet.
+
+**Trap: override `get_caller`, not `get_current_actor`.** Since the API keys,
+`requires(...)` and `CurrentActor` both sit on `api/deps.get_caller`. A test that
+substitutes the caller by overriding `get_current_actor` alone leaves every
+`requires` gate reading the real token, and the request arrives as a 401 instead
+of the 403 the test expects — that is how #133's first CI run failed.
+
 ## 2026-10-06 (later) — code scanning: four alerts fixed, one left for a person to dismiss
 
 **As of:** 2026-10-06 · on `claude/trusting-brown-hfc1pu`, `main` at
