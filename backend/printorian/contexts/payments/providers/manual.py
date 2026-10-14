@@ -59,7 +59,12 @@ class ManualPaymentProvider:
         )
 
     async def refund(
-        self, provider_payment_id: str, amount: Decimal, *, idempotency_key: str
+        self,
+        provider_payment_id: str,
+        amount: Decimal,
+        *,
+        currency: str,
+        idempotency_key: str,
     ) -> ProviderRefund:
         """Record the intent to refund; a person actually sends the money."""
         return ProviderRefund(

@@ -6,7 +6,15 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Numeric, String, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from printorian.contexts.payments.policies import PaymentStatus
@@ -22,6 +30,17 @@ class Payment(Entity):
         UniqueConstraint("idempotency_key", name="uq_payments_idempotency_key"),
         Index("ix_payments_order_id_status", "order_id", "status"),
         Index("ix_payments_provider_payment_id", "provider_payment_id"),
+        # At most one *live* payment per order, in the database. `start` checks
+        # for one before it inserts, but that check is a race with a double click,
+        # and the loser of it used to register a second payment at the gateway —
+        # two confirmation pages, both payable. The loser now hits this index
+        # before the gateway is called, and `start` hands back the winner.
+        Index(
+            "uq_payments_one_live_per_order",
+            "order_id",
+            unique=True,
+            postgresql_where=text("status IN ('created', 'pending')"),
+        ),
         CheckConstraint("amount >= 0", name="amount_non_negative"),
         CheckConstraint("refunded_amount >= 0", name="refunded_non_negative"),
         # The one invariant in this schema that is worth money: without it a bug in

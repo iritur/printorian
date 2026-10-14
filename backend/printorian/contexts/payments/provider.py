@@ -126,8 +126,20 @@ class PaymentProvider(Protocol):
         ...
 
     async def refund(
-        self, provider_payment_id: str, amount: Decimal, *, idempotency_key: str
-    ) -> ProviderRefund: ...
+        self,
+        provider_payment_id: str,
+        amount: Decimal,
+        *,
+        currency: str,
+        idempotency_key: str,
+    ) -> ProviderRefund:
+        """Return money in the payment's own currency.
+
+        ``currency`` is required rather than defaulted: the YooKassa adapter used
+        to spell `RUB` into every refund body whatever the payment was taken in,
+        and a default here is the same mistake one layer up.
+        """
+        ...
 
     def verify_webhook(self, headers: dict[str, str], body: bytes) -> WebhookEvent:
         """Authenticate and parse a notification, or raise."""

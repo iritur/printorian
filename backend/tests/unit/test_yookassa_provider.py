@@ -173,12 +173,16 @@ async def test_refund_posts_the_right_body() -> None:
         {"id": "r1", "status": "succeeded", "amount": {"value": "50.00", "currency": "RUB"}}
     )
     try:
-        result = await provider.refund("p5", Decimal("50.00"), idempotency_key="ref-key")
+        result = await provider.refund(
+            "p5", Decimal("50.00"), currency="KZT", idempotency_key="ref-key"
+        )
     finally:
         await client.aclose()
 
     assert seen["url"].endswith("/v3/refunds")
-    assert seen["body"] == {"payment_id": "p5", "amount": {"value": "50.00", "currency": "RUB"}}
+    # The payment's own currency, not a literal: the adapter used to spell `RUB`
+    # into every refund whatever the payment had been taken in.
+    assert seen["body"] == {"payment_id": "p5", "amount": {"value": "50.00", "currency": "KZT"}}
     assert result.succeeded is True
 
 
@@ -259,3 +263,21 @@ async def test_two_settlements_for_two_payments_are_two_events_not_one() -> None
     assert first.event_id != second.event_id
     # The same notification delivered twice is still the same event.
     assert first.event_id == again.event_id
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"[]",  # an array where an object belongs: TypeError
+        b'"payment.succeeded"',  # a bare string: TypeError
+        b'{"event": "payment.succeeded", "object": []}',  # `object` not an object
+        b'{"event": "payment.succeeded", "object": {"id": "p", "amount": {"value": "x"}}}',
+        b'{"event": "payment.succeeded", "object": {"id": "p", "amount": []}}',
+    ],
+)
+async def test_a_malformed_body_is_refused_with_a_code_not_a_traceback(body: bytes) -> None:
+    """Each of these used to escape as a bare 500 from an allow-listed address."""
+    provider = YooKassaProvider("123456", "live_secret")
+    with pytest.raises(WebhookVerificationError) as raised:
+        provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body)
+    assert raised.value.code == "error.payments.webhook_malformed"

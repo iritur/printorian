@@ -364,22 +364,71 @@ to a different owner than this branch. They are listed in §5 for filing.
   Stage 3 (§1 of this document).
 * **Journal unsubscribe token travels in the path**, so it lands in the access
   log; subscribe is unthrottled.
-* **A payment cancelled or expired at the gateway is never recorded**, so the
-  customer's `start()` returns a dead pending payment for ever; and a late
-  settlement of an order the farm already cancelled is accepted silently.
-* **Two concurrent `POST /payments` create two live gateway payments** (no partial
-  unique index on the order's open payment).
-* **Currency is never reconciled**, and refunds hard-code `RUB`.
-* **Malformed webhook bodies are 500s** (`TypeError`, `InvalidOperation` escape),
-  reachable only from the allow-listed networks.
+* ~~**A payment cancelled or expired at the gateway is never recorded**~~ —
+  closed, F13 below. **Still open:** a late settlement of an order the farm already
+  cancelled is accepted silently. That half is a decision, not a fix — refund it
+  automatically, reinstate the order, or hold the money for a person — and is §5(d).
+* ~~**Two concurrent `POST /payments` create two live gateway payments**~~ — closed, F14.
+* ~~**Currency is never reconciled**, and refunds hard-code `RUB`~~ — closed, F15.
+* ~~**Malformed webhook bodies are 500s**~~ — closed, F16.
 * **The console's `finance.payment_provider` settings are dead** — only the
   environment is read, and `tbank` is declared but unknown to `build_provider`.
-* **`payment_notifications.payment_id` is never populated**, so the runbook's
-  reconciliation join is empty.
+* ~~**`payment_notifications.payment_id` is never populated**~~ — closed, F17.
 * **Plate upload validates after `storage.put`** and answers 422 rather than 413
   for an oversize part; staff-only.
 * **`CreateOrderLine.model_asset_id` is accepted and dropped**, with no ownership
   check anywhere on it — latent, and the day it is wired through it is an IDOR.
+
+### Closed after the second pass — 2026-10-14
+
+Five of the payment items above were mechanical rather than decisions, and are
+fixed with tests in `backend/tests/unit/test_payment_lifecycle.py` unless named
+otherwise. Each test was checked by reverting its fix and watching it fail.
+
+**F13 — a payment the gateway gave up on is recorded, and checkout starts afresh.**
+A `cancelled` or `failed` answer from the gateway — by notification, or by asking
+when the customer reopens checkout, because the notification is not guaranteed —
+now closes the payment (`failure_reason` `gateway.cancelled`) and leaves the order
+awaiting payment, so `start` registers a fresh one instead of handing back a page
+that no longer takes money. Asking also recovers the opposite loss: a payment the
+gateway *settled* while its notification went missing is settled at checkout. If
+the gateway cannot be reached, `start` answers as it always did. Proved by
+`test_a_cancellation_notification_is_recorded_and_checkout_starts_afresh`,
+`test_a_cancellation_whose_notification_was_lost_is_found_by_asking` and
+`test_a_settlement_whose_notification_was_lost_is_settled_at_checkout`.
+
+**F14 — two concurrent starts make one payment.** Migration
+`0031_one_live_payment_per_order` adds a partial unique index on the order's
+`created`/`pending` payment, and `start` inserts under a savepoint: the loser of a
+double click hits the index **before the gateway is called** and is handed the
+winner. The migration refuses to run over existing duplicates rather than choosing
+which to cancel. Proved by
+`test_the_database_refuses_a_second_live_payment_for_one_order` and
+`test_the_loser_of_a_double_click_gets_the_winner_and_never_reaches_the_gateway`
+(the gateway is set to fail, so reaching it would fail the test).
+
+**F15 — currency is reconciled, and refunds carry the payment's own.**
+`policies.reconcile_currency` refuses a settlement whose captured currency is not
+the order's, as `reconcile` refuses a wrong amount; `PaymentProvider.refund` takes
+`currency` as a required keyword, so the adapter can no longer spell `RUB` into
+every refund. Proved by `test_a_settlement_in_another_currency_is_refused` and
+`tests/unit/test_yookassa_provider.py::test_refund_posts_the_right_body`, which now
+refunds in `KZT`.
+
+**F16 — a malformed webhook body is a coded refusal, not a 500.** Every read of
+the body sits inside the adapter's `try`, and `TypeError`, `AttributeError` and
+`decimal.InvalidOperation` join the caught set. Proved by
+`test_yookassa_provider.py::test_a_malformed_body_is_refused_with_a_code_not_a_traceback`,
+five bodies.
+
+**F17 — every notification is linked to its payment.** The handler sets
+`payment_notifications.payment_id` once it has found the payment, so the runbook's
+reconciliation join has rows. Proved by
+`test_every_notification_is_linked_to_the_payment_it_was_about`.
+
+`service.py` passed the 400-line gate with these, and refunding moved to
+`payments/refunding.py` as a mixin — the one job in the service that only ever
+sends money out, in the `settings.resolvers` shape.
 
 ---
 
@@ -461,10 +510,11 @@ answer as long as it is a chosen one.
 **(d) `type:security` — the second pass's unfixed list.** Everything under
 "Recorded, not fixed here" in §2b: the websocket `Origin` check and the `Secure`
 cookie flag are one small change each and want a test against a TLS-terminating
-edge that does not exist yet; the payment-lifecycle gaps (cancelled at the gateway,
-late settlement of a cancelled order, two concurrent starts, currency) are one
-issue with four bullets and a state-machine decision in it; the rest are hygiene.
-File them, then replace this paragraph with the numbers.
+edge that does not exist yet; of the payment-lifecycle gaps, four are closed
+(F13–F17) and **one is a decision**: what happens to money that arrives for an
+order the farm already cancelled — refund it automatically, reinstate the order,
+or hold it for a person; the rest are hygiene. File them, then replace this
+paragraph with the numbers.
 
 ---
 

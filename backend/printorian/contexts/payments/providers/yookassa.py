@@ -175,14 +175,19 @@ class YooKassaProvider:
         return self._to_payment(payload)
 
     async def refund(
-        self, provider_payment_id: str, amount: Decimal, *, idempotency_key: str
+        self,
+        provider_payment_id: str,
+        amount: Decimal,
+        *,
+        currency: str,
+        idempotency_key: str,
     ) -> ProviderRefund:
         payload = await self._request(
             "POST",
             "/refunds",
             json={
                 "payment_id": provider_payment_id,
-                "amount": {"value": f"{amount:.2f}", "currency": "RUB"},
+                "amount": {"value": f"{amount:.2f}", "currency": currency},
             },
             idempotency_key=idempotency_key,
         )
@@ -210,10 +215,19 @@ class YooKassaProvider:
         if not self._is_trusted(source):
             raise WebhookVerificationError("error.payments.webhook_untrusted_source", source=source)
 
+        # Everything that reads the body sits inside the `try`. A JSON array or a
+        # string where an object belongs is a `TypeError`, an `amount.value` that is
+        # not a number is `decimal.InvalidOperation` (an `ArithmeticError`, not a
+        # `ValueError`), and a non-object `object` is an `AttributeError` — each of
+        # which used to escape as a bare 500 from an allow-listed address.
         try:
             payload = json_module.loads(body)
             obj = payload["object"]
-        except (ValueError, KeyError) as exc:
+            event_type = str(payload.get("event", ""))
+            provider_payment_id = str(obj["id"])
+            status = _STATUS_MAP.get(str(obj.get("status")), PaymentStatus.PENDING)
+            amount = Decimal(str(obj.get("amount", {}).get("value", "0")))
+        except (ValueError, KeyError, TypeError, AttributeError, ArithmeticError) as exc:
             raise WebhookVerificationError("error.payments.webhook_malformed") from exc
 
         # The idempotency key is the event *and* the payment it is about. YooKassa's
@@ -223,12 +237,10 @@ class YooKassaProvider:
         # never settled, never retried. Money taken, order left awaiting payment
         # (security review, second pass). A body with no `event` falls back to the
         # service's digest of the bytes, which is what an empty key means to it.
-        event_type = str(payload.get("event", ""))
-        provider_payment_id = str(obj["id"])
         return WebhookEvent(
             provider_payment_id=provider_payment_id,
-            status=_STATUS_MAP.get(str(obj.get("status")), PaymentStatus.PENDING),
-            amount=Decimal(str(obj.get("amount", {}).get("value", "0"))),
+            status=status,
+            amount=amount,
             event_id=f"{event_type}:{provider_payment_id}" if event_type else "",
             raw=payload,
         )
