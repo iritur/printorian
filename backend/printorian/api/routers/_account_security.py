@@ -13,6 +13,7 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Request, Response, status
 
+from printorian.api.client_address import throttle_key
 from printorian.api.deps import (
     SESSION_COOKIE,
     AppSettings,
@@ -21,7 +22,6 @@ from printorian.api.deps import (
     SignInLockout,
     rate_limited,
     session_token,
-    throttle_key,
 )
 from printorian.api.session_cookie import cookie_is_secure
 from printorian.contexts.identity import ChangePassword, SessionView

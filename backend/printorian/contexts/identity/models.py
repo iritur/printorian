@@ -1,4 +1,4 @@
-"""Persistent models for users and sessions."""
+"""Persistent models for users, their sessions, and the API keys they issue."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from sqlalchemy import Boolean, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from printorian.contexts.identity.policies import CustomerKind, Role
-from printorian.core.db import Entity, UtcDateTime, enum_column
+from printorian.core.db import Entity, JsonB, UtcDateTime, enum_column
 from printorian.core.ids import EntityId
 
 
@@ -84,3 +84,38 @@ class Session(Entity):
     last_seen_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
 
     user: Mapped[User] = relationship(back_populates="sessions")
+
+
+class ApiKey(Entity):
+    """A credential for a machine — a floor screen, an accounting export.
+
+    Stored exactly as a session is: the SHA-256 of the key, never the key, which
+    exists once in the response that issued it. `prefix` is its first twelve
+    characters, kept so «Ключи API» can say which key is which without holding
+    anything that would let a reader use one.
+
+    ``CASCADE`` from the owner: a key is a credential of the person who issued
+    it, and a credential must not outlive the account behind it. Deactivating the
+    owner stops every key at the next request (`api_keys.resolve`), the same rule
+    sessions follow.
+    """
+
+    __tablename__ = "api_keys"
+    __table_args__ = (
+        # The `CASCADE` above is checked on every user delete, and PostgreSQL does
+        # not index a foreign key for you.
+        Index("ix_api_keys_owner_id", "owner_id"),
+    )
+
+    owner_id: Mapped[EntityId] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    prefix: Mapped[str] = mapped_column(String(16), nullable=False)
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    #: Permission codes, a subset of `policies.KEY_PERMISSIONS` when issued. Stored
+    #: as codes rather than an enum array so a permission later removed from the
+    #: matrix is skipped at resolution instead of failing every request.
+    permissions: Mapped[list[str]] = mapped_column(JsonB, nullable=False, default=list)
+    last_used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)

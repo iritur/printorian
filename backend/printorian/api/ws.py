@@ -32,7 +32,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
 from printorian.api.deps import SESSION_COOKIE
-from printorian.contexts.identity import IdentityService, Permission
+from printorian.contexts.identity import ApiKeyService, IdentityService, Permission, is_api_key
 from printorian.core.errors import PrintorianError
 from printorian.core.events import Event, EventBus
 from printorian.core.relay import LIVE_PATTERNS, redacted
@@ -251,8 +251,14 @@ async def _authenticate(websocket: WebSocket) -> object | None:
         # `last_used_at`, and that update was being silently discarded on every
         # WebSocket handshake.
         async for session in state.database.session():
-            identity = IdentityService(session, state.settings, state.clock, state.event_bus)
-            actor = await identity.resolve(token)
+            # A key as well as a session: the kit's first example key is a floor
+            # screen, and the floor screen *is* this stream. The permission check
+            # below is the same for both, and a key can only hold reads.
+            if is_api_key(token):
+                actor = await ApiKeyService(session, state.clock).resolve(token)
+            else:
+                identity = IdentityService(session, state.settings, state.clock, state.event_bus)
+                actor = await identity.resolve(token)
             resolved = actor if actor.can(Permission.VIEW_PRODUCTION) else None
     except PrintorianError:
         return None
