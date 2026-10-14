@@ -1372,9 +1372,19 @@ export const ru = {
   'settings.field.finance.prices_include_tax.hint': 'Влияет на то, как разложена смета, но не на итог.',
   'settings.field.finance.rounding_step': 'Округление итога',
   'settings.field.finance.payment_provider': 'Провайдер',
+  // The three payment fields are stored and audited but not yet read: the API
+  // takes the provider and its credentials from the environment
+  // (docs/RUNBOOK-PAYMENTS.md). Saying so here is the whole fix until they are
+  // wired — an owner who saves a key here and sees «было · стало» would
+  // otherwise reasonably believe the farm now takes money through it (#27).
+  'settings.field.finance.payment_provider.hint':
+    'Пока не действует: провайдер задаётся переменной окружения PRINTORIAN_PAYMENT_PROVIDER (RUNBOOK-PAYMENTS).',
   'settings.field.finance.yookassa_shop_id': 'Идентификатор магазина',
+  'settings.field.finance.yookassa_shop_id.hint':
+    'Пока не действует: берётся из PRINTORIAN_YOOKASSA_SHOP_ID.',
   'settings.field.finance.yookassa_secret_key': 'Секретный ключ',
-  'settings.field.finance.yookassa_secret_key.hint': 'Хранится зашифрованным. Показать значение обратно невозможно — только заменить.',
+  'settings.field.finance.yookassa_secret_key.hint':
+    'Пока не действует: берётся из PRINTORIAN_YOOKASSA_SECRET_KEY. Здесь хранится зашифрованным и обратно не показывается.',
   'settings.field.finance.prepayment_percent': 'Предоплата',
   'settings.field.finance.prepayment_percent.hint': '100% — заказ не уходит в производство до полной оплаты.',
   'settings.field.finance.invoice_payment': 'Оплата по счёту для юрлиц',
@@ -3011,9 +3021,14 @@ export const en: Messages = {
   'settings.field.finance.prices_include_tax.hint': 'Changes how the estimate is laid out, not the total.',
   'settings.field.finance.rounding_step': 'Total rounding',
   'settings.field.finance.payment_provider': 'Provider',
+  'settings.field.finance.payment_provider.hint':
+    'Not in effect yet: the provider comes from PRINTORIAN_PAYMENT_PROVIDER (RUNBOOK-PAYMENTS).',
   'settings.field.finance.yookassa_shop_id': 'Shop id',
+  'settings.field.finance.yookassa_shop_id.hint':
+    'Not in effect yet: taken from PRINTORIAN_YOOKASSA_SHOP_ID.',
   'settings.field.finance.yookassa_secret_key': 'Secret key',
-  'settings.field.finance.yookassa_secret_key.hint': 'Stored encrypted. The value can never be shown back — only replaced.',
+  'settings.field.finance.yookassa_secret_key.hint':
+    'Not in effect yet: taken from PRINTORIAN_YOOKASSA_SECRET_KEY. Stored here encrypted, never shown back.',
   'settings.field.finance.prepayment_percent': 'Prepayment',
   'settings.field.finance.prepayment_percent.hint': '100% — an order does not enter production until fully paid.',
   'settings.field.finance.invoice_payment': 'Invoice payment for companies',

@@ -369,6 +369,13 @@ to a different owner than this branch. They are listed in §5 for filing.
 * ~~**Malformed webhook bodies are 500s**~~ — closed, F16.
 * **The console's `finance.payment_provider` settings are dead** — only the
   environment is read, and `tbank` is declared but unknown to `build_provider`.
+  **Labelled, 2026-10-14:** each of the three fields' hints now says it is not in
+  effect and names the environment variable that is, so an owner who saves a
+  key there is not told by «было · стало» that the farm now takes money through
+  it. Wiring them is the catalogue's later read-edge stage and a choice about
+  where a payment credential lives (environment, settings table, or both with
+  an order of precedence) — one source of truth, decided once, not two that can
+  disagree about which shop the money goes to.
 * ~~**`payment_notifications.payment_id` is never populated**~~ — closed, F17.
 * **Plate upload validates after `storage.put`** and answers 422 rather than 413
   for an oversize part; staff-only.
