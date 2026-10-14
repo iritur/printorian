@@ -83,7 +83,12 @@ class MockPaymentProvider:
         raise PaymentProviderError("error.payments.not_found_upstream", payment=provider_payment_id)
 
     async def refund(
-        self, provider_payment_id: str, amount: Decimal, *, idempotency_key: str
+        self,
+        provider_payment_id: str,
+        amount: Decimal,
+        *,
+        currency: str,
+        idempotency_key: str,
     ) -> ProviderRefund:
         record = self._record_for(provider_payment_id)
         record.refunded += amount
@@ -110,7 +115,7 @@ class MockPaymentProvider:
 
     # -- test helpers ----------------------------------------------------
 
-    def customer_pays(self, provider_payment_id: str) -> None:
+    def customer_pays(self, provider_payment_id: str, *, currency: str | None = None) -> None:
         """Simulate the customer completing payment at the gateway.
 
         This mutates the *upstream* record, which is what makes the mock faithful:
@@ -122,6 +127,24 @@ class MockPaymentProvider:
         record.payment = ProviderPayment(
             provider_payment_id=record.payment.provider_payment_id,
             status=PaymentStatus.SUCCEEDED,
+            amount=record.payment.amount,
+            # Overridable so a test can have the gateway capture in a currency the
+            # order was not priced in — the case `reconcile_currency` refuses.
+            currency=currency or record.payment.currency,
+            confirmation_url=record.payment.confirmation_url,
+            raw=record.payment.raw,
+        )
+
+    def gateway_cancels(self, provider_payment_id: str) -> None:
+        """Simulate the gateway giving up on a payment nobody completed.
+
+        YooKassa cancels an unpaid payment after its confirmation window; the
+        record upstream says so, and the service must come to believe it.
+        """
+        record = self._record_for(provider_payment_id)
+        record.payment = ProviderPayment(
+            provider_payment_id=record.payment.provider_payment_id,
+            status=PaymentStatus.CANCELLED,
             amount=record.payment.amount,
             currency=record.payment.currency,
             confirmation_url=record.payment.confirmation_url,

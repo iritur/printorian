@@ -7,6 +7,37 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
+## 2026-10-14 — the security review's recorded list, worked down
+
+**As of:** 2026-10-14 · branched from `main` at `3b40583` (#129). Each pull request
+below names its own gates and tests; this section is what the next person needs
+that the pull requests do not say.
+
+**Payments: five of the second pass's recorded gaps closed (F13–F17 in
+`docs/SECURITY-REVIEW.md`).** A payment the gateway cancelled is now recorded —
+by notification, or by asking the gateway when the customer reopens checkout — so
+`start` registers a fresh one instead of handing back a dead confirmation page;
+asking also settles a payment whose success notification was lost. Two concurrent
+starts make one payment: migration `0031_one_live_payment_per_order` adds a partial
+unique index on the order's live payment, and the loser of a double click hits it
+before the gateway is called. Currency is reconciled on settlement, and
+`PaymentProvider.refund` takes `currency` as a required keyword, so no adapter can
+default it. Malformed webhook bodies are a coded refusal rather than a 500, and
+every notification row is linked to its payment. Each test was checked by
+reverting its fix and watching it fail. Refunding moved to
+`payments/refunding.py` as a mixin, because `service.py` passed the 400-line gate.
+**Not done, and why:** money arriving for an order the farm already cancelled is
+still accepted silently. Refund it, reinstate the order, or hold it for a person
+is the owner's call, and §5(d) of the review says so.
+
+**Two traps from this session.** After a dependency pull request merges, the
+local virtualenv is stale until it is reinstalled the way CI does it —
+`pip install -e ".[dev]" -c constraints.txt` — and the symptom is two dozen mypy
+errors in files nobody touched (SQLAlchemy 2.1's variadic `Select`). And Docker
+Desktop does not start with the machine: `docker compose` fails with "cannot find
+the file specified" on the engine pipe until it is launched, and Postgres answers
+"the database system is starting up" for about fifteen seconds after that.
+
 ## 2026-10-06 (later) — code scanning: four alerts fixed, one left for a person to dismiss
 
 **As of:** 2026-10-06 · on `claude/trusting-brown-hfc1pu`, `main` at

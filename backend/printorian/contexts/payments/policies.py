@@ -94,6 +94,27 @@ def reconcile(expected: Decimal, captured: Decimal) -> None:
         )
 
 
+def reconcile_currency(expected: str, captured: str) -> None:
+    """Refuse a settlement in a currency the order was not priced in.
+
+    The amount check above compares numbers, and `1 500.00` is the same number in
+    roubles and in tenge. A gateway that captured in the wrong currency has not
+    collected what was owed, whatever the digits say.
+    """
+    if expected.upper() != captured.upper():
+        raise DomainRuleViolationError(
+            "error.payments.currency_mismatch", expected=expected, captured=captured
+        )
+
+
+#: What a gateway can say about a payment that will never be paid. Recorded,
+#: so the order can be paid again through a fresh payment rather than being
+#: handed the dead one for ever.
+GATEWAY_CLOSED: frozenset[PaymentStatus] = frozenset(
+    {PaymentStatus.CANCELLED, PaymentStatus.FAILED}
+)
+
+
 def assert_refundable(*, settled: Decimal, already_refunded: Decimal, amount: Decimal) -> None:
     """A refund may never exceed what is still held."""
     if amount <= 0:
