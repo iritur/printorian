@@ -17,6 +17,7 @@ from printorian.api.deps import (
     session_token,
     throttle_key,
 )
+from printorian.api.session_cookie import cookie_is_secure
 from printorian.contexts.identity import Actor, CreateUser, Role, SessionGranted, SignIn, UserView
 from printorian.core.errors import UnauthenticatedError
 
@@ -105,7 +106,7 @@ async def sign_in(
         granted.token,
         httponly=True,
         samesite="lax",
-        secure=request.url.scheme == "https",
+        secure=cookie_is_secure(request),
         expires=granted.expires_at,
     )
     return granted
@@ -116,7 +117,7 @@ async def sign_out(request: Request, response: Response, identity: Identity) -> 
     token = session_token(request)
     if token:
         await identity.sign_out(token)
-    response.delete_cookie(SESSION_COOKIE)
+    response.delete_cookie(SESSION_COOKIE, secure=cookie_is_secure(request))
 
 
 @router.get("/me")
