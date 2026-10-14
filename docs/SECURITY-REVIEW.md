@@ -377,10 +377,16 @@ to a different owner than this branch. They are listed in §5 for filing.
   an order of precedence) — one source of truth, decided once, not two that can
   disagree about which shop the money goes to.
 * ~~**`payment_notifications.payment_id` is never populated**~~ — closed, F17.
-* **Plate upload validates after `storage.put`** and answers 422 rather than 413
-  for an oversize part; staff-only.
-* **`CreateOrderLine.model_asset_id` is accepted and dropped**, with no ownership
-  check anywhere on it — latent, and the day it is wired through it is an IDOR.
+* ~~**Plate upload validates after `storage.put`** and answers 422 rather than 413
+  for an oversize part~~ — closed, F22.
+* **`DraftLine.model_asset_id` is accepted and dropped**, with no ownership check
+  anywhere on it — latent, and the day it is wired through it is an IDOR. **Left,
+  deliberately.** HANDOFF already records that writing it through is a person's
+  decision, because it switches the unattended plate path on for real orders; and
+  the ownership rule cannot be written before that decision either, since a
+  catalogue order would name an asset the customer did not upload. Whoever wires
+  it must compare `ModelAsset.uploaded_by` to the caller, or check that the asset
+  backs a published catalogue model, in the same change.
 
 ### Closed after the second pass — 2026-10-14
 
@@ -470,6 +476,18 @@ as `{token}` on every log line that names a path. `POST /journal/subscribe`
 takes the `auth` bucket's per-address ceiling. Proved by
 `test_web_hygiene.py::test_the_unsubscribe_token_is_redacted_and_nothing_else_is`
 and `test_guards_api.py::test_subscribing_to_the_journal_has_a_ceiling`.
+
+**F22 — a plate the record would refuse is refused before it is stored.** The
+`?copies=0` fix had moved one bound ahead of `storage.put` and left the rest of
+`RecordPlate` behind it, so a filename past 300 characters, or an empty
+`printer_profile`, still failed after the write as a bare pydantic error — an
+uncoded 500 and an object no row would ever reference. The record is now built
+first, its failure translated to `error.catalog.plate_invalid` naming the
+fields, and only the three storage fields are filled in after the write. An
+oversize part is `413` with the limit, as on the other upload routes. Proved by
+`tests/api/test_prep_round_trip.py::test_a_plate_the_record_would_refuse_is_refused_before_anything_is_stored`,
+which asserts the object store is empty and fails when the write is moved back
+ahead of the record.
 
 ---
 

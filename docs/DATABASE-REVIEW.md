@@ -12,12 +12,12 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **57 tables** across fifteen contexts, built
-by thirty-three Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **58 tables** across fifteen contexts, built
+by thirty-four Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
-| `identity` | `users`, `sessions` |
+| `identity` | `users`, `sessions`, `api_keys` |
 | `account` | `addresses`, `notification_prefs` |
 | `inventory` | `material_specs`, `material_lots`, `storage_zones`, `storage_cells`, `material_movements`, `stocktakes`, `stocktake_lines` |
 | `ordering` | `orders`, `order_lines`, `order_events`, `rate_snapshots`, `sla_credit_entries` |

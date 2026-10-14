@@ -3,7 +3,9 @@
 Public interface. Other contexts and the API import from here and nowhere deeper.
 """
 
+from printorian.contexts.identity.api_keys import KEY_PREFIX, ApiKeyService, is_api_key
 from printorian.contexts.identity.policies import (
+    KEY_PERMISSIONS,
     PERMISSIONS,
     STAFF_ROLES,
     CustomerKind,
@@ -20,8 +22,11 @@ from printorian.contexts.identity.reserved import (
 )
 from printorian.contexts.identity.schemas import (
     Actor,
+    ApiKeyView,
     ChangePassword,
+    CreateApiKey,
     CreateUser,
+    IssuedApiKey,
     SessionGranted,
     SessionView,
     SignIn,
@@ -36,16 +41,22 @@ from printorian.contexts.identity.service import (
 )
 
 __all__ = [
+    "KEY_PERMISSIONS",
+    "KEY_PREFIX",
     "MIN_PASSWORD_LENGTH",
     "PERMISSIONS",
     "RESERVED_SUFFIXES",
     "SEEN_GRANULARITY",
     "STAFF_ROLES",
     "Actor",
+    "ApiKeyService",
+    "ApiKeyView",
     "ChangePassword",
+    "CreateApiKey",
     "CreateUser",
     "CustomerKind",
     "IdentityService",
+    "IssuedApiKey",
     "Permission",
     "Role",
     "SessionGranted",
@@ -55,6 +66,7 @@ __all__ = [
     "UserView",
     "actor_of",
     "can",
+    "is_api_key",
     "is_staff",
     "permissions_for",
     "refusal_message",
