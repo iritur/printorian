@@ -13,7 +13,7 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 ## 1. Shape
 
 One PostgreSQL database (ADR-0001, D1). **59 tables** across fifteen contexts, built
-by thirty-five Alembic migrations on a single linear head.
+by thirty-six Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
@@ -516,8 +516,10 @@ irreversible, so the guard is not the call order but a clamp: the cutoff is
 has actually reached. Summarising that stalls stops the dropping with it, and a farm
 that has never summarised an hour drops nothing.
 
-**Off-site backup sync has a recipe but no committed job** — the destination and its
-credentials are farm-specific.
+**Off-site backup sync is committed but has no destination** — `deploy/offsite.sh`
+and `printorian-offsite.timer` copy the blobs and then the backups to a restic
+repository, tested in CI against a local one; the destination, its credentials
+and the password's escrow are farm-specific and a person's to choose.
 
 **Rate limits and the sign-in lockout are in-process** (`core/ratelimit.py`). The
 deployment is one API process (ADR-0003), so a Redis-backed counter would buy
@@ -552,7 +554,7 @@ The remainder of the schema to build, by phase:
 | _trigger_ | Partition `assignment_records` | [#44](https://github.com/iritur/printorian/issues/44) |
 | _trigger_ | Paginate the fleet and materials listings | [#45](https://github.com/iritur/printorian/issues/45) |
 | _trigger_ | Evaluate TimescaleDB or telemetry on its own instance | [#46](https://github.com/iritur/printorian/issues/46) |
-| _trigger_ | Commit the off-site sync job | [#16](https://github.com/iritur/printorian/issues/16) |
+| _trigger_ | Choose the off-site destination and drill a restore from it | [#16](https://github.com/iritur/printorian/issues/16) |
 
 Done since the original review: `metric_rollups` with retention enabled, `addresses` and `notification_prefs`, `catalog_models`, `journal_posts`, the enum CHECK constraints ([#43](https://github.com/iritur/printorian/issues/43)), and the delete rules of §3 ([#47](https://github.com/iritur/printorian/issues/47)).
 

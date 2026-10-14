@@ -87,14 +87,51 @@ farm — replace it with a bind mount onto the backup disk there.
 
 Local-only backups on a single on-prem box are one fire from total loss.
 
-```bash
-restic -r <remote> backup /backup/dumps /backup/base /backup/wal
-```
+`printorian-offsite.timer` runs `deploy/offsite.sh` nightly at 05:00, in the
+pinned restic image: the blob store first, then `/mnt/backup`'s dumps, base
+backups and WAL, then `forget --prune` and a structural `check`. Blobs first
+because ADR-0019 says so — a database restored from a snapshot taken after the
+blobs can only name blobs that snapshot holds. A run that completes leaves an
+`offsite` row in `maintenance_runs` (§5).
 
 **Encrypt before it leaves.** The dump contains every `password_hash` and every
-`printers.access_code_encrypted`. `restic` encrypts by default; `rclone` needs
-`crypt` configured. Store that repository password somewhere other than the farm —
-see §6.
+`printers.access_code_encrypted`. `restic` encrypts by default, with the
+repository password. Store that password somewhere other than the farm — see §6;
+a repository whose password burned with the farm is noise.
+
+**Setting it up, once per farm** — the person's part, because the destination
+and its keys are:
+
+1. Choose the destination (RU object storage per INFRASTRUCTURE §4) and create a
+   bucket and an access key that can write to it.
+2. Put restic's variables in `deploy/offsite.env` — rendered from the SOPS store
+   in Stage 2, never typed into a shell and never committed (`.gitignore` has it):
+
+   ```
+   RESTIC_REPOSITORY=s3:https://<endpoint>/<bucket>/printorian
+   RESTIC_PASSWORD=<generated, and escrowed off the farm the same day>
+   AWS_ACCESS_KEY_ID=<key>
+   AWS_SECRET_ACCESS_KEY=<secret>
+   ```
+
+3. Initialise the repository. The script refuses to — a script that initialises
+   on demand turns a mistyped bucket name into a fresh, empty repository it then
+   reports success into:
+
+   ```bash
+   docker run --rm --env-file deploy/offsite.env restic/restic:0.18.0 init
+   ```
+
+4. `sudo systemctl enable --now printorian-offsite.timer`, then
+   `sudo systemctl start printorian-offsite.service` once and read
+   `journalctl -u printorian-offsite`.
+5. Drill a restore **from the off-site copy** (§5) the same week. Until that has
+   been done once, the copy is a hypothesis.
+
+The script refuses, before writing anything, when the repository cannot be
+opened, when the blob store or the backup disk is not mounted, or when there is
+no dump to copy — a backup disk that failed to mount looks exactly like an empty
+one, and a successful off-site copy of nothing is the worst kind of green.
 
 ---
 
@@ -231,13 +268,37 @@ no sample at all. The rules are `BackupStale` and `RestoreDrillStale` in
 `deploy/observability/rules/printorian.yml`. **On a new farm, run the drill once
 by hand the day it is installed**: otherwise there is no drill stamp until the
 first Sunday, and `RestoreDrillStale` pages every day of that week for a fact
-nobody can change. Recording the stamp is non-fatal in both jobs; a run that logs
+nobody can change. The off-site copy stamps the same table as `offsite`, and
+`OffsiteCopyStale` is a *digest* at 26 hours rather than a page: nothing on the
+farm is broken while it fires, but every copy of the farm is on one machine.
+Recording the stamp is non-fatal in all three jobs; a run that logs
 "recording it failed" did its real work, and the stale stamp is what will say so.
 To see the history directly:
 
 ```bash
 docker exec printorian-postgres psql -U printorian -d printorian   -c "select kind, finished_at, detail from maintenance_runs order by finished_at desc limit 10;"
 ```
+
+**The off-site drill.** The weekly drill restores from `/mnt/backup`, which
+proves the dump and not the copy. To prove the copy, restore the newest
+`database` snapshot from the repository into a scratch directory and drill the
+dump that comes back:
+
+```bash
+docker run --rm --env-file deploy/offsite.env -v /tmp/offsite-restore:/restore \
+  restic/restic:0.18.0 restore latest --tag database --target /restore
+docker run --rm --env-file deploy/offsite.env -v /tmp/offsite-restore:/restore \
+  restic/restic:0.18.0 restore latest --tag blobs --target /restore
+docker compose -f deploy/compose.prod.yml run --rm -v /tmp/offsite-restore:/offsite:ro api \
+  sh -c 'python -m scripts.restore_drill "$(ls -t /offsite/data/backup/dumps/*.dump | head -1)"'
+```
+
+Then compare the restored `data/blobs` with the live store — a count is enough
+to catch the failure the unit's comment names, a wrong volume name that mounted
+an empty store and copied nothing. For point-in-time recovery from the off-site
+WAL, set `recovery_target_time` no later than the `blobs` snapshot's time
+(`restic snapshots --tag blobs`): WAL copied after the blobs can describe rows
+whose files that snapshot does not hold.
 
 ---
 
@@ -311,8 +372,10 @@ has to be able to absorb that rather than treat it as an impossible transition.
   A farm left unscheduled fills its backup disk and then stops archiving, which is
   the state in which the backup guarantee silently stops holding.
 
-- **Automated off-site sync.** The recipe is in §2; the destination and its
-  credentials are farm-specific and not committed here.
+- **An off-site destination.** The job is committed and tested (§2, Off-site);
+  the destination, its credentials and the password's escrow are farm-specific,
+  and until a person chooses them nothing leaves the farm. `OffsiteCopyStale`
+  says so in every daily digest.
 - **Telemetry rollups.** `telemetry_retention_days` defaults to `0` — retention is
   *off* — because dropping a partition is irreversible and, until rollups exist
   (Slice G), the raw samples are the only copy of what the farm measured. Turn

@@ -1,0 +1,57 @@
+# Copy the blob store and the backups off the farm (ADR-0019 §3, issue #16).
+#
+# See `deploy/offsite.sh` for what is copied, in which order and why. This unit
+# supplies the mounts, the credentials and the stamp.
+
+[Unit]
+Description=Printorian off-site copy
+Documentation=https://github.com/iritur/printorian/blob/main/docs/RUNBOOK-BACKUP-RESTORE.md
+Requires=printorian.service
+After=printorian.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/printorian/repo
+
+# In the pinned restic image rather than a host install, for the reason the
+# backup runs in the postgres image: the version that was tested is the version
+# that runs, and the farm host needs nothing installed for it.
+#
+# * `deploy/offsite.env` carries only restic's variables — the repository, its
+#   password, the bucket's keys — rendered from the SOPS store (Stage 2) and
+#   never committed. Not the farm's `.env`: this container has no business
+#   holding the database password or `PRINTORIAN_SECRET_KEY`.
+# * Both sources read-only. This job copies; nothing it does may alter a backup.
+# * `printorian_storage` is the compose project's blob volume. A wrong name here
+#   would mount a fresh, empty volume, and the copy would succeed with no blobs
+#   in it — the off-site drill (RUNBOOK §5) is what catches that.
+# * A named volume for restic's cache, so each night does not download the whole
+#   repository index again from object storage that charges for the reads.
+ExecStart=/usr/bin/docker run --rm --name printorian-offsite \
+    --env-file deploy/offsite.env \
+    -v printorian_storage:/data/blobs:ro \
+    -v /mnt/backup:/data/backup:ro \
+    -v printorian_restic_cache:/root/.cache/restic \
+    -v /srv/printorian/repo/deploy/offsite.sh:/offsite.sh:ro \
+    --entrypoint /bin/sh \
+    restic/restic:0.18.0@sha256:4cf4a61ef9786f4de53e9de8c8f5c040f33830eb0a10bf3d614410ee2fcb6120 \
+    /offsite.sh
+
+# The stamp `GET /metrics` serves as printorian_offsite_last_success_timestamp.
+# `ExecStartPost` runs only when `ExecStart` succeeded, so a row exists only for a
+# copy that completed — the same rule as the backup's and the drill's stamps.
+# Here, not in the script: the restic image has no `psql`, and the postgres
+# container has one that already matches the server.
+#
+# The leading `-` makes its own failure non-fatal, as in `backup.sh`: the copy is
+# good at this point, and the stamp going stale is what sends a person to look.
+ExecStartPost=-/usr/bin/docker compose -f deploy/compose.prod.yml exec -T postgres \
+    psql --username=printorian --dbname=printorian --no-psqlrc --quiet \
+    --set ON_ERROR_STOP=1 \
+    --command="INSERT INTO maintenance_runs (kind, detail) VALUES ('offsite', 'restic')"
+
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

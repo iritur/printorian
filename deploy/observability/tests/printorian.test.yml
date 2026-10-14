@@ -49,6 +49,8 @@ tests:
         values: '0x288 86400x71'
       - series: 'printorian_restore_drill_last_success_timestamp'
         values: '0x360'
+      - series: 'printorian_offsite_last_success_timestamp'
+        values: '7200x312 93600x47'
       - series: 'printorian_wal_archive_failures_total'
         values: '7x360'
       - series: 'printorian_telemetry_partition_months_ahead'
@@ -79,6 +81,7 @@ tests:
       - {eval_time: 30h, alertname: EstimateVarianceOutsideBand, exp_alerts: []}
       - {eval_time: 30h, alertname: BackupStale, exp_alerts: []}
       - {eval_time: 30h, alertname: RestoreDrillStale, exp_alerts: []}
+      - {eval_time: 30h, alertname: OffsiteCopyStale, exp_alerts: []}
       - {eval_time: 30h, alertname: WalArchiveFailing, exp_alerts: []}
       - {eval_time: 30h, alertname: TelemetryPartitionsRunningOut, exp_alerts: []}
       - {eval_time: 30h, alertname: PaymentNotSettled, exp_alerts: []}
@@ -123,6 +126,7 @@ tests:
       - {eval_time: 25m, alertname: PrintorianDatabaseUnreadable, exp_alerts: []}
       - {eval_time: 25m, alertname: BackupStale, exp_alerts: []}
       - {eval_time: 25m, alertname: RestoreDrillStale, exp_alerts: []}
+      - {eval_time: 25m, alertname: OffsiteCopyStale, exp_alerts: []}
       - {eval_time: 25m, alertname: PrinterOffline, exp_alerts: []}
 
   # The API answers but the database does not: the printer readings (Redis) go
@@ -156,6 +160,7 @@ tests:
       - {eval_time: 25m, alertname: PrintorianApiDown, exp_alerts: []}
       - {eval_time: 25m, alertname: BackupStale, exp_alerts: []}
       - {eval_time: 25m, alertname: RestoreDrillStale, exp_alerts: []}
+      - {eval_time: 25m, alertname: OffsiteCopyStale, exp_alerts: []}
       - {eval_time: 25m, alertname: PrintorianJobStuck, exp_alerts: []}
       - {eval_time: 25m, alertname: PrinterOffline, exp_alerts: []}
 
@@ -329,6 +334,47 @@ tests:
                 `journalctl -u printorian-drill`.
               runbook: docs/RUNBOOK-BACKUP-RESTORE.md
       - {eval_time: 171h, alertname: BackupStale, exp_alerts: []}
+
+  # The local backup keeps succeeding; only the copy off the farm stops. One
+  # digest, and the backup alert stays quiet — they are different failures.
+  - name: an off-site copy that stops is a digest after 26 hours
+    interval: 1h
+    input_series:
+      - series: 'printorian_orders_awaiting_prep'
+        values: '3x30'
+      - series: 'printorian_backup_last_success_timestamp'
+        values: '0+3600x30'
+      - series: 'printorian_offsite_last_success_timestamp'
+        values: '0x30'
+    alert_rule_test:
+      - {eval_time: 25h, alertname: OffsiteCopyStale, exp_alerts: []}
+      - eval_time: 27h
+        alertname: OffsiteCopyStale
+        exp_alerts:
+          - exp_labels:
+              severity: digest
+            exp_annotations: &offsite_stale
+              summary: Nothing has been copied off the farm in the last 26 hours.
+              description: >-
+                `printorian-offsite.service` stamps `maintenance_runs` only when the
+                restic copy completes. Every copy of the farm's data is on one machine
+                until it does. Its journal is `journalctl -u printorian-offsite`.
+              runbook: docs/RUNBOOK-BACKUP-RESTORE.md
+      - {eval_time: 27h, alertname: BackupStale, exp_alerts: []}
+
+  # The farm as it is on the day the off-site destination is still undecided.
+  - name: a farm that has never copied anything off-site says so
+    interval: 1m
+    input_series:
+      - series: 'printorian_orders_awaiting_prep'
+        values: '3x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: OffsiteCopyStale
+        exp_alerts:
+          - exp_labels:
+              severity: digest
+            exp_annotations: *offsite_stale
 
   # Seven old failures sit in the counter throughout; the archiver starts
   # failing at minute 10 and is fixed at minute 20.

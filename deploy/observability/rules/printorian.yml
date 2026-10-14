@@ -194,6 +194,29 @@ groups:
             `journalctl -u printorian-drill`.
           runbook: docs/RUNBOOK-BACKUP-RESTORE.md
 
+      # The copy that survives the farm (ADR-0019 §3, `deploy/offsite.sh`).
+      # Nightly at 05:00, so the backup's 26 hours for the same reason. A digest,
+      # not a page: a stale off-site copy is a risk that grows by the day, not an
+      # outage — nothing on the farm is broken while it fires, and the response
+      # is "look at it today", which is what the digest is for. It is fenced like
+      # the backup, so an unreadable database is reported once, as itself.
+      - alert: OffsiteCopyStale
+        expr: >-
+          (
+            absent(printorian_offsite_last_success_timestamp)
+            or (time() - printorian_offsite_last_success_timestamp) > 26 * 3600
+          )
+          and on() printorian_orders_awaiting_prep
+        labels:
+          severity: digest
+        annotations:
+          summary: Nothing has been copied off the farm in the last 26 hours.
+          description: >-
+            `printorian-offsite.service` stamps `maintenance_runs` only when the
+            restic copy completes. Every copy of the farm's data is on one machine
+            until it does. Its journal is `journalctl -u printorian-offsite`.
+          runbook: docs/RUNBOOK-BACKUP-RESTORE.md
+
       # `pg_stat_archiver.failed_count` is cumulative since the statistics were
       # reset, so "greater than zero" would page for ever about one failure in
       # March. The *increase* is the failure happening now — and the archiver

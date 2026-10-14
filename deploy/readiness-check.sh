@@ -340,7 +340,7 @@ fi
 section "9. Not required for first boot (informational)"
 
 info "cosign      — image signature verification on the farm (INFRASTRUCTURE Stage 4, the deploy loop)"
-info "restic      — encrypted off-site backup sync (recipe in RUNBOOK-BACKUP-RESTORE §2)"
+info "offsite     — printorian-offsite.timer, once a destination exists (RUNBOOK-BACKUP-RESTORE §2; restic runs in its image)"
 info "wireguard   — the farm-dials-out tunnel to the edge VPS (Stage 3; the storefront is rehearsal-only until then)"
 info "nut (UPS)   — clean shutdown before the battery dies (INFRASTRUCTURE §5, power control loop)"
 info "node_exporter / postgres_exporter / victoriametrics / grafana / loki — observability (Stage 5)"
