@@ -164,6 +164,27 @@ def test_an_anonymous_client_never_gets_a_socket(app_client: TestClient) -> None
         pass
 
 
+def test_a_page_on_another_site_cannot_open_the_stream(app_client: TestClient) -> None:
+    """Cross-site WebSocket hijacking: a browser attaches the cookie whatever page
+    started the handshake. Refused even with a valid credential (#27)."""
+    token = sign_in(app_client, "op@example.com")
+    with (
+        pytest.raises(Exception),  # noqa: B017
+        app_client.websocket_connect(
+            "/ws/events",
+            headers={"Authorization": f"Bearer {token}", "Origin": "https://evil.example"},
+        ),
+    ):
+        pass
+
+    # The same credential from this API's own origin still gets its socket.
+    with app_client.websocket_connect(
+        "/ws/events",
+        headers={"Authorization": f"Bearer {token}", "Origin": "http://testserver"},
+    ):
+        pass
+
+
 def test_identity_events_are_not_broadcast() -> None:
     """Account activity has no business on a floor display."""
     assert not any(pattern.startswith("identity") for pattern in LIVE_PATTERNS)

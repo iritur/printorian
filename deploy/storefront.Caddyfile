@@ -36,6 +36,19 @@
 	# `frontend/apps/web/vite.config.ts`. Development, this, and the edge
 	# disagreeing about the prefix is a class of bug that only appears after a
 	# deploy, so all three are kept the same deliberately.
+	# The two probes that describe the farm are not the public's business.
+	# `/health/workers` names every printer and its driver state, `/metrics`
+	# their ids and brands, and both answer without a session because the
+	# monitoring that reads them is on the LAN (`api/routers/health.py` says the
+	# edge must not forward them). The real edge will inherit this file, so it
+	# is closed here rather than remembered there (security review, #27).
+	# A `handle`, which Caddy orders before `handle_path`, so these never reach
+	# the proxy below.
+	@farm_probes path /api/health /api/health/* /api/metrics /api/metrics/*
+	handle @farm_probes {
+		respond 404
+	}
+
 	handle_path /api/* {
 		# No `trusted_proxies`, deliberately. Caddy's default is to ignore an
 		# incoming `X-Forwarded-For` rather than append to it, so the API sees

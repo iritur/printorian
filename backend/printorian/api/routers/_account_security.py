@@ -23,6 +23,7 @@ from printorian.api.deps import (
     session_token,
     throttle_key,
 )
+from printorian.api.session_cookie import cookie_is_secure
 from printorian.contexts.identity import ChangePassword, SessionView
 from printorian.core.errors import UnauthenticatedError
 from printorian.core.ids import EntityId
@@ -116,4 +117,4 @@ async def change_password(
         )
         raise
     lockout.clear(key)
-    response.delete_cookie(SESSION_COOKIE, secure=request.url.scheme == "https")
+    response.delete_cookie(SESSION_COOKIE, secure=cookie_is_secure(request))

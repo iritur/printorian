@@ -329,3 +329,37 @@ async def test_two_genuinely_different_peers_keep_their_own_allowance(
     )
 
     assert answered.status_code != 429
+
+
+# ------------------------------------------------- the second review's leftovers (#27)
+
+
+async def test_the_session_cookie_is_secure_when_the_proxy_says_https(
+    client: AsyncClient, an_account: None
+) -> None:
+    """Behind Caddy the scheme is always `http`, so the flag was never set anywhere."""
+    credentials = {"email": EMAIL, "password": PASSWORD}
+
+    plain = await client.post("/auth/sign-in", json=credentials)
+    proxied = await client.post(
+        "/auth/sign-in", json=credentials, headers={"X-Forwarded-Proto": "https"}
+    )
+
+    assert plain.status_code == proxied.status_code == 200
+    # The LAN console over plain HTTP must keep working, so no `Secure` there.
+    assert "secure" not in plain.headers["set-cookie"].lower()
+    assert "secure" in proxied.headers["set-cookie"].lower()
+
+
+async def test_subscribing_to_the_journal_has_a_ceiling(
+    client: AsyncClient, strict_settings: Settings
+) -> None:
+    """Public and unauthenticated by design; it had no bound at all."""
+    for index in range(strict_settings.auth_rate_per_minute):
+        accepted = await client.post(
+            "/journal/subscribe", json={"email": f"reader{index}@example.org"}
+        )
+        assert accepted.status_code == 202, accepted.text
+
+    refused = await client.post("/journal/subscribe", json={"email": "one-more@example.org"})
+    assert refused.status_code == 429

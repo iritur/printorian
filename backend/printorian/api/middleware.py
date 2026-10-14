@@ -87,7 +87,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
             logger.exception(
                 "request_failed",
                 method=request.method,
-                path=request.url.path,
+                path=loggable_path(request.url.path),
                 duration_ms=_elapsed_ms(started),
             )
             raise
@@ -104,6 +104,24 @@ def _incoming_id(request: Request) -> str | None:
     return raw if raw.isprintable() else None
 
 
+#: Routes whose path carries a secret, and what each is logged as. The journal's
+#: unsubscribe token *is* the authorisation — RFC 8058's one-click unsubscribe
+#: posts to a URL that carries it, so it cannot move into a body — and the
+#: access line used to write it in full to a log more people can read than can
+#: read the subscriber table (security review, #27).
+_SECRET_PATHS: tuple[tuple[str, str], ...] = (
+    ("/journal/unsubscribe/", "/journal/unsubscribe/{token}"),
+)
+
+
+def loggable_path(path: str) -> str:
+    """The request path as it may appear in a log, secrets replaced."""
+    for prefix, template in _SECRET_PATHS:
+        if path.startswith(prefix):
+            return template
+    return path
+
+
 def _elapsed_ms(started: float) -> float:
     return round((time.perf_counter() - started) * 1000, 2)
 
@@ -115,7 +133,7 @@ def _log_response(request: Request, response: Response, started: float) -> None:
 
     fields = {
         "method": request.method,
-        "path": request.url.path,
+        "path": loggable_path(request.url.path),
         "status": status,
         "duration_ms": _elapsed_ms(started),
     }
@@ -211,7 +229,7 @@ class BodySizeLimitMiddleware:
         ).encode()
         logger.warning(
             "request_body_too_large",
-            path=scope.get("path"),
+            path=loggable_path(str(scope.get("path", ""))),
             size=size,
             limit=self.limit,
         )

@@ -12,7 +12,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from printorian.api.deps import AppClock, AppSettings, Journal, OptionalActor, requires
+from printorian.api.deps import (
+    AppClock,
+    AppSettings,
+    Journal,
+    OptionalActor,
+    rate_limited,
+    requires,
+)
 from printorian.api.routers._journal_feed import feed
 from printorian.contexts.identity import Actor, Permission
 from printorian.contexts.journal import (
@@ -104,7 +111,14 @@ async def rss(journal: Journal, clock: AppClock, settings: AppSettings) -> Respo
     )
 
 
-@router.post("/subscribe", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/subscribe",
+    status_code=status.HTTP_202_ACCEPTED,
+    # The `auth` bucket's per-address ceiling. Public and unauthenticated by
+    # design, and until this nothing bounded it: one script could fill the
+    # subscriber table with every address it could invent (#27).
+    dependencies=[Depends(rate_limited("auth", lambda s: s.auth_rate_per_minute))],
+)
 async def subscribe(data: Subscribe, journal: Journal) -> Subscription:
     """Ask to hear when a report goes out.
 

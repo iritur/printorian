@@ -351,19 +351,15 @@ because the change is which function is called and the cache is what is proved.
 Each of these is real and small, and each is a decision or a change that belongs
 to a different owner than this branch. They are listed in §5 for filing.
 
-* **Websocket handshake has no `Origin` check** (`api/ws.py`). Safe today only
-  because the cookie is `SameSite=Lax`; one attribute away from cross-site
-  hijacking of the production stream.
-* **Session cookie is never `Secure`** — `request.url.scheme` is always `http`
-  behind Caddy because uvicorn is not told which proxy to trust. Harmless on a
-  plain-HTTP LAN; wrong the day the edge terminates TLS.
+* ~~**Websocket handshake has no `Origin` check**~~ — closed, F18.
+* ~~**Session cookie is never `Secure`**~~ — closed, F19.
 * **Registration enumerates accounts** (409 with the address, and no hashing on
-  conflict). Bounded to the `auth` ceiling. No clean fix without outbound mail.
-* **`/health/workers` and `/metrics` describe the fleet to an anonymous caller**,
-  and the storefront rehearsal Caddyfile forwards all of `/api/*`. Already owed to
-  Stage 3 (§1 of this document).
-* **Journal unsubscribe token travels in the path**, so it lands in the access
-  log; subscribe is unthrottled.
+  conflict). Bounded to the `auth` ceiling. Accepted, §4 — no clean fix without
+  outbound mail.
+* ~~**`/health/workers` and `/metrics` describe the fleet to an anonymous
+  caller**~~ through the storefront edge — closed, F20.
+* ~~**Journal unsubscribe token travels in the path**, so it lands in the access
+  log; subscribe is unthrottled~~ — closed, F21.
 * ~~**A payment cancelled or expired at the gateway is never recorded**~~ —
   closed, F13 below. **Still open:** a late settlement of an order the farm already
   cancelled is accepted silently. That half is a decision, not a fix — refund it
@@ -430,6 +426,44 @@ reconciliation join has rows. Proved by
 `payments/refunding.py` as a mixin — the one job in the service that only ever
 sends money out, in the `settings.resolvers` shape.
 
+The four web-facing items were closed the same day, with the pure rules in
+`backend/tests/unit/test_web_hygiene.py` and the edge halves named below. Each
+edge test was checked by reverting its fix.
+
+**F18 — a WebSocket handshake from another site is refused.** A browser
+attaches cookies to a WebSocket handshake whatever page starts it, and the
+same-origin policy does not apply to WebSockets, so `SameSite=Lax` was the only
+thing between any web page and the live production stream. `ws.origin_allowed`
+now refuses (close `4403`, before the credential is read) any `Origin` that is
+not this host, not in `PRINTORIAN_CORS_ORIGINS`, and — outside production only —
+not loopback, because the Vite dev proxy rewrites `Host` and not `Origin`. No
+`Origin` at all is not a browser and still has to authenticate. Proved by
+`tests/api/test_events_ws.py::test_a_page_on_another_site_cannot_open_the_stream`,
+which also asserts the same credential from the API's own origin is accepted.
+
+**F19 — the session cookie is `Secure` whenever the browser used HTTPS.**
+`api/session_cookie.py` reads `X-Forwarded-Proto`, which both Caddyfiles set and
+nothing else can reach the API to forge; a forged one could only mark the
+forger's own cookie. Sign-out and the password change delete the cookie with
+the same flag, because a browser refuses to let a non-`Secure` delete overwrite
+a `Secure` cookie. The plain-HTTP LAN console is unchanged. Proved by
+`tests/api/test_guards_api.py::test_the_session_cookie_is_secure_when_the_proxy_says_https`.
+
+**F20 — the storefront edge does not forward the farm's probes.**
+`deploy/storefront.Caddyfile` answers `/api/health*` and `/api/metrics*` with
+`404` in a `handle` that Caddy orders before the `/api/*` proxy. Not testable
+in the suite; proved by `caddy validate` and `caddy adapt` in the pinned
+`caddy:2` image the storefront is built from, whose route list puts the
+probe match and its `static_response` 404 ahead of the `reverse_proxy`.
+
+**F21 — the unsubscribe token stays out of the log, and subscribing has a
+ceiling.** RFC 8058's one-click unsubscribe posts to a URL that carries the
+token, so the token stays in the path and `middleware.loggable_path` writes it
+as `{token}` on every log line that names a path. `POST /journal/subscribe`
+takes the `auth` bucket's per-address ceiling. Proved by
+`test_web_hygiene.py::test_the_unsubscribe_token_is_redacted_and_nothing_else_is`
+and `test_guards_api.py::test_subscribing_to_the_journal_has_a_ceiling`.
+
 ---
 
 ## 3. Defences confirmed sound
@@ -481,6 +515,13 @@ identical to a plain permission failure, deliberately
 accepted behaviour for both routers rather than as two findings.
 
 ---
+
+**Registration says whether an address has an account.** `POST /auth/register`
+answers `409 email_taken` and skips the password hash on a conflict, so both the
+status and the timing differ. The honest fix is to answer every registration
+the same way and tell the address's owner by mail, and the farm sends no mail
+yet. Bounded by the `auth` ceiling meanwhile; recorded here rather than left as
+a finding nobody owns, and to be revisited when outbound mail exists.
 
 ## 5. Decisions this review will not make
 

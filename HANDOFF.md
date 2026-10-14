@@ -30,13 +30,29 @@ reverting its fix and watching it fail. Refunding moved to
 still accepted silently. Refund it, reinstate the order, or hold it for a person
 is the owner's call, and §5(d) of the review says so.
 
-**Two traps from this session.** After a dependency pull request merges, the
+**The web-facing items closed too (F18–F21).** WebSocket handshakes from
+another site are refused before the cookie is read — loopback origins pass
+outside production only, because the Vite proxy rewrites `Host` and not
+`Origin`, so a dev console that loses its live stream after a config change
+should look there first. The session cookie is `Secure` when
+`X-Forwarded-Proto` says `https` (`api/session_cookie.py`); the LAN console
+over plain HTTP is unchanged. The storefront Caddyfile answers `/api/health*`
+and `/api/metrics*` with 404 — checked with `caddy adapt` in the pinned image,
+since nothing in CI validates a Caddyfile. The journal's unsubscribe token is
+logged as `{token}`, and subscribing has the `auth` ceiling. Registration
+enumeration is recorded as accepted in the review's §4 until outbound mail
+exists.
+
+**Three traps from this session.** After a dependency pull request merges, the
 local virtualenv is stale until it is reinstalled the way CI does it —
 `pip install -e ".[dev]" -c constraints.txt` — and the symptom is two dozen mypy
 errors in files nobody touched (SQLAlchemy 2.1's variadic `Select`). And Docker
 Desktop does not start with the machine: `docker compose` fails with "cannot find
 the file specified" on the engine pipe until it is launched, and Postgres answers
 "the database system is starting up" for about fifteen seconds after that.
+And a bare `python -` in a Git Bash command, with no heredoc after it, waits
+on stdin for ever; the tool times out at ten minutes and the rest of the
+command never runs. Write multi-line scripts to a file and run that.
 
 ## 2026-10-06 (later) — code scanning: four alerts fixed, one left for a person to dismiss
 

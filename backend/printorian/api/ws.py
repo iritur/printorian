@@ -23,7 +23,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+from collections.abc import Sequence
 from typing import Any
+from urllib.parse import urlsplit
 
 import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -107,6 +109,18 @@ class Hub:
 @router.websocket("/ws/events")
 async def events_socket(websocket: WebSocket) -> None:
     """Stream live events to an entitled client."""
+    settings = websocket.app.state.settings
+    if not origin_allowed(
+        websocket.headers.get("origin"),
+        host=websocket.headers.get("host", ""),
+        allowed=settings.allowed_origins,
+        allow_loopback=not settings.is_production,
+    ):
+        # Refused before the credential is even read: a page on another site
+        # has no business opening this socket, whoever's cookie it carries.
+        await websocket.close(code=4403)
+        return
+
     actor = await _authenticate(websocket)
     if actor is None:
         # Closed before accepting: an unauthenticated caller never gets a socket.
@@ -140,6 +154,50 @@ async def events_socket(websocket: WebSocket) -> None:
         hub.unsubscribe(queue)
         if reader is not None:
             reader.cancel()
+
+
+#: Hostnames a development proxy reports as the page's origin. Vite's proxy
+#: rewrites `Host` to the API's address (`changeOrigin`) but leaves `Origin` as
+#: the dev server's, so a same-origin page fails the comparison below in
+#: development and only there.
+_LOOPBACK = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def origin_allowed(
+    origin: str | None,
+    *,
+    host: str,
+    allowed: Sequence[str],
+    allow_loopback: bool,
+) -> bool:
+    """Whether a handshake's `Origin` is a page this API serves.
+
+    The cookie is read first in `_credential`, which is right for the storefront
+    and is also exactly what cross-site WebSocket hijacking needs: a browser
+    attaches cookies to a WebSocket handshake whatever page started it, and the
+    same-origin policy does not apply to WebSockets at all. The only thing
+    standing in the way today is the cookie's `SameSite=Lax` — one attribute,
+    in another file (security review, #27).
+
+    * No `Origin` is not a browser — every browser sends one on a WebSocket
+      handshake — so a test client or a script passes, and must still
+      authenticate like anyone else.
+    * Otherwise the origin must be this host (Caddy passes `Host` through
+      untouched, so a same-origin page matches it), an entry in
+      `PRINTORIAN_CORS_ORIGINS`, or — outside production only — a loopback
+      address, for the development proxy described at `_LOOPBACK`.
+    * `null`, which a sandboxed frame or a `file:` page sends, matches none.
+    """
+    if not origin:
+        return True
+    if origin in allowed:
+        return True
+    parsed = urlsplit(origin)
+    if not parsed.scheme or not parsed.netloc:
+        return False
+    if host and parsed.netloc.lower() == host.lower():
+        return True
+    return allow_loopback and parsed.hostname in _LOOPBACK
 
 
 async def _drain(websocket: WebSocket) -> None:
