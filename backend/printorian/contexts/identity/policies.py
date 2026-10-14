@@ -129,6 +129,22 @@ PERMISSIONS: dict[Role, frozenset[Permission]] = {
 STAFF_ROLES: frozenset[Role] = frozenset({Role.OPERATOR, Role.ENGINEER, Role.MANAGER, Role.OWNER})
 
 
+#: What an API key may be granted: reading the farm, never changing it and never
+#: anything scoped to one person. The kit's two examples are a floor screen
+#: (`view_production`) and an accounting export (`view_all_orders`). A key is a
+#: secret pasted into another system, so the question is what a leaked one
+#: costs — and a read-only key costs a disclosure, not a refund, a deleted user
+#: or a re-rated price list. Widen this only with that sentence in mind.
+KEY_PERMISSIONS: frozenset[Permission] = frozenset(
+    {
+        Permission.VIEW_PRODUCTION,
+        Permission.VIEW_ALL_ORDERS,
+        Permission.VIEW_FINANCIALS,
+        Permission.VIEW_AUDIT_LOG,
+    }
+)
+
+
 def permissions_for(role: Role) -> frozenset[Permission]:
     return PERMISSIONS[role]
 

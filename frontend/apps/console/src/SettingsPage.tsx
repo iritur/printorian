@@ -15,6 +15,7 @@ import {
 } from '@printorian/ui'
 
 import { DiagnosticsPanel } from './DiagnosticsPanel'
+import { ApiKeysPanel } from './settings/ApiKeysPanel'
 import { MaintenanceEditor } from './settings/MaintenanceEditor'
 import { OperationsEditor } from './settings/OperationsEditor'
 import type { ZoneRow } from './settings/ZonesEditor'
@@ -580,6 +581,11 @@ export function SettingsPage({ locale }: { locale: Locale }) {
                   reports edits pending in *other* sections, and hiding it on
                   this tab would hide them. */}
               {current === DIAGNOSTICS && <DiagnosticsPanel locale={locale} />}
+
+              {/* Not a stored setting, so not a bucket: keys are rows of their
+                  own with their own routes, and the panel draws itself only
+                  for `manage_users`. */}
+              {current === 'security' && <ApiKeysPanel locale={locale} />}
 
               {current === 'maintenance' && (
                 <>

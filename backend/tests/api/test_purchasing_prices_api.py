@@ -18,7 +18,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from printorian.api.app import create_app
-from printorian.api.deps import get_current_actor
+from printorian.api.deps import get_caller
 from printorian.contexts.identity import Actor, Permission, Role
 from printorian.core.clock import FixedClock
 from printorian.core.config import Settings
@@ -68,7 +68,7 @@ async def client(
 async def test_prices_are_refused_without_view_financials(client: AsyncClient) -> None:
     """403 with a code — never the same body with the figures blanked."""
     app = client.app  # type: ignore[attr-defined]
-    app.dependency_overrides[get_current_actor] = lambda: Actor(
+    app.dependency_overrides[get_caller] = lambda: Actor(
         user_id=new_id(),
         email="buyer@example.com",
         display_name="buyer",
