@@ -219,6 +219,22 @@ incident.
 Run it weekly. A failing drill is an incident in its own right — the farm is
 currently running without a usable backup, whatever the file listing suggests.
 
+**Both jobs leave a stamp when they succeed, and only then.** `backup.sh` ends by
+inserting a `backup` row into `maintenance_runs`, and a passing drill inserts a
+`restore_drill` row into the live database. `GET /metrics` serves the newest of
+each as `printorian_backup_last_success_timestamp` and
+`printorian_restore_drill_last_success_timestamp`. A job that dies before it can
+write anything is exactly the failure that matters, so the alert is on staleness —
+`absent(x) or time() - x > 26h` for the backup, eight days for the drill — and the
+`absent` half is not optional: a farm that has never backed up has no sample at
+all. Recording the stamp is non-fatal in both jobs; a run that logs
+"recording it failed" did its real work, and the stale stamp is what will say so.
+To see the history directly:
+
+```bash
+docker exec printorian-postgres psql -U printorian -d printorian   -c "select kind, finished_at, detail from maintenance_runs order by finished_at desc limit 10;"
+```
+
 ---
 
 ## 6. Secrets, and the half-restore
@@ -270,11 +286,15 @@ has to be able to absorb that rather than treat it as an impossible transition.
 
 ## 9. What is not covered yet
 
-- **Anything that runs these scripts on a schedule.** Both work — `backup.sh` was
+- **The schedule is written, not installed.** Both scripts work — `backup.sh` was
   run end to end on 2026-08-22 and produced a verified dump and a base backup, and
   `restore_drill.py` restored that dump into a scratch database with the schema at
-  head. Nothing invokes either of them, and nothing would notice if a run failed.
-  Stage 2 of `INFRASTRUCTURE.md` is where the systemd timers live.
+  head. `deploy/systemd/printorian-backup.timer` and `printorian-drill.timer` are
+  the units that run them, and installing them on the farm host is a person's step
+  (`deploy/systemd/README.md`). Each success now leaves a stamp `/metrics` serves
+  (§5); what *notices* the stamp going stale is an alert rule, and the
+  VictoriaMetrics/Alertmanager stack that would evaluate it is INFRASTRUCTURE
+  Stage 5 and not built.
 
   **This is a disk-fill risk, not just a missing backup.** `pg_archivecleanup`
   runs *inside* `backup.sh` and nowhere else, so until something schedules it,

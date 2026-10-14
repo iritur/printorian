@@ -1,4 +1,4 @@
-"""The Prometheus scrape — seven of INFRASTRUCTURE §5's ten domain metrics.
+"""The Prometheus scrape — nine of INFRASTRUCTURE §5's ten domain metrics.
 
 Composition only. The mechanics are `core.metrics` (a registry per scrape, a text
 writer, and the rule that a reading nobody took is an *absent* series), and each
@@ -26,11 +26,11 @@ than a substring check, so it goes on holding when a fourth series is added.
 partition headroom and WAL archive failures, which this process measures itself;
 and four the database answers — the oldest job wedged in ASSIGNED or
 DISPATCHING, the variance band's mean with its sample count beside it, the prep
-queue's depth, and payments the gateway reported paid that are not settled. Each
-of those is read where the fact is owned (`production.vitals`,
-`payments.reconciliation`) and only composed here. Not here: two need a
-machine-readable stamp neither `scripts/backup.sh` nor `scripts/restore_drill.py`
-writes today, and the tenth is the money one above.
+queue's depth, payments the gateway reported paid that are not settled, and the
+last success of the backup and of the restore drill, each of which now leaves a
+row in `maintenance_runs` when it succeeds. Each is read where the fact is owned
+(`production.vitals`, `payments.reconciliation`, `settings.maintenance_runs`) and
+only composed here. Not here: the tenth, the money one above.
 
 Unauthenticated, for the reason the three health probes are: a scraper has no
 session. Like them it carries no farm data — ids, brand names, counts, ages and
@@ -55,6 +55,7 @@ from printorian.contexts.production import (
     stuck_seconds,
     variance_ratio,
 )
+from printorian.contexts.settings import RunKind, last_successes
 from printorian.core import metrics
 from printorian.core.db import archiver_failures
 from printorian.core.driver_health import CONNECTED, UNAVAILABLE, DriverHealth
@@ -119,6 +120,14 @@ async def scrape(request: Request, clock: AppClock) -> Response:
         metrics.PAYMENT_NOTIFICATIONS_UNRECONCILED,
         "Payments the gateway reported succeeded that are not settled here.",
     )
+    backup_stamp = metrics.gauge(
+        metrics.BACKUP_LAST_SUCCESS,
+        "Unix time of the newest successful backup. Absent if none was ever recorded.",
+    )
+    drill_stamp = metrics.gauge(
+        metrics.RESTORE_DRILL_LAST_SUCCESS,
+        "Unix time of the newest successful restore drill. Absent if none was recorded.",
+    )
 
     # The roster is what the *worker* published, never the `printers` table. An
     # empty report means nothing was observed, and it produces a family with no
@@ -133,6 +142,7 @@ async def scrape(request: Request, clock: AppClock) -> Response:
     variances: VarianceReading | None = None
     prep_depth: int | None = None
     unsettled: int | None = None
+    stamps: dict[RunKind, float] = {}
     try:
         async for session in request.app.state.database.session():
             brands = await brands_for(session, [state.printer_id for state in states])
@@ -142,6 +152,7 @@ async def scrape(request: Request, clock: AppClock) -> Response:
             variances = await variance_ratio(session)
             prep_depth = await awaiting_prep(session)
             unsettled = await unreconciled_payments(session)
+            stamps = {kind: at.timestamp() for kind, at in (await last_successes(session)).items()}
     except Exception:
         # A scrape that fails entirely is a scrape that also stops reporting the
         # readings that *did* work — including the printer states, which come from
@@ -172,6 +183,10 @@ async def scrape(request: Request, clock: AppClock) -> Response:
         metrics.observe(stuck, ages.get(job_state.value), state=job_state.value)
     metrics.observe(awaiting, prep_depth)
     metrics.observe(unreconciled, unsettled)
+    # A job that never succeeded has no row and so no sample: "never" is not a
+    # timestamp, and the alert has to say `absent()` as well as "too old".
+    metrics.observe(backup_stamp, stamps.get(RunKind.BACKUP))
+    metrics.observe(drill_stamp, stamps.get(RunKind.RESTORE_DRILL))
     if variances is not None:
         # The mean of no variances is not 1.0 and not 0: no sample, with the
         # count of 0 beside it saying why (ADR-0007).
@@ -188,6 +203,8 @@ async def scrape(request: Request, clock: AppClock) -> Response:
             variance_samples,
             awaiting,
             unreconciled,
+            backup_stamp,
+            drill_stamp,
         )
     )
     return Response(content=body, media_type=content_type)

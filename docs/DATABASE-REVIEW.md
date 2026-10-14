@@ -12,8 +12,8 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **58 tables** across fifteen contexts, built
-by thirty-four Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **59 tables** across fifteen contexts, built
+by thirty-five Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
@@ -31,7 +31,7 @@ by thirty-four Alembic migrations on a single linear head.
 | `journal` | `journal_posts`, `journal_subscribers` |
 | `logistics` | `shipments`, `shipment_events` |
 | `service` | `printer_failures`, `service_tickets`, `service_ticket_steps` |
-| `settings` | `settings`, `settings_audit` |
+| `settings` | `settings`, `settings_audit`, `maintenance_runs` |
 
 `pricing` and `scheduling` own no tables at all. Both are pure functions
 (ADR-0002, ARCHITECTURE §6), and import-linter enforces that `pricing` cannot even

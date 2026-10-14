@@ -40,6 +40,7 @@ from printorian.contexts.postproduction import models as postproduction_models
 from printorian.contexts.procurement import models as procurement_models
 from printorian.contexts.production import models as production_models
 from printorian.contexts.service import models as service_models
+from printorian.contexts.settings import maintenance_runs as settings_maintenance_runs
 from printorian.contexts.settings import models as settings_models
 from printorian.core.db import Base
 
@@ -67,5 +68,6 @@ __all__ = [
     "procurement_models",
     "production_models",
     "service_models",
+    "settings_maintenance_runs",
     "settings_models",
 ]

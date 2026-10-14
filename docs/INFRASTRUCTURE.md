@@ -317,13 +317,13 @@ a secondary email path.
 
 Request rates and CPU graphs will not tell you the farm has stopped earning. These
 will, and every one maps to a decision already written down. `[served]` marks the
-seven the API exposes today at `GET /metrics`; the rest are not exposed anywhere:
+nine the API exposes today at `GET /metrics`:
 
 ```
 printorian_printers_offline{printer,brand}              ADR-0007                                  [served]
 printorian_job_stuck_seconds{state}                     jobs wedged in assigned or dispatching    [served]
-printorian_backup_last_success_timestamp                ADR-0019
-printorian_restore_drill_last_success_timestamp         ADR-0019 — a failing drill is an incident
+printorian_backup_last_success_timestamp                ADR-0019                                  [served]
+printorian_restore_drill_last_success_timestamp         ADR-0019 — a failing drill is an incident [served]
 printorian_wal_archive_failures_total                   docker-compose archive_command            [served]
 printorian_telemetry_partition_months_ahead             config.py names this failure explicitly   [served]
 printorian_estimate_variance_ratio                      ADR-0013 tolerance band                   [served]
@@ -358,11 +358,17 @@ gateway reported paid that this side has not settled; a *refused* settlement
 rolls back with its notification and so cannot be counted here at all — its
 signal is the webhook's 4xx in the logs.
 
-The three that are still missing are two kinds of missing.
-`backup_last_success_timestamp` and `restore_drill_last_success_timestamp`
-cannot be written yet, because neither `scripts/backup.sh` nor
-`scripts/restore_drill.py` leaves a machine-readable marker behind; and the money
-one is the paragraph above.
+The two backup stamps are read from `maintenance_runs`, a row each job writes when
+it *succeeds* — `scripts/backup.sh` through `psql` as its last step,
+`scripts/restore_drill.py` into the live database once the drill has passed. A
+row per success and never a failure, because the failures that matter (the disk
+full, the container gone, the timer never firing) are the ones a job cannot report:
+the signal is the newest success going stale, and a job that never succeeded has
+no sample at all, so the alert is `absent(x) or time() - x > 26h`. Recording the
+stamp is non-fatal in both jobs — the backup or drill itself did succeed, and the
+stale stamp is what sends a person to look.
+
+The one still missing is the money series, for the reason in the paragraph above.
 
 ### Tracing: deliberately not yet
 
