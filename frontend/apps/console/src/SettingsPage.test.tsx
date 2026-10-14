@@ -755,6 +755,55 @@ describe('the three intervals the workers read once', () => {
   })
 })
 
+describe('the three payment fields the API does not read yet', () => {
+  // `finance.payment_provider`, `finance.yookassa_shop_id` and
+  // `finance.yookassa_secret_key` save and audit like their neighbours, while
+  // the API takes all three from the environment (docs/RUNBOOK-PAYMENTS.md). An
+  // owner who pastes a shop's key here would otherwise reasonably believe the
+  // farm now takes money through it (#27). This pins that each says so, and
+  // names the variable that is in effect instead.
+  it('says on each of them that it is not in effect, and what is', async () => {
+    const field = (key: string, kind: string, value: unknown): Field => ({
+      key,
+      section: 'finance',
+      kind,
+      value,
+      default: value,
+      is_overridden: false,
+      is_set: false,
+      options: kind === 'enum' ? ['mock', 'yookassa'] : [],
+    })
+    const sections = [
+      {
+        id: 'finance',
+        fields: [
+          field('finance.payment_provider', 'enum', 'mock'),
+          field('finance.yookassa_shop_id', 'string', ''),
+          field('finance.yookassa_secret_key', 'secret', null),
+        ],
+      },
+    ]
+    net.handler = (url: string) => {
+      if (url.endsWith('/settings/sections')) return Promise.resolve(jsonOk(sections))
+      if (url.endsWith('/settings/history')) return Promise.resolve(jsonOk([]))
+      return Promise.reject(new Error('unexpected request: ' + url))
+    }
+
+    render(<SettingsPage locale="ru" />)
+    await userEvent.click(await screen.findByRole('tab', { name: /^Финансы/ }))
+
+    expect(await screen.findByText('Провайдер')).toBeInTheDocument()
+    expect(screen.getAllByText(/^Пока не действует/)).toHaveLength(3)
+    for (const variable of [
+      'PRINTORIAN_PAYMENT_PROVIDER',
+      'PRINTORIAN_YOOKASSA_SHOP_ID',
+      'PRINTORIAN_YOOKASSA_SECRET_KEY',
+    ]) {
+      expect(screen.getByText(new RegExp(variable))).toBeInTheDocument()
+    }
+  })
+})
+
 describe('the maintenance table', () => {
   // Issue #29's maintenance-intervals row. The editor is fixed to the six kinds
   // the fleet knows; an interval is edited in place, and a kind can be taken
