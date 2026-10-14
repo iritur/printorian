@@ -20,6 +20,10 @@ sudo systemctl enable --now printorian.service
 sudo systemctl enable --now printorian-backup.timer printorian-drill.timer printorian-ensure.timer
 ```
 
+`printorian-offsite.timer` is installed with the rest and enabled only once
+`deploy/offsite.env` exists and the repository is initialised — RUNBOOK §2,
+Off-site, which is a person's step because the destination is.
+
 `deploy/reconcile.sh` must stay executable — it is committed `100755`, and a mode
 lost in transit turns the reconciliation timer into a unit that fails every five
 minutes.

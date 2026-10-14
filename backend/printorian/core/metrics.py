@@ -100,6 +100,10 @@ BACKUP_LAST_SUCCESS: Final = "printorian_backup_last_success_timestamp"
 #: ADR-0019 — a failing drill is an incident. The same table, the drill's rows.
 RESTORE_DRILL_LAST_SUCCESS: Final = "printorian_restore_drill_last_success_timestamp"
 
+#: ADR-0019 §3 — the copy that survives the farm. The same table, the rows
+#: `printorian-offsite.service` writes once `deploy/offsite.sh` has completed.
+OFFSITE_LAST_SUCCESS: Final = "printorian_offsite_last_success_timestamp"
+
 #: The series this process measures today. Named as a set so the doc-drift test
 #: iterates it rather than repeating the list, and so a series added here cannot
 #: skip that check.
@@ -114,6 +118,7 @@ SERVED: Final = (
     PAYMENT_NOTIFICATIONS_UNRECONCILED,
     BACKUP_LAST_SUCCESS,
     RESTORE_DRILL_LAST_SUCCESS,
+    OFFSITE_LAST_SUCCESS,
 )
 
 _Family = GaugeMetricFamily | CounterMetricFamily

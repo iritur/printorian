@@ -226,6 +226,7 @@ async def test_the_backup_stamps_are_the_newest_successes_and_absent_when_there_
     series = await scrape(client)
     assert metrics.BACKUP_LAST_SUCCESS not in series
     assert metrics.RESTORE_DRILL_LAST_SUCCESS not in series
+    assert metrics.OFFSITE_LAST_SUCCESS not in series
 
     async for db in database.session():
         await record_success(db, RunKind.BACKUP, detail="printorian-20261014T030000Z.dump")
@@ -234,3 +235,13 @@ async def test_the_backup_stamps_are_the_newest_successes_and_absent_when_there_
     [(_, stamp)] = series[metrics.BACKUP_LAST_SUCCESS]
     assert abs(stamp - datetime.now(UTC).timestamp()) < 300
     assert metrics.RESTORE_DRILL_LAST_SUCCESS not in series
+    assert metrics.OFFSITE_LAST_SUCCESS not in series
+
+    # The off-site copy's stamp is its own: the backup succeeding says nothing
+    # about whether anything left the farm (ADR-0019 §3).
+    async for db in database.session():
+        await record_success(db, RunKind.OFFSITE, detail="restic")
+
+    series = await scrape(client)
+    [(_, offsite)] = series[metrics.OFFSITE_LAST_SUCCESS]
+    assert abs(offsite - datetime.now(UTC).timestamp()) < 300

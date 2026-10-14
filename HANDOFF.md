@@ -81,7 +81,7 @@ console against a throwaway owner (created, used, deleted): the key shows once
 on its own line, «не использовался» rather than a dash, revoke stops it. Still
 owed on #29: the notification event matrix and webhooks.
 
-**#22: `/metrics` serves nine of INFRASTRUCTURE §5's ten series.** The four
+**#22: `/metrics` serves ten of INFRASTRUCTURE §5's eleven series.** The four
 database-backed ones are `production.vitals` (the oldest job wedged in ASSIGNED or
 DISPATCHING, the prep queue's depth, the variance band's 30-day mean with its
 sample count beside it) and `payments.reconciliation` (payments the gateway said
@@ -90,7 +90,7 @@ notification and cannot be counted there). The two ADR-0019 stamps come from
 `maintenance_runs`, one row per *success* that `backup.sh` (through `psql`) and
 `restore_drill.py` write; a job that never succeeded has no sample, so an alert on
 them must say `absent()` as well as "too old". **And the alert rules are written and proven** —
-`deploy/observability/rules/printorian.yml`, thirteen rules, with
+`deploy/observability/rules/printorian.yml`, fourteen rules, with
 `promtool test rules` in a new CI job `alerts`. Each test breaks one thing and
 asserts its own alert fires and the others stay quiet, and thirty healthy hours
 page nobody. Every rule that fires on a *missing* series is fenced by the series
@@ -109,6 +109,38 @@ the stamp only goes stale after 26 hours. Meeting that exit criterion needs the
 systemd units' `OnFailure=` to post straight to Alertmanager. When running
 promtool locally from Git Bash, set `MSYS_NO_PATHCONV=1` and mount
 `$(pwd -W)`, or the volume path is mangled.
+
+**#16: the off-site copy is written; only the destination is missing.**
+`deploy/offsite.sh` runs in the pinned restic image from
+`printorian-offsite.timer` (05:00). It copies the blob store first and the
+backup disk second (ADR-0019's order), skips `.partial` and `.tmp`, then runs
+`forget --prune` and a structural `check`. The unit's `ExecStartPost` writes an
+`offsite` row to `maintenance_runs` through the postgres container; migration
+`0034` widened the CHECK to allow it. `/metrics` serves the result as
+`printorian_offsite_last_success_timestamp`, and `OffsiteCopyStale` is a 26-hour
+*digest*.
+
+Before anything is written, the script refuses an uninitialised repository (it
+never runs `restic init` itself), an unmounted source, and a backup disk with no
+dump on it. CI job `offsite` runs the script against a local repository with
+the same mounts and proves the refusals, the order, the exclusions, a
+byte-for-byte restore and that retention groups nights under one fixed host.
+Each of those checks was confirmed to fail when the property it guards was
+removed.
+
+**Two things to know before touching it.** First, restic 0.17+ keeps the
+*oldest* snapshot under `--keep-daily` too, so two runs on one day leave two
+snapshots of each kind, not one. Second, the container's hostname is random,
+which is why `--host` is fixed: without it `forget` never forgets anything.
+
+**Still a person's:** choosing the destination and its keys, rendering
+`deploy/offsite.env` (gitignored), `restic init`, escrowing the password, and
+the first restore *from the off-site copy* (RUNBOOK §2 and §5 have the
+commands).
+
+**Not done:** `systemd-analyze verify` in CI. It parses the new unit cleanly,
+but in a container it fails on the host's absence (`docker.service`,
+`/srv/printorian`), so it needs a stubbed host before it can be a gate.
 
 **Trap: override `get_caller`, not `get_current_actor`.** Since the API keys,
 `requires(...)` and `CurrentActor` both sit on `api/deps.get_caller`. A test that
@@ -1927,9 +1959,9 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 |---|---|
 | `customer_storage_quota_bytes` displayed, not enforced | Refusing a quote mid-configuration is the wrong UX. Growth is bounded by `model_retention_days` instead. |
 | Rate limiting and sign-in lockout are in-process | Correct for one API process (ADR-0003). Counters reset on restart; a second replica would get its own allowance. `docs/DATABASE-REVIEW.md` §9. |
-| `/metrics` serves nine of INFRASTRUCTURE §5's ten series | The four database-backed collectors and the two backup stamps arrived 2026-10-14 (`production.vitals`, `payments.reconciliation`, `settings.maintenance_runs` — `backup.sh` and `restore_drill.py` write a row there when they succeed). The worker exporter and the money series remain, and so does the whole VictoriaMetrics/Grafana/Alertmanager host stack; `/health/workers` remains the liveness signal, reading beats each loop records at the *end* of a pass. |
+| `/metrics` serves ten of INFRASTRUCTURE §5's eleven series | The four database-backed collectors and the three backup stamps arrived 2026-10-14 (`production.vitals`, `payments.reconciliation`, `settings.maintenance_runs` — `backup.sh`, `restore_drill.py` and `printorian-offsite.service` write a row there when they succeed). The worker exporter and the money series remain, and so does the whole VictoriaMetrics/Grafana/Alertmanager host stack; `/health/workers` remains the liveness signal, reading beats each loop records at the *end* of a pass. |
 | `printorian_sla_credit_accrued_rub` is held back rather than unbuilt | `/metrics` is unauthenticated, so `VIEW_FINANCIALS` has no caller to check. The money series waits for the scrape to have an identity — a token in Settings, or mTLS — and that is a decision for a person, not a query somebody has not written. A test forbids any `_rub` or `sla_credit` name on the endpoint meanwhile. |
-| Off-site backup sync has a recipe, no committed job | Needs farm-specific credentials. |
+| Off-site backup sync is committed, with no destination | `deploy/offsite.sh` and `printorian-offsite.timer` are written and tested against a local restic repository in CI. The destination, its credentials and the password's escrow are a person's (#16); `OffsiteCopyStale` says so in every digest until then. |
 | `assignment_records` is not partitioned | ADR-0018's deferral still holds — bounded by planning frequency, not by the clock. `/health/ready` now reports when the trigger fires; [#44](https://github.com/iritur/printorian/issues/44) stays open until it does. |
 | Storefront `body` lifts the page ground | Predates Harvester; `--hv-bg` vs `--hv-void` is six values out of 255 in dark, identical in light. A visual call, not a cleanup. See `apps/web/src/app.css`. |
 | TypeScript held at 5.x | `openapi-typescript` crashes on TS 7. Reason and three failed workarounds are in `.github/dependabot.yml`. |

@@ -209,6 +209,33 @@ jobs:
           "$PROMTOOL_IMAGE" check config /obs/scrape.yml
 
   # ------------------------------------------------------------------------
+  # The off-site copy (ADR-0019 §3, issue #16).
+  #
+  # `deploy/offsite.sh` against a real restic repository — a local directory
+  # standing in for object storage — in the same pinned image and with the same
+  # mounts as `printorian-offsite.service`. What it proves is the part above
+  # restic's backend: what is refused before anything is written, that the
+  # blobs are snapshotted before the database, that half-written files stay
+  # behind, that both restore byte for byte, and that retention groups the
+  # nights together instead of keeping every one for ever. The image tag and
+  # digest are the unit's; a bump changes both together.
+  # ------------------------------------------------------------------------
+  offsite:
+    name: offsite
+    runs-on: ubuntu-latest
+    env:
+      RESTIC_IMAGE: restic/restic:0.18.0@sha256:4cf4a61ef9786f4de53e9de8c8f5c040f33830eb0a10bf3d614410ee2fcb6120
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: The unit runs the image this job tests
+        run: grep -qF "$RESTIC_IMAGE" deploy/systemd/printorian-offsite.service
+
+      - name: Off-site copy
+        run: bash deploy/tests/offsite.test.sh
+
+  # ------------------------------------------------------------------------
   # The artifact.
   #
   # The two jobs above test the *source tree*. Nothing there proves the thing

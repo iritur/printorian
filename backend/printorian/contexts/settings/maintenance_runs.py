@@ -1,9 +1,10 @@
 """When the backup and the restore drill last *succeeded*, kept where the scrape can read it.
 
 INFRASTRUCTURE §5's `printorian_backup_last_success_timestamp` and
-`printorian_restore_drill_last_success_timestamp`. Neither could be served,
-because neither `scripts/backup.sh` nor `scripts/restore_drill.py` left anything
-machine-readable behind: a backup that had stopped succeeding looked, from
+`printorian_restore_drill_last_success_timestamp`, and the off-site copy's
+`printorian_offsite_last_success_timestamp` beside them. The first two could not
+be served, because neither `scripts/backup.sh` nor `scripts/restore_drill.py`
+left anything machine-readable behind: a backup that had stopped succeeding looked, from
 outside, exactly like one that was fine — the disk-full incident ADR-0019 was
 written after.
 
@@ -16,11 +17,13 @@ the signal is *staleness*: the newest success getting old. The alert is
 that has never backed up has no row and therefore no sample at all (ADR-0007 —
 "never" is not a timestamp).
 
-**In the database, not in a marker file**, because the two jobs run in different
-containers: the backup in `postgres`, which owns the backup volume, and the
-drill in `api`, which mounts that volume read-only on purpose
-(`deploy/compose.prod.yml`). One table both can write is one mechanism; a file
-for one and something else for the other would be two that could disagree.
+**In the database, not in a marker file**, because the jobs run in different
+containers: the backup in `postgres`, which owns the backup volume, the drill in
+`api`, which mounts that volume read-only on purpose (`deploy/compose.prod.yml`),
+and the off-site copy in a restic container that has no database client at all,
+so its unit writes the row through `postgres` once the copy succeeded. One table
+every job can write is one mechanism; a file for one and something else for the
+others would be several that could disagree.
 
 It lives in `settings` because «Обслуживание системы» is the section that owns
 these jobs — `maintenance.backup_hour` and the irreversible operations sit there.
@@ -44,6 +47,9 @@ from printorian.core.ids import EntityId, new_id
 class RunKind(StrEnum):
     BACKUP = "backup"
     RESTORE_DRILL = "restore_drill"
+    #: The copy to the restic repository off the farm (`deploy/offsite.sh`),
+    #: written by `printorian-offsite.service` once the copy has completed.
+    OFFSITE = "offsite"
 
 
 class MaintenanceRun(Entity):
@@ -53,7 +59,7 @@ class MaintenanceRun(Entity):
     __table_args__ = (
         # "The newest success of this kind" is the only read, so it is the index.
         Index("ix_maintenance_runs_kind_finished_at", "kind", "finished_at"),
-        CheckConstraint("kind IN ('backup', 'restore_drill')", name="kind_known"),
+        CheckConstraint("kind IN ('backup', 'restore_drill', 'offsite')", name="kind_known"),
     )
 
     #: Redeclared only to add a server default: `scripts/backup.sh` inserts with

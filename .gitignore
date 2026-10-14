@@ -34,6 +34,9 @@ backend/var/
 # Rendered by the release gate and by the farm's deploy timer from the
 # SOPS-encrypted store — never committed.
 deploy/.env
+# The off-site repository's address, password and bucket keys, rendered the same
+# way and read only by `printorian-offsite.service`.
+deploy/offsite.env
 
 # Local
 .env

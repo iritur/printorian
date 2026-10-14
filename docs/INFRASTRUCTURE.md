@@ -36,7 +36,7 @@ does not exist, and nothing watches any of it.**
 | The tunnel | ADR-0016 "reverse-proxies `/api` back to the farm" | **Unbuilt.** [`deploy/storefront.Caddyfile`](../deploy/storefront.Caddyfile) is written against it and `readiness-check.sh` calls the storefront "rehearsal-only until then". No customer can reach the system — [#18](https://github.com/iritur/printorian/issues/18) |
 | Secrets | ADR-0014, ADR-0019 escrow | Environment variables and a gitignored `backend/printers.local.toml`. **SOPS + age (§4.4) is not adopted** — there is no `.sops.yaml` |
 | Backups | ADR-0019, `backend/scripts/backup.sh` | **Scheduled.** `printorian-backup.timer`, 03:00 daily, `Persistent=true`, and the dump runs inside the postgres container so client and server versions cannot drift. `pg_archivecleanup` runs with it, so WAL no longer grows unbounded |
-| Off-site copy | ADR-0019 | **Still nothing.** `backup.sh` names this as a deliberate gap and stops at the local disk; every copy of the farm's data is on one machine — [#16](https://github.com/iritur/printorian/issues/16) |
+| Off-site copy | ADR-0019 | **Written, not installed.** `deploy/offsite.sh` copies the blob store and then the backups to a restic repository, from `printorian-offsite.timer` nightly, and CI restores what it copied byte for byte. No destination is chosen yet, so every copy of the farm's data is still on one machine — [#16](https://github.com/iritur/printorian/issues/16) |
 | Restore drill | ADR-0019 "a failing drill is an incident" | **Scheduled.** `printorian-drill.timer`, Sundays 04:00, running `restore_drill.py` in the api container. A *failing* drill still reaches nobody — that is the alerting row |
 | Observability | ARCHITECTURE §10, which now claims only what runs: "metrics are stubbed", drivers deliberately outside readiness | **Partly, and §10 says so.** `/health/ready` reports `database`, `telemetry_partitions`, `assignment_records`, `printers_listing`, `materials_listing`, `wal_archiving`, and `event_relay` **only where a relay is configured** — with no relay the key is absent rather than `ok`, so a count of seven is a count of a full deployment. **Drivers are still not covered** — [#21](https://github.com/iritur/printorian/issues/21); §10 records why the API process cannot cover them. Prometheus metrics: still zero — [#20](https://github.com/iritur/printorian/issues/20) |
 | Alerting | — | **None running.** The rules are written and tested (`deploy/observability`, CI job `alerts`), but nothing evaluates them and nothing routes to a phone, so the only monitor is still a person looking at a screen — [#22](https://github.com/iritur/printorian/issues/22) |
@@ -314,7 +314,7 @@ Routing: Alertmanager → Telegram bot (free, on the phone, works in Russia) wit
 a secondary email path.
 
 **The rules are written; nothing evaluates them yet.**
-`deploy/observability/rules/printorian.yml` holds thirteen, each labelled
+`deploy/observability/rules/printorian.yml` holds fourteen, each labelled
 `severity: page`, `digest` or `heartbeat`, and each saying where its threshold
 came from. They keep to PromQL, so `promtool test rules` can run them against
 `deploy/observability/tests/printorian.test.yml` in CI. Those tests break one
@@ -332,13 +332,14 @@ the prep queue's depth, because ADR-0006 gives no number for "saturated".
 
 Request rates and CPU graphs will not tell you the farm has stopped earning. These
 will, and every one maps to a decision already written down. `[served]` marks the
-nine the API exposes today at `GET /metrics`:
+ten the API exposes today at `GET /metrics`:
 
 ```
 printorian_printers_offline{printer,brand}              ADR-0007                                  [served]
 printorian_job_stuck_seconds{state}                     jobs wedged in assigned or dispatching    [served]
 printorian_backup_last_success_timestamp                ADR-0019                                  [served]
 printorian_restore_drill_last_success_timestamp         ADR-0019 — a failing drill is an incident [served]
+printorian_offsite_last_success_timestamp               ADR-0019 §3 — the copy that survives       [served]
 printorian_wal_archive_failures_total                   docker-compose archive_command            [served]
 printorian_telemetry_partition_months_ahead             config.py names this failure explicitly   [served]
 printorian_estimate_variance_ratio                      ADR-0013 tolerance band                   [served]
@@ -373,9 +374,11 @@ gateway reported paid that this side has not settled; a *refused* settlement
 rolls back with its notification and so cannot be counted here at all — its
 signal is the webhook's 4xx in the logs.
 
-The two backup stamps are read from `maintenance_runs`, a row each job writes when
+The three backup stamps are read from `maintenance_runs`, a row each job writes when
 it *succeeds* — `scripts/backup.sh` through `psql` as its last step,
-`scripts/restore_drill.py` into the live database once the drill has passed. A
+`scripts/restore_drill.py` into the live database once the drill has passed, and
+`printorian-offsite.service` through the postgres container once the restic copy
+has completed. A
 row per success and never a failure, because the failures that matter (the disk
 full, the container gone, the timer never firing) are the ones a job cannot report:
 the signal is the newest success going stale, and a job that never succeeded has
@@ -558,7 +561,9 @@ Ansible role `printorian-farm`, idempotent, re-runnable:
   `printorian-drill.timer` (weekly, `scripts/restore_drill.py`),
   `printorian-deploy.timer` (§6).
 * Off-site: `restic` to RU object storage, **blobs before the database** per
-  ADR-0019's ordering rule, repository password escrowed separately.
+  ADR-0019's ordering rule, repository password escrowed separately. The job is
+  written and tested (`deploy/offsite.sh`, `printorian-offsite.timer`, CI job
+  `offsite`); the destination, its credentials and the escrow are a person's.
 * UPS via `nut`, with a clean shutdown hook.
 * The reboot guard: no unattended reboot while any job is `printing`.
 

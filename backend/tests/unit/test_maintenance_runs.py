@@ -7,11 +7,14 @@ What the two ADR-0019 stamps on `/metrics` rest on:
   server defaults, exactly the statement `scripts/backup.sh` runs through `psql`;
 * **an unknown kind is refused by the database**, the contract the script is held to;
 * **the drill writes its row** through the function `restore_drill.py` calls.
+* **the off-site unit's insert works** — read out of the unit file itself.
 """
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from sqlalchemy import text
@@ -22,6 +25,10 @@ from printorian.contexts.settings import RunKind, last_successes, record_success
 from printorian.contexts.settings.maintenance_runs import MaintenanceRun
 from printorian.core.config import Settings
 from scripts.restore_drill import _record_success
+
+OFFSITE_UNIT = (
+    Path(__file__).resolve().parents[3] / "deploy" / "systemd" / "printorian-offsite.service"
+)
 
 
 async def test_the_newest_success_of_each_kind_and_nothing_for_a_kind_never_run(
@@ -76,3 +83,17 @@ async def test_record_success_appends_rather_than_overwrites(db_session: AsyncSe
     await record_success(db_session, RunKind.RESTORE_DRILL, detail="second.dump")
     count = await db_session.scalar(text("SELECT count(*) FROM maintenance_runs"))
     assert count == 2
+
+
+async def test_the_offsite_units_own_insert_works(db_session: AsyncSession) -> None:
+    """The statement `printorian-offsite.service` runs through `psql`, read from the unit.
+
+    Read rather than copied, so an edit to the unit is an edit to this test. The
+    CHECK is the only contract that unit is held to, and migration 0034 is what
+    widened it: without it the insert is refused, the unit's `-` prefix swallows
+    the refusal, and the stamp never appears however many copies succeed.
+    """
+    unit = OFFSITE_UNIT.read_text(encoding="utf-8")
+    [statement] = re.findall(r'--command="([^"]+)"', unit)
+    await db_session.execute(text(statement))
+    assert RunKind.OFFSITE in await last_successes(db_session)

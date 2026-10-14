@@ -1,0 +1,18 @@
+[Unit]
+Description=Printorian nightly off-site copy
+Documentation=https://github.com/iritur/printorian/blob/main/docs/RUNBOOK-BACKUP-RESTORE.md
+
+[Timer]
+# 05:00 local, two hours after the 03:00 backup, so the copy carries that night's
+# dump rather than the previous one. Not chained to the backup with `OnSuccess=`
+# on purpose: on a night the dump fails, the blobs and the WAL still go off-site,
+# and they are most of what a lost host would cost.
+#
+# A backup still running at 05:00 is not copied half-written: `backup.sh` renames
+# the dump into place only once it verifies, and `offsite.sh` skips `.partial`.
+OnCalendar=*-*-* 05:00:00
+Persistent=true
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

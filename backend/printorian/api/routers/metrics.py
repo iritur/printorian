@@ -1,4 +1,4 @@
-"""The Prometheus scrape — nine of INFRASTRUCTURE §5's ten domain metrics.
+"""The Prometheus scrape — ten of INFRASTRUCTURE §5's eleven domain metrics.
 
 Composition only. The mechanics are `core.metrics` (a registry per scrape, a text
 writer, and the rule that a reading nobody took is an *absent* series), and each
@@ -22,15 +22,16 @@ argument in its strongest form. `tests/api/test_metrics_api.py` forbids any metr
 name containing `sla_credit` or ending `_rub`, as a rule over parsed names rather
 than a substring check, so it goes on holding when a fourth series is added.
 
-**What this serves, and what it does not.** Seven: printers offline, telemetry
-partition headroom and WAL archive failures, which this process measures itself;
-and four the database answers — the oldest job wedged in ASSIGNED or
+**What this serves, and what it does not.** Three readings this process takes
+itself — printers offline, telemetry partition headroom and WAL archive
+failures — and the rest from the database: the oldest job wedged in ASSIGNED or
 DISPATCHING, the variance band's mean with its sample count beside it, the prep
 queue's depth, payments the gateway reported paid that are not settled, and the
-last success of the backup and of the restore drill, each of which now leaves a
-row in `maintenance_runs` when it succeeds. Each is read where the fact is owned
-(`production.vitals`, `payments.reconciliation`, `settings.maintenance_runs`) and
-only composed here. Not here: the tenth, the money one above.
+last success of the backup, of the restore drill and of the off-site copy, each
+of which leaves a row in `maintenance_runs` when it succeeds. Each is read where
+the fact is owned (`production.vitals`, `payments.reconciliation`,
+`settings.maintenance_runs`) and only composed here. Not here: the money series
+above.
 
 Unauthenticated, for the reason the three health probes are: a scraper has no
 session. Like them it carries no farm data — ids, brand names, counts, ages and
@@ -128,6 +129,10 @@ async def scrape(request: Request, clock: AppClock) -> Response:
         metrics.RESTORE_DRILL_LAST_SUCCESS,
         "Unix time of the newest successful restore drill. Absent if none was recorded.",
     )
+    offsite_stamp = metrics.gauge(
+        metrics.OFFSITE_LAST_SUCCESS,
+        "Unix time of the newest completed off-site copy. Absent if none was recorded.",
+    )
 
     # The roster is what the *worker* published, never the `printers` table. An
     # empty report means nothing was observed, and it produces a family with no
@@ -187,6 +192,7 @@ async def scrape(request: Request, clock: AppClock) -> Response:
     # timestamp, and the alert has to say `absent()` as well as "too old".
     metrics.observe(backup_stamp, stamps.get(RunKind.BACKUP))
     metrics.observe(drill_stamp, stamps.get(RunKind.RESTORE_DRILL))
+    metrics.observe(offsite_stamp, stamps.get(RunKind.OFFSITE))
     if variances is not None:
         # The mean of no variances is not 1.0 and not 0: no sample, with the
         # count of 0 beside it saying why (ADR-0007).
@@ -205,6 +211,7 @@ async def scrape(request: Request, clock: AppClock) -> Response:
             unreconciled,
             backup_stamp,
             drill_stamp,
+            offsite_stamp,
         )
     )
     return Response(content=body, media_type=content_type)
