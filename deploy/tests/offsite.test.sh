@@ -91,11 +91,14 @@ check "half-written files are not copied" \
   test "$(inspect 'restic ls latest --tag database | grep -cE "\.(partial|tmp)$" || true')" = 0
 
 inspect 'restic restore latest --tag database --target /restore/db && restic restore latest --tag blobs --target /restore/blobs' > /dev/null
+# Compared inside the container, against the originals it already has mounted:
+# restic restores as root with the original modes, so on a Linux runner the
+# restored files are not readable by the runner's own user. (Docker Desktop does
+# not enforce that, which is how this passed on Windows and failed in CI first.)
 check "the dump restores byte for byte" \
-  cmp "${WORK}/backup/dumps/printorian-20261014T030000Z.dump" \
-      "${WORK}/restore/db/data/backup/dumps/printorian-20261014T030000Z.dump"
+  inspect 'cmp /data/backup/dumps/printorian-20261014T030000Z.dump /restore/db/data/backup/dumps/printorian-20261014T030000Z.dump'
 check "the blobs restore byte for byte" \
-  diff -r "${WORK}/blobs" "${WORK}/restore/blobs/data/blobs"
+  inspect 'diff -r /data/blobs /restore/blobs/data/blobs'
 
 # ---------------------------------------------------------------- retention
 
