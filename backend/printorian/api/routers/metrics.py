@@ -1,4 +1,4 @@
-"""The Prometheus scrape — three of INFRASTRUCTURE §5's ten domain metrics.
+"""The Prometheus scrape — seven of INFRASTRUCTURE §5's ten domain metrics.
 
 Composition only. The mechanics are `core.metrics` (a registry per scrape, a text
 writer, and the rule that a reading nobody took is an *absent* series), and each
@@ -22,21 +22,21 @@ argument in its strongest form. `tests/api/test_metrics_api.py` forbids any metr
 name containing `sla_credit` or ending `_rub`, as a rule over parsed names rather
 than a substring check, so it goes on holding when a fourth series is added.
 
-**What this serves, and what it does not.** Three: printers offline, telemetry
-partition headroom, WAL archive failures — the three whose data *this process*
-already measures. The other seven of §5 are not here: four need queries no route
-runs yet, two need a machine-readable stamp neither `scripts/backup.sh` nor
-`scripts/restore_drill.py` writes today, and the tenth is the money one above. Read
-three series as three series, not as §5.
+**What this serves, and what it does not.** Seven: printers offline, telemetry
+partition headroom and WAL archive failures, which this process measures itself;
+and four the database answers — the oldest job wedged in ASSIGNED or
+DISPATCHING, the variance band's mean with its sample count beside it, the prep
+queue's depth, and payments the gateway reported paid that are not settled. Each
+of those is read where the fact is owned (`production.vitals`,
+`payments.reconciliation`) and only composed here. Not here: two need a
+machine-readable stamp neither `scripts/backup.sh` nor `scripts/restore_drill.py`
+writes today, and the tenth is the money one above.
 
 Unauthenticated, for the reason the three health probes are: a scraper has no
-session. Like them it carries no farm data — ids, brand names and counters — but it
-does describe the shape of the deployment, so **the storefront's edge must not
-forward it** when Stage 3 is built. `deploy/storefront.Caddyfile`'s
-`handle_path /api/*` forwards this exactly as it already forwards `/health/*`, and
-that file is deliberately untouched here rather than edited blind: this branch has
-no way to run `caddy validate`, and a config change nobody verified is worse than a
-recorded gap.
+session. Like them it carries no farm data — ids, brand names, counts, ages and
+a dimensionless ratio — but it does describe the shape of the deployment, so the
+storefront's edge answers it 404 (`deploy/storefront.Caddyfile`, checked with
+`caddy adapt`, security review F20).
 """
 
 from __future__ import annotations
@@ -47,6 +47,14 @@ from fastapi.responses import PlainTextResponse
 
 from printorian.api.deps import AppClock
 from printorian.contexts.fleet import brands_for, retention
+from printorian.contexts.payments import unreconciled_payments
+from printorian.contexts.production import (
+    STUCK_WATCHED,
+    VarianceReading,
+    awaiting_prep,
+    stuck_seconds,
+    variance_ratio,
+)
 from printorian.core import metrics
 from printorian.core.db import archiver_failures
 from printorian.core.driver_health import CONNECTED, UNAVAILABLE, DriverHealth
@@ -90,6 +98,27 @@ async def scrape(request: Request, clock: AppClock) -> Response:
         metrics.WAL_ARCHIVE_FAILURES,
         "pg_stat_archiver.failed_count, since the statistics were last reset.",
     )
+    stuck = metrics.gauge(
+        metrics.JOB_STUCK_SECONDS,
+        "Seconds the oldest job has sat in this state; 0 when no job is in it.",
+        "state",
+    )
+    variance = metrics.gauge(
+        metrics.ESTIMATE_VARIANCE_RATIO,
+        "Mean prepared/quoted cost over the variances of the last 30 days (ADR-0013).",
+    )
+    variance_samples = metrics.gauge(
+        metrics.ESTIMATE_VARIANCE_SAMPLES,
+        "Variances the ratio is the mean of. No ratio is published when this is 0.",
+    )
+    awaiting = metrics.gauge(
+        metrics.ORDERS_AWAITING_PREP,
+        "Jobs waiting for an engineer to slice them (ADR-0006).",
+    )
+    unreconciled = metrics.gauge(
+        metrics.PAYMENT_NOTIFICATIONS_UNRECONCILED,
+        "Payments the gateway reported succeeded that are not settled here.",
+    )
 
     # The roster is what the *worker* published, never the `printers` table. An
     # empty report means nothing was observed, and it produces a family with no
@@ -100,17 +129,26 @@ async def scrape(request: Request, clock: AppClock) -> Response:
     brands: dict[str, str] = {}
     months_ahead: int | None = None
     wal_failures: int | None = None
+    ages: dict[str, float] = {}
+    variances: VarianceReading | None = None
+    prep_depth: int | None = None
+    unsettled: int | None = None
     try:
         async for session in request.app.state.database.session():
             brands = await brands_for(session, [state.printer_id for state in states])
             months_ahead = await retention.months_provisioned_ahead(session, now=clock.now())
             wal_failures = await archiver_failures(session)
+            ages = {state.value: age for state, age in (await stuck_seconds(session)).items()}
+            variances = await variance_ratio(session)
+            prep_depth = await awaiting_prep(session)
+            unsettled = await unreconciled_payments(session)
     except Exception:
         # A scrape that fails entirely is a scrape that also stops reporting the
         # readings that *did* work — including the printer states, which come from
         # Redis and are unaffected by a database that is down. So this answers 200
         # with what is known, and the two database-backed series stay absent
-        # rather than zero. `/health/ready` is the endpoint whose job is to say
+        # rather than zero — all of them, so a half-read database cannot publish
+        # some series and silently omit others. `/health/ready` is the endpoint whose job is to say
         # the database is unreachable; saying it twice, badly, helps nobody.
         logger.warning("metrics_database_readings_unavailable", exc_info=True)
 
@@ -128,6 +166,28 @@ async def scrape(request: Request, clock: AppClock) -> Response:
         )
     metrics.observe(headroom, months_ahead)
     metrics.observe(archive_failures, wal_failures)
+    # A state with no job in it is a measured 0 — the query ran and found nothing
+    # wedged. A database that could not be read publishes no state at all.
+    for job_state in STUCK_WATCHED:
+        metrics.observe(stuck, ages.get(job_state.value), state=job_state.value)
+    metrics.observe(awaiting, prep_depth)
+    metrics.observe(unreconciled, unsettled)
+    if variances is not None:
+        # The mean of no variances is not 1.0 and not 0: no sample, with the
+        # count of 0 beside it saying why (ADR-0007).
+        metrics.observe(variance, variances.ratio)
+        metrics.observe(variance_samples, variances.samples)
 
-    body, content_type = metrics.render(metrics.build_registry(offline, headroom, archive_failures))
+    body, content_type = metrics.render(
+        metrics.build_registry(
+            offline,
+            headroom,
+            archive_failures,
+            stuck,
+            variance,
+            variance_samples,
+            awaiting,
+            unreconciled,
+        )
+    )
     return Response(content=body, media_type=content_type)

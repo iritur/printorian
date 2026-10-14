@@ -317,19 +317,19 @@ a secondary email path.
 
 Request rates and CPU graphs will not tell you the farm has stopped earning. These
 will, and every one maps to a decision already written down. `[served]` marks the
-three the API exposes today at `GET /metrics`; the rest are not exposed anywhere,
-and a scrape that returns three series is not a §5 that is nearly finished:
+seven the API exposes today at `GET /metrics`; the rest are not exposed anywhere:
 
 ```
 printorian_printers_offline{printer,brand}              ADR-0007                                  [served]
-printorian_job_stuck_seconds{state}                     jobs wedged in dispatching
+printorian_job_stuck_seconds{state}                     jobs wedged in assigned or dispatching    [served]
 printorian_backup_last_success_timestamp                ADR-0019
 printorian_restore_drill_last_success_timestamp         ADR-0019 — a failing drill is an incident
 printorian_wal_archive_failures_total                   docker-compose archive_command            [served]
 printorian_telemetry_partition_months_ahead             config.py names this failure explicitly   [served]
-printorian_estimate_variance_ratio                      ADR-0013 tolerance band
-printorian_orders_awaiting_prep                         the human queue backing up
-printorian_payment_notifications_unreconciled           ADR-0019's reason for a 1-minute RPO
+printorian_estimate_variance_ratio                      ADR-0013 tolerance band                   [served]
+printorian_estimate_variance_samples                    the ratio's denominator, beside it        [served]
+printorian_orders_awaiting_prep                         the human queue backing up                [served]
+printorian_payment_notifications_unreconciled           ADR-0019's reason for a 1-minute RPO      [served]
 printorian_sla_credit_accrued_rub                       money leaking through lateness            [held back]
 ```
 
@@ -345,14 +345,24 @@ forbids any metric name on that endpoint ending in `_rub` or containing
 `sla_credit`, as a rule over parsed names rather than a substring check, so a fourth
 collector cannot bring one in by accident.
 
-The three that are served are the three whose data the API process already measures.
-The seven that are not divide into three different kinds of missing, which is worth
-saying because only one of them is a query somebody has not written yet:
-`job_stuck_seconds`, `estimate_variance_ratio`, `orders_awaiting_prep` and
-`payment_notifications_unreconciled` are database-backed readings that need writing;
-`backup_last_success_timestamp` and `restore_drill_last_success_timestamp` cannot be
-written at all yet, because neither `scripts/backup.sh` nor `scripts/restore_drill.py`
-leaves a machine-readable marker behind; and the money one is the paragraph above.
+Three of the served series are readings the API process takes itself; the other
+four are database queries, each living beside the code that owns the fact
+(`production.vitals`, `payments.reconciliation`) and only composed by the scrape.
+Two definitions are worth knowing before an alert is written on them.
+`job_stuck_seconds` watches ASSIGNED and DISPATCHING only — a PRINTING job twelve
+hours old is a normal plate — and reads 0 for a state with no job in it, which is
+a measurement. `estimate_variance_ratio` is published with its sample count, and
+with no sample at all when the window holds no variance: the mean of nothing is
+neither 1.0 nor 0. `payment_notifications_unreconciled` counts payments the
+gateway reported paid that this side has not settled; a *refused* settlement
+rolls back with its notification and so cannot be counted here at all — its
+signal is the webhook's 4xx in the logs.
+
+The three that are still missing are two kinds of missing.
+`backup_last_success_timestamp` and `restore_drill_last_success_timestamp`
+cannot be written yet, because neither `scripts/backup.sh` nor
+`scripts/restore_drill.py` leaves a machine-readable marker behind; and the money
+one is the paragraph above.
 
 ### Tracing: deliberately not yet
 

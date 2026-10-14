@@ -31,6 +31,7 @@ from printorian.contexts.payments.provider import (
     reset_registry,
 )
 from printorian.contexts.payments.providers import ManualPaymentProvider, MockPaymentProvider
+from printorian.contexts.payments.reconciliation import unreconciled_payments
 from printorian.contexts.payments.schemas import (
     PaymentDocument,
     PaymentView,
@@ -66,4 +67,5 @@ __all__ = [
     "reconcile",
     "register",
     "reset_registry",
+    "unreconciled_payments",
 ]

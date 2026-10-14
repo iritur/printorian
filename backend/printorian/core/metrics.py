@@ -74,13 +74,37 @@ TELEMETRY_PARTITION_MONTHS_AHEAD: Final = "printorian_telemetry_partition_months
 #: `pg_stat_archiver.failed_count`. ADR-0019's guarantee rests on archived WAL.
 WAL_ARCHIVE_FAILURES: Final = "printorian_wal_archive_failures_total"
 
-#: The three of §5's ten that this process can actually measure today. Named as a
-#: set so the doc-drift test iterates it rather than repeating the list, and so a
-#: fourth series added here cannot skip that check.
+#: How long the oldest job has sat in a state where sitting means wedged,
+#: per state (`production.vitals.STUCK_WATCHED`).
+JOB_STUCK_SECONDS: Final = "printorian_job_stuck_seconds"
+
+#: ADR-0013's band, as the mean of prepared over quoted cost in a window. A ratio,
+#: so no rouble amount reaches this unauthenticated surface.
+ESTIMATE_VARIANCE_RATIO: Final = "printorian_estimate_variance_ratio"
+
+#: The observations that mean stands on — published beside it, because a mean
+#: without its denominator is the flattering number CLAUDE.md §1 forbids.
+ESTIMATE_VARIANCE_SAMPLES: Final = "printorian_estimate_variance_samples"
+
+#: The prep queue's depth: jobs no engineer has sliced (ADR-0006).
+ORDERS_AWAITING_PREP: Final = "printorian_orders_awaiting_prep"
+
+#: Payments the gateway reported paid and this side has not settled
+#: (`payments.reconciliation`, which says what it cannot count).
+PAYMENT_NOTIFICATIONS_UNRECONCILED: Final = "printorian_payment_notifications_unreconciled"
+
+#: The series this process measures today. Named as a set so the doc-drift test
+#: iterates it rather than repeating the list, and so a series added here cannot
+#: skip that check.
 SERVED: Final = (
     PRINTERS_OFFLINE,
     TELEMETRY_PARTITION_MONTHS_AHEAD,
     WAL_ARCHIVE_FAILURES,
+    JOB_STUCK_SECONDS,
+    ESTIMATE_VARIANCE_RATIO,
+    ESTIMATE_VARIANCE_SAMPLES,
+    ORDERS_AWAITING_PREP,
+    PAYMENT_NOTIFICATIONS_UNRECONCILED,
 )
 
 _Family = GaugeMetricFamily | CounterMetricFamily
