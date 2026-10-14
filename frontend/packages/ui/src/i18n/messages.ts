@@ -116,6 +116,7 @@ export const ru = {
   'error.catalog.mesh_non_finite': 'В файле есть координаты, которые не являются числом',
   'error.catalog.mesh_oversized': 'Деталь длиннее {limit_mm} мм ({extent_mm} мм) — это не модель для печати',
   'error.catalog.upload_too_large': 'Файл слишком большой',
+  'error.catalog.plate_invalid': 'Пластина не записана: неверные поля {fields}',
   'error.catalog.model_not_found': 'Модель для этого задания не найдена',
   'error.catalog.plate_not_parsed':
     'В файле не указаны время печати и вес — сохраните пластину вручную',
@@ -1822,6 +1823,7 @@ export const en: Messages = {
   'error.catalog.mesh_non_finite': 'The file has coordinates that are not numbers',
   'error.catalog.mesh_oversized': 'The part is longer than {limit_mm} mm ({extent_mm} mm) — not a printable model',
   'error.catalog.upload_too_large': 'That file is too large',
+  'error.catalog.plate_invalid': 'The plate was not recorded: invalid fields {fields}',
   'error.catalog.model_not_found': 'No model found for this job',
   'error.catalog.plate_not_parsed':
     'The file does not state print time and weight — save the plate by hand',

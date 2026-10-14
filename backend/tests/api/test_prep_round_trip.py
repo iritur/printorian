@@ -328,6 +328,34 @@ async def test_a_copy_count_below_one_is_refused_before_anything_is_stored(
     assert len((await client.get("/jobs/prep-queue", headers=eng)).json()) == 1
 
 
+async def test_a_plate_the_record_would_refuse_is_refused_before_anything_is_stored(
+    client: AsyncClient,
+    settings: Settings,
+    clock: FixedClock,
+    bus: EventBus,
+    object_store: InMemoryObjectStore,
+) -> None:
+    """The `copies` fix moved one check ahead of the write and left the rest behind
+    it: a filename past 300 characters still failed *after* `storage.put`, as an
+    uncoded 500 with an orphaned object (security review, #27)."""
+    job_id, _ = await a_job_with_a_model(settings, clock, bus, object_store)
+    eng = await auth(client, "eng@example.com")
+    plate = a_sliced_3mf()
+
+    response = await client.post(
+        f"/jobs/{job_id}/plate/file",
+        files={"plate": ("x" * 297 + ".3mf", plate, "application/octet-stream")},
+        headers=eng,
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "error.catalog.plate_invalid"
+    # `model_name` falls back to the upload's name too when the job has none.
+    assert response.json()["details"]["fields"] == ["filename", "model_name"]
+    with pytest.raises(ObjectNotFoundError):
+        await object_store.get(digest_of(plate))
+
+
 async def test_only_an_engineer_may_upload_a_plate(
     client: AsyncClient,
     settings: Settings,
