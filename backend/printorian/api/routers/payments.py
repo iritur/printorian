@@ -20,14 +20,17 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
 
+from printorian.api.client_address import client_address
 from printorian.api.deps import AppSettings, CurrentActor, Ordering, Payments, requires
 from printorian.api.providers import build_provider
 from printorian.api.routers._order_access import order_for
 from printorian.contexts.identity import Permission
 from printorian.contexts.payments import (
+    HeldPayment,
     PaymentProvider,
     PaymentView,
     RefundRequest,
+    ReleaseHold,
     StartPayment,
 )
 from printorian.contexts.payments.providers.manual import ManualPaymentProvider
@@ -89,7 +92,9 @@ async def gateway_webhook(
     body = await request.body()
     headers = dict(request.headers)
 
-    result = await payments.handle_webhook(provider, headers, body)
+    # Where it came from, by the API's one rule for that — the address the trusted
+    # proxy saw, or the socket peer — never a header the adapter parses itself.
+    result = await payments.handle_webhook(provider, headers, body, source=client_address(request))
     return {"status": "processed" if result is not None else "duplicate"}
 
 
@@ -106,6 +111,35 @@ async def payments_for_order(
     """
     await order_for(ordering, order_id, actor, staff_permission=Permission.VIEW_FINANCIALS)
     return await payments.for_order(order_id)
+
+
+@router.get("/held")
+async def held_payments(
+    payments: Payments,
+    _: Annotated[object, Depends(requires(Permission.VIEW_FINANCIALS))] = None,
+) -> list[HeldPayment]:
+    """Money that arrived for an order not waiting for it, waiting for a person.
+
+    Declared before `/{payment_id}`, which would otherwise take ``held`` for a
+    payment id and answer 422. Rubles, so `VIEW_FINANCIALS` (security review §5(d)).
+    """
+    return await payments.held()
+
+
+@router.post(
+    "/held/{payment_id}/release",
+    dependencies=[Depends(requires(Permission.ISSUE_REFUND))],
+)
+async def release_held_payment(
+    payment_id: EntityId, data: ReleaseHold, actor: CurrentActor, payments: Payments
+) -> HeldPayment:
+    """Keep held money, with a reason, attributed to whoever decided.
+
+    `ISSUE_REFUND` rather than `VIEW_FINANCIALS`: deciding not to send money back
+    is the same decision as sending it, made the other way, and it belongs to the
+    same narrower permission (security review §5(b), kept as intended).
+    """
+    return await payments.release_hold(payment_id, note=data.note, actor_id=actor.user_id)
 
 
 @router.get("/{payment_id}")

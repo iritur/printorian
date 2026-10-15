@@ -27,14 +27,14 @@
 	# request and Caddy proxies it as one.
 	handle_path /api/* {
 		# No `trusted_proxies`, deliberately. Caddy's default is to ignore an
-		# incoming `X-Forwarded-For` rather than append to it, so the API sees
-		# exactly one hop: the address this server's socket saw. Two places read
-		# that header and read opposite ends of it — `api/deps.py:throttle_key`
-		# takes the last (the quote ceiling and the sign-in lockout) and the
-		# YooKassa webhook's source check takes the first — and they agree only
-		# while the chain has one entry. Setting `trusted_proxies`, or putting a
-		# proxy in front of this one, makes it a chain again; both of those read
-		# sites have to be settled before that happens, not after.
+		# incoming `X-Forwarded-For` rather than append to it, so the API is
+		# handed the address this server's socket saw as the last entry — and
+		# the API believes the header only because this container is the proxy
+		# it names (`PRINTORIAN_TRUSTED_PROXIES` in `compose.prod.yml`, the
+		# fixed address below; `api/client_address.py`, security review §5(a)).
+		# Putting a proxy in front of this one — a load balancer at the edge —
+		# makes the last entry *that* proxy's address; the API's rule then needs
+		# a hop count, and has to be changed before that happens, not after.
 		reverse_proxy api:8000 {
 			header_up X-Forwarded-Proto {scheme}
 		}

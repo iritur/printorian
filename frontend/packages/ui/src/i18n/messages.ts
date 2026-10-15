@@ -770,6 +770,17 @@ export const ru = {
   'fleet.slots': 'Слоты AMS',
 
   // -- order desk (manage_order, issue_refund)
+  'payments.held.title': 'Оплаты на удержании',
+  'payments.held.order': 'Заказ',
+  'payments.held.reason': 'Заказ был',
+  'payments.held.amount': 'К решению',
+  'payments.held.since': 'Поступила',
+  'payments.held.keep': 'Оставить',
+  'payments.held.note': 'Причина',
+  'payments.held.release': 'Оставить деньги',
+  'payments.held.none': 'Ничего не удержано',
+  'payments.held.refund_hint':
+    'Деньги пришли за заказ, который их не ждал. Вернуть — из заказа ниже; оставить — с причиной.',
   'variance.title': 'Пересмотр цены',
   'variance.minutes': 'Минуты · оценка → плита',
   'variance.grams': 'Граммы · оценка → плита',
@@ -2491,6 +2502,17 @@ export const en: Messages = {
   'fleet.service.deep_clean': 'Deep clean',
   'fleet.slots': 'AMS slots',
 
+  'payments.held.title': 'Held payments',
+  'payments.held.order': 'Order',
+  'payments.held.reason': 'The order was',
+  'payments.held.amount': 'To decide',
+  'payments.held.since': 'Arrived',
+  'payments.held.keep': 'Keep',
+  'payments.held.note': 'Reason',
+  'payments.held.release': 'Keep the money',
+  'payments.held.none': 'Nothing is held',
+  'payments.held.refund_hint':
+    'Money arrived for an order that was not waiting for it. Refund it from the order below, or keep it with a reason.',
   'variance.title': 'Price review',
   'variance.minutes': 'Minutes · estimate → plate',
   'variance.grams': 'Grams · estimate → plate',

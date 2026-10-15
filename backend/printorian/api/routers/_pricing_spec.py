@@ -44,8 +44,6 @@ from printorian.core.errors import PayloadTooLargeError, ValidationError
 from printorian.core.ids import EntityId
 from printorian.core.storage import digest_of
 
-_MAX_UPLOAD_BYTES = 80 * 1024 * 1024
-
 #: Statuses meaning the farm already holds the filament. Anything else has to be
 #: bought in, which the customer pays for (`material.procurement`).
 _IN_STOCK = {MaterialStatus.STOCK, MaterialStatus.IN_PRINTER}
@@ -130,7 +128,7 @@ async def _build_spec(
     include_shipping: bool,
     keep: ModelLibrary | None = None,
     uploaded_by: EntityId | None = None,
-    max_bytes: int = _MAX_UPLOAD_BYTES,
+    max_bytes: int,
     promise: PromisePolicy | None = None,
     catalogue: Mapping[str, FinishOption],
 ) -> tuple[PriceSpec, dict[str, Any]]:

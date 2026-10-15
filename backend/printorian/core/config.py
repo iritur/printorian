@@ -95,6 +95,19 @@ class Settings(BaseSettings):
     #: including registration — Argon2 is expensive on purpose, so an unthrottled
     #: sign-in endpoint is a way to spend the API's CPU as well as to guess.
     auth_rate_per_minute: int = Field(default=20, ge=1)
+    #: The reverse proxies whose `X-Forwarded-For` the API believes, as addresses
+    #: or networks. Security review F3 / §5(a), decided by the owner: **trust one
+    #: named proxy**. A request whose socket peer is in this list is from the
+    #: address that proxy appended — the *last* entry; any other request is from
+    #: its socket peer, and whatever `X-Forwarded-For` it carries is ignored.
+    #: `api/client_address.py` is the one reader, and the rate ceilings, the
+    #: sign-in lockout, the session's recorded address and the YooKassa webhook's
+    #: source check all go through it.
+    #:
+    #: Loopback by default, which is uvicorn's own default for the same header and
+    #: what the development proxy connects from. `deploy/compose.prod.yml` names
+    #: the two Caddy containers by their fixed addresses on the farm's network.
+    trusted_proxies: list[str] = Field(default_factory=lambda: ["127.0.0.1", "::1"])
 
     # -- live events -------------------------------------------------------
     #: Redis channel the event relay fans out on (`core.relay`).
@@ -162,6 +175,17 @@ class Settings(BaseSettings):
     #: Largest upload accepted, in bytes. A mesh above this is refused before it is
     #: read into memory rather than after.
     max_upload_bytes: int = Field(default=200 * 1024 * 1024, ge=1024)
+    #: Largest upload a caller who has **not** signed in may have parsed for a
+    #: quote or a preview. Never above `max_upload_bytes`; the lower of the two
+    #: applies (`api/routers/pricing.py`).
+    #:
+    #: Security review F5 / §5(c), decided by the owner. Parsing an ASCII STL
+    #: costs 5–10× its size in memory (measured, `docs/SECURITY-REVIEW.md` F5),
+    #: four parses may run at once, and `POST /pricing/quote` needs no account —
+    #: so the anonymous ceiling is what bounds what a stranger can make the farm
+    #: allocate. 50 MiB is a real slicer export of a large part; a customer with
+    #: a bigger file signs in and gets the full limit.
+    anonymous_upload_bytes: int = Field(default=50 * 1024 * 1024, ge=1024)
     #: How much uploaded geometry one customer may keep, shown on «Мои модели».
     #:
     #: Not enforced at upload — a customer who has hit it should be told which of

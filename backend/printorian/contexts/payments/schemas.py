@@ -98,3 +98,32 @@ class StartPayment(BaseModel):
 class RefundRequest(BaseModel):
     amount: Decimal | None = Field(default=None, description="Omit to refund everything left")
     reason: str = Field(default="refund.requested", max_length=80)
+
+
+class HeldPayment(BaseModel):
+    """A settled payment that moved no order, waiting for a person (`PaymentHold`).
+
+    Rubles, so it is only ever served behind `VIEW_FINANCIALS`. The refundable
+    figure is what a refund would send back now; a payment refunded in part stays
+    on the list until the rest is decided.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    payment_id: EntityId
+    order_id: EntityId
+    provider: str
+    status: PaymentStatus
+    amount: Decimal
+    refunded_amount: Decimal
+    currency: str
+    settled_at: datetime | None
+    #: What the order was doing when the money landed: an `OrderStatus` code.
+    order_status: str
+    held_at: datetime
+
+
+class ReleaseHold(BaseModel):
+    """Keep the money, on a person's word. The reason is required — it is the record."""
+
+    note: str = Field(min_length=1, max_length=500)

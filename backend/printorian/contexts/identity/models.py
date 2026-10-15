@@ -70,9 +70,9 @@ class Session(Entity):
     #:
     #: Recorded once, at sign-in, and never updated — this answers "was that me?",
     #: and a field that follows the session around answers a different and less
-    #: useful question. Behind a reverse proxy it is the first hop of
-    #: `X-Forwarded-For`; `printorian.api.deps.client_ip` is the one place that
-    #: decision is made.
+    #: useful question. Behind the trusted proxy it is the address that proxy
+    #: saw; `printorian.api.client_address` is the one place that decision is
+    #: made.
     client_ip: Mapped[str] = mapped_column(String(45), nullable=False, default="")
     #: Last time this session was used, to five-minute granularity.
     #:

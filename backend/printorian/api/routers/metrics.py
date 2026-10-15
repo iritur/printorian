@@ -1,4 +1,4 @@
-"""The Prometheus scrape — ten of INFRASTRUCTURE §5's eleven domain metrics.
+"""The Prometheus scrape — eleven of INFRASTRUCTURE §5's twelve domain metrics.
 
 Composition only. The mechanics are `core.metrics` (a registry per scrape, a text
 writer, and the rule that a reading nobody took is an *absent* series), and each
@@ -26,10 +26,11 @@ than a substring check, so it goes on holding when a fourth series is added.
 itself — printers offline, telemetry partition headroom and WAL archive
 failures — and the rest from the database: the oldest job wedged in ASSIGNED or
 DISPATCHING, the variance band's mean with its sample count beside it, the prep
-queue's depth, payments the gateway reported paid that are not settled, and the
-last success of the backup, of the restore drill and of the off-site copy, each
-of which leaves a row in `maintenance_runs` when it succeeds. Each is read where
-the fact is owned (`production.vitals`, `payments.reconciliation`,
+queue's depth, payments the gateway reported paid that are not settled, payments
+held because they moved no order, and the last success of the backup, of the
+restore drill and of the off-site copy, each of which leaves a row in
+`maintenance_runs` when it succeeds. Each is read where the fact is owned
+(`production.vitals`, `payments.reconciliation`, `payments.holding`,
 `settings.maintenance_runs`) and only composed here. Not here: the money series
 above.
 
@@ -48,7 +49,7 @@ from fastapi.responses import PlainTextResponse
 
 from printorian.api.deps import AppClock
 from printorian.contexts.fleet import brands_for, retention
-from printorian.contexts.payments import unreconciled_payments
+from printorian.contexts.payments import held_payment_count, unreconciled_payments
 from printorian.contexts.production import (
     STUCK_WATCHED,
     VarianceReading,
@@ -121,6 +122,10 @@ async def scrape(request: Request, clock: AppClock) -> Response:
         metrics.PAYMENT_NOTIFICATIONS_UNRECONCILED,
         "Payments the gateway reported succeeded that are not settled here.",
     )
+    held = metrics.gauge(
+        metrics.PAYMENTS_HELD,
+        "Settled payments that moved no order, waiting for a person to refund or keep.",
+    )
     backup_stamp = metrics.gauge(
         metrics.BACKUP_LAST_SUCCESS,
         "Unix time of the newest successful backup. Absent if none was ever recorded.",
@@ -147,6 +152,7 @@ async def scrape(request: Request, clock: AppClock) -> Response:
     variances: VarianceReading | None = None
     prep_depth: int | None = None
     unsettled: int | None = None
+    held_count: int | None = None
     stamps: dict[RunKind, float] = {}
     try:
         async for session in request.app.state.database.session():
@@ -157,6 +163,7 @@ async def scrape(request: Request, clock: AppClock) -> Response:
             variances = await variance_ratio(session)
             prep_depth = await awaiting_prep(session)
             unsettled = await unreconciled_payments(session)
+            held_count = await held_payment_count(session)
             stamps = {kind: at.timestamp() for kind, at in (await last_successes(session)).items()}
     except Exception:
         # A scrape that fails entirely is a scrape that also stops reporting the
@@ -188,6 +195,7 @@ async def scrape(request: Request, clock: AppClock) -> Response:
         metrics.observe(stuck, ages.get(job_state.value), state=job_state.value)
     metrics.observe(awaiting, prep_depth)
     metrics.observe(unreconciled, unsettled)
+    metrics.observe(held, held_count)
     # A job that never succeeded has no row and so no sample: "never" is not a
     # timestamp, and the alert has to say `absent()` as well as "too old".
     metrics.observe(backup_stamp, stamps.get(RunKind.BACKUP))
@@ -209,6 +217,7 @@ async def scrape(request: Request, clock: AppClock) -> Response:
             variance_samples,
             awaiting,
             unreconciled,
+            held,
             backup_stamp,
             drill_stamp,
             offsite_stamp,

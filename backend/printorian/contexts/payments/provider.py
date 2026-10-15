@@ -141,8 +141,18 @@ class PaymentProvider(Protocol):
         """
         ...
 
-    def verify_webhook(self, headers: dict[str, str], body: bytes) -> WebhookEvent:
-        """Authenticate and parse a notification, or raise."""
+    def verify_webhook(
+        self, headers: dict[str, str], body: bytes, *, source: str = ""
+    ) -> WebhookEvent:
+        """Authenticate and parse a notification, or raise.
+
+        ``source`` is the address the notification came from, resolved by the
+        delivery layer under the one rule the API has for that
+        (`api/client_address.py`). An adapter never reads a forwarding header
+        itself: two readers of `X-Forwarded-For` is how the source check and the
+        rate limiter came to read opposite ends of it (security review F3). Empty
+        when nobody resolved it, which an adapter that checks the source refuses.
+        """
         ...
 
 

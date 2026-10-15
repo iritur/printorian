@@ -27,10 +27,25 @@ from printorian.api.deps import (
 from printorian.api.routers._loyalty import tier_for
 from printorian.api.routers._pricing_render import _render, _render_delta
 from printorian.api.routers._pricing_spec import _build_spec, _material_price
+from printorian.contexts.identity import Actor
 from printorian.contexts.pricing import diff, price
+from printorian.core.config import Settings
 from printorian.core.errors import ValidationError
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
+
+
+def upload_ceiling(settings: Settings, actor: Actor | None) -> int:
+    """The largest model this caller may have parsed.
+
+    A signed-in caller gets `max_upload_bytes`; anybody else the lower of that and
+    `anonymous_upload_bytes` (security review §5(c)). Both endpoints below parse
+    the mesh, so both use this — the preview used to carry its own hard-coded
+    80 MiB, a third number nobody had chosen.
+    """
+    if actor is not None:
+        return settings.max_upload_bytes
+    return min(settings.anonymous_upload_bytes, settings.max_upload_bytes)
 
 
 @router.post(
@@ -79,7 +94,7 @@ async def quote(
         # stores it once.
         keep=models,
         uploaded_by=actor.user_id if actor else None,
-        max_bytes=settings.max_upload_bytes,
+        max_bytes=upload_ceiling(settings, actor),
         promise=promise,
         catalogue=catalogue,
     )
@@ -115,6 +130,7 @@ async def quote(
 async def preview_option(
     db: DbSession,
     actor: OptionalActor,
+    settings: AppSettings,
     settings_store: FarmSettings,
     cpu: Cpu,
     model: Annotated[UploadFile, File()],
@@ -155,6 +171,7 @@ async def preview_option(
         finishes=finishes or [],
         rush=rush,
         include_shipping=include_shipping,
+        max_bytes=upload_ceiling(settings, actor),
         promise=promise,
         catalogue=catalogue,
     )

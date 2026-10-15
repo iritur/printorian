@@ -27,6 +27,7 @@ from sqlalchemy.orm import selectinload
 from printorian.contexts.ordering import OrderingService, OrderStatus
 from printorian.contexts.payments import events as payment_events
 from printorian.contexts.payments.documents import documents_for
+from printorian.contexts.payments.holding import Holding
 from printorian.contexts.payments.models import Payment, PaymentNotification
 from printorian.contexts.payments.policies import (
     GATEWAY_CLOSED,
@@ -54,7 +55,7 @@ from printorian.core.ids import EntityId
 MANUAL_PROVIDER = "manual"
 
 
-class PaymentsService(Refunding):
+class PaymentsService(Refunding, Holding):
     """Collecting and returning money for orders."""
 
     def __init__(
@@ -155,14 +156,19 @@ class PaymentsService(Refunding):
     # -- settling --------------------------------------------------------
 
     async def handle_webhook(
-        self, provider: PaymentProvider, headers: dict[str, str], body: bytes
+        self,
+        provider: PaymentProvider,
+        headers: dict[str, str],
+        body: bytes,
+        *,
+        source: str = "",
     ) -> PaymentView | None:
         """Process a gateway notification, exactly once.
 
         Returns ``None`` when the event has already been seen — a duplicate is a
         normal event, not an error, because providers retry by design.
         """
-        event = provider.verify_webhook(headers, body)
+        event = provider.verify_webhook(headers, body, source=source)
 
         notification = await self._record_notification(provider.name, event, body)
         if notification is None:
@@ -241,6 +247,11 @@ class PaymentsService(Refunding):
             await self._ordering.advance(
                 order.id, OrderStatus.PAID, reason="payment.settled", actor_id=actor_id
             )
+        else:
+            # The money is real and the order was not waiting for it — cancelled,
+            # or paid by another attempt. Held for a person, in this same unit of
+            # work, rather than accepted in silence (`holding`).
+            await self._hold(payment, order.status.value)
 
         await self._bus.publish(
             payment_events.PaymentSettled(

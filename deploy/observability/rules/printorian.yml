@@ -268,6 +268,23 @@ groups:
             The gateway reported these payments succeeded and they are still not
             booked. The customer has paid; the order is not moving.
 
+      # Money that moved no order: the customer paid for an order the farm had
+      # already cancelled, or paid twice. The owner's decision is that a person
+      # refunds or keeps it (security review §5(d)), so this exists to make sure
+      # a person is told. A digest, not a page: the money is safe where it is,
+      # and the decision wants a calm look at the order, not a phone at night.
+      # No `for:` — a hold is not transient; it stays until somebody decides.
+      - alert: PaymentHeld
+        expr: printorian_payments_held > 0
+        labels:
+          severity: digest
+        annotations:
+          summary: "{{ $value }} payment(s) moved no order and are held for a decision."
+          description: >-
+            Settled money for an order that was cancelled or already paid. Refund it
+            from the order, or release it with a reason: `GET /payments/held`.
+          runbook: docs/RUNBOOK-PAYMENTS.md
+
   # ------------------------------------------------------------------ the machine
   - name: printorian-machine
     interval: 30s

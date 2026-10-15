@@ -10,11 +10,11 @@ checking it. A rule flipped to ``CASCADE`` in a model is one word, would have pa
 all six gates and the whole suite, and the first evidence of it would have been a
 retention sweep deleting an order's lines.
 
-The inventory below is all fifty-nine keys rather than the interesting ones,
-because a spot check leaves the other fifty-one unwatched and because the sixtieth
+The inventory below is every key rather than the interesting ones — seventy-seven
+on 2026-10-15 — because a spot check leaves the rest unwatched and because the next
 key should not be addable without somebody deciding what it does on delete. Rules
 are grouped by *rule* rather than listed per table: the reason for a rule is shared,
-and repeating it fifty-nine times would be fifty-nine places to keep in step. Where
+and repeating it per key would be that many places to keep in step. Where
 an individual key is load-bearing, or reads wrong beside its neighbour, it is called
 out under its group.
 
@@ -88,6 +88,8 @@ CASCADE: frozenset[str] = frozenset(
         # An event is one line of a parcel's history and nothing without it.
         "shipment_events.shipment_id",
         "refunds.payment_id",
+        # A hold says something about one payment and nothing on its own.
+        "payment_holds.payment_id",
         "service_operations.printer_id",
         "sessions.user_id",
         # A key is a credential of the person who issued it; it must not outlive them.
@@ -126,6 +128,8 @@ SET_NULL: frozenset[str] = frozenset(
         "model_assets.uploaded_by",
         "order_events.actor_id",
         "orders.customer_id",
+        # Who decided to keep held money outlives the person who decided it.
+        "payment_holds.released_by",
         "packaging_tasks.operator_id",
         "packaging_tasks.tara_id",
         "postproduction_tasks.operator_id",

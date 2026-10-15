@@ -109,6 +109,37 @@ is worth nothing on its own; the fetch is what settles the order. Never loosen t
 IP check to make a test pass — an unauthenticated webhook that marks orders paid is
 free prints.
 
+**Which address is "the source".** The adapter does not read `X-Forwarded-For`
+itself. The API resolves one address per request (`api/client_address.py`): the
+last entry of the header when the request came through a proxy named in
+`PRINTORIAN_TRUSTED_PROXIES` — on the farm, the two Caddy containers by their fixed
+addresses — and the socket peer otherwise. So a notification forwarded by Caddy is
+judged by the address Caddy saw, and one that reached the API any other way is
+judged by its own address whatever header it carries (security review §5(a)). If
+every YooKassa notification starts being refused with
+`error.payments.webhook_untrusted_source` naming a `172.29.70.x` address, the proxy's
+address and the trusted list have parted company; `test_trusted_proxies_deploy.py`
+exists so that cannot merge.
+
+## 3a. Money for an order that was not waiting for it
+
+A customer can pay on a confirmation page after the farm cancelled the order, or a
+second attempt can settle on an order another one already paid. The gateway took
+the money either way, so the settlement is recorded — and **held** (security review
+§5(d)): the order does not move, a `payment_holds` row is written, the payment
+appears under «Оплаты на удержании» above the order list, and
+`printorian_payments_held` raises the `PaymentHeld` digest.
+
+Nothing automatic happens to the money. Somebody holding `issue_refund` decides:
+
+* **Refund it** from the order's own desk, as any refund. Once the whole amount is
+  back, the payment leaves the held list by itself.
+* **Keep it** — the customer re-ordered by phone, or asked to apply it elsewhere —
+  with «Оставить деньги» and a written reason. The reason and who gave it are kept
+  on the hold (`POST /payments/held/{id}/release`).
+
+A manager sees the list (`view_financials`) and can do neither, by design (§5(b)).
+
 ---
 
 ## 4. Config surface
@@ -119,6 +150,7 @@ free prints.
 | `PRINTORIAN_YOOKASSA_SHOP_ID` | `""` | merchant shop id |
 | `PRINTORIAN_YOOKASSA_SECRET_KEY` | `""` | secret key (a `SecretStr`) |
 | `PRINTORIAN_PAYMENT_RETURN_URL` | dev storefront | where the gateway returns the customer |
+| `PRINTORIAN_TRUSTED_PROXIES` | loopback | the proxies whose `X-Forwarded-For` is believed (§3) |
 
 `mock` refuses to load in production (ADR-0007 applied to money), and the API
 resolves a gateway per request through `api.providers.build_provider`, so the choice

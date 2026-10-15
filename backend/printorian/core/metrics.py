@@ -93,6 +93,11 @@ ORDERS_AWAITING_PREP: Final = "printorian_orders_awaiting_prep"
 #: (`payments.reconciliation`, which says what it cannot count).
 PAYMENT_NOTIFICATIONS_UNRECONCILED: Final = "printorian_payment_notifications_unreconciled"
 
+#: Settled payments that moved no order — money for an order already cancelled
+#: or already paid — waiting for a person (`payments.holding`, security review
+#: §5(d)). A count, never a sum: this surface carries no rubles.
+PAYMENTS_HELD: Final = "printorian_payments_held"
+
 #: ADR-0019. The newest row `scripts/backup.sh` left in `maintenance_runs`;
 #: absent when it never left one. The alert is staleness, `absent()` included.
 BACKUP_LAST_SUCCESS: Final = "printorian_backup_last_success_timestamp"
@@ -116,6 +121,7 @@ SERVED: Final = (
     ESTIMATE_VARIANCE_SAMPLES,
     ORDERS_AWAITING_PREP,
     PAYMENT_NOTIFICATIONS_UNRECONCILED,
+    PAYMENTS_HELD,
     BACKUP_LAST_SUCCESS,
     RESTORE_DRILL_LAST_SUCCESS,
     OFFSITE_LAST_SUCCESS,

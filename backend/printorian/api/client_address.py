@@ -1,78 +1,65 @@
-"""Where a request came from: one answer to show a person, one to count against.
+"""Where a request came from — one answer, for every reader that needs one.
 
-Two functions that read opposite ends of `X-Forwarded-For`, and the difference
-is the point of each — the docstrings say why. Moved out of `api/deps.py`, which
-is the dependency wiring, when the API-key resolution needed its room (#29):
-these are pure functions of a request and depend on nothing in that module.
+Security review F3, decided by the owner as §5(a): **trust one named proxy.**
+There used to be two answers, read from opposite ends of `X-Forwarded-For`: the
+first entry for the security screen and the YooKassa webhook's source check, the
+last for the rate ceilings and the sign-in lockout. They agreed only because
+Caddy strips a caller's header and writes exactly one entry — a proxy behaviour
+nothing stated, and the day the API was reached any other way, the two halves
+were wrong in different directions (a forged first entry passed the webhook's
+allow-list; a forged last entry would have bought allowance).
+
+Now there is a rule, and it is stated in configuration rather than inferred:
+
+* if the **socket peer is a trusted proxy** (`Settings.trusted_proxies`), the
+  request is from the address that proxy appended — the **last** entry, the
+  only one in the chain written by something the farm runs;
+* otherwise the request is from **its socket peer**, and any `X-Forwarded-For`
+  it carries is the caller's own claim and is ignored.
+
+So a forged header buys nothing whichever way the API is reached: through Caddy
+the forgery is in front of the entry Caddy wrote, and around Caddy the header is
+not read at all. Putting a second proxy in front of Caddy — a load balancer at
+the Stage 3 edge — would make Caddy append *that* proxy's address; the answer
+then is a hop count, and this function is the one line to change.
 """
 
 from __future__ import annotations
 
+import ipaddress
+from functools import lru_cache
+
 from fastapi import Request
 
+#: `sessions.client_ip` is a `String(45)` — the longest IPv6 text form.
+_MAX = 45
 
-def throttle_key(request: Request) -> str:
-    """The address a ceiling is counted against — the *last* forwarded hop.
 
-    Deliberately **not** `client_ip`, and the difference is the whole point of
-    having two functions.
+@lru_cache(maxsize=16)
+def _networks(
+    trusted: tuple[str, ...],
+) -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
+    return tuple(ipaddress.ip_network(entry, strict=False) for entry in trusted)
 
-    `X-Forwarded-For` is a list that each proxy appends to, so the *first* entry is
-    whatever the caller sent and the *last* is the peer the nearest proxy actually
-    saw. `client_ip` shows the first, because a security screen is telling a person
-    "this is where the request said it came from" and a wrong answer there costs
-    nothing. A rate limit keyed on the first entry costs everything: one forged
-    header per request and the ceiling is a free-for-all, which is worse than no
-    ceiling because it looks like one.
 
-    So this reads the last hop, and falls back to the socket peer when nothing is
-    forwarded at all — the dev server, and the console on the LAN.
+def is_trusted_proxy(peer: str, trusted: list[str]) -> bool:
+    """Whether ``peer`` is one of the proxies whose forwarding header is believed."""
+    try:
+        address = ipaddress.ip_address(peer)
+    except ValueError:
+        # Not an address at all — a test transport's name, a Unix socket. Nothing
+        # that cannot be placed on the network can be a proxy the farm runs.
+        return False
+    return any(address in network for network in _networks(tuple(trusted)))
 
-    **This is exactly as trustworthy as the proxy in front of it**, and what that
-    proxy does was checked rather than assumed — an earlier version of this
-    paragraph asserted that Caddy appends, and that is only half true. Caddy's
-    `reverse_proxy` sets or augments `X-Forwarded-For`, but by default it "will
-    ignore their values from incoming requests, to prevent spoofing"; it appends
-    to a caller's chain only where `trusted_proxies` says the caller is itself a
-    proxy. Neither `deploy/console.Caddyfile` nor `deploy/storefront.Caddyfile`
-    sets `trusted_proxies`, so the header arriving here has exactly **one** entry,
-    written by Caddy, and first hop and last hop are the same address.
 
-    Which means the last-hop rule is not what protects the ceiling today — Caddy's
-    stripping is. This is written to survive the day that stops being true, and
-    `test_guards_api.py` pins it for the day somebody reads the two functions and
-    decides they ought to agree.
-
-    Setting `trusted_proxies`, or putting a second proxy in front, turns the header
-    back into a chain and would need a hop *count* rather than "the last one". Both
-    Caddyfiles carry a note pointing here, because the other reader of that
-    decision is the YooKassa webhook's source check — which reads the *first* hop,
-    and is safe only while there is exactly one.
-    """
+def client_address(request: Request) -> str:
+    """The address this request came from, by the rule in the module docstring."""
+    peer = request.client.host if request.client else ""
     forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.rsplit(",", 1)[-1].strip()[:45]
-    return (request.client.host if request.client else "")[:45]
+    if forwarded and is_trusted_proxy(peer, request.app.state.settings.trusted_proxies):
+        return forwarded.rsplit(",", 1)[-1].strip()[:_MAX]
+    return peer[:_MAX]
 
 
-def client_ip(request: Request) -> str:
-    """Where the request came from, as best the API can tell.
-
-    Behind the reverse proxy both apps are served through (ADR-0016), the socket
-    peer is always the proxy, so the first hop of `X-Forwarded-For` is the only
-    thing that varies per client. It is also client-controlled and therefore not
-    evidence of anything — which is exactly why it is used here and nowhere near
-    an authorization decision. The security screen shows it so a person can say
-    "that was not me", and a wrong address is no worse than the proxy's own on
-    every row.
-
-    One place, so that the day this becomes a trust boundary there is one line to
-    change rather than a search.
-    """
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()[:45]
-    return (request.client.host if request.client else "")[:45]
-
-
-__all__ = ["client_ip", "throttle_key"]
+__all__ = ["client_address", "is_trusted_proxy"]
