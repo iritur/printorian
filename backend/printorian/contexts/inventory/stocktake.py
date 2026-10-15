@@ -27,6 +27,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from printorian.contexts.inventory.article_models import StockArticle
+from printorian.contexts.inventory.articles import StockArticles
 from printorian.contexts.inventory.models import MaterialLot, StorageCell, StorageZone
 from printorian.contexts.inventory.movements import MOVED_COUNTED
 from printorian.contexts.inventory.placement import record_movement
@@ -34,6 +36,7 @@ from printorian.contexts.inventory.policies import LocationKind, StocktakeStatus
 from printorian.contexts.inventory.stocktake_models import (
     STOCKTAKE_NUMBER_SEQUENCE,
     Stocktake,
+    StocktakeArticleLine,
     StocktakeLine,
 )
 from printorian.core.errors import ConflictError, DomainRuleViolationError, NotFoundError
@@ -83,12 +86,23 @@ class StocktakeService:
             )
             .order_by(StorageCell.address, MaterialLot.created_at)
         )
+        # The non-filament stock on the same shelves (#35), by the same rule: in a
+        # cell, with something on hand. An item nobody has placed is nowhere a
+        # person could be sent to count it.
+        articles_query = (
+            select(StockArticle, StorageCell.address)
+            .join(StorageCell, StockArticle.cell_id == StorageCell.id)
+            .where(StockArticle.on_hand > 0, StockArticle.is_active.is_(True))
+            .order_by(StorageCell.address, StockArticle.code)
+        )
         if zone_code is not None:
             zone = await self._db.scalar(select(StorageZone).where(StorageZone.code == zone_code))
             if zone is None:
                 raise NotFoundError("error.inventory.zone_not_found", code=zone_code)
             query = query.where(StorageCell.zone_id == zone.id)
+            articles_query = articles_query.where(StorageCell.zone_id == zone.id)
         lots = list(await self._db.scalars(query))
+        articles = (await self._db.execute(articles_query)).all()
 
         stocktake = Stocktake(
             number=await self._next_number(),
@@ -107,6 +121,17 @@ class StocktakeService:
                 expected_grams=lot.remaining_grams,
             )
             for lot in lots
+        ]
+        stocktake.article_lines = [
+            StocktakeArticleLine(
+                article_id=article.id,
+                code=article.code,
+                name=article.name,
+                unit=article.unit,
+                cell_address=address,
+                expected=article.on_hand,
+            )
+            for article, address in articles
         ]
         self._db.add(stocktake)
         await self._db.flush()
@@ -137,6 +162,28 @@ class StocktakeService:
                 initial_grams=str(lot.initial_grams),
             )
         line.counted_grams = grams
+        line.counted_at = at
+        line.counted_by = actor_id
+        await self._db.flush()
+        return stocktake
+
+    async def count_article(
+        self,
+        stocktake_id: EntityId,
+        article_id: EntityId,
+        *,
+        quantity: Decimal,
+        at: datetime,
+        actor_id: EntityId | None = None,
+    ) -> Stocktake:
+        """Write what was found for one item, in its unit. Counting again overwrites."""
+        stocktake = await self._open_one(stocktake_id)
+        line = next((row for row in stocktake.article_lines if row.article_id == article_id), None)
+        if line is None:
+            raise NotFoundError(
+                "error.inventory.stocktake_line_not_found", article_id=str(article_id)
+            )
+        line.counted = quantity
         line.counted_at = at
         line.counted_by = actor_id
         await self._db.flush()
@@ -188,6 +235,24 @@ class StocktakeService:
             # `record_movement` does not flush and `next_sequence` reads the
             # ledger: two rows before one flush would claim the same rung.
             await self._db.flush()
+        # The same rule for the articles: against the book *now*, through the
+        # article ledger, with the stocktake's number on the row.
+        stock = StockArticles(self._db)
+        for article_line in stocktake.article_lines:
+            if article_line.counted is None:
+                continue
+            article = await self._db.get(StockArticle, article_line.article_id)
+            if article is None:
+                continue
+            article_line.variance = article_line.counted - article.on_hand
+            await stock.restate(
+                article.kind,
+                article.code,
+                article_line.counted,
+                at=at,
+                actor_id=actor_id,
+                note=stocktake.number,
+            )
         stocktake.status = StocktakeStatus.CLOSED
         stocktake.closed_at = at
         stocktake.closed_by = actor_id
@@ -199,7 +264,7 @@ class StocktakeService:
     async def _open_one(self, stocktake_id: EntityId) -> Stocktake:
         stocktake = await self._db.scalar(
             select(Stocktake)
-            .options(selectinload(Stocktake.lines))
+            .options(selectinload(Stocktake.lines), selectinload(Stocktake.article_lines))
             .where(Stocktake.id == stocktake_id)
         )
         if stocktake is None:

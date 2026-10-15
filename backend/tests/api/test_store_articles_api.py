@@ -13,12 +13,15 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from printorian.api.app import create_app
 from printorian.contexts.identity import CreateUser, IdentityService, Role
+from printorian.contexts.inventory import ArticleKind, StockArticles
 from printorian.core.clock import FixedClock
 from printorian.core.config import Settings
 from printorian.core.db import Base
@@ -139,3 +142,50 @@ async def test_taking_more_than_the_book_holds_is_a_coded_refusal(client: AsyncC
     # 422, as every domain refusal here (`api/errors.py`), the spool write-off included.
     assert refused.status_code == 422, refused.text
     assert refused.json()["code"] == "error.inventory.take_exceeds_on_hand"
+
+
+async def test_an_article_is_counted_in_its_own_unit_and_reported_in_both_measures(
+    client: AsyncClient,
+) -> None:
+    """The stocktake's article line, and the two reports' article halves (#35)."""
+    boss = await auth(client, "boss@example.com")
+    op = await auth(client, "op@example.com")
+    await client.post("/store/zones", json={"code": "C", "name": "Запчасти"}, headers=boss)
+    await client.post("/store/cells", json={"zone_code": "C", "address": "C6-1"}, headers=boss)
+    article = (
+        await client.post(
+            "/store/articles", json={"kind": "packaging", "code": "box-a"}, headers=boss
+        )
+    ).json()
+    async with client._transport.app.state.database.session_factory() as session:  # type: ignore[attr-defined]
+        await StockArticles(session).receive(
+            ArticleKind.PACKAGING,
+            "box-a",
+            quantity=Decimal(12),
+            at=datetime(2026, 1, 1, tzinfo=UTC),
+            unit_cost=Decimal(62),
+        )
+        await session.commit()
+    await client.post(
+        f"/store/articles/{article['id']}/place", json={"address": "C6-1"}, headers=boss
+    )
+
+    opened = (await client.post("/store/stocktakes", json={}, headers=boss)).json()
+    [line] = opened["article_lines"]
+    assert (line["code"], line["expected"]) == ("box-a", "12.00")
+    counted = await client.post(
+        f"/store/stocktakes/{opened['id']}/articles/{article['id']}",
+        json={"counted": "11"},
+        headers=boss,
+    )
+    assert counted.status_code == 200, counted.text
+    assert Decimal(counted.json()["article_lines"][0]["counted"]) == Decimal(11)
+
+    turnover = await client.get("/store/turnover", headers=op)
+    assert turnover.status_code == 200
+    assert [row["kind"] for row in turnover.json()["article_rows"]] == ["packaging"]
+    # The money half stays behind view_financials, for articles as for spools.
+    assert (await client.get("/store/dead-stock", headers=op)).status_code == 403
+    dead = await client.get("/store/dead-stock?idle_days=1", headers=boss)
+    assert dead.status_code == 200
+    assert "articles" in dead.json()

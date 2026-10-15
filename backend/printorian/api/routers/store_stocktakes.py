@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, status
 from printorian.api.deps import AppClock, CurrentActor, DbSession, requires
 from printorian.contexts.identity import Permission
 from printorian.contexts.inventory import (
+    CountArticle,
     CountLine,
     OpenStocktake,
     StocktakeDetail,
@@ -90,6 +91,30 @@ async def count_line(
         stocktake_id,
         lot_id,
         grams=Decimal(data.counted_grams),
+        at=clock.now(),
+        actor_id=actor.user_id,
+    )
+    return detail_of(stocktake)
+
+
+@router.post("/{stocktake_id}/articles/{article_id}", dependencies=[_MANAGES])
+async def count_article(
+    stocktake_id: EntityId,
+    article_id: EntityId,
+    data: CountArticle,
+    db: DbSession,
+    actor: CurrentActor,
+    clock: AppClock,
+) -> StocktakeDetail:
+    """Write what was found of one packaging, consumable or spare-part item (#35).
+
+    In the item's own unit, on its own line: a count of boxes is not a count of
+    grams, and the two kinds of line are kept apart for that reason.
+    """
+    stocktake = await StocktakeService(db).count_article(
+        stocktake_id,
+        article_id,
+        quantity=Decimal(data.counted),
         at=clock.now(),
         actor_id=actor.user_id,
     )

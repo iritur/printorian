@@ -87,6 +87,12 @@ class Stocktake(Entity):
     lines: Mapped[list[StocktakeLine]] = relationship(
         back_populates="stocktake", cascade="all, delete-orphan", order_by="StocktakeLine.label"
     )
+    #: Packaging, consumables and spare parts in the counted cells (#35).
+    article_lines: Mapped[list[StocktakeArticleLine]] = relationship(
+        back_populates="stocktake",
+        cascade="all, delete-orphan",
+        order_by="StocktakeArticleLine.code",
+    )
 
 
 class StocktakeLine(Entity):
@@ -141,4 +147,50 @@ class StocktakeLine(Entity):
         return self.counted_grams is not None
 
 
-__all__ = ["STOCKTAKE_NUMBER_SEQUENCE", "Stocktake", "StocktakeLine"]
+class StocktakeArticleLine(Entity):
+    """One non-filament item as the book had it and as it was found (#35).
+
+    `StocktakeLine`'s shape in the article's own unit, for the reason the article
+    ledger is its own table: a count of boxes in a column named ``grams`` would be
+    a number with the wrong unit beside it. Same rules — the book snapshotted at
+    opening, a null count until somebody counts, the variance written at close
+    against the book *then*, and stored rather than recomputed.
+    """
+
+    __tablename__ = "stocktake_article_lines"
+    __table_args__ = (
+        UniqueConstraint(
+            "stocktake_id", "article_id", name="uq_stocktake_article_lines_stocktake_id_article_id"
+        ),
+        Index("ix_stocktake_article_lines_article_id", "article_id"),
+        Index("ix_stocktake_article_lines_counted_by", "counted_by"),
+        CheckConstraint("expected >= 0", name="expected_non_negative"),
+        CheckConstraint("counted IS NULL OR counted >= 0", name="counted_non_negative"),
+        CheckConstraint("(counted IS NULL) = (counted_at IS NULL)", name="counted_at_with_count"),
+    )
+
+    stocktake_id: Mapped[EntityId] = mapped_column(
+        ForeignKey("stocktakes.id", ondelete="CASCADE"), nullable=False
+    )
+    #: ``RESTRICT``, as for a spool's line: the variance is evidence.
+    article_id: Mapped[EntityId] = mapped_column(
+        ForeignKey("stock_articles.id", ondelete="RESTRICT"), nullable=False
+    )
+    #: Copied off the article and its cell, so the line reads without a join.
+    code: Mapped[str] = mapped_column(String(80), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    unit: Mapped[str] = mapped_column(String(20), nullable=False)
+    cell_address: Mapped[str | None] = mapped_column(String(24), nullable=True)
+
+    expected: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    counted: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    counted_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    counted_by: Mapped[EntityId | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    variance: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+
+    stocktake: Mapped[Stocktake] = relationship(back_populates="article_lines")
+
+
+__all__ = ["STOCKTAKE_NUMBER_SEQUENCE", "Stocktake", "StocktakeArticleLine", "StocktakeLine"]

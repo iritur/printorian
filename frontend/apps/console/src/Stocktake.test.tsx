@@ -81,6 +81,7 @@ const open = {
 const openDetail = {
   ...open,
   note: null,
+  article_lines: [],
   lines: [
     {
       lot_id: 'lot-1',
@@ -105,7 +106,13 @@ const openDetail = {
   ],
 }
 
-const value = { id: 'st-0', number: 'ST-00001', short_value: '3240.00', over_value: '940.00', unpriced_lines: 1 }
+const value = {
+  id: 'st-0',
+  number: 'ST-00001',
+  short_value: '3240.00',
+  over_value: '940.00',
+  unpriced_lines: 1,
+}
 
 beforeEach(() => {
   session.permissions = ['manage_inventory', 'view_financials']
@@ -114,7 +121,8 @@ beforeEach(() => {
   net.handler = (url: string, init?: RequestInit) => {
     if (init?.method === 'POST') return Promise.resolve(jsonOk(openDetail))
     if (url.endsWith('/store/stocktakes/st-1')) return Promise.resolve(jsonOk(openDetail))
-    if (url.endsWith('/store/stocktakes/st-0')) return Promise.resolve(jsonOk({ ...closed, note: null, lines: [] }))
+    if (url.endsWith('/store/stocktakes/st-0'))
+      return Promise.resolve(jsonOk({ ...closed, note: null, lines: [], article_lines: [] }))
     if (url.endsWith('/store/stocktakes/st-0/value')) return Promise.resolve(jsonOk(value))
     return Promise.reject(new Error(`unexpected request: ${url}`))
   }
@@ -158,7 +166,9 @@ describe('the panel', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Закрыть инвентаризацию' }))
     await waitFor(() =>
-      expect(net.posts.some((post) => post.url.endsWith('/store/stocktakes/st-1/close'))).toBe(true),
+      expect(net.posts.some((post) => post.url.endsWith('/store/stocktakes/st-1/close'))).toBe(
+        true,
+      ),
     )
     // An open count has no money to show, so none was asked for.
     expect(net.calls.some((url) => url.endsWith('/value'))).toBe(false)
@@ -175,7 +185,9 @@ describe('the panel', () => {
     render(<StocktakePanel history={[closed]} locale="ru" mayManage onChanged={noop} />)
 
     await screen.findByText('Проверено позиций')
-    await waitFor(() => expect(net.calls.some((url) => url.endsWith('/store/stocktakes/st-0'))).toBe(true))
+    await waitFor(() =>
+      expect(net.calls.some((url) => url.endsWith('/store/stocktakes/st-0'))).toBe(true),
+    )
     expect(net.calls.some((url) => url.endsWith('/value'))).toBe(false)
     expect(document.body.textContent ?? '').not.toContain('₽')
   })

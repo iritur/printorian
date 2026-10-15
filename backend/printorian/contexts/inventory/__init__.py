@@ -5,6 +5,13 @@ identity and price; a **lot** is a physical spool with a mass and a location.
 Status is derived from the lots, never stored.
 """
 
+from printorian.contexts.inventory.article_measures import (
+    ArticleTurnoverRow,
+    DeadStockArticle,
+    article_histories,
+    article_turnover,
+    dead_articles,
+)
 from printorian.contexts.inventory.article_models import MOVED_RETURNED
 from printorian.contexts.inventory.article_schemas import (
     ArticleMovementView,
@@ -48,6 +55,7 @@ from printorian.contexts.inventory.schemas import (
     CellDetail,
     CellMap,
     CellView,
+    CountArticle,
     CountLine,
     CreateMaterialLot,
     CreateMaterialSpec,
@@ -63,6 +71,7 @@ from printorian.contexts.inventory.schemas import (
     PlaceLot,
     ScenarioMatch,
     StatusCount,
+    StocktakeArticleLineView,
     StocktakeDetail,
     StocktakeLineView,
     StocktakeSummary,
@@ -106,15 +115,18 @@ __all__ = [
     "MOVEMENT_REASONS",
     "ArticleKind",
     "ArticleMovementView",
+    "ArticleTurnoverRow",
     "ArticleView",
     "CellDetail",
     "CellMap",
     "CellView",
+    "CountArticle",
     "CountLine",
     "CreateMaterialLot",
     "CreateMaterialSpec",
     "CreateStorageCell",
     "CreateStorageZone",
+    "DeadStockArticle",
     "DeadStockLot",
     "DeadStockReport",
     "DryLot",
@@ -140,6 +152,7 @@ __all__ = [
     "ScenarioMatch",
     "StatusCount",
     "StockArticles",
+    "StocktakeArticleLineView",
     "StocktakeDetail",
     "StocktakeLineView",
     "StocktakeReads",
@@ -154,6 +167,9 @@ __all__ = [
     "TurnoverRow",
     "WriteOffLot",
     "ZoneView",
+    "article_histories",
+    "article_turnover",
+    "dead_articles",
     "dead_stock",
     "derive_status",
     "detail_of",

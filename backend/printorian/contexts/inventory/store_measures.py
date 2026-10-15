@@ -32,6 +32,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from printorian.contexts.inventory.article_measures import (
+    ArticleTurnoverRow,
+    DeadStockArticle,
+)
 from printorian.contexts.inventory.models import MaterialLot, MaterialSpec
 from printorian.contexts.inventory.movements import (
     MOVED_ISSUED,
@@ -87,6 +91,9 @@ class TurnoverReport(BaseModel):
     since: datetime
     until: datetime
     rows: list[TurnoverRow] = Field(default_factory=list)
+    #: Packaging, consumables and spare parts, per kind, as days of cover —
+    #: `article_measures` says why the definition differs from a spool's (#35).
+    article_rows: list[ArticleTurnoverRow] = Field(default_factory=list)
 
 
 class DeadStockLot(BaseModel):
@@ -106,9 +113,15 @@ class DeadStockReport(BaseModel):
     idle_days: int
     lots: list[DeadStockLot] = Field(default_factory=list)
     total_grams: Decimal = Decimal(0)
-    #: Over the priced lots only; `unpriced_lots` says how many it leaves out.
+    #: Over the priced lots *and* priced articles; `unpriced_lots` and
+    #: `unpriced_articles` say how many it leaves out. One total, because the
+    #: panel's question — how much money is sitting still — does not care whether
+    #: it is filament or film (#35).
     total_value: Decimal = Decimal(0)
     unpriced_lots: int = 0
+    #: Packaging, consumables and spare parts nothing has touched (#35).
+    articles: list[DeadStockArticle] = Field(default_factory=list)
+    unpriced_articles: int = 0
 
 
 # ------------------------------------------------------------------ the rules

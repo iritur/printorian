@@ -71,8 +71,13 @@ counted from the sets the test checks against the database. Corrected.
 - **Expand/contract.** `packaging_tara.stock` is still written beside the
   article (`choosing._mirror`). `postproduction_consumables.remaining` is no
   longer read. A later migration drops both.
-- **Still owed by #35:** the stocktake, turnover and dead stock for articles.
-  The next PR does those and closes the issue.
+- **And the second half, which closes #35:** a stocktake lines up articles in
+  the counted cells (`stocktake_article_lines`, migration `0037`) and corrects
+  them at close through the article ledger, against the book at close. Turnover
+  for articles is *days of cover* (on hand ÷ the window's daily use) rather than
+  days per lot, because fungible stock has no per-item history; the unused items
+  are counted beside the mean. Dead articles join the one `VIEW_FINANCIALS`
+  total, valued at their recorded unit cost and counted as unpriced otherwise.
 - **Fixed on the way:** a packer who changed boxes used to take two boxes off
   the shelf for one parcel.
 

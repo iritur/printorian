@@ -285,7 +285,15 @@ packing and post-processing catalogues read their counts from it. The map counts
 articles beside spools, the cell panel lists them with move, issue and write-off,
 and «Движения» interleaves both ledgers with each quantity in its own unit.
 
-**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — the stocktake, «Оборачиваемость» and «Залежалое» for articles, which today cover spools only.
+**And they are counted and measured like spools.** A stocktake lines up the
+articles in the counted cells beside the spools (`stocktake_article_lines`, in
+each item's own unit) and its close corrects them through the article ledger,
+against the book at close. «Оборачиваемость» for articles is **days of cover** —
+how long what is on hand would last at the window's rate — because a box of film
+has no history of its own to measure days-per-lot on (`article_measures`); the
+unused ones are counted beside the mean. «Залежалое» adds the articles nothing
+has touched, valued at their recorded unit cost, to the one total behind
+`VIEW_FINANCIALS`. With this, §2.4 owes nothing.
 
 When dead stock arrives it takes the `api/routers/jobs.py` shape — a separate
 route with `VIEW_FINANCIALS` on top of the production gate — never a value field

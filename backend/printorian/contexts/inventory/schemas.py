@@ -307,6 +307,26 @@ class StocktakeLineView(BaseModel):
     variance_grams: Decimal | None = None
 
 
+class CountArticle(BaseModel):
+    """What was found of one non-filament item, in its unit. Zero is a count."""
+
+    counted: Decimal = Field(ge=0)
+
+
+class StocktakeArticleLineView(BaseModel):
+    """`StocktakeLineView`'s shape for an article, in its own unit (#35)."""
+
+    article_id: EntityId
+    code: str
+    name: str
+    unit: str
+    cell_address: str | None = None
+    expected: Decimal
+    counted: Decimal | None = None
+    counted_at: datetime | None = None
+    variance: Decimal | None = None
+
+
 class StocktakeSummary(BaseModel):
     """The panel's figures. Every count here is over the lines that exist."""
 
@@ -316,7 +336,8 @@ class StocktakeSummary(BaseModel):
     zone_code: str | None = None
     opened_at: datetime
     closed_at: datetime | None = None
-    #: Lines lined up at opening — the denominator of «проверено».
+    #: Lines lined up at opening — spools and articles both — the denominator of
+    #: «проверено».
     positions: int
     counted: int
     matched: int
@@ -327,6 +348,7 @@ class StocktakeSummary(BaseModel):
 class StocktakeDetail(StocktakeSummary):
     note: str | None = None
     lines: list[StocktakeLineView] = Field(default_factory=list)
+    article_lines: list[StocktakeArticleLineView] = Field(default_factory=list)
 
 
 class StocktakeValue(BaseModel):
