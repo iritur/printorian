@@ -4,6 +4,8 @@ import { ApiError } from '@printorian/api-client'
 import type { Locale, MessageKey } from '@printorian/ui'
 import { api, translate, translateError, useChrome, useSession } from '@printorian/ui'
 
+import { ArticlesPanel } from './Articles'
+import type { Article, ArticleMovement } from './Articles'
 import { CellDetail } from './CellDetail'
 // `Cell` and `Movement` are declared beside the window rather than here, so the
 // dependency runs one way: the map imports the detail, and the detail imports
@@ -13,6 +15,7 @@ import type { Cell, Movement } from './CellDetail'
 // Split out at the seam: the map is a map, and declaring places is a form. It
 // also keeps this file under the console's four-hundred-line convention.
 import { DeclareForms } from './DeclareForms'
+import { MovementFeed } from './MovementFeed'
 import { StocktakePanel, StocktakeTile } from './Stocktake'
 import type { StocktakeSummary } from './Stocktake'
 import { StoreMeasures } from './StoreMeasures'
@@ -71,6 +74,8 @@ export function StorePage({ locale }: { locale: Locale }) {
 
   const [map, setMap] = useState<CellMap | null>(null)
   const [movements, setMovements] = useState<Movement[]>([])
+  const [articles, setArticles] = useState<Article[]>([])
+  const [articleMovements, setArticleMovements] = useState<ArticleMovement[]>([])
   const [stocktakes, setStocktakes] = useState<StocktakeSummary[]>([])
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
@@ -90,14 +95,18 @@ export function StorePage({ locale }: { locale: Locale }) {
 
   const load = useCallback(async () => {
     try {
-      const [cells, feed, counts] = await Promise.all([
+      const [cells, feed, counts, stocked, stockFeed] = await Promise.all([
         api.get<CellMap>('/store/cells'),
         api.get<Movement[]>('/store/movements'),
         api.get<StocktakeSummary[]>('/store/stocktakes'),
+        api.get<Article[]>('/store/articles'),
+        api.get<ArticleMovement[]>('/store/articles/movements'),
       ])
       setMap(cells)
       setMovements(feed)
       setStocktakes(counts)
+      setArticles(stocked)
+      setArticleMovements(stockFeed)
       setError(null)
     } catch (exc: unknown) {
       setError(
@@ -179,9 +188,12 @@ export function StorePage({ locale }: { locale: Locale }) {
           <span>{t('store.movements')}</span>
         </div>
         <div className="hv-panel__body--none">
-          <MovementTable rows={movements} locale={locale} />
+          <MovementFeed spools={movements} articles={articleMovements} locale={locale} />
         </div>
       </section>
+
+      {/* Packaging, consumables and spare parts — the shared stock (#35). */}
+      <ArticlesPanel articles={articles} locale={locale} mayManage={mayManage} onChanged={load} />
 
       {/* Turnover for everybody; dead stock only asked for behind view_financials. */}
       <StoreMeasures locale={locale} />
@@ -245,7 +257,9 @@ function ZoneMap({
 
 function CellNode({ cell, onOpen }: { cell: Cell; onOpen: (address: string) => void }) {
   const fill = percent(cell.fill_percent)
-  const empty = cell.lot_count === 0
+  // Spools and articles both occupy a cell (#35); either makes it not empty.
+  const held = cell.lot_count + cell.article_count
+  const empty = held === 0
   return (
     <button
       type="button"
@@ -257,7 +271,7 @@ function CellNode({ cell, onOpen }: { cell: Cell; onOpen: (address: string) => v
       onClick={() => onOpen(cell.address)}
     >
       <span className="hv-node__id">{cell.address}</span>
-      <span className="hv-node__pct">{fill ?? `${cell.lot_count}`}</span>
+      <span className="hv-node__pct">{fill ?? `${held}`}</span>
       {/*
         No bar at all when the capacity was never declared — the treatment
         `StatusWall` already gives a null progress. A bar at 0% would say the
@@ -267,36 +281,5 @@ function CellNode({ cell, onOpen }: { cell: Cell; onOpen: (address: string) => v
         <span className="hv-node__fill" style={{ '--p': fill } as React.CSSProperties} />
       )}
     </button>
-  )
-}
-
-function MovementTable({ rows, locale }: { rows: Movement[]; locale: Locale }) {
-  const t = (key: MessageKey) => translate(locale, key)
-  if (rows.length === 0) return <p className="hv-hint">{t('store.movements.empty')}</p>
-  return (
-    <table className="hv-table">
-      <thead>
-        <tr>
-          <th>{t('store.movement.time')}</th>
-          <th>{t('store.movement.reason')}</th>
-          <th>{t('store.movement.route')}</th>
-          <th data-align="end">{t('store.movement.grams')}</th>
-          <th>{t('store.movement.note')}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.id}>
-            <td className="hv-table__id">{new Date(row.at).toLocaleString(locale)}</td>
-            <td>{translate(locale, `store.reason.${row.reason}` as MessageKey)}</td>
-            <td className="hv-table__id">
-              {[row.from_address, row.to_address].map((part) => part ?? '—').join(' → ')}
-            </td>
-            <td data-align="end">{Number(row.grams).toFixed(0)}</td>
-            <td>{row.note ?? '—'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   )
 }

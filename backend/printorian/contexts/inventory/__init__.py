@@ -5,6 +5,15 @@ identity and price; a **lot** is a physical spool with a mass and a location.
 Status is derived from the lots, never stored.
 """
 
+from printorian.contexts.inventory.article_models import MOVED_RETURNED
+from printorian.contexts.inventory.article_schemas import (
+    ArticleMovementView,
+    ArticleView,
+    PlaceArticle,
+    RegisterArticle,
+    TakeArticle,
+)
+from printorian.contexts.inventory.articles import StockArticles
 from printorian.contexts.inventory.drying import (
     HYGROSCOPIC_FAMILIES,
     DryingPolicy,
@@ -16,6 +25,7 @@ from printorian.contexts.inventory.headroom import MaterialStock, headroom
 from printorian.contexts.inventory.movements import (
     MOVED_COUNTED,
     MOVED_DRIED,
+    MOVED_ISSUED,
     MOVED_MOUNTED,
     MOVED_MOVED,
     MOVED_RECEIVED,
@@ -26,6 +36,7 @@ from printorian.contexts.inventory.movements import (
 )
 from printorian.contexts.inventory.placement import PlacementService
 from printorian.contexts.inventory.policies import (
+    ArticleKind,
     DryingState,
     Location,
     LocationKind,
@@ -84,13 +95,18 @@ __all__ = [
     "HYGROSCOPIC_FAMILIES",
     "MOVED_COUNTED",
     "MOVED_DRIED",
+    "MOVED_ISSUED",
     "MOVED_MOUNTED",
     "MOVED_MOVED",
     "MOVED_RECEIVED",
+    "MOVED_RETURNED",
     "MOVED_TO_DRYER",
     "MOVED_UNMOUNTED",
     "MOVED_WRITTEN_OFF",
     "MOVEMENT_REASONS",
+    "ArticleKind",
+    "ArticleMovementView",
+    "ArticleView",
     "CellDetail",
     "CellMap",
     "CellView",
@@ -117,10 +133,13 @@ __all__ = [
     "MaterialTable",
     "MovementView",
     "OpenStocktake",
+    "PlaceArticle",
     "PlaceLot",
     "PlacementService",
+    "RegisterArticle",
     "ScenarioMatch",
     "StatusCount",
+    "StockArticles",
     "StocktakeDetail",
     "StocktakeLineView",
     "StocktakeReads",
@@ -130,6 +149,7 @@ __all__ = [
     "StocktakeValue",
     "StoreViews",
     "StoredLot",
+    "TakeArticle",
     "TurnoverReport",
     "TurnoverRow",
     "WriteOffLot",

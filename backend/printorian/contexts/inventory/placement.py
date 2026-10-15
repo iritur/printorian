@@ -22,6 +22,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from printorian.contexts.inventory.article_models import StockArticle
 from printorian.contexts.inventory.models import MaterialLot, StorageCell, StorageZone
 from printorian.contexts.inventory.movements import (
     MOVED_MOVED,
@@ -275,21 +276,35 @@ class PlacementService:
         return lot
 
     async def _occupancy(self, cell_id: EntityId) -> int:
-        """How many live lots sit in this cell right now.
-
-        Empty spools do not count against capacity: a reel with nothing on it is
-        waste awaiting disposal, not stock, and the materials table already reads
-        `remaining_grams > 0` as the definition of live.
-        """
-        count = await self._db.scalar(
-            select(func.count())
-            .select_from(MaterialLot)
-            .where(MaterialLot.cell_id == cell_id, MaterialLot.remaining_grams > 0)
-        )
-        return int(count or 0)
+        return await occupants(self._db, cell_id)
 
 
-def cell_view(cell: StorageCell, *, zone_code: str, lot_count: int) -> CellView:
+async def occupants(db: AsyncSession, cell_id: EntityId) -> int:
+    """How many live things sit in this cell right now — spools and articles.
+
+    Empty spools do not count against capacity: a reel with nothing on it is
+    waste awaiting disposal, not stock, and the materials table already reads
+    `remaining_grams > 0` as the definition of live. An article with nothing on
+    hand is the same: a label on an empty shelf. One stocked item, of either
+    kind, is one occupant — `capacity_lots` counts things put there, and a box of
+    film takes the place a spool would (#35).
+    """
+    lots = await db.scalar(
+        select(func.count())
+        .select_from(MaterialLot)
+        .where(MaterialLot.cell_id == cell_id, MaterialLot.remaining_grams > 0)
+    )
+    articles = await db.scalar(
+        select(func.count())
+        .select_from(StockArticle)
+        .where(StockArticle.cell_id == cell_id, StockArticle.on_hand > 0)
+    )
+    return int(lots or 0) + int(articles or 0)
+
+
+def cell_view(
+    cell: StorageCell, *, zone_code: str, lot_count: int, article_count: int = 0
+) -> CellView:
     """One cell as the map draws it, with the fill rule applied in one place."""
     return CellView(
         id=cell.id,
@@ -297,7 +312,8 @@ def cell_view(cell: StorageCell, *, zone_code: str, lot_count: int) -> CellView:
         zone_code=zone_code,
         capacity_lots=cell.capacity_lots,
         lot_count=lot_count,
-        fill_percent=fill_percent(lot_count, cell.capacity_lots),
+        article_count=article_count,
+        fill_percent=fill_percent(lot_count + article_count, cell.capacity_lots),
         is_active=cell.is_active,
     )
 

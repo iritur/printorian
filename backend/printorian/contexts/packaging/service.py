@@ -19,16 +19,16 @@ from __future__ import annotations
 from datetime import timedelta
 from decimal import Decimal
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from printorian.contexts.packaging import events as pk_events
+from printorian.contexts.packaging.choosing import Choosing
 from printorian.contexts.packaging.models import (
     PackInstruction,
     PackStep,
     PackTask,
-    PackUse,
     Tara,
 )
 from printorian.contexts.packaging.policies import (
@@ -38,7 +38,6 @@ from printorian.contexts.packaging.policies import (
     assert_transition,
 )
 from printorian.contexts.packaging.schemas import (
-    ChooseTara,
     CreatePackTask,
     HoldParcel,
     PackView,
@@ -56,7 +55,7 @@ from printorian.core.ids import EntityId
 _NUMBER_PREFIX = "PK"
 
 
-class PackagingService:
+class PackagingService(Choosing):
     """Raising, packing and shipping parcels."""
 
     def __init__(self, session: AsyncSession, clock: Clock, bus: EventBus) -> None:
@@ -163,53 +162,6 @@ class PackagingService:
         # with the board still showing them as work in hand.
         if all(one.done_at is not None for one in task.steps):
             return await self.ready(task_id)
-        return await self._view(task)
-
-    async def choose_tara(self, task_id: EntityId, data: ChooseTara) -> PackView:
-        """Record what went into the parcel, and what it cost.
-
-        Written when the packer names it rather than when the parcel closes: a
-        parcel abandoned halfway has still consumed the box, and a ledger that
-        only counted finished work would understate the month.
-        """
-        task = await self._task(task_id)
-        if task.status.is_terminal:
-            raise DomainRuleViolationError("error.packaging.closed", status=task.status.value)
-
-        wanted: dict[EntityId, Decimal] = {data.tara_id: Decimal(1)}
-        for tara_id, quantity in data.extras.items():
-            if quantity > 0:
-                wanted[tara_id] = wanted.get(tara_id, Decimal(0)) + quantity
-
-        # Replaced wholesale rather than added to: choosing a different box is a
-        # correction, and a ledger that accumulated both would bill the parcel for
-        # two enclosures it never had.
-        #
-        # Issued as a statement rather than by walking `task.used`. The rows are
-        # added with `session.add` rather than through the relationship, so an
-        # already-loaded collection does not see them — and a second call would
-        # find nothing to delete and leave the parcel billed for both boxes. Found
-        # by the test that changes its mind about the box.
-        await self._db.execute(delete(PackUse).where(PackUse.task_id == task.id))
-        await self._db.flush()
-
-        cost = Decimal(0)
-        for tara_id, quantity in wanted.items():
-            tara = await self._db.get(Tara, tara_id)
-            if tara is None:
-                raise NotFoundError("error.packaging.tara_not_found")
-            self._db.add(
-                PackUse(task_id=task.id, tara_id=tara.id, quantity=quantity, unit_price=tara.price)
-            )
-            # Stock moves here too. The alternative — decrementing on close — has
-            # the post's shelf disagreeing with the post's screen for the length
-            # of every parcel, which is when somebody is looking at both.
-            tara.stock = max(Decimal(0), tara.stock - quantity)
-            cost += tara.price * quantity
-
-        task.tara_id = data.tara_id
-        task.packaging_cost = cost.quantize(Decimal("0.01"))
-        await self._db.flush()
         return await self._view(task)
 
     async def weigh(self, task_id: EntityId, data: Weigh) -> PackView:

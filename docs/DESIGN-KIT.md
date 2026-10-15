@@ -41,7 +41,7 @@ three of the table-valued settings, not the screen (§2.1).
 | `dashboard` `orders` `fleet` `materials` `users` `postproduction` `packaging` | control | **built** |
 | `settings` | control | **built** — scalars and Диагностика; the tables remain, §2.1 |
 | `service` | control | **built** — the ticket board, the work order and the reliability table; §2.2 for the rest |
-| `purchasing` | control | **built** — the desk, the six stages and receiving into material stock; the deferred panels are in §2.3 |
+| `purchasing` | control | **built** — the desk, the six stages and receiving into stock (filament, packaging, consumables, spare parts); the deferred panels are in §2.3 |
 | `store` | control | **built** — cells, ledger and movements; §2.4 for the rest |
 | `logistics` | control | **built** — shipments, carriers and delivery accuracy; §2.5 for the rest |
 
@@ -194,7 +194,10 @@ recorded verbatim but is **not** a cause; the farm has no table mapping one to �
 renders it and [`contexts/procurement`](../backend/printorian/contexts/procurement/)
 serves it: suppliers, purchase orders over the kit's six stages plus cancellation,
 five purchasable classes on the lines, and receiving a material line into a
-`material_lots` row carrying its lot number and the price paid. `MANAGE_INVENTORY`
+`material_lots` row carrying its lot number and the price paid — and, since #35, a
+packaging, consumable or spare-part line into the shared stock
+(`inventory.stock_articles`), with the order's number as the movement's
+«Основание». A printer is still ordered but never stocked. `MANAGE_INVENTORY`
 gates the desk; prices arrive from `GET /purchasing/orders/{id}/costs` behind
 `VIEW_FINANCIALS`, as a separate route rather than as blanked fields — a null
 already means "not measured" (ADR-0007) and reusing it for "not permitted" makes
@@ -223,13 +226,11 @@ than an omission; three of them would have to invent a number to exist at all.
   decremented. The reorder row's consequence is a discriminated value with no
   coverage arm and the console draws «—». `test_procurement_reorder.py` is the
   tripwire.
-- **Receiving into `packaging_tara` and `postproduction_consumables`** — neither
-  context offers an *increment*; `PackingCatalogue.stock_tara` restates the level
-  absolutely, so receiving into it would lose whatever a packer did in between.
-  The lines are ordered and paid for; only the arrival is refused, by code.
-- **Spare parts stock** — [#33](https://github.com/iritur/printorian/issues/33)
-  claims that table. `spare_part` is declared in the enum so adding it later is a
-  service change, and modelling stock for it here would give the farm two.
+- ~~**Receiving into `packaging_tara` and `postproduction_consumables`**~~ and
+  ~~**spare parts stock**~~ — built by #35 as one shared stock model
+  (`inventory.stock_articles`, its own ledger `article_movements`). Each receipt
+  adds through an increment and a ledger row, which is what the old per-context
+  counts lacked.
 
 ### 2.4 `store.html` — built
 
@@ -274,7 +275,17 @@ was measured, so nothing lapsed. PLA and the rule switched off read as a dash. T
 trip to the dryer is two ledger rows (`stock.to_dryer`, `stock.dried`) and the
 spool keeps its cell meanwhile, so the map does not offer its slot to anybody.
 
-**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — the three non-filament purchasable classes: tara, consumables and spare parts.
+**Packaging, consumables and spare parts are stock now** (#35, the owner's
+decision: one shared stock model). An *article* — `inventory.stock_articles` — is
+an item, its unit and how many there are, in at most one cell; every change is a
+row in `article_movements`, the shape of the spool ledger in the article's own
+unit. Packing a parcel consumes its box through it (and a changed choice gives the
+first box back — the old code took two), purchasing receives into it, and the
+packing and post-processing catalogues read their counts from it. The map counts
+articles beside spools, the cell panel lists them with move, issue and write-off,
+and «Движения» interleaves both ledgers with each quantity in its own unit.
+
+**What the backend still owes:** [#35](https://github.com/iritur/printorian/issues/35) — the stocktake, «Оборачиваемость» and «Залежалое» for articles, which today cover spools only.
 
 When dead stock arrives it takes the `api/routers/jobs.py` shape — a separate
 route with `VIEW_FINANCIALS` on top of the production gate — never a value field

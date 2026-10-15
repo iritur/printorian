@@ -27,6 +27,7 @@ from printorian.contexts.catalog import models as catalog_models
 from printorian.contexts.fleet import history as fleet_history
 from printorian.contexts.fleet import models as fleet_models
 from printorian.contexts.identity import models as identity_models
+from printorian.contexts.inventory import article_models as inventory_articles
 from printorian.contexts.inventory import models as inventory_models
 from printorian.contexts.inventory import movements as inventory_movements
 from printorian.contexts.inventory import stocktake_models as inventory_stocktake
@@ -54,6 +55,7 @@ __all__ = [
     "fleet_history",
     "fleet_models",
     "identity_models",
+    "inventory_articles",
     "inventory_models",
     "inventory_movements",
     "inventory_stocktake",

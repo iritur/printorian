@@ -16,6 +16,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from printorian.contexts.inventory.article_models import ArticleMovement, StockArticle
+from printorian.contexts.inventory.article_schemas import ArticleMovementView, ArticleView
 from printorian.contexts.inventory.drying import DryingPolicy, drying_of
 from printorian.contexts.inventory.models import MaterialLot, StorageCell, StorageZone
 from printorian.contexts.inventory.movements import MaterialMovement
@@ -57,13 +59,16 @@ class StoreViews:
             )
         )
         occupancy = await self._occupancy_by_cell()
+        stocked = await self._articles_by_cell()
 
         views: list[ZoneView] = []
         cells_total = 0
         occupied_total = 0
         for zone in zones:
             cells = sorted(zone.cells, key=lambda cell: cell.address)
-            occupied = sum(1 for cell in cells if occupancy.get(cell.id, 0) > 0)
+            occupied = sum(
+                1 for cell in cells if occupancy.get(cell.id, 0) + stocked.get(cell.id, 0) > 0
+            )
             cells_total += len(cells)
             occupied_total += occupied
             views.append(
@@ -85,6 +90,7 @@ class StoreViews:
                             cell,
                             zone_code=zone.code,
                             lot_count=occupancy.get(cell.id, 0),
+                            article_count=stocked.get(cell.id, 0),
                         )
                         for cell in cells
                     ],
@@ -135,8 +141,17 @@ class StoreViews:
                 .limit(CELL_MOVEMENT_LIMIT)
             )
         )
+        articles = list(
+            await self._db.scalars(
+                select(StockArticle)
+                .where(StockArticle.cell_id == cell.id, StockArticle.on_hand > 0)
+                .order_by(StockArticle.kind, StockArticle.code)
+            )
+        )
         return CellDetail(
-            cell=cell_view(cell, zone_code=cell.zone.code, lot_count=len(lots)),
+            cell=cell_view(
+                cell, zone_code=cell.zone.code, lot_count=len(lots), article_count=len(articles)
+            ),
             lots=[
                 StoredLot(
                     **LotView.model_validate(lot).model_dump(),
@@ -154,6 +169,13 @@ class StoreViews:
             ],
             drying_valid_hours=drying.valid_hours if drying.required else None,
             movements=[MovementView.model_validate(row) for row in movements],
+            articles=[
+                ArticleView.model_validate(article).model_copy(update={"cell": cell.address})
+                for article in articles
+            ],
+            article_movements=await self.article_movements(
+                address=address, limit=CELL_MOVEMENT_LIMIT
+            ),
         )
 
     async def movements(
@@ -189,6 +211,66 @@ class StoreViews:
             )
         )
         return [MovementView.model_validate(row) for row in rows]
+
+    async def article_movements(
+        self,
+        *,
+        since: datetime | None = None,
+        address: str | None = None,
+        article_id: EntityId | None = None,
+        limit: int = FEED_LIMIT,
+    ) -> list[ArticleMovementView]:
+        """The non-filament half of the movements feed, newest first (#35).
+
+        A list of its own rather than mixed into `movements`: the two ledgers carry
+        different units — grams there, the article's own unit here — and a single
+        row shape would have to pretend one of them was the other. The screen
+        interleaves them by time.
+        """
+        query = select(ArticleMovement, StockArticle).join(
+            StockArticle, StockArticle.id == ArticleMovement.article_id
+        )
+        if since is not None:
+            query = query.where(ArticleMovement.at >= since)
+        if address is not None:
+            query = query.where(
+                or_(ArticleMovement.from_address == address, ArticleMovement.to_address == address)
+            )
+        if article_id is not None:
+            query = query.where(ArticleMovement.article_id == article_id)
+        rows = await self._db.execute(
+            query.order_by(ArticleMovement.at.desc(), ArticleMovement.sequence.desc()).limit(
+                min(limit, FEED_LIMIT)
+            )
+        )
+        return [
+            ArticleMovementView(
+                id=movement.id,
+                article_id=article.id,
+                kind=article.kind,
+                code=article.code,
+                name=article.name,
+                unit=article.unit,
+                reason=movement.reason,
+                quantity=movement.quantity,
+                on_hand_after=movement.on_hand_after,
+                at=movement.at,
+                from_address=movement.from_address,
+                to_address=movement.to_address,
+                reference=movement.reference,
+                note=movement.note,
+            )
+            for movement, article in rows.all()
+        ]
+
+    async def _articles_by_cell(self) -> dict[EntityId, int]:
+        """Stocked articles per cell, counted like spools: only those with any on hand."""
+        rows = await self._db.execute(
+            select(StockArticle.cell_id, func.count())
+            .where(StockArticle.cell_id.is_not(None), StockArticle.on_hand > 0)
+            .group_by(StockArticle.cell_id)
+        )
+        return {cell_id: int(count) for cell_id, count in rows if cell_id is not None}
 
     async def _occupancy_by_cell(self) -> dict[EntityId, int]:
         """Live lots per cell, in one query rather than one per cell.

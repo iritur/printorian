@@ -61,6 +61,7 @@ const cellA1 = {
   zone_code: 'A',
   capacity_lots: null,
   lot_count: 1,
+  article_count: 0,
   fill_percent: null,
   is_active: true,
 }
@@ -71,6 +72,7 @@ const cellA2 = {
   zone_code: 'A',
   capacity_lots: 4,
   lot_count: 2,
+  article_count: 0,
   fill_percent: '50.0',
   is_active: true,
 }
@@ -139,6 +141,8 @@ const detail = {
   ],
   drying_valid_hours: 72,
   movements,
+  articles: [],
+  article_movements: [],
 }
 
 beforeEach(() => {
@@ -148,6 +152,8 @@ beforeEach(() => {
     if (url.endsWith('/store/cells')) return Promise.resolve(jsonOk(map))
     if (url.endsWith('/store/movements')) return Promise.resolve(jsonOk(movements))
     if (url.endsWith('/store/stocktakes')) return Promise.resolve(jsonOk([]))
+    if (url.endsWith('/store/articles')) return Promise.resolve(jsonOk([]))
+    if (url.endsWith('/store/articles/movements')) return Promise.resolve(jsonOk([]))
     if (url.endsWith('/store/cells/A1-1')) return Promise.resolve(jsonOk(detail))
     return Promise.reject(new Error('unexpected request: ' + url))
   }

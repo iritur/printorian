@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from printorian.contexts.inventory.article_schemas import ArticleMovementView, ArticleView
 from printorian.contexts.inventory.policies import (
     DryingState,
     LocationKind,
@@ -139,6 +140,10 @@ class CellView(BaseModel):
     zone_code: str
     capacity_lots: int | None = None
     lot_count: int
+    #: Non-filament items stocked here (#35). Counted beside the spools rather
+    #: than into `lot_count`, so a screen that labels the number «катушек» does
+    #: not quietly start counting boxes; the fill is over both.
+    article_count: int = 0
     fill_percent: Decimal | None = None
     is_active: bool = True
 
@@ -239,6 +244,9 @@ class CellDetail(BaseModel):
     #: the states. ``None`` when the rule is switched off, and the panel says so.
     drying_valid_hours: int | None = None
     movements: list[MovementView] = Field(default_factory=list)
+    #: The non-filament items in this cell, and their recent movements (#35).
+    articles: list[ArticleView] = Field(default_factory=list)
+    article_movements: list[ArticleMovementView] = Field(default_factory=list)
 
 
 class CreateStorageZone(BaseModel):

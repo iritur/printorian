@@ -16,6 +16,7 @@ to 2.1 claim a version whose steps have to stay what they were.
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -113,7 +114,8 @@ async def main() -> None:
                     price=Decimal(price),
                     stock=Decimal(stock),
                     reorder_at=Decimal(reorder),
-                )
+                ),
+                at=datetime.now(UTC),
             )
         print(f"tara :: {len(TARA)} positions")
 

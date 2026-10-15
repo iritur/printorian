@@ -200,25 +200,30 @@ async def test_receiving_a_class_with_no_stock_model_is_refused_by_code(
 ) -> None:
     """An honest refusal rather than a silent no-op.
 
-    Packaging and post-production both carry stock but neither offers an
-    *increment*, and spare parts have no stock model at all (issue #33 claims that
-    table). A receipt that recorded the arrival and put nothing on a shelf would
-    leave a buyer believing a box of film had been stored.
+    A printer is bought here and is not stock: it arrives as a fleet entry. Since
+    #35 every other class has somewhere to go, so a printer is the class that
+    shows the refusal still holds — a receipt that recorded the arrival and put
+    nothing anywhere would leave a buyer believing it had been stored.
     """
     order_id, line_id = await an_order(
-        procurement, kind=PurchasableKind.PACKAGING, item_code="BOX-M", quantity="20"
+        procurement, kind=PurchasableKind.PRINTER, item_code="P1S", quantity="1"
     )
 
     with pytest.raises(ValidationError) as raised:
         await procurement.receive(
             order_id,
-            ReceiveDelivery(lines=[ReceiveLine(line_id=line_id, quantity=Decimal(20))]),
+            ReceiveDelivery(lines=[ReceiveLine(line_id=line_id, quantity=Decimal(1))]),
             by=None,
         )
 
     assert raised.value.code == "error.procurement.class_not_receivable"
-    assert raised.value.details["kind"] == "packaging"
-    assert raised.value.details["receivable"] == ["material"]
+    assert raised.value.details["kind"] == "printer"
+    assert raised.value.details["receivable"] == [
+        "material",
+        "packaging",
+        "post_consumable",
+        "spare_part",
+    ]
     assert list(await db_session.scalars(select(PurchaseReceipt))) == []
 
 

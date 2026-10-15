@@ -181,6 +181,7 @@ class PurchaseReceipt(Entity):
     __table_args__ = (
         Index("ix_purchase_receipts_line_id", "line_id"),
         Index("ix_purchase_receipts_material_lot_id", "material_lot_id"),
+        Index("ix_purchase_receipts_stock_article_id", "stock_article_id"),
         Index("ix_purchase_receipts_received_by", "received_by"),
         CheckConstraint("quantity > 0", name="purchase_receipt_quantity_positive"),
         CheckConstraint(
@@ -205,10 +206,15 @@ class PurchaseReceipt(Entity):
     #: The stock row this arrival created, when the class has one.
     #:
     #: ``SET NULL``: a spool written off or merged away must not delete the record
-    #: that it was bought. Null also covers the four classes this build cannot
-    #: receive into — see `policies.RECEIVABLE`.
+    #: that it was bought. Null for every class but filament — see
+    #: `stock_article_id` for the others, and `policies.RECEIVABLE`.
     material_lot_id: Mapped[EntityId | None] = mapped_column(
         ForeignKey("material_lots.id", ondelete="SET NULL"), nullable=True
+    )
+    #: The article this arrival added to, for packaging, consumables and spare
+    #: parts (#35) — `material_lot_id`'s twin, and ``SET NULL`` for the same reason.
+    stock_article_id: Mapped[EntityId | None] = mapped_column(
+        ForeignKey("stock_articles.id", ondelete="SET NULL"), nullable=True
     )
     received_at: Mapped[datetime] = mapped_column(UtcDateTime, nullable=False)
     #: ``SET NULL``: a person leaving the farm must not erase the deliveries they

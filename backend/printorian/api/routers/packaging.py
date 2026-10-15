@@ -238,9 +238,9 @@ async def report_discrepancy(
 
 
 @router.post("/tara", status_code=status.HTTP_201_CREATED, dependencies=[_SHELF])
-async def stock_tara(data: CreateTara, shelf: PackingShelf) -> TaraRow:
+async def stock_tara(data: CreateTara, shelf: PackingShelf, clock: AppClock) -> TaraRow:
     """Add a packing item, or restate one already on the shelf."""
-    return await shelf.stock_tara(data)
+    return await shelf.stock_tara(data, at=clock.now())
 
 
 @router.delete("/tara/{tara_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[_SHELF])

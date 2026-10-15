@@ -13,9 +13,12 @@ norms behind last month's pace figures have to stay reconstructable.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from printorian.contexts.inventory import ArticleKind, RegisterArticle, StockArticles
 from printorian.contexts.packaging.models import PackInstruction, PackInstructionStep, Tara
 from printorian.contexts.packaging.schemas import CreateTara, PublishInstruction, TaraRow
 from printorian.core.errors import DomainRuleViolationError
@@ -80,13 +83,19 @@ class PackingCatalogue:
         )
         return found
 
-    async def stock_tara(self, data: CreateTara) -> TaraRow:
+    async def stock_tara(self, data: CreateTara, *, at: datetime) -> TaraRow:
         """Add a packing item, or restate one already on the shelf.
 
         Keyed by code rather than by id, because this is how a new box arrives:
         somebody types the code from the supplier's invoice, and asking them to
         first find out whether the farm already knows it is asking them to do the
         lookup the database can do.
+
+        **The count goes to the shared stock as a correction** (#35). This used to
+        overwrite `packaging_tara.stock` with whatever was typed, so the book could
+        jump from 40 to 12 with nothing saying why. Now the article is declared
+        here and moved to the stated level by a `stock.counted` row — the number
+        still lands, and the ledger records by how much it changed.
         """
         tara = await self._db.scalar(select(Tara).where(Tara.code == data.code))
         if tara is None:
@@ -99,9 +108,23 @@ class PackingCatalogue:
         tara.inner_width_mm = data.inner_width_mm
         tara.inner_height_mm = data.inner_height_mm
         tara.price = data.price
-        tara.stock = data.stock
         tara.reorder_at = data.reorder_at
         tara.is_active = True
+        stock = StockArticles(self._db)
+        await stock.register(
+            RegisterArticle(
+                kind=ArticleKind.PACKAGING,
+                code=data.code,
+                name=data.name,
+                unit=data.unit,
+                reorder_at=data.reorder_at,
+            )
+        )
+        await stock.restate(
+            ArticleKind.PACKAGING, data.code, data.stock, at=at, note="packing shelf"
+        )
+        # Written beside the article while both exist — see `service._mirror`.
+        tara.stock = data.stock
         await self._db.flush()
         return TaraRow.model_validate(tara)
 
