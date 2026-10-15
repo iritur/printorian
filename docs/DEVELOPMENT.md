@@ -127,6 +127,7 @@ scheduler, SLA, intake or heartbeat ran for that long. Now:
 | 1 | 60.1 s | 0.0 s | 0.0 s |
 | 8 | 60.3 s | 0.0 s | 0.3 s |
 | 16 | 120.4 s | 60.3 s | 0.3 s |
+| 32 | 240.7 s | 180.6 s | 0.4 s |
 
 The driver connects in a thread, so the loop never stalls; the pool tries up to
 eight printers at once (`CONNECT_CONCURRENCY`), so a pass costs the slowest
@@ -134,7 +135,7 @@ attempt rather than their sum; and a printer that failed is retried after 30 s,
 doubling to 5 min, each delay scaled by a random factor in [0.5, 1) so a router
 reboot does not bring the whole farm back in the same second. New connection
 details are tried at once. **Beyond eight silent printers the farm degrades
-rather than collapses:** passes lengthen in 60-second waves (the 16 row), and the
+rather than collapses:** passes lengthen in 60-second waves (the 16 and 32 rows), and the
 scheduler waits behind them because one refresh runs at a time — two passes
 connecting the same machine would give it two MQTT sessions. The event loop keeps
 running throughout. What this cannot measure is the ceiling against *real*
