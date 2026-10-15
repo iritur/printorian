@@ -14,6 +14,7 @@ docstring — V1's connector claimed to work and did not.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import ssl
 import threading
@@ -47,6 +48,13 @@ from printorian.drivers.base import (
 #: How long to wait for the first report before deciding the machine is unreachable.
 _CONNECT_TIMEOUT_SECONDS = 15.0
 
+#: The MQTT keepalive, which paho *also* uses as the TLS handshake's socket
+#: timeout (`Client._ssl_wrap_socket`). So a machine that accepts the TCP
+#: connection and then says nothing — switched on but wedged — holds a connect
+#: attempt for this long, not for paho's five-second `connect_timeout`. Measured:
+#: `tools/measure_driver_pool.py`, 60.1 s per silent printer (issue #26).
+_KEEPALIVE_SECONDS = 60
+
 
 class BambuDriver(PrinterDriver):
     """LAN control for Bambu Lab printers."""
@@ -79,7 +87,16 @@ class BambuDriver(PrinterDriver):
     # -- connection ------------------------------------------------------
 
     async def connect(self, info: ConnectionInfo) -> None:
-        """Open the MQTT session and wait for the machine to describe itself."""
+        """Open the MQTT session and wait for the machine to describe itself.
+
+        **Every blocking step runs in a thread, never on the event loop.** paho's
+        `connect` is synchronous and the first-report wait is a `threading.Event`;
+        called directly from this coroutine they froze the *whole* worker process —
+        scheduler, SLA, intake, heartbeats — for up to a minute per unreachable
+        printer, one printer after another, on every pass (issue #26, measured
+        before and after with `tools/measure_driver_pool.py`). In a thread the
+        attempt still takes as long, but only this coroutine waits for it.
+        """
         self._info = info
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         client.username_pw_set(transport.USERNAME, info.access_code)
@@ -90,7 +107,9 @@ class BambuDriver(PrinterDriver):
         client.on_disconnect = self._on_disconnect
 
         try:
-            client.connect(info.host or "", transport.MQTT_PORT, keepalive=60)
+            await asyncio.to_thread(
+                client.connect, info.host or "", transport.MQTT_PORT, keepalive=_KEEPALIVE_SECONDS
+            )
         except (OSError, ssl.SSLError) as exc:
             raise DriverUnavailableError(
                 "error.driver.unavailable", printer=info.printer_id, detail=str(exc)
@@ -102,7 +121,7 @@ class BambuDriver(PrinterDriver):
         # A connection that never produces a report is not a working connection.
         # Silence here usually means a wrong serial: the topic simply has no
         # publisher, and nothing else would ever tell us.
-        if not self._first_report.wait(_CONNECT_TIMEOUT_SECONDS):
+        if not await asyncio.to_thread(self._first_report.wait, _CONNECT_TIMEOUT_SECONDS):
             await self.disconnect()
             raise DriverUnavailableError(
                 "error.driver.no_report",
@@ -113,9 +132,10 @@ class BambuDriver(PrinterDriver):
 
     async def disconnect(self) -> None:
         if self._client is not None:
-            self._client.loop_stop()
-            self._client.disconnect()
-            self._client = None
+            client, self._client = self._client, None
+            # `loop_stop` joins paho's network thread, which may itself be inside
+            # a blocking read — not something to wait for on the event loop.
+            await asyncio.to_thread(_close, client)
         self._first_report.clear()
 
     def _on_connect(self, client: mqtt.Client, _u: Any, _f: Any, reason: Any, _p: Any) -> None:
@@ -194,11 +214,12 @@ class BambuDriver(PrinterDriver):
         **Not yet verified against hardware** — the Phase 0 machine had no writable
         storage. A refusal surfaces as ``DriverStorageError`` so the cause is named.
         """
-        ftps = transport.connect_ftps(self._info.host or "", self._info.access_code or "")
-        try:
-            remote = transport.upload_plate(ftps, plate.filename, plate.content)
-        finally:
-            transport.close_ftps(ftps)
+        # In a thread for the reason `connect` is: an FTPS transfer of a plate is
+        # seconds of blocking socket I/O, and on the event loop that is seconds in
+        # which no other worker loop runs.
+        remote = await asyncio.to_thread(
+            _upload, self._info.host or "", self._info.access_code or "", plate
+        )
         return RemoteFileRef(path=remote)
 
     async def start(self, ref: RemoteFileRef, ams_mapping: dict[int, int]) -> JobHandle:
@@ -245,6 +266,19 @@ class BambuDriver(PrinterDriver):
             raise DriverUnavailableError(
                 "error.driver.publish_failed", printer=self._info.printer_id, rc=result.rc
             )
+
+
+def _close(client: mqtt.Client) -> None:
+    client.loop_stop()
+    client.disconnect()
+
+
+def _upload(host: str, access_code: str, plate: PlateUpload) -> str:
+    ftps = transport.connect_ftps(host, access_code)
+    try:
+        return transport.upload_plate(ftps, plate.filename, plate.content)
+    finally:
+        transport.close_ftps(ftps)
 
 
 def state_of(telemetry: Telemetry | None) -> PrinterState:

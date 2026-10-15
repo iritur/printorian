@@ -7,6 +7,46 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
+## 2026-10-15 — what an unreachable printer costs the worker process
+
+**As of:** 2026-10-15 · branched from `main` at `edbcef5` (#140).
+
+**#26: the mitigations are in and measured; the ceiling against real printers is
+not.** `BambuDriver.connect` ran paho's synchronous connect and a
+`threading.Event.wait` on the event loop, and paho bounds the TLS handshake by the
+MQTT keepalive (60 s), not its five-second `connect_timeout`. So one printer that
+was switched on but silent froze the *whole* worker process — every loop, every
+heartbeat — for 60 s, and the pool retried it on every pass. That was measured
+with `backend/tools/measure_driver_pool.py`, which runs the real pool and the real
+driver against a silent local listener: 60.1 s for one printer, 240.2 s for four.
+
+Now:
+- `connect`, `disconnect` and the FTPS `upload` run in threads.
+- The pool attempts up to eight printers at once.
+- A failed printer is retried on a jittered backoff: 30 s doubling to 5 min.
+- New details are tried at once.
+- One `refresh` runs at a time, because the scheduler and the poller share the
+  pool and could otherwise give one machine two MQTT sessions.
+
+The table is in `docs/DEVELOPMENT.md`. Beyond eight silent printers the passes
+lengthen in 60-second waves, but the loop never stalls.
+
+`test_bambu_connect_off_loop.py` uses the real driver. With the fix reverted the
+event loop ticked zero times during the connect. The six pool properties were each
+removed in turn, and each failed its own test.
+
+Two traps. Existing pool tests that assumed an immediate retry now advance the
+clock past the backoff. And paho leaks the `SSLSocket` of a handshake that times
+out, which CPython frees at once; the warning is filtered in that one test and
+the comment says why.
+
+**#35 is not code-only.** Its last item is the three non-filament stock classes.
+Packaging stock lives in `packaging.Tara`, post-processing stock in
+`postproduction.Consumable` — neither with an increment — and spare parts have no
+stock model at all. The movement ledger is keyed on filament lots in grams. Where
+non-filament stock lives is a decision across three contexts, and it is left with
+the owner.
+
 ## 2026-10-14 — the security review's recorded list, worked down
 
 **As of:** 2026-10-14 · branched from `main` at `3b40583` (#129). Each pull request

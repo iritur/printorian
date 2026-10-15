@@ -88,7 +88,7 @@ The hardest phase. The spike from Phase 0 becomes a product-grade driver.
 
 **Exit criterion:** the console shows live state for every real printer on the farm; an operator uploads a plate and starts a print from Printorian; a driver disconnection produces `Offline` plus an alert — and never fabricated data.
 
-**Risks:** Bambu firmware changes (mitigations in [ARCHITECTURE §7](ARCHITECTURE.md#7-printer-drivers-drivers)); FTPS implicit-TLS quirks; MQTT reconnect storms with many printers — cap concurrent connections and jitter reconnects.
+**Risks:** Bambu firmware changes (mitigations in [ARCHITECTURE §7](ARCHITECTURE.md#7-printer-drivers-drivers)); FTPS implicit-TLS quirks; MQTT reconnect storms with many printers — cap concurrent connections and jitter reconnects. Both are in the driver pool now, measured against silent printers ([DEVELOPMENT.md](DEVELOPMENT.md), #26); the ceiling against real machines waits for Phase 4.
 
 ---
 
