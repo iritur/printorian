@@ -15,14 +15,31 @@ A printer that was merely renamed does not lose its connection.
 
 Failure to connect is not cached as an error. A machine that was unplugged at
 09:00 must be able to come back at 09:05 without restarting the process, so a
-failed build is simply absent from the dictionary and retried next pass. The
-callers already know what to do with a printer that has no driver: the poller
-records it offline (ADR-0007), and the scheduler cannot dispatch to it.
+failed build is simply absent from the dictionary and retried. The callers
+already know what to do with a printer that has no driver: the poller records it
+offline (ADR-0007), and the scheduler cannot dispatch to it.
+
+**Retried on a backoff, not on every pass, and several at once** (issue #26). A
+connect attempt against a machine that is switched on but not answering takes a
+full minute — paho bounds the TLS handshake by the MQTT keepalive — and the
+telemetry loop runs every five seconds. Retrying every printer on every pass, one
+after another, made the passes themselves the reconnect storm ROADMAP warns
+about: measured with `tools/measure_driver_pool.py`, one silent printer cost a
+60-second pass and four cost 240. So a printer that failed is next tried after
+`RETRY_FIRST_SECONDS`, doubling to `RETRY_CAP_SECONDS`, each delay scaled by a
+random factor in [0.5, 1) so that a farm-wide outage — a router reboot — does not
+bring every machine back in the same second. Changing the printer's connection
+details retries at once: that is somebody fixing it. And the attempts that are
+due run together, at most `connect_concurrency` at a time, so a pass waits for
+the slowest attempt rather than for the sum of them.
 """
 
 from __future__ import annotations
 
+import asyncio
+import random
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 import structlog
 
@@ -36,6 +53,19 @@ from printorian.drivers import DriverError, PrinterDriver
 from printorian.drivers import registry as driver_registry
 
 logger = structlog.get_logger(__name__)
+
+#: The first retry after a failed connect. Long enough that a five-second
+#: telemetry loop is not a connect attempt every five seconds; short enough that
+#: a machine whose plug was only knocked is back within a minute.
+RETRY_FIRST_SECONDS = 30
+#: The longest a failing printer waits between attempts. Five minutes keeps the
+#: module's promise — unplugged at 09:00, back at 09:05 — once the delay has
+#: reached its ceiling.
+RETRY_CAP_SECONDS = 300
+#: Connect attempts in flight at once. The telemetry poller reads eight machines
+#: at a time (`workers.telemetry`), and the same number bounds the threads a
+#: farm-wide outage can hold in paho's minute-long handshakes.
+CONNECT_CONCURRENCY = 8
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,12 +105,40 @@ class _Fingerprint:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class _Retry:
+    """When a printer that failed to connect is next worth trying."""
+
+    failures: int
+    not_before: datetime
+    #: The details the failed attempt used. Different details are a fix, and are
+    #: tried at once rather than after the backoff.
+    fingerprint: _Fingerprint
+
+
 class DriverPool:
     """Owns the process's live printer connections."""
 
-    def __init__(self, clock: Clock, settings: Settings) -> None:
+    def __init__(
+        self,
+        clock: Clock,
+        settings: Settings,
+        *,
+        connect_concurrency: int = CONNECT_CONCURRENCY,
+        jitter: random.Random | None = None,
+    ) -> None:
         self._clock = clock
         self._settings = settings
+        self._limit = asyncio.Semaphore(connect_concurrency)
+        # Not a security use: it spreads retries out in time, nothing more.
+        self._jitter = jitter or random.Random()
+        # The scheduler and the telemetry poller share this pool and each call
+        # `refresh` at the top of its pass. While connecting blocked the event
+        # loop the two could not interleave; now that it does not, two passes
+        # could each open a session to the same machine, and a printer with two
+        # MQTT sessions has each unaware of the other. One refresh at a time.
+        self._lock = asyncio.Lock()
+        self._retry: dict[str, _Retry] = {}
         self._drivers: dict[str, PrinterDriver] = {}
         self._fingerprints: dict[str, _Fingerprint] = {}
         # The last failure reported for a printer, so a machine that is simply
@@ -108,27 +166,43 @@ class DriverPool:
         restart, and one deleted or deactivated has its socket closed rather than
         left open against a machine nobody is watching.
         """
-        wanted = {str(printer.id): printer for printer in printers}
-        self._roster = {printer_id: printer.name for printer_id, printer in wanted.items()}
-        # Gone from the fleet: close the socket *and* forget the printer entirely,
-        # so one re-registered later is treated as new.
-        await self._retire(set(self._drivers) - set(wanted), forget=True)
+        async with self._lock:
+            wanted = {str(printer.id): printer for printer in printers}
+            self._roster = {printer_id: printer.name for printer_id, printer in wanted.items()}
+            # Gone from the fleet: close the socket *and* forget the printer
+            # entirely, so one re-registered later is treated as new.
+            await self._retire(set(self._drivers) - set(wanted), forget=True)
+            for gone in set(self._retry) - set(wanted):
+                del self._retry[gone]
 
-        for printer_id, printer in wanted.items():
-            fingerprint = _Fingerprint.of(printer)
-            if self._fingerprints.get(printer_id) == fingerprint and printer_id in self._drivers:
-                continue
+            now = self._clock.now()
+            due: list[tuple[Printer, _Fingerprint]] = []
+            for printer_id, printer in wanted.items():
+                fingerprint = _Fingerprint.of(printer)
+                live = printer_id in self._drivers
+                if live and self._fingerprints.get(printer_id) == fingerprint:
+                    continue
+                retry = self._retry.get(printer_id)
+                if retry and retry.fingerprint == fingerprint and now < retry.not_before:
+                    continue
+                due.append((printer, fingerprint))
+
+            await asyncio.gather(*(self._attempt(fleet, p, f) for p, f in due))
+            return dict(self._drivers)
+
+    async def _attempt(
+        self, fleet: FleetService, printer: Printer, fingerprint: _Fingerprint
+    ) -> None:
+        async with self._limit:
             # Details changed under a live connection: close it before opening the
             # replacement, or the old session stays attached to the machine.
             #
             # `forget=False` matters here. This runs before every *retry* of an
             # unreachable printer too, and clearing its failure state would make
-            # the reason look new each pass — which is exactly the per-pass
+            # the reason look new each attempt — which is exactly the repeated
             # logging this is meant to prevent.
-            await self._retire({printer_id})
+            await self._retire({str(printer.id)})
             await self._connect(fleet, printer, fingerprint)
-
-        return dict(self._drivers)
 
     def states(self) -> list[DriverHealth]:
         """What this pool would say about each printer it was asked to drive.
@@ -199,8 +273,10 @@ class DriverPool:
                     code=code, since=self._clock.now().isoformat()
                 )
             self._connected_since.pop(printer_id, None)
+            self._schedule_retry(printer_id, fingerprint)
             return
 
+        self._retry.pop(printer_id, None)
         self._drivers[printer_id] = driver
         self._fingerprints[printer_id] = fingerprint
         self._connected_since[printer_id] = self._clock.now().isoformat()
@@ -212,6 +288,18 @@ class DriverPool:
             printer_id=printer_id,
             brand=printer.brand,
             recovered=failure.code if failure else None,
+        )
+
+    def _schedule_retry(self, printer_id: str, fingerprint: _Fingerprint) -> None:
+        previous = self._retry.get(printer_id)
+        same = previous is not None and previous.fingerprint == fingerprint
+        failures = previous.failures + 1 if previous and same else 1
+        ceiling = min(RETRY_CAP_SECONDS, RETRY_FIRST_SECONDS * 2 ** (failures - 1))
+        delay = ceiling * (0.5 + 0.5 * self._jitter.random())
+        self._retry[printer_id] = _Retry(
+            failures=failures,
+            not_before=self._clock.now() + timedelta(seconds=delay),
+            fingerprint=fingerprint,
         )
 
     async def _retire(self, printer_ids: set[str], *, forget: bool = False) -> None:

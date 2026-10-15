@@ -113,6 +113,33 @@ fifty-machine farm that is a reconnect storm, and a Bambu driver holds an MQTT/T
 session. A connection is replaced only when the printer's brand, mode, host,
 serial or access-code-set state changes; renaming a printer does not disturb it.
 
+**A printer that will not connect is the expensive case, and is measured.** paho
+bounds the TLS handshake by the MQTT keepalive, so a machine that is switched on
+but not answering holds a connect attempt for **60 s**. Until issue #26 that
+attempt ran *on the event loop* and the pool retried every unreachable printer,
+one after another, on every pass. `tools/measure_driver_pool.py` — the real pool
+and the real Bambu driver against a silent local listener — put the cost at
+**60.1 s of a frozen worker process per silent printer, 240.2 s for four**: no
+scheduler, SLA, intake or heartbeat ran for that long. Now:
+
+| Silent printers | First pass | The pass after | Longest event-loop stall |
+|---|---|---|---|
+| 1 | 60.1 s | 0.0 s | 0.0 s |
+| 8 | 60.3 s | 0.0 s | 0.3 s |
+| 16 | 120.4 s | 60.3 s | 0.3 s |
+
+The driver connects in a thread, so the loop never stalls; the pool tries up to
+eight printers at once (`CONNECT_CONCURRENCY`), so a pass costs the slowest
+attempt rather than their sum; and a printer that failed is retried after 30 s,
+doubling to 5 min, each delay scaled by a random factor in [0.5, 1) so a router
+reboot does not bring the whole farm back in the same second. New connection
+details are tried at once. **Beyond eight silent printers the farm degrades
+rather than collapses:** passes lengthen in 60-second waves (the 16 row), and the
+scheduler waits behind them because one refresh runs at a time — two passes
+connecting the same machine would give it two MQTT sessions. The event loop keeps
+running throughout. What this cannot measure is the ceiling against *real*
+printers that answer, which waits for the driver's first real print (#14).
+
 `run_web.bat` starts the worker process alongside the API.
 
 Run the tests:

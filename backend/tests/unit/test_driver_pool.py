@@ -10,73 +10,21 @@ come back without restarting the process.
 from __future__ import annotations
 
 from datetime import timedelta
-from decimal import Decimal
 
 import pytest
 
-from printorian.contexts.fleet import ConnectionMode, CreatePrinter, FleetService
-from printorian.contexts.fleet.models import Printer
+from printorian.contexts.fleet import FleetService
 from printorian.core.clock import FixedClock
-from printorian.core.config import Settings
 from printorian.core.driver_health import CONNECTED, UNAVAILABLE
 from printorian.core.events import EventBus
 from printorian.core.secrets import SecretBox
 from printorian.drivers import DriverUnavailableError
-from printorian.workers.drivers import DriverPool
-
-KEY = "a-development-secret-key-not-for-production"
-
-
-class FakeDriver:
-    """Counts what the pool does to it."""
-
-    def __init__(self) -> None:
-        self.connects = 0
-        self.disconnects = 0
-
-    @property
-    def brand(self) -> str:
-        return "fake"
-
-    async def connect(self, info: object) -> None:
-        self.connects += 1
-
-    async def disconnect(self) -> None:
-        self.disconnects += 1
+from tests.unit._driver_pool_support import KEY, FakeDriver, a_printer, pool_with
 
 
 @pytest.fixture
 def fleet(db_session: object, clock: FixedClock, bus: EventBus) -> FleetService:
     return FleetService(db_session, clock, bus, SecretBox(KEY))  # type: ignore[arg-type]
-
-
-async def a_printer(
-    fleet: FleetService, *, name: str = "P1S-01", host: str = "10.0.0.5"
-) -> Printer:
-    view = await fleet.register(
-        CreatePrinter(
-            name=name,
-            brand="fake",
-            model="P1S",
-            connection_mode=ConnectionMode.LAN,
-            host=host,
-            serial="SERIAL-1",
-            width_mm=Decimal(256),
-            depth_mm=Decimal(256),
-            height_mm=Decimal(256),
-            nozzle_diameter_mm=Decimal("0.4"),
-            supports_multi_material=True,
-        )
-    )
-    return await fleet._load(view.id)
-
-
-def pool_with(monkeypatch: pytest.MonkeyPatch, driver: object, clock: FixedClock) -> DriverPool:
-    """A pool whose registry hands back the driver under test."""
-    from printorian.workers import drivers as module
-
-    monkeypatch.setattr(module.driver_registry, "build", lambda *a, **k: driver)
-    return DriverPool(clock, Settings(secret_key=KEY))
 
 
 async def test_an_unchanged_printer_keeps_its_connection(
@@ -165,6 +113,8 @@ async def test_a_failure_is_retried_rather_than_cached(
 
     assert await pool.refresh(fleet, [printer]) == {}
 
+    # Five minutes on: past any backoff the pool can choose for one failure.
+    clock.advance(timedelta(minutes=5))
     Flaky.fail = False
     drivers = await pool.refresh(fleet, [printer])
 
@@ -219,9 +169,12 @@ async def test_a_printer_that_stays_off_is_reported_once(
         async def connect(self, info: object) -> None:
             raise DriverUnavailableError("error.driver.unavailable")
 
-    pool = pool_with(monkeypatch, Dead(), clock)
+    driver = Dead()
+    pool = pool_with(monkeypatch, driver, clock)
     for _ in range(5):
         await pool.refresh(fleet, [printer])
+        # Past the backoff ceiling, so every pass really is a fresh attempt.
+        clock.advance(timedelta(minutes=10))
 
     assert capsys.readouterr().out.count("driver_unavailable") == 1
 
@@ -245,6 +198,7 @@ async def test_a_recovery_is_always_reported(
 
     pool = pool_with(monkeypatch, Flaky(), clock)
     await pool.refresh(fleet, [printer])
+    clock.advance(timedelta(minutes=5))
     Flaky.fail = False
     await pool.refresh(fleet, [printer])
 
