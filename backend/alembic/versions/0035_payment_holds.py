@@ -65,7 +65,11 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_payment_holds")),
         sa.UniqueConstraint("payment_id", name="uq_payment_holds_payment_id"),
     )
+    op.create_index(
+        "ix_payment_holds_released_by", "payment_holds", ["released_by"], unique=False
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_payment_holds_released_by", table_name="payment_holds")
     op.drop_table("payment_holds")

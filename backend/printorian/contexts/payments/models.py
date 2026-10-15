@@ -156,7 +156,13 @@ class PaymentHold(Entity):
     """
 
     __tablename__ = "payment_holds"
-    __table_args__ = (UniqueConstraint("payment_id", name="uq_payment_holds_payment_id"),)
+    __table_args__ = (
+        UniqueConstraint("payment_id", name="uq_payment_holds_payment_id"),
+        # `payment_id` is covered by the unique constraint; this one is not, and
+        # the `SET NULL` that fires when a member of staff is removed would
+        # otherwise scan every hold (`test_schema_contracts`).
+        Index("ix_payment_holds_released_by", "released_by"),
+    )
 
     payment_id: Mapped[EntityId] = mapped_column(
         ForeignKey("payments.id", ondelete="CASCADE"), nullable=False
