@@ -39,6 +39,7 @@ const cell = {
   zone_code: 'D',
   capacity_lots: null,
   lot_count: 3,
+  article_count: 0,
   fill_percent: null,
   is_active: true,
 }
@@ -76,6 +77,8 @@ const detail = {
   ],
   drying_valid_hours: 72,
   movements: [],
+  articles: [],
+  article_movements: [],
 }
 
 beforeEach(() => {

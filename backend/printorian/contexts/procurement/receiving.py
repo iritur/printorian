@@ -33,13 +33,22 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.contexts.inventory import CreateMaterialLot, InventoryService
+from printorian.contexts.inventory import (
+    ArticleKind,
+    CreateMaterialLot,
+    InventoryService,
+    StockArticles,
+)
 from printorian.contexts.procurement.models import (
     PurchaseOrder,
     PurchaseOrderLine,
     PurchaseReceipt,
 )
-from printorian.contexts.procurement.policies import RECEIVABLE, PurchaseStatus
+from printorian.contexts.procurement.policies import (
+    RECEIVABLE,
+    PurchasableKind,
+    PurchaseStatus,
+)
 from printorian.contexts.procurement.schemas import ReceiveDelivery, ReceiveLine
 from printorian.contexts.procurement.views import received
 from printorian.core.clock import Clock
@@ -90,7 +99,7 @@ async def receive(
             # silently did nothing is worse than one that was refused whole.
             raise NotFoundError("error.procurement.line_not_found", line_id=str(entry.line_id))
         _assert_receivable(line, entry)
-        await _receive_one(db, clock, lots, line=line, entry=entry, by=by)
+        await _receive_one(db, clock, lots, line=line, entry=entry, by=by, number=order.number)
 
     # The order has now started arriving, whatever anybody had it marked as. Not
     # advanced to `STORED`: that is a person saying the shelf is straight, and
@@ -134,8 +143,12 @@ async def _receive_one(
     line: PurchaseOrderLine,
     entry: ReceiveLine,
     by: EntityId | None,
+    number: str,
 ) -> None:
     """One line's arrival: a stock row, then the receipt that explains it."""
+    if line.kind is not PurchasableKind.MATERIAL:
+        await _receive_article(db, clock, line=line, entry=entry, by=by, number=number)
+        return
     lot = await lots.add_lot(
         CreateMaterialLot(
             spec_code=line.item_code,
@@ -159,6 +172,47 @@ async def _receive_one(
     # arrived: the next entry in this same delivery runs its over-receipt check
     # against `received(line)`, and a line whose receipts were only in the session
     # would let two entries in one request each pass on their own.
+    line.receipts.append(receipt)
+    await db.flush()
+
+
+async def _receive_article(
+    db: AsyncSession,
+    clock: Clock,
+    *,
+    line: PurchaseOrderLine,
+    entry: ReceiveLine,
+    by: EntityId | None,
+    number: str,
+) -> None:
+    """Packaging, a consumable or a spare part: an article goes up, then the receipt.
+
+    The same order as a spool, for the same reason: the stock first, then the
+    paper. The article is found by ``(kind, item_code)`` — the pair the line
+    already carries — and declared by this delivery if the farm never stocked it
+    before, named and measured as the buyer wrote it on the order.
+    """
+    article = await StockArticles(db).receive(
+        ArticleKind(line.kind.value),
+        line.item_code,
+        quantity=entry.quantity,
+        at=clock.now(),
+        name=line.item_name,
+        unit=line.unit,
+        unit_cost=entry.unit_price_paid,
+        reference=number,
+        actor_id=by,
+    )
+    receipt = PurchaseReceipt(
+        line_id=line.id,
+        quantity=entry.quantity,
+        unit_price_paid=entry.unit_price_paid,
+        lot_number=entry.lot_number,
+        stock_article_id=article.id,
+        received_at=clock.now(),
+        received_by=by,
+    )
+    db.add(receipt)
     line.receipts.append(receipt)
     await db.flush()
 

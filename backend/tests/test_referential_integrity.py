@@ -10,7 +10,7 @@ checking it. A rule flipped to ``CASCADE`` in a model is one word, would have pa
 all six gates and the whole suite, and the first evidence of it would have been a
 retention sweep deleting an order's lines.
 
-The inventory below is every key rather than the interesting ones — seventy-seven
+The inventory below is every key rather than the interesting ones — eighty-one
 on 2026-10-15 — because a spot check leaves the rest unwatched and because the next
 key should not be addable without somebody deciding what it does on delete. Rules
 are grouped by *rule* rather than listed per table: the reason for a rule is shared,
@@ -120,6 +120,9 @@ SET_NULL: frozenset[str] = frozenset(
         # of that cell survives the column going null, because a movement copies
         # the address as text rather than pointing at the row.
         "material_lots.cell_id",
+        # The same for an article: a retired cell unplaces it (#35).
+        "stock_articles.cell_id",
+        "article_movements.actor_id",
         "stocktakes.opened_by",
         "stocktakes.closed_by",
         "stocktake_lines.counted_by",
@@ -154,6 +157,7 @@ SET_NULL: frozenset[str] = frozenset(
         # The packing row is the shipment's origin, not its identity.
         "shipments.pack_task_id",
         "purchase_receipts.material_lot_id",
+        "purchase_receipts.stock_article_id",
         "purchase_receipts.received_by",
         "settings.updated_by",
         "settings_audit.changed_by",
@@ -185,6 +189,8 @@ RESTRICT: frozenset[str] = frozenset(
         # the column: a spec whose lot has moved can no longer be ORM-deleted,
         # because `MaterialSpec.lots` cascades.
         "material_movements.lot_id",
+        # The same rule for the non-filament ledger (#35).
+        "article_movements.article_id",
         "stocktake_lines.lot_id",
         "order_lines.model_asset_id",
         "orders.rate_snapshot_id",

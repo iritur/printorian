@@ -52,6 +52,21 @@ class DryingState(StrEnum):
     EXPIRED = "expired"
 
 
+class ArticleKind(StrEnum):
+    """The three stocked classes that are not filament (#35).
+
+    The values are `procurement.PurchasableKind`'s for the same three, so a
+    purchase-order line names its stock row by ``(kind, item_code)`` with no
+    translation table between them. Filament stays a `MaterialLot`: a spool has a
+    mass, a dryness and a printer slot, and none of that means anything for a box
+    of film or a nozzle.
+    """
+
+    PACKAGING = "packaging"
+    POST_CONSUMABLE = "post_consumable"
+    SPARE_PART = "spare_part"
+
+
 class StocktakeStatus(StrEnum):
     """Open while people are counting; closed once the book was corrected to the count."""
 

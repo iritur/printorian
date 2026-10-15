@@ -11,6 +11,7 @@ from __future__ import annotations
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from printorian.contexts.inventory import ArticleKind, StockArticles
 from printorian.contexts.postproduction.models import Consumable, InstructionStep, Operation
 from printorian.contexts.postproduction.schemas import (
     ConsumableView,
@@ -72,10 +73,26 @@ class InstructionCatalogue:
         return operation.id
 
     async def consumables(self) -> list[ConsumableView]:
-        rows = await self._db.scalars(
-            select(Consumable).where(Consumable.is_active.is_(True)).order_by(Consumable.name)
+        """The post's consumables, with how many there are from the shared stock (#35).
+
+        `postproduction_consumables.remaining` was written by nothing and is no
+        longer read: the article is the count, moved by receipts, issues and
+        stocktakes. The column stays until the contract migration drops it.
+        """
+        rows = list(
+            await self._db.scalars(
+                select(Consumable).where(Consumable.is_active.is_(True)).order_by(Consumable.name)
+            )
         )
-        return [ConsumableView.model_validate(row) for row in rows]
+        on_hand = await StockArticles(self._db).on_hand(
+            ArticleKind.POST_CONSUMABLE, (row.code for row in rows)
+        )
+        return [
+            ConsumableView.model_validate(row).model_copy(
+                update={"remaining": on_hand.get(row.code, row.remaining)}
+            )
+            for row in rows
+        ]
 
 
 __all__ = ["InstructionCatalogue"]

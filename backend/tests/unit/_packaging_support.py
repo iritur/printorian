@@ -7,7 +7,7 @@ from an actual catalogue. A test that faked any of it would be testing a fake.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from itertools import count
 
@@ -52,6 +52,10 @@ async def a_packer(db: AsyncSession):
     return packer_id
 
 
+#: When the test shelf was stocked — the opening `stock.counted` rows carry it.
+SHELF_STOCKED_AT = datetime(2026, 1, 1, tzinfo=UTC)
+
+
 async def a_shelf(db: AsyncSession) -> None:
     """Two boxes and a roll of film, priced so cheapest and smallest disagree."""
     catalogue = PackingCatalogue(db)
@@ -65,7 +69,8 @@ async def a_shelf(db: AsyncSession) -> None:
             inner_height_mm=Decimal(80),
             price=Decimal(62),
             stock=Decimal(10),
-        )
+        ),
+        at=SHELF_STOCKED_AT,
     )
     await catalogue.stock_tara(
         CreateTara(
@@ -77,7 +82,8 @@ async def a_shelf(db: AsyncSession) -> None:
             inner_height_mm=Decimal(120),
             price=Decimal(94),
             stock=Decimal(10),
-        )
+        ),
+        at=SHELF_STOCKED_AT,
     )
     await catalogue.stock_tara(
         CreateTara(
@@ -87,7 +93,8 @@ async def a_shelf(db: AsyncSession) -> None:
             unit="roll",
             price=Decimal(340),
             stock=Decimal(4),
-        )
+        ),
+        at=SHELF_STOCKED_AT,
     )
 
 

@@ -4,6 +4,8 @@ import { ApiError } from '@printorian/api-client'
 import type { Locale, MessageKey } from '@printorian/ui'
 import { Modal, api, translate, translateError } from '@printorian/ui'
 
+import { CellArticles } from './Articles'
+import type { Article, ArticleMovement } from './Articles'
 import { Field } from './FleetAdmin'
 
 /**
@@ -35,6 +37,8 @@ export interface Cell {
   /** Null when nobody declared one. Not zero, and not one. */
   capacity_lots: number | null
   lot_count: number
+  /** Packaging, consumables and parts stocked here (#35), counted beside the spools. */
+  article_count: number
   /** Null wherever the capacity was never declared — draw no bar at all. */
   fill_percent: string | null
   is_active: boolean
@@ -86,6 +90,8 @@ interface Detail {
   /** Null when the rule is off, and the panel says so instead of showing hours. */
   drying_valid_hours: number | null
   movements: Movement[]
+  articles: Article[]
+  article_movements: ArticleMovement[]
 }
 
 function DryingCell({ drying, locale }: { drying: Drying; locale: Locale }) {
@@ -177,7 +183,7 @@ export function CellDetail({
             {/* Null capacity says so in words. A dash here would be read as zero. */}
             {detail.cell.capacity_lots === null
               ? t('store.fill.unknown')
-              : `${detail.cell.lot_count} / ${detail.cell.capacity_lots}`}
+              : `${detail.cell.lot_count + detail.cell.article_count} / ${detail.cell.capacity_lots}`}
           </p>
 
           <section>
@@ -224,11 +230,18 @@ export function CellDetail({
             )}
           </section>
 
+          <CellArticles
+            articles={detail.articles}
+            locale={locale}
+            mayManage={mayManage}
+            onDone={after}
+          />
+
           <section>
             <div className="hv-panel__head">
               <span>{t('store.movements')}</span>
             </div>
-            {detail.movements.length === 0 ? (
+            {detail.movements.length + detail.article_movements.length === 0 ? (
               <p className="hv-hint">{t('store.movements.empty')}</p>
             ) : (
               <ul className="hv-stack">
@@ -236,6 +249,13 @@ export function CellDetail({
                   <li key={row.id} className="hv-micro">
                     {new Date(row.at).toLocaleString(locale)} ·{' '}
                     {translate(locale, `store.reason.${row.reason}` as MessageKey)} ·{' '}
+                    {[row.from_address, row.to_address].map((part) => part ?? '—').join(' → ')}
+                  </li>
+                ))}
+                {detail.article_movements.map((row) => (
+                  <li key={`article-${row.id}`} className="hv-micro">
+                    {new Date(row.at).toLocaleString(locale)} ·{' '}
+                    {translate(locale, `store.reason.${row.reason}` as MessageKey)} · {row.code} ·{' '}
                     {[row.from_address, row.to_address].map((part) => part ?? '—').join(' → ')}
                   </li>
                 ))}

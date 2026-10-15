@@ -50,6 +50,32 @@ such breakages were run, and each failed exactly the intended test.
 docstring both said fifty-nine foreign keys; the inventory holds seventy-seven,
 counted from the sets the test checks against the database. Corrected.
 
+**#35, first half: packaging, consumables and spare parts are stock.**
+- **The model.** `inventory.stock_articles` holds an item and how many there are,
+  in its own unit and at most one cell. `article_movements` is its ledger: the
+  spool ledger's shape, in the article's unit. Migration `0036` creates both and
+  backfills them from `packaging_tara.stock` and
+  `postproduction_consumables.remaining`, with one opening-balance row each.
+- **Who writes it:**
+  - receiving, now that packaging, consumables and spare parts are in
+    `RECEIVABLE`; the receipt's `stock_article_id` points at the article;
+  - packing, where `packaging/choosing.py` consumes the box and gives a replaced
+    box back;
+  - `stock_tara`'s typed level, which becomes a `stock.counted` correction;
+  - the store's move, issue and write-off.
+- **Who reads it:** the packing and post-processing catalogues, and the store's
+  map, cell panel and feed.
+- **Not one widened table.** The ledger is separate from `material_movements`,
+  because that table is grams-shaped. The owner chose "one shared model" in
+  words that said "widened"; the PR says why it isn't.
+- **Expand/contract.** `packaging_tara.stock` is still written beside the
+  article (`choosing._mirror`). `postproduction_consumables.remaining` is no
+  longer read. A later migration drops both.
+- **Still owed by #35:** the stocktake, turnover and dead stock for articles.
+  The next PR does those and closes the issue.
+- **Fixed on the way:** a packer who changed boxes used to take two boxes off
+  the shelf for one parcel.
+
 **Trap.** After a session restart `docker` is not on PATH in Git Bash, and
 `docker.exe` there has no `compose` plugin. Use
 `/c/Program Files/Docker/Docker/resources/bin/docker.exe` and `docker-compose.exe`

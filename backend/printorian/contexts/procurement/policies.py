@@ -101,19 +101,23 @@ class PurchasableKind(StrEnum):
 
 #: Classes whose arrival this build can actually put into stock.
 #:
-#: Only materials, and the reason is ADR-0007 rather than effort. `packaging.Tara`
-#: and `postproduction.Consumable` both carry stock, but neither context offers an
-#: *increment* — `PackingCatalogue.stock_tara` restates the level absolutely — so
-#: receiving into them would mean this context computing a new level from one it
-#: read a moment ago, and losing whatever a packer did in between. Spare parts have
-#: no stock model at all, and issue #33 claims that table; modelling one here would
-#: give the farm two.
+#: Materials become a spool; packaging, post-processing consumables and spare
+#: parts add to an `inventory` article (#35), through an *increment* that writes a
+#: ledger row — the thing the old per-context counts lacked, and the reason they
+#: were refused until now. Printers are not stock: one arrives as a fleet entry.
 #:
-#: A line in one of the other four classes is still ordered, tracked and paid for.
+#: A line in a class outside this set is still ordered, tracked and paid for.
 #: Only the arrival is refused, with `error.procurement.class_not_receivable` —
 #: an honest refusal rather than a silent no-op that would leave a buyer believing
-#: a box of film had reached the shelf.
-RECEIVABLE: frozenset[PurchasableKind] = frozenset({PurchasableKind.MATERIAL})
+#: something had reached the shelf.
+RECEIVABLE: frozenset[PurchasableKind] = frozenset(
+    {
+        PurchasableKind.MATERIAL,
+        PurchasableKind.PACKAGING,
+        PurchasableKind.POST_CONSUMABLE,
+        PurchasableKind.SPARE_PART,
+    }
+)
 
 
 def can_transition(current: PurchaseStatus, target: PurchaseStatus) -> bool:

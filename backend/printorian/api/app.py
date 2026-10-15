@@ -35,6 +35,7 @@ from printorian.api.routers import (
     service,
     service_tickets,
     store,
+    store_articles,
     store_stocktakes,
     users,
 )
@@ -210,6 +211,7 @@ def _install_routers(app: FastAPI) -> None:
     app.include_router(printers.router)
     app.include_router(store.router)
     app.include_router(store_stocktakes.router)
+    app.include_router(store_articles.router)
     app.include_router(settings_router.router)
     app.include_router(fleet.router)
     app.include_router(service.router)

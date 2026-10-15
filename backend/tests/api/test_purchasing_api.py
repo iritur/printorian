@@ -269,7 +269,7 @@ async def test_a_refused_delivery_leaves_nothing_behind(
 ) -> None:
     """One transaction, read back rather than trusting the status code.
 
-    The second line is packaging, which this build cannot put into stock. The
+    The second line is a printer, which is bought but never stocked. The
     first line is a material and would otherwise have been written already — a lot
     and a receipt, flushed before the refusal. The request-scoped session rolls
     both back, and this reads the database to prove it rather than believing the
@@ -281,7 +281,7 @@ async def test_a_refused_delivery_leaves_nothing_behind(
         json={
             "lines": [
                 {"kind": "material", "item_code": MATERIAL, "quantity": "1000", "unit": "gram"},
-                {"kind": "packaging", "item_code": "BOX-M", "quantity": "20", "unit": "piece"},
+                {"kind": "printer", "item_code": "P1S", "quantity": "1", "unit": "piece"},
             ]
         },
         headers=headers,
@@ -297,7 +297,7 @@ async def test_a_refused_delivery_leaves_nothing_behind(
         json={
             "lines": [
                 {"line_id": order["lines"][0]["id"], "quantity": "1000"},
-                {"line_id": order["lines"][1]["id"], "quantity": "20"},
+                {"line_id": order["lines"][1]["id"], "quantity": "1"},
             ]
         },
         headers=headers,

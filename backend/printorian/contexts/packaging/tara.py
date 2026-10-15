@@ -22,6 +22,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from printorian.contexts.inventory import ArticleKind, StockArticles
 from printorian.contexts.packaging.models import PackTask, PackUse, Tara
 from printorian.contexts.packaging.policies import (
     ENCLOSURES,
@@ -106,14 +107,19 @@ async def tara_rows(db: AsyncSession, *, now: datetime, days: int = STATS_DAYS) 
         )
     )
 
+    # How many there are is the shared stock's answer now (#35), not the column
+    # the catalogue used to overwrite.
+    on_hand = await StockArticles(db).on_hand(ArticleKind.PACKAGING, (t.code for t in stocked))
+
     rows: list[TaraRow] = []
     for tara in stocked:
         # Normalised to a month whatever the window is, so the column keeps its
         # header's meaning if `STATS_DAYS` is ever changed.
         rate = used.get(tara.id, Decimal(0)) * Decimal(30) / Decimal(max(1, days))
         row = TaraRow.model_validate(tara)
+        row.stock = on_hand.get(tara.code, tara.stock)
         row.used_per_month = rate.quantize(Decimal("0.1"))
-        row.months_left = (tara.stock / rate).quantize(Decimal("0.1")) if rate > 0 else None
+        row.months_left = (row.stock / rate).quantize(Decimal("0.1")) if rate > 0 else None
         rows.append(row)
     return rows
 
