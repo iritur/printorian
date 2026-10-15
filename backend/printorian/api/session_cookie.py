@@ -14,8 +14,9 @@ Both Caddyfiles set it from the connection Caddy actually received, and the
 it. A forged header could at worst mark *the forger's own* cookie `Secure` over
 plain HTTP, and the forger's browser would then not send it back — there is no
 one else to harm. Teaching uvicorn to trust the proxy instead would have
-rewritten `request.client` too, which `throttle_key` and the webhook source check
-read deliberately and differently; this keeps the change to the one flag.
+rewritten `request.client` too, which `api.client_address` reads deliberately —
+it decides itself whether the peer is a proxy to believe — so this keeps the
+change to the one flag.
 
 Sign-out and the password change delete the cookie with the same flag. A browser
 refuses to let a non-`Secure` `Set-Cookie` overwrite a `Secure` one, so a delete

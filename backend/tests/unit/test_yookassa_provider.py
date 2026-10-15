@@ -212,14 +212,16 @@ async def test_webhook_accepts_only_the_documented_source_networks() -> None:
         }
     ).encode()
 
-    event = provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body)
+    event = provider.verify_webhook({}, body, source="185.71.76.1")
     assert event.provider_payment_id == "p9"
     assert event.status is PaymentStatus.SUCCEEDED
     assert event.amount == Decimal("10.00")
 
-    # A proxy chain uses the left-most, client-facing address.
-    event = provider.verify_webhook({"x-forwarded-for": "185.71.76.1, 10.0.0.2"}, body)
-    assert event.provider_payment_id == "p9"
+    # The adapter does not read forwarding headers at all any more: the source is
+    # resolved once, by `api/client_address.py`. A forged header naming a YooKassa
+    # address buys nothing when the resolved source is somebody else (§5(a)).
+    with pytest.raises(WebhookVerificationError):
+        provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body, source="203.0.113.7")
 
 
 async def test_webhook_rejects_untrusted_or_missing_sources() -> None:
@@ -229,7 +231,7 @@ async def test_webhook_rejects_untrusted_or_missing_sources() -> None:
     ).encode()
 
     with pytest.raises(WebhookVerificationError):
-        provider.verify_webhook({"x-forwarded-for": "203.0.113.7"}, body)
+        provider.verify_webhook({}, body, source="203.0.113.7")
     with pytest.raises(WebhookVerificationError):
         provider.verify_webhook({}, body)
 
@@ -256,9 +258,9 @@ async def test_two_settlements_for_two_payments_are_two_events_not_one() -> None
             }
         ).encode()
 
-    first = provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body("p1"))
-    second = provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body("p2"))
-    again = provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body("p1"))
+    first = provider.verify_webhook({}, body("p1"), source="185.71.76.1")
+    second = provider.verify_webhook({}, body("p2"), source="185.71.76.1")
+    again = provider.verify_webhook({}, body("p1"), source="185.71.76.1")
 
     assert first.event_id != second.event_id
     # The same notification delivered twice is still the same event.
@@ -279,5 +281,5 @@ async def test_a_malformed_body_is_refused_with_a_code_not_a_traceback(body: byt
     """Each of these used to escape as a bare 500 from an allow-listed address."""
     provider = YooKassaProvider("123456", "live_secret")
     with pytest.raises(WebhookVerificationError) as raised:
-        provider.verify_webhook({"x-forwarded-for": "185.71.76.1"}, body)
+        provider.verify_webhook({}, body, source="185.71.76.1")
     assert raised.value.code == "error.payments.webhook_malformed"

@@ -9,6 +9,7 @@ Two rules define this context:
 * a webhook is a hint — settlement is confirmed by re-reading the gateway.
 """
 
+from printorian.contexts.payments.holding import held_payment_count
 from printorian.contexts.payments.policies import (
     RECONCILIATION_TOLERANCE,
     PaymentStatus,
@@ -33,16 +34,19 @@ from printorian.contexts.payments.provider import (
 from printorian.contexts.payments.providers import ManualPaymentProvider, MockPaymentProvider
 from printorian.contexts.payments.reconciliation import unreconciled_payments
 from printorian.contexts.payments.schemas import (
+    HeldPayment,
     PaymentDocument,
     PaymentView,
     RefundRequest,
     RefundView,
+    ReleaseHold,
     StartPayment,
 )
 from printorian.contexts.payments.service import PaymentsService
 
 __all__ = [
     "RECONCILIATION_TOLERANCE",
+    "HeldPayment",
     "ManualPaymentProvider",
     "MockPaymentProvider",
     "PaymentDocument",
@@ -57,6 +61,7 @@ __all__ = [
     "ReceiptLine",
     "RefundRequest",
     "RefundView",
+    "ReleaseHold",
     "StartPayment",
     "WebhookEvent",
     "WebhookVerificationError",
@@ -64,6 +69,7 @@ __all__ = [
     "available",
     "can_transition",
     "get",
+    "held_payment_count",
     "reconcile",
     "register",
     "reset_registry",

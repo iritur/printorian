@@ -314,7 +314,7 @@ Routing: Alertmanager → Telegram bot (free, on the phone, works in Russia) wit
 a secondary email path.
 
 **The rules are written; nothing evaluates them yet.**
-`deploy/observability/rules/printorian.yml` holds fourteen, each labelled
+`deploy/observability/rules/printorian.yml` holds fifteen, each labelled
 `severity: page`, `digest` or `heartbeat`, and each saying where its threshold
 came from. They keep to PromQL, so `promtool test rules` can run them against
 `deploy/observability/tests/printorian.test.yml` in CI. Those tests break one
@@ -332,20 +332,21 @@ the prep queue's depth, because ADR-0006 gives no number for "saturated".
 
 Request rates and CPU graphs will not tell you the farm has stopped earning. These
 will, and every one maps to a decision already written down. `[served]` marks the
-ten the API exposes today at `GET /metrics`:
+eleven the API exposes today at `GET /metrics`:
 
 ```
 printorian_printers_offline{printer,brand}              ADR-0007                                  [served]
 printorian_job_stuck_seconds{state}                     jobs wedged in assigned or dispatching    [served]
 printorian_backup_last_success_timestamp                ADR-0019                                  [served]
 printorian_restore_drill_last_success_timestamp         ADR-0019 — a failing drill is an incident [served]
-printorian_offsite_last_success_timestamp               ADR-0019 §3 — the copy that survives       [served]
+printorian_offsite_last_success_timestamp               ADR-0019 §3 — the copy that survives      [served]
 printorian_wal_archive_failures_total                   docker-compose archive_command            [served]
 printorian_telemetry_partition_months_ahead             config.py names this failure explicitly   [served]
 printorian_estimate_variance_ratio                      ADR-0013 tolerance band                   [served]
 printorian_estimate_variance_samples                    the ratio's denominator, beside it        [served]
 printorian_orders_awaiting_prep                         the human queue backing up                [served]
 printorian_payment_notifications_unreconciled           ADR-0019's reason for a 1-minute RPO      [served]
+printorian_payments_held                                money for an order not waiting for it     [served]
 printorian_sla_credit_accrued_rub                       money leaking through lateness            [held back]
 ```
 

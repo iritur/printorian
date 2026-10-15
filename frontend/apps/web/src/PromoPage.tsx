@@ -28,6 +28,8 @@ interface FarmStats {
   catalog_models: number
   /** The configurator's own limit, so the copy cannot drift from it. */
   max_upload_bytes: number
+  /** The lower limit for a visitor who has not signed in (security review §5(c)). */
+  anonymous_upload_bytes: number
 }
 
 /**
@@ -268,9 +270,9 @@ export function PromoPage({
         </div>
 
         <p className="hv-hero__sub">
-          Загрузите модель — увидите <b>полную смету построчно</b> с основанием расчёта под
-          каждой цифрой. Не «от 500 ₽» и не «уточним по телефону»: сумма и срок известны до
-          оплаты, а срок обещает та машина, которая будет печатать.
+          Загрузите модель — увидите <b>полную смету построчно</b> с основанием расчёта под каждой
+          цифрой. Не «от 500 ₽» и не «уточним по телефону»: сумма и срок известны до оплаты, а срок
+          обещает та машина, которая будет печатать.
         </p>
 
         <div className="hv-row">
@@ -357,14 +359,14 @@ export function PromoPage({
             <span className="hv-micro">ГЛАВНОЕ ОТЛИЧИЕ</span>
             <h2 className="hv-display hv-display--rule">Цена без тумана</h2>
             <p className="hv-prose">
-              Почти все считают «по объёму, умножить на коэффициент». Мы считаем независимые
-              статьи и показываем каждую. Под ценой стоит основание: сколько граммов, по какой
-              ставке, сколько часов машины.
+              Почти все считают «по объёму, умножить на коэффициент». Мы считаем независимые статьи
+              и показываем каждую. Под ценой стоит основание: сколько граммов, по какой ставке,
+              сколько часов машины.
             </p>
             <p className="hv-prose">
-              Это не щедрость, а следствие устройства: расчёт — чистая функция от тарифов, и
-              если цифру нельзя вывести из тарифа, её не существует. Побочный эффект оказался
-              важнее — видя структуру, заказчик сам находит, где сэкономить.
+              Это не щедрость, а следствие устройства: расчёт — чистая функция от тарифов, и если
+              цифру нельзя вывести из тарифа, её не существует. Побочный эффект оказался важнее —
+              видя структуру, заказчик сам находит, где сэкономить.
             </p>
           </div>
 
@@ -374,9 +376,8 @@ export function PromoPage({
             <div className="hv-frame">
               <span className="hv-micro">СМЕТА СТРОИТСЯ ПОД ВАШУ МОДЕЛЬ</span>
               <p className="hv-prose">
-                Каждая строка — отдельная статья с основанием расчёта. Наведите на любой
-                параметр в конфигураторе, и увидите, на сколько он изменит сумму, до того как
-                согласитесь.
+                Каждая строка — отдельная статья с основанием расчёта. Наведите на любой параметр в
+                конфигураторе, и увидите, на сколько он изменит сумму, до того как согласитесь.
               </p>
               <div className="hv-row">
                 <button type="button" className="hv-btn" onClick={onStart}>
@@ -418,9 +419,7 @@ export function PromoPage({
             {STEPS.map((step, index) => (
               <div className="hv-pipe__step" key={step.key}>
                 <div className="hv-pipe__n">{String(index + 1).padStart(2, '0')}</div>
-                <div className="hv-pipe__k">
-                  {t(step.key as Parameters<typeof translate>[1])}
-                </div>
+                <div className="hv-pipe__k">{t(step.key as Parameters<typeof translate>[1])}</div>
                 <div className="hv-pipe__t">{step.caption}</div>
               </div>
             ))}
@@ -470,9 +469,9 @@ export function PromoPage({
             <span className="hv-micro">ЧЕСТНО О РАЗНИЦЕ</span>
             <h2 className="hv-display">Не для всех</h2>
             <p className="hv-prose">
-              Мы не самые дешёвые. Резерв на брак, обязательный контроль качества и оплата
-              простоя машин — всё это в цене. Если нужна одна деталь «как получится» и
-              подешевле, дешевле будет у частника с одним принтером.
+              Мы не самые дешёвые. Резерв на брак, обязательный контроль качества и оплата простоя
+              машин — всё это в цене. Если нужна одна деталь «как получится» и подешевле, дешевле
+              будет у частника с одним принтером.
             </p>
             <p className="hv-prose">
               Мы нужны, когда важен предсказуемый срок, повторяемость от партии к партии и
@@ -569,16 +568,18 @@ export function PromoPage({
             an STL and nothing else, so a 3MF is stored without geometry and a
             STEP is not even a recognised extension. Either would be accepted and
             then refused a price, which is a worse first impression than a
-            shorter list. The size comes from the server's own `max_upload_bytes`
-            rather than a number typed here, so raising the limit changes the
-            promise with it.
+            shorter list. The size comes from the server's own
+            `anonymous_upload_bytes` rather than a number typed here, so raising
+            the limit changes the promise with it — and it is the anonymous
+            figure because this line promises a quote without signing up.
+            A signed-in customer may send more (`max_upload_bytes`).
           */}
           <p
             className="hv-micro"
             style={{ margin: 'var(--hv-2) 0 0', color: 'inherit', opacity: 0.7 }}
           >
             РАСЧЁТ БЕЗ РЕГИСТРАЦИИ · STL
-            {stats ? ` · ДО ${Math.round(stats.max_upload_bytes / (1024 * 1024))} МБ` : ''}
+            {stats ? ` · ДО ${Math.round(stats.anonymous_upload_bytes / (1024 * 1024))} МБ` : ''}
           </p>
         </div>
         <div className="hv-row">
@@ -616,8 +617,8 @@ export function PromoPage({
           <div>
             <span className="hv-label">О ферме</span>
             <p className="hv-prose hv-prose--small">
-              Ферма печатает круглосуточно. Каждый заказ проходит девять этапов, и
-              все они видны в кабинете — с временем и номером машины.
+              Ферма печатает круглосуточно. Каждый заказ проходит девять этапов, и все они видны в
+              кабинете — с временем и номером машины.
             </p>
           </div>
 

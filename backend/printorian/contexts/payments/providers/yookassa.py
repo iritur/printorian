@@ -199,17 +199,22 @@ class YooKassaProvider:
             raw=payload,
         )
 
-    def verify_webhook(self, headers: dict[str, str], body: bytes) -> WebhookEvent:
+    def verify_webhook(
+        self, headers: dict[str, str], body: bytes, *, source: str = ""
+    ) -> WebhookEvent:
         """Check the source address and parse the body.
 
         This establishes *plausibility*, not truth. YooKassa does not sign
         notifications, so the payment is re-read from the API before anything is
         settled — see ``PaymentsService.handle_webhook``.
+
+        ``source`` is resolved by the delivery layer (`api/client_address.py`):
+        the address the trusted proxy saw, or the socket peer. This used to read
+        the *first* entry of `X-Forwarded-For` itself — the one entry a caller
+        writes — which held only while Caddy stripped the header, and would have
+        let a forged `185.71.76.1, …` through the allow-list the day the API was
+        reached any other way (security review F3, §5(a)).
         """
-        lowered = {key.lower(): value for key, value in headers.items()}
-        source = lowered.get("x-forwarded-for", "").split(",")[0].strip() or lowered.get(
-            "x-real-ip", ""
-        )
         if not source:
             raise WebhookVerificationError("error.payments.webhook_no_source_ip")
         if not self._is_trusted(source):

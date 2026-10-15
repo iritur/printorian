@@ -75,7 +75,9 @@ class ManualPaymentProvider:
             raw={"requires_human_transfer": True},
         )
 
-    def verify_webhook(self, headers: dict[str, str], body: bytes) -> WebhookEvent:
+    def verify_webhook(
+        self, headers: dict[str, str], body: bytes, *, source: str = ""
+    ) -> WebhookEvent:
         """Manual payments have no webhooks, so any arriving is suspect."""
         raise WebhookVerificationError("error.payments.manual_has_no_webhook")
 

@@ -1,6 +1,7 @@
 import type { Locale } from '@printorian/ui'
 import { OrdersScreen, translate, useSession } from '@printorian/ui'
 
+import { HeldPayments } from './HeldPayments'
 import { ISSUE_REFUND, MANAGE_ORDER, OrderDesk } from './OrderDesk'
 import { PriceReview, VIEW_FINANCIALS } from './PriceReview'
 import { RateSnapshotPanel } from './RateSnapshotPanel'
@@ -18,35 +19,46 @@ import { RateSnapshotPanel } from './RateSnapshotPanel'
  */
 export function OrdersPage({ locale }: { locale: Locale }) {
   const { actor } = useSession()
+  const mayRefund = actor?.permissions.includes(ISSUE_REFUND) ?? false
 
   return (
-    <OrdersScreen
-      locale={locale}
-      scope="all"
-      title={translate(locale, 'orders.all.title')}
-      renderDetail={(order, refresh) => (
-        <>
-          <OrderDesk
-            order={order}
-            locale={locale}
-            mayAdvance={actor?.permissions.includes(MANAGE_ORDER) ?? false}
-            mayRefund={actor?.permissions.includes(ISSUE_REFUND) ?? false}
-            onChanged={refresh}
-          />
-          {/*
+    <>
+      {/*
+        Money that arrived for an order not waiting for it (security review
+        §5(d)). Above the list, because it is the one thing on this screen that
+        is waiting for somebody; gated like the price panels below it — rubles.
+      */}
+      {(actor?.permissions.includes(VIEW_FINANCIALS) ?? false) && (
+        <HeldPayments locale={locale} mayDecide={mayRefund} />
+      )}
+      <OrdersScreen
+        locale={locale}
+        scope="all"
+        title={translate(locale, 'orders.all.title')}
+        renderDetail={(order, refresh) => (
+          <>
+            <OrderDesk
+              order={order}
+              locale={locale}
+              mayAdvance={actor?.permissions.includes(MANAGE_ORDER) ?? false}
+              mayRefund={mayRefund}
+              onChanged={refresh}
+            />
+            {/*
             Gated here rather than left to 403, for the same reason the desk's
             own controls are: a panel that renders an error to every operator is
             worse than one that is absent. `VIEW_FINANCIALS` is deliberately not
             any of the production permissions — what a plate cost is money.
           */}
-          {(actor?.permissions.includes(VIEW_FINANCIALS) ?? false) && (
-            <>
-              <PriceReview order={order} locale={locale} />
-              <RateSnapshotPanel order={order} locale={locale} />
-            </>
-          )}
-        </>
-      )}
-    />
+            {(actor?.permissions.includes(VIEW_FINANCIALS) ?? false) && (
+              <>
+                <PriceReview order={order} locale={locale} />
+                <RateSnapshotPanel order={order} locale={locale} />
+              </>
+            )}
+          </>
+        )}
+      />
+    </>
   )
 }

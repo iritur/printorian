@@ -13,7 +13,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from printorian.api.client_address import throttle_key
+from printorian.api.client_address import client_address
 from printorian.contexts.account import AccountService
 from printorian.contexts.catalog import ModelLibrary, PlateLibrary
 from printorian.contexts.fleet import FleetService
@@ -99,9 +99,10 @@ def rate_limited(bucket: str, allowance: Callable[[Settings], int]) -> Callable[
     """Build a dependency that caps how often one address may hit these routes.
 
     ``bucket`` groups the routes sharing an allowance, so a caller cannot spend a
-    quote budget on previews and then start again. Keyed on `client_ip`, which is
-    client-controlled behind a proxy and is not evidence of identity — deliberately
-    so: this bounds *cost*, and the endpoint it most needs to bound takes an
+    quote budget on previews and then start again. Keyed on `client_address` —
+    the address a trusted proxy saw, or the socket peer — which is not evidence of
+    identity, deliberately so: this bounds *cost*, and the endpoint it most needs
+    to bound takes an
     optional actor, meaning there is frequently no identity to key on at all. An
     attacker who can vary their source address can buy more allowance; one who
     cannot is capped, and the CPU gate behind it (`core.cpu`) bounds what even an
@@ -115,7 +116,7 @@ def rate_limited(bucket: str, allowance: Callable[[Settings], int]) -> Callable[
     def guard(request: Request, settings: AppSettings) -> None:
         limiter: RateLimiter = request.app.state.limiter
         limiter.check(
-            f"{bucket}:{throttle_key(request)}",
+            f"{bucket}:{client_address(request)}",
             limit=allowance(settings),
             window=RATE_WINDOW,
         )

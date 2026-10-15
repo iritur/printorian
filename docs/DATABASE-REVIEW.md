@@ -12,8 +12,8 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **59 tables** across fifteen contexts, built
-by thirty-six Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **60 tables** across fifteen contexts, built
+by thirty-seven Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
@@ -21,7 +21,7 @@ by thirty-six Alembic migrations on a single linear head.
 | `account` | `addresses`, `notification_prefs` |
 | `inventory` | `material_specs`, `material_lots`, `storage_zones`, `storage_cells`, `material_movements`, `stocktakes`, `stocktake_lines` |
 | `ordering` | `orders`, `order_lines`, `order_events`, `rate_snapshots`, `sla_credit_entries` |
-| `payments` | `payments`, `refunds`, `payment_notifications` |
+| `payments` | `payments`, `refunds`, `payment_notifications`, `payment_holds` |
 | `catalog` | `model_assets`, `prepared_plates`, `catalog_models`, `catalog_model_materials` |
 | `fleet` | `printers`, `ams_slots`, `service_operations`, `telemetry_samples`, `metric_rollups` |
 | `production` | `print_jobs`, `job_events`, `assignment_records`, `wait_list_entries`, `estimate_variances` |
@@ -53,7 +53,8 @@ orders ─┬─< order_lines                  (CASCADE)
         ├─< order_events                 (CASCADE)
         ├─< sla_credit_entries           (CASCADE)
         ├─< payments                     (RESTRICT) ─┬─< refunds              (CASCADE)
-        │                                            └─< payment_notifications (CASCADE)
+        │                                            ├─< payment_notifications (CASCADE)
+        │                                            └─< payment_holds        (CASCADE)
         └─< print_jobs                   (CASCADE) ─┬─< job_events            (CASCADE)
                                                     ├─< assignment_records    (CASCADE)
                                                     ├─< wait_list_entries     (CASCADE)
@@ -150,11 +151,14 @@ second writer cannot get past them.
 
 ### Referential integrity
 
-**Fifty-nine foreign keys, each with a deliberate delete rule** — 29 `CASCADE`,
-20 `SET NULL`, 10 `RESTRICT`. The enumeration is
-`backend/tests/test_referential_integrity.py` rather than the list below: it names
-all fifty-nine as `table.column`, fails if a sixtieth is added without somebody
-deciding what it does on delete, and reads the rules back out of `pg_constraint` so
+**Seventy-seven foreign keys, each with a deliberate delete rule** — 34 `CASCADE`,
+30 `SET NULL`, 13 `RESTRICT`. Counted on 2026-10-15 from the three sets in
+`backend/tests/test_referential_integrity.py`, which that file checks against the
+live metadata and `pg_constraint`. This paragraph said fifty-nine (29/20/10) while
+later slices added sixteen keys — nothing tests the prose — and the held-payments
+table adds the last two. The enumeration is that file rather than
+the list below: it names all seventy-seven as `table.column`, fails if a
+seventy-eighth is added without somebody deciding what it does on delete, and reads the rules back out of `pg_constraint` so
 that what the database is *holding* is what the models declare. Look there for which
 key carries which rule. What follows is why there are three groups, which is the
 half a test cannot carry.

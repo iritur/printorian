@@ -13,7 +13,7 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Request, Response, status
 
-from printorian.api.client_address import throttle_key
+from printorian.api.client_address import client_address
 from printorian.api.deps import (
     SESSION_COOKIE,
     AppSettings,
@@ -103,7 +103,7 @@ async def change_password(
     account and the address, as `sign_in` is, and the count is cleared only by a
     successful change (the security review, #27).
     """
-    key = f"password|{actor.user_id}|{throttle_key(request)}"
+    key = f"password|{actor.user_id}|{client_address(request)}"
     lockout.guard(key)
     try:
         await identity.change_password(

@@ -23,8 +23,10 @@ and `/health/*`.
 
 **Not reviewed, and why.**
 
-* **The edge.** `find deploy -type f` returns thirteen files and none of them
-  configures a tunnel or a VPS. The four mentions in that tree —
+* **The edge** — now [#144](https://github.com/iritur/printorian/issues/144), blocked
+  on Stage 3 ([#18](https://github.com/iritur/printorian/issues/18)).
+  `find deploy -type f` returned thirteen files and none of them
+  configured a tunnel or a VPS. The four mentions in that tree —
   `compose.prod.yml:242`, `readiness-check.sh:344`, `storefront.Caddyfile:4` and
   `:25` — all say the same thing: it does not exist yet.
   [INFRASTRUCTURE.md](INFRASTRUCTURE.md) Stage 3 is unbuilt. There is nothing to
@@ -132,7 +134,20 @@ together, or the typed catalogue fails.
 
 ### F3 — The webhook's source check depends on a proxy behaviour nothing states
 
-*Not fixed. Needs the owner's decision — see §5(a).*
+*Fixed 2026-10-15 — §5(a), decided by the owner: **trust one named proxy**.* The two
+readers are one now: `api/client_address.py` believes `X-Forwarded-For` only when the
+socket peer is a proxy named in `Settings.trusted_proxies`, and then takes the
+*last* entry — the one that proxy wrote; any other request is from its socket peer
+and its header is not read. The rate ceilings, the sign-in lockout, the session's
+recorded address and the YooKassa webhook (which no longer parses the header itself
+but is handed `source=`) all go through it. `deploy/compose.prod.yml` gives the two
+Caddy containers fixed addresses and names exactly those; the agreement is
+`tests/unit/test_trusted_proxies_deploy.py`. Proofs: `tests/unit/test_client_address.py`,
+and `tests/api/test_trusted_proxy_api.py` — from an untrusted peer a forged header
+buys no allowance, and a forged `185.71.76.1` is refused by the webhook with the
+peer named as its source. A proxy *in front of* Caddy would need a hop count; that is
+[#144](https://github.com/iritur/printorian/issues/144)'s to settle. The analysis
+below is how the decision was reached and is kept as written.
 
 `contexts/payments/providers/yookassa.py:205` trusts the **first** entry of
 `X-Forwarded-For`; `api/deps.py:throttle_key` trusts the **last**. That looked like
@@ -171,7 +186,10 @@ a deployment requirement, and that is the decision in §5(a).
 
 ### F4 — A manager can create money but cannot return it
 
-*Not fixed. Needs the owner's decision — see §5(b).*
+*Decided 2026-10-15 — §5(b): **intended, and kept.** Returning money stays the
+narrower `ISSUE_REFUND`. The same split now governs keeping held money (§5(d)):
+releasing a hold is `ISSUE_REFUND`, because deciding not to send money back is the
+same decision made the other way.*
 
 `POST /payments/{id}/settle-manually` (`api/routers/payments.py:181-199`) is gated on
 `VIEW_FINANCIALS`, which MANAGER holds (`policies.py:109-116`). It reaches
@@ -188,7 +206,15 @@ maintaining. This is a design question, so it is asked as one rather than answer
 
 ### F5 — The anonymous quote upload's cost ceiling is 200 MiB
 
-*Not fixed. Needs the owner's decision — see §5(c).*
+*Fixed 2026-10-15 — §5(c), decided: **a smaller anonymous limit**.*
+`Settings.anonymous_upload_bytes`, default 50 MiB, applies to `POST /pricing/quote`
+and `/pricing/preview` when nobody is signed in (the lower of it and
+`max_upload_bytes`); a signed-in customer keeps the full limit. The preview's own
+hard-coded 80 MiB, a third number nobody had chosen, is gone. At the measured
+5–10× ratio below, the worst anonymous parse is now ≈ 260–500 MiB rather than
+1–2 GiB. `/public/stats` serves the figure, and the promo page's «расчёт без
+регистрации» promises it rather than the signed-in one. Proofs:
+`tests/api/test_anonymous_upload_api.py` and `apps/web/src/PromoPage.test.tsx`.
 
 `POST /pricing/quote` (`api/routers/pricing.py:36-45`) takes `OptionalActor`, so it
 is reachable without signing in. The body ceiling is `max_upload_bytes`, default
@@ -361,13 +387,13 @@ to a different owner than this branch. They are listed in §5 for filing.
 * ~~**Journal unsubscribe token travels in the path**, so it lands in the access
   log; subscribe is unthrottled~~ — closed, F21.
 * ~~**A payment cancelled or expired at the gateway is never recorded**~~ —
-  closed, F13 below. **Still open:** a late settlement of an order the farm already
-  cancelled is accepted silently. That half is a decision, not a fix — refund it
-  automatically, reinstate the order, or hold the money for a person — and is §5(d).
+  closed, F13 below. ~~A late settlement of an order the farm already cancelled is
+  accepted silently~~ — closed 2026-10-15, §5(d): **held for a person**.
 * ~~**Two concurrent `POST /payments` create two live gateway payments**~~ — closed, F14.
 * ~~**Currency is never reconciled**, and refunds hard-code `RUB`~~ — closed, F15.
 * ~~**Malformed webhook bodies are 500s**~~ — closed, F16.
-* **The console's `finance.payment_provider` settings are dead** — only the
+* **The console's `finance.payment_provider` settings are dead** —
+  [#142](https://github.com/iritur/printorian/issues/142). Only the
   environment is read, and `tbank` is declared but unknown to `build_provider`.
   **Labelled, 2026-10-14:** each of the three fields' hints now says it is not in
   effect and names the environment variable that is, so an owner who saves a
@@ -379,7 +405,8 @@ to a different owner than this branch. They are listed in §5 for filing.
 * ~~**`payment_notifications.payment_id` is never populated**~~ — closed, F17.
 * ~~**Plate upload validates after `storage.put`** and answers 422 rather than 413
   for an oversize part~~ — closed, F22.
-* **`DraftLine.model_asset_id` is accepted and dropped**, with no ownership check
+* **`DraftLine.model_asset_id` is accepted and dropped** —
+  [#143](https://github.com/iritur/printorian/issues/143) — with no ownership check
   anywhere on it — latent, and the day it is wired through it is an IDOR. **Left,
   deliberately.** HANDOFF already records that writing it through is a person's
   decision, because it switches the unattended plate path on for real orders; and
@@ -548,39 +575,39 @@ the same way and tell the address's owner by mail, and the farm sends no mail
 yet. Bounded by the `auth` ceiling meanwhile; recorded here rather than left as
 a finding nobody owns, and to be revisited when outbound mail exists.
 
-## 5. Decisions this review will not make
+## 5. The owner's decisions — 2026-10-15
 
-Each of these is a trade-off with a real cost on both sides, which makes it the
-owner's to make rather than a reviewer's to close. **These are not filed as issues
-yet** — the agent that wrote this review does not open issues on the owner's
-account. File them, then replace each heading here with its issue number.
+The review asked four questions it would not answer itself. They are answered, and
+each answer is either built with its tests or recorded as accepted.
 
-**(a) `type:security`, `needs-person` — state the proxy contract, or stop depending
-on it.** F3. The webhook's source check and the rate ceiling read opposite ends of
-`X-Forwarded-For` and are both correct only while Caddy strips the incoming header.
-Options: set `trusted_proxies` explicitly and pick a hop rule for the resulting
-chain; or add a readiness assertion that the API is not reachable except through the
-proxy; or accept it and record why. Whichever is chosen, the Stage 3 edge inherits
-it, and the prose notes now in both Caddyfiles are a warning, not a guarantee.
+**(a) The proxy contract — trust one named proxy.** Built: F3 above.
 
-**(b) `type:security`, `needs-person` — is the settle/refund permission split
-intended?** F4. `VIEW_FINANCIALS` creates money and `ISSUE_REFUND` returns it, and
-MANAGER holds only the first.
+**(b) The settle/refund permission split — intended, kept.** Recorded: F4 above. A
+manager records money arriving; only `ISSUE_REFUND` returns it or decides to keep
+money nothing asked for.
 
-**(c) `type:task`, `needs-person` — the anonymous cost ceiling.** F5, with the
-measured ratios above. A separate, smaller `max_upload_bytes` for the anonymous path
-is one answer; requiring an actor for uploads over some size is another; leaving it
-at 200 MiB because the farm is behind a LAN today is a third and is a legitimate
-answer as long as it is a chosen one.
+**(c) The anonymous upload ceiling — a smaller limit for anonymous callers.** Built:
+F5 above.
 
-**(d) `type:security` — the second pass's unfixed list.** Everything under
-"Recorded, not fixed here" in §2b: the websocket `Origin` check and the `Secure`
-cookie flag are one small change each and want a test against a TLS-terminating
-edge that does not exist yet; of the payment-lifecycle gaps, four are closed
-(F13–F17) and **one is a decision**: what happens to money that arrives for an
-order the farm already cancelled — refund it automatically, reinstate the order,
-or hold it for a person; the rest are hygiene. File them, then replace this
-paragraph with the numbers.
+**(d) Money arriving for an order not waiting for it — hold it for a person.**
+Built. A settlement on an order that was cancelled, or already paid by another
+attempt, is still recorded — refusing it would not give the customer's money back,
+only stop the farm knowing it has it — and a `payment_holds` row is written in the
+same unit of work (`contexts/payments/holding.py`, migration `0035_payment_holds`).
+The order does not move. `GET /payments/held` (`VIEW_FINANCIALS`) lists what is
+waiting, «Оплаты на удержании» shows it above the order list, and
+`printorian_payments_held` counts it for the `PaymentHeld` digest alert. A person
+resolves each one: a refund through the order's ordinary refund controls (a fully
+refunded payment leaves the list by itself), or a release with a written reason
+(`POST /payments/held/{id}/release`, `ISSUE_REFUND`). Neither is automatic. Proofs:
+`tests/unit/test_payment_holds.py`, `tests/api/test_payment_holds_api.py`,
+`apps/console/src/HeldPayments.test.tsx`.
+
+**Filed rather than decided here:** where the payment credential lives
+([#142](https://github.com/iritur/printorian/issues/142)), wiring
+`DraftLine.model_asset_id` ([#143](https://github.com/iritur/printorian/issues/143)),
+and the edge, which does not exist yet
+([#144](https://github.com/iritur/printorian/issues/144)).
 
 ---
 

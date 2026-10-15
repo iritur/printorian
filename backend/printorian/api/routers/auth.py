@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Request, Response, status
 
-from printorian.api.client_address import client_ip, throttle_key
+from printorian.api.client_address import client_address
 from printorian.api.deps import (
     SESSION_COOKIE,
     AppSettings,
@@ -75,18 +75,18 @@ async def sign_in(
     a script seeding staff accounts calls the same service and should not be
     throttled for it.
     """
-    # `throttle_key`, not `client_ip`: a lockout keyed on the address the *caller*
-    # claims is one header away from being no lockout at all. `client_ip` is still
-    # what gets recorded on the session below, because a security screen is
-    # reporting what the request said rather than deciding anything on it.
-    key = _lockout_key(data.email, throttle_key(request))
+    # The address a trusted proxy saw, never one the caller wrote: a lockout keyed
+    # on a claimed address is one header away from being no lockout at all. The
+    # same answer is recorded on the session below (`api/client_address.py`).
+    address = client_address(request)
+    key = _lockout_key(data.email, address)
     lockout.guard(key)
 
     try:
         granted = await identity.sign_in(
             data,
             user_agent=request.headers.get("User-Agent"),
-            client_ip=client_ip(request),
+            client_ip=address,
         )
     except UnauthenticatedError:
         lockout.record_failure(

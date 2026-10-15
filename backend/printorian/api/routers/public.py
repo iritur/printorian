@@ -61,6 +61,9 @@ class FarmStatsView(BaseModel):
     #: 400 MB file, and hard-coding it in the copy would leave the promise and
     #: the configuration free to drift the first time a farm raised it.
     max_upload_bytes: int = 0
+    #: The same, for a visitor who has not signed in — the figure the promo page's
+    #: «расчёт без регистрации» promises (`anonymous_upload_bytes`, §5(c)).
+    anonymous_upload_bytes: int = 0
 
 
 @router.get("/stats")
@@ -73,5 +76,10 @@ async def stats(db: DbSession, clock: AppClock, settings: AppSettings) -> FarmSt
     """
     measured = await farm_stats(db, now=clock.now())
     return FarmStatsView.model_validate(measured).model_copy(
-        update={"max_upload_bytes": settings.max_upload_bytes}
+        update={
+            "max_upload_bytes": settings.max_upload_bytes,
+            "anonymous_upload_bytes": min(
+                settings.anonymous_upload_bytes, settings.max_upload_bytes
+            ),
+        }
     )

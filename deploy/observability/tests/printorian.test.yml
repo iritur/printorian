@@ -45,6 +45,8 @@ tests:
         values: '3x360'
       - series: 'printorian_payment_notifications_unreconciled'
         values: '0x100 1x4 0x255'
+      - series: 'printorian_payments_held'
+        values: '0x360'
       - series: 'printorian_backup_last_success_timestamp'
         values: '0x288 86400x71'
       - series: 'printorian_restore_drill_last_success_timestamp'
@@ -85,6 +87,7 @@ tests:
       - {eval_time: 30h, alertname: WalArchiveFailing, exp_alerts: []}
       - {eval_time: 30h, alertname: TelemetryPartitionsRunningOut, exp_alerts: []}
       - {eval_time: 30h, alertname: PaymentNotSettled, exp_alerts: []}
+      - {eval_time: 30h, alertname: PaymentHeld, exp_alerts: []}
       - {eval_time: 30h, alertname: DiskFilling, exp_alerts: []}
       - {eval_time: 30h, alertname: DiskNearlyFull, exp_alerts: []}
       # Mid-run too: the payment was non-zero and the dispatch was two minutes
@@ -435,6 +438,27 @@ tests:
               description: >-
                 The gateway reported these payments succeeded and they are still not
                 booked. The customer has paid; the order is not moving.
+
+  # A hold is not transient: it fires at once and stays until somebody decides.
+  - name: money held for a decision is a digest from the first one
+    interval: 1m
+    input_series:
+      - series: 'printorian_payments_held'
+        values: '0x3 1x10 0x5'
+    alert_rule_test:
+      - {eval_time: 2m, alertname: PaymentHeld, exp_alerts: []}
+      - eval_time: 5m
+        alertname: PaymentHeld
+        exp_alerts:
+          - exp_labels:
+              severity: digest
+            exp_annotations:
+              summary: 1 payment(s) moved no order and are held for a decision.
+              description: >-
+                Settled money for an order that was cancelled or already paid. Refund it
+                from the order, or release it with a reason: `GET /payments/held`.
+              runbook: docs/RUNBOOK-PAYMENTS.md
+      - {eval_time: 17m, alertname: PaymentHeld, exp_alerts: []}
 
   # ---------------------------------------------------------------- the machine
   # A disk filling from 60 % to 85 % at minute 10 and 95 % at minute 40: the

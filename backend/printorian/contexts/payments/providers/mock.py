@@ -99,7 +99,11 @@ class MockPaymentProvider:
             succeeded=True,
         )
 
-    def verify_webhook(self, headers: dict[str, str], body: bytes) -> WebhookEvent:
+    def verify_webhook(
+        self, headers: dict[str, str], body: bytes, *, source: str = ""
+    ) -> WebhookEvent:
+        # The stand-in authenticates by a fixed signature header; where the
+        # notification came from is a real gateway's question, not this one's.
         lowered = {key.lower(): value for key, value in headers.items()}
         if lowered.get(SIGNATURE_HEADER) != VALID_SIGNATURE:
             raise WebhookVerificationError("error.payments.webhook_unverified")

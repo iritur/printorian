@@ -172,6 +172,13 @@ services:
       PRINTORIAN_PAYMENT_PROVIDER: ${PRINTORIAN_PAYMENT_PROVIDER:-mock}
       PRINTORIAN_YOOKASSA_SHOP_ID: ${PRINTORIAN_YOOKASSA_SHOP_ID:-}
       PRINTORIAN_YOOKASSA_SECRET_KEY: ${PRINTORIAN_YOOKASSA_SECRET_KEY:-}
+      # The two Caddy containers, by the fixed addresses `networks` gives them
+      # below — the only peers whose `X-Forwarded-For` the API believes
+      # (security review §5(a), `api/client_address.py`). Anything else reaching
+      # the API is judged by its own socket address, header or no header.
+      # `backend/tests/unit/test_trusted_proxies_deploy.py` keeps this list and
+      # the two addresses in step.
+      PRINTORIAN_TRUSTED_PROXIES: '["172.29.70.10", "172.29.70.11"]'
     depends_on:
       postgres:
         condition: service_healthy
@@ -246,6 +253,12 @@ services:
     # (ADR-0016); the storefront is, and it lives on the edge VPS.
     ports:
       - "${PRINTORIAN_CONSOLE_BIND:-0.0.0.0}:${PRINTORIAN_CONSOLE_PORT:-8080}:8080"
+    # Fixed, because the API trusts this proxy by its address. A restart keeps
+    # it; an address handed out fresh each time would have the API stop
+    # believing its own proxy after the first `compose up` that reshuffled them.
+    networks:
+      default:
+        ipv4_address: 172.29.70.10
     depends_on:
       api:
         condition: service_started
@@ -271,6 +284,19 @@ services:
         condition: service_healthy
     ports:
       - "${PRINTORIAN_STOREFRONT_BIND:-0.0.0.0}:${PRINTORIAN_STOREFRONT_PORT:-8081}:8081"
+    networks:
+      default:
+        ipv4_address: 172.29.70.11
+
+# A subnet of our own, so the two proxies above can hold fixed addresses. If it
+# collides with a network already on the host, `compose up` refuses to create it
+# — loudly, which is the right failure: an overlap that silently handed a
+# proxy's address to something else would have the API trusting a stranger.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.29.70.0/24
 
 volumes:
   pgdata:

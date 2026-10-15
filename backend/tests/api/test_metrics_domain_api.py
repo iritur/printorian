@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from printorian.api.app import create_app
-from printorian.contexts.payments.models import Payment, PaymentNotification
+from printorian.contexts.payments.models import Payment, PaymentHold, PaymentNotification
 from printorian.contexts.payments.policies import PaymentStatus
 from printorian.contexts.production.models import EstimateVariance, JobEvent
 from printorian.contexts.production.policies import JobStatus
@@ -217,6 +217,37 @@ async def test_a_payment_the_gateway_said_was_paid_and_we_did_not_settle_is_coun
 
     # The pending one is money the gateway says it took; the settled one is booked.
     assert (await scrape(client))[metrics.PAYMENT_NOTIFICATIONS_UNRECONCILED] == [({}, 1.0)]
+
+
+async def test_held_money_is_counted_until_somebody_decides(
+    client: AsyncClient, database: _TestDatabase
+) -> None:
+    """Security review §5(d). A measured 0 on a quiet farm, and a count — never a sum."""
+    assert (await scrape(client))[metrics.PAYMENTS_HELD] == [({}, 0.0)]
+
+    async for db in database.session():
+        order_id = await an_order_id(db)
+        for index, released in enumerate((False, True)):
+            payment = Payment(
+                order_id=order_id,
+                provider="mock",
+                idempotency_key=f"held-{index}",
+                status=PaymentStatus.SUCCEEDED,
+                amount=Decimal(1000),
+                currency="RUB",
+            )
+            db.add(payment)
+            await db.flush()
+            db.add(
+                PaymentHold(
+                    payment_id=payment.id,
+                    order_status="cancelled",
+                    released_at=datetime.now(UTC) if released else None,
+                )
+            )
+
+    # The released one has been decided; only the other is still waiting.
+    assert (await scrape(client))[metrics.PAYMENTS_HELD] == [({}, 1.0)]
 
 
 async def test_the_backup_stamps_are_the_newest_successes_and_absent_when_there_are_none(

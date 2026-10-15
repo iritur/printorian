@@ -136,3 +136,44 @@ class PaymentNotification(Entity):
     payload: Mapped[dict[str, Any]] = mapped_column(JsonB, nullable=False, default=dict)
 
     payment: Mapped[Payment | None] = relationship(back_populates="notifications")
+
+
+class PaymentHold(Entity):
+    """Money that arrived for an order that was not waiting for it.
+
+    A settlement the gateway confirms is recorded whatever the order is doing —
+    refusing it would not un-take the customer's money, it would only stop the
+    farm knowing about it. But when the order was already cancelled, or already
+    paid by another attempt, settling it moves the order nowhere, and until this
+    table existed nothing else happened either: the money sat on a payment row
+    that no screen lists, owed back to somebody nobody had been told about
+    (security review §5(d)).
+
+    The owner's decision is that **a person decides**, not the code: a refund
+    resolves it through the ordinary refund route, and a release records that
+    somebody looked and chose to keep it, with their reason. One hold per
+    payment, because a payment settles once.
+    """
+
+    __tablename__ = "payment_holds"
+    __table_args__ = (
+        UniqueConstraint("payment_id", name="uq_payment_holds_payment_id"),
+        # `payment_id` is covered by the unique constraint; this one is not, and
+        # the `SET NULL` that fires when a member of staff is removed would
+        # otherwise scan every hold (`test_schema_contracts`).
+        Index("ix_payment_holds_released_by", "released_by"),
+    )
+
+    payment_id: Mapped[EntityId] = mapped_column(
+        ForeignKey("payments.id", ondelete="CASCADE"), nullable=False
+    )
+    #: What the order was doing when the money landed — `cancelled`, `paid`,
+    #: `refunded` — the order status code, so the reason is a fact and not prose.
+    order_status: Mapped[str] = mapped_column(String(40), nullable=False)
+    released_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    #: ``SET NULL``: a person leaving the farm must not erase the record that
+    #: somebody decided to keep this money.
+    released_by: Mapped[EntityId | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    release_note: Mapped[str] = mapped_column(String(500), nullable=False, default="")

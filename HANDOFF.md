@@ -7,6 +7,54 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
+## 2026-10-15 — why no issue had closed since September, and #27 closed
+
+**As of:** 2026-10-15 · branched from `main` at `27a0c56` (#141).
+
+**Every open issue was waiting on something that is not code.** The last issue to
+close did so on 2026-09-26, and every pull request since then delivered a slice
+of an issue whose "Done when" needs hardware, a server, a person's account or a
+decision. Only #14 and #18 said so in their labels, so the tracker looked workable
+when it was not. **The owner chose to relabel rather than split:** #15, #16, #19,
+#22, #24 and #25 are now `needs-person`, and #17 and #26 are `blocked:hardware`.
+The seven `deferred` issues stay open by design (WORKFLOW §3).
+
+**The owner also made the decisions three issues were waiting on:**
+- #27 §5(a)–(d) — trust one named proxy, keep the refund split, a smaller anonymous
+  upload limit, and hold late money for a person;
+- #35 — one shared stock model for packaging, consumables and spare parts;
+- #29 — webhooks through a transactional outbox.
+
+**#27 is closed by this work.**
+- **Held payments.** `contexts/payments/holding.py` writes a hold when a
+  settlement moves no order (migration `0035_payment_holds`).
+  - Holds are listed at `GET /payments/held` and shown in «Оплаты на удержании».
+  - `printorian_payments_held` counts them for the `PaymentHeld` digest.
+  - A person resolves each one: refund it, or release it with a reason
+    (`ISSUE_REFUND`).
+- **One address rule.** `api/client_address.py` replaces the two opposite-end
+  readers of `X-Forwarded-For`. The header is believed only from the proxies in
+  `trusted_proxies`, which `compose.prod.yml` sets to the two Caddy containers at
+  fixed addresses on a fixed subnet.
+  - The YooKassa adapter is handed `source=` and no longer parses the header.
+- **Anonymous upload limit.** `anonymous_upload_bytes` (50 MiB) bounds both
+  `/pricing` endpoints for anonymous callers. The preview's hard-coded 80 MiB is
+  gone.
+- **Filed, not decided here:** #142 (where the payment credential lives), #143
+  (`model_asset_id`) and #144 (the edge review, blocked on #18).
+
+Each fix was checked by breaking it on purpose and watching its own test fail. Seven
+such breakages were run, and each failed exactly the intended test.
+
+**Drift found on the way.** DATABASE-REVIEW and `test_referential_integrity.py`'s
+docstring both said fifty-nine foreign keys; the inventory holds seventy-seven,
+counted from the sets the test checks against the database. Corrected.
+
+**Trap.** After a session restart `docker` is not on PATH in Git Bash, and
+`docker.exe` there has no `compose` plugin. Use
+`/c/Program Files/Docker/Docker/resources/bin/docker.exe` and `docker-compose.exe`
+from the same directory.
+
 ## 2026-10-15 — what an unreachable printer costs the worker process
 
 **As of:** 2026-10-15 · branched from `main` at `edbcef5` (#140).
@@ -44,8 +92,9 @@ the comment says why.
 Packaging stock lives in `packaging.Tara`, post-processing stock in
 `postproduction.Consumable` — neither with an increment — and spare parts have no
 stock model at all. The movement ledger is keyed on filament lots in grams. Where
-non-filament stock lives is a decision across three contexts, and it is left with
-the owner.
+non-filament stock lives was a decision across three contexts; the owner made it
+the same day — **one shared stock model** that packaging, post-processing and service
+consume from, with the movement ledger widened to it. That is the next build.
 
 ## 2026-10-14 — the security review's recorded list, worked down
 
@@ -121,7 +170,7 @@ console against a throwaway owner (created, used, deleted): the key shows once
 on its own line, «не использовался» rather than a dash, revoke stops it. Still
 owed on #29: the notification event matrix and webhooks.
 
-**#22: `/metrics` serves ten of INFRASTRUCTURE §5's eleven series.** The four
+**#22: `/metrics` serves eleven of INFRASTRUCTURE §5's twelve series.** The four
 database-backed ones are `production.vitals` (the oldest job wedged in ASSIGNED or
 DISPATCHING, the prep queue's depth, the variance band's 30-day mean with its
 sample count beside it) and `payments.reconciliation` (payments the gateway said
@@ -130,7 +179,7 @@ notification and cannot be counted there). The two ADR-0019 stamps come from
 `maintenance_runs`, one row per *success* that `backup.sh` (through `psql`) and
 `restore_drill.py` write; a job that never succeeded has no sample, so an alert on
 them must say `absent()` as well as "too old". **And the alert rules are written and proven** —
-`deploy/observability/rules/printorian.yml`, fourteen rules, with
+`deploy/observability/rules/printorian.yml`, fifteen rules, with
 `promtool test rules` in a new CI job `alerts`. Each test breaks one thing and
 asserts its own alert fires and the others stay quiet, and thirty healthy hours
 page nobody. Every rule that fires on a *missing* series is fenced by the series
@@ -1999,7 +2048,7 @@ Not oversights. Changing any of them is a decision, not a cleanup.
 |---|---|
 | `customer_storage_quota_bytes` displayed, not enforced | Refusing a quote mid-configuration is the wrong UX. Growth is bounded by `model_retention_days` instead. |
 | Rate limiting and sign-in lockout are in-process | Correct for one API process (ADR-0003). Counters reset on restart; a second replica would get its own allowance. `docs/DATABASE-REVIEW.md` §9. |
-| `/metrics` serves ten of INFRASTRUCTURE §5's eleven series | The four database-backed collectors and the three backup stamps arrived 2026-10-14 (`production.vitals`, `payments.reconciliation`, `settings.maintenance_runs` — `backup.sh`, `restore_drill.py` and `printorian-offsite.service` write a row there when they succeed). The worker exporter and the money series remain, and so does the whole VictoriaMetrics/Grafana/Alertmanager host stack; `/health/workers` remains the liveness signal, reading beats each loop records at the *end* of a pass. |
+| `/metrics` serves eleven of INFRASTRUCTURE §5's twelve series | The four database-backed collectors and the three backup stamps arrived 2026-10-14 (`production.vitals`, `payments.reconciliation`, `settings.maintenance_runs` — `backup.sh`, `restore_drill.py` and `printorian-offsite.service` write a row there when they succeed). The worker exporter and the money series remain, and so does the whole VictoriaMetrics/Grafana/Alertmanager host stack; `/health/workers` remains the liveness signal, reading beats each loop records at the *end* of a pass. |
 | `printorian_sla_credit_accrued_rub` is held back rather than unbuilt | `/metrics` is unauthenticated, so `VIEW_FINANCIALS` has no caller to check. The money series waits for the scrape to have an identity — a token in Settings, or mTLS — and that is a decision for a person, not a query somebody has not written. A test forbids any `_rub` or `sla_credit` name on the endpoint meanwhile. |
 | Off-site backup sync is committed, with no destination | `deploy/offsite.sh` and `printorian-offsite.timer` are written and tested against a local restic repository in CI. The destination, its credentials and the password's escrow are a person's (#16); `OffsiteCopyStale` says so in every digest until then. |
 | `assignment_records` is not partitioned | ADR-0018's deferral still holds — bounded by planning frequency, not by the clock. `/health/ready` now reports when the trigger fires; [#44](https://github.com/iritur/printorian/issues/44) stays open until it does. |
