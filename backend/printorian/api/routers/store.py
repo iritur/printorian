@@ -47,6 +47,9 @@ from printorian.contexts.inventory import (
     TurnoverReport,
     WriteOffLot,
     ZoneView,
+    article_histories,
+    article_turnover,
+    dead_articles,
     dead_stock,
     lot_histories,
     turnover,
@@ -228,7 +231,10 @@ async def turnover_report(
     until = clock.now()
     since = until - timedelta(days=days)
     return TurnoverReport(
-        since=since, until=until, rows=turnover(await lot_histories(db), since=since, until=until)
+        since=since,
+        until=until,
+        rows=turnover(await lot_histories(db), since=since, until=until),
+        article_rows=article_turnover(await article_histories(db, since=since), window_days=days),
     )
 
 
@@ -244,4 +250,13 @@ async def dead_stock_report(
     `purchase_price` pro rata to what is left, and only where receiving recorded a
     price; the unpriced lots are counted, not costed at nought.
     """
-    return dead_stock(await lot_histories(db), now=clock.now(), idle_days=idle_days)
+    now = clock.now()
+    report = dead_stock(await lot_histories(db), now=now, idle_days=idle_days)
+    # The articles' half (#35), over the same idle line and added to the one total.
+    rows, value, unpriced = dead_articles(
+        await article_histories(db, since=now), now=now, idle_days=idle_days
+    )
+    report.articles = rows
+    report.total_value += value
+    report.unpriced_articles = unpriced
+    return report

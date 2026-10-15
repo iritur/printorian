@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react'
 import { api, translate, useSession } from '@printorian/ui'
 import type { Locale, MessageKey } from '@printorian/ui'
 
+import type { Article } from './Articles'
+import { amount } from './Articles'
+
 /**
  * «Оборачиваемость» and «Залежалое» on the store screen — two reads over the
  * movement ledger, and the second is money.
@@ -30,10 +33,23 @@ export interface TurnoverRow {
   still_on_shelf: number
 }
 
+/**
+ * Packaging, consumables and parts, per kind. Days of *cover*, not days per lot:
+ * a box of film has no history of its own, so the honest figure is how long what
+ * is on hand would last at the window's rate (`article_measures`, #35).
+ */
+export interface ArticleTurnoverRow {
+  kind: Article['kind']
+  measured: number
+  mean_days_of_cover: string | null
+  idle: number
+}
+
 interface TurnoverReport {
   since: string
   until: string
   rows: TurnoverRow[]
+  article_rows: ArticleTurnoverRow[]
 }
 
 export interface DeadStockLot {
@@ -45,12 +61,26 @@ export interface DeadStockLot {
   value: string | null
 }
 
+export interface DeadStockArticle {
+  article_id: string
+  kind: Article['kind']
+  code: string
+  name: string
+  unit: string
+  on_hand: string
+  idle_days: string
+  value: string | null
+}
+
 interface DeadStockReport {
   idle_days: number
   lots: DeadStockLot[]
   total_grams: string
+  /** Over priced lots and priced articles alike. */
   total_value: string
   unpriced_lots: number
+  articles: DeadStockArticle[]
+  unpriced_articles: number
 }
 
 const INTL: Record<Locale, string> = { ru: 'ru-RU', en: 'en-GB' }
@@ -132,6 +162,31 @@ export function StoreMeasures({ locale }: { locale: Locale }) {
             </tbody>
           </table>
         </div>
+        {(turnover?.article_rows ?? []).length > 0 && (
+          <div className="hv-panel__body--none">
+            <table className="hv-table">
+              <thead>
+                <tr>
+                  <th>{t('store.articles.kind')}</th>
+                  <th data-align="end">{t('store.turnover.measured')}</th>
+                  <th data-align="end">{t('store.turnover.cover')}</th>
+                  <th data-align="end">{t('store.turnover.idle')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(turnover?.article_rows ?? []).map((row) => (
+                  <tr key={row.kind}>
+                    <td>{t(`store.kind.${row.kind}` as MessageKey)}</td>
+                    <td data-align="end">{row.measured}</td>
+                    {/* Nothing used in the window: a dash, never «0 дн». */}
+                    <td data-align="end">{days(row.mean_days_of_cover, locale)}</td>
+                    <td data-align="end">{row.idle}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <div className="hv-panel__foot">
           <span>{t('store.turnover.foot')}</span>
         </div>
@@ -168,7 +223,18 @@ export function StoreMeasures({ locale }: { locale: Locale }) {
                     <td data-align="end">{money(lot.value, locale)}</td>
                   </tr>
                 ))}
-                {(dead?.lots ?? []).length === 0 && (
+                {(dead?.articles ?? []).map((item) => (
+                  <tr key={item.article_id}>
+                    <td>
+                      {item.code} {item.name}
+                      <div className="hv-micro">{t(`store.kind.${item.kind}` as MessageKey)}</div>
+                    </td>
+                    <td data-align="end">{amount(locale, item.on_hand, item.unit)}</td>
+                    <td data-align="end">{days(item.idle_days, locale)}</td>
+                    <td data-align="end">{money(item.value, locale)}</td>
+                  </tr>
+                ))}
+                {(dead?.lots ?? []).length + (dead?.articles ?? []).length === 0 && (
                   <tr>
                     <td colSpan={4}>{dead ? t('store.dead.empty') : t('common.loading')}</td>
                   </tr>
@@ -182,7 +248,7 @@ export function StoreMeasures({ locale }: { locale: Locale }) {
                 ? t('store.dead.foot', {
                     grams: grams(dead.total_grams, locale),
                     value: money(dead.total_value, locale),
-                    unpriced: dead.unpriced_lots,
+                    unpriced: dead.unpriced_lots + dead.unpriced_articles,
                   })
                 : ''}
             </span>

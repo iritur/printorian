@@ -12,14 +12,14 @@ Read alongside [ARCHITECTURE.md](ARCHITECTURE.md) for the system it serves,
 
 ## 1. Shape
 
-One PostgreSQL database (ADR-0001, D1). **62 tables** across fifteen contexts, built
-by thirty-eight Alembic migrations on a single linear head.
+One PostgreSQL database (ADR-0001, D1). **63 tables** across fifteen contexts, built
+by thirty-nine Alembic migrations on a single linear head.
 
 | Context | Tables |
 |---|---|
 | `identity` | `users`, `sessions`, `api_keys` |
 | `account` | `addresses`, `notification_prefs` |
-| `inventory` | `material_specs`, `material_lots`, `storage_zones`, `storage_cells`, `material_movements`, `stocktakes`, `stocktake_lines`, `stock_articles`, `article_movements` |
+| `inventory` | `material_specs`, `material_lots`, `storage_zones`, `storage_cells`, `material_movements`, `stocktakes`, `stocktake_lines`, `stock_articles`, `article_movements`, `stocktake_article_lines` |
 | `ordering` | `orders`, `order_lines`, `order_events`, `rate_snapshots`, `sla_credit_entries` |
 | `payments` | `payments`, `refunds`, `payment_notifications`, `payment_holds` |
 | `catalog` | `model_assets`, `prepared_plates`, `catalog_models`, `catalog_model_materials` |
@@ -151,14 +151,14 @@ second writer cannot get past them.
 
 ### Referential integrity
 
-**Eighty-one foreign keys, each with a deliberate delete rule** — 34 `CASCADE`,
-33 `SET NULL`, 14 `RESTRICT`. Counted on 2026-10-15 from the three sets in
+**Eighty-four foreign keys, each with a deliberate delete rule** — 35 `CASCADE`,
+34 `SET NULL`, 15 `RESTRICT`. Counted on 2026-10-15 from the three sets in
 `backend/tests/test_referential_integrity.py`, which that file checks against the
 live metadata and `pg_constraint`. This paragraph said fifty-nine (29/20/10) while
 later slices added sixteen keys — nothing tests the prose — and the held payments
-and the shared stock (#35) add the last six. The enumeration is that file rather
-than the list below: it names all eighty-one as `table.column`, fails if an
-eighty-second is added without somebody deciding what it does on delete, and reads the rules back out of `pg_constraint` so
+and the shared stock and its stocktake lines (#35) add the last nine. The enumeration is that file rather
+than the list below: it names all eighty-four as `table.column`, fails if an
+eighty-fifth is added without somebody deciding what it does on delete, and reads the rules back out of `pg_constraint` so
 that what the database is *holding* is what the models declare. Look there for which
 key carries which rule. What follows is why there are three groups, which is the
 half a test cannot carry.

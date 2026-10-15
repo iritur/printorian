@@ -48,6 +48,7 @@ function jsonOk(body: unknown): Response {
 const turnover = {
   since: '2026-06-26T12:00:00Z',
   until: '2026-09-24T12:00:00Z',
+  article_rows: [],
   rows: [
     { family: 'PETG', turned: 0, mean_days_on_shelf: null, still_on_shelf: 3 },
     { family: 'PLA', turned: 12, mean_days_on_shelf: '6.4', still_on_shelf: 5 },
@@ -77,6 +78,8 @@ const dead = {
   total_grams: '890',
   total_value: '1382.40',
   unpriced_lots: 1,
+  articles: [],
+  unpriced_articles: 0,
 }
 
 beforeEach(() => {
@@ -124,5 +127,58 @@ describe('dead stock', () => {
     await waitFor(() => expect(net.calls.some((url) => url.endsWith('/store/turnover'))).toBe(true))
     expect(net.calls.some((url) => url.endsWith('/store/dead-stock'))).toBe(false)
     expect(screen.queryByText('Залежалое')).toBeNull()
+  })
+})
+
+describe('packaging, consumables and parts (#35)', () => {
+  it('shows days of cover per kind and dead items in their own unit, summed in one total', async () => {
+    net.handler = (url: string) => {
+      if (url.endsWith('/store/turnover'))
+        return Promise.resolve(
+          jsonOk({
+            ...turnover,
+            article_rows: [
+              { kind: 'packaging', measured: 2, mean_days_of_cover: '30.0', idle: 1 },
+              { kind: 'spare_part', measured: 0, mean_days_of_cover: null, idle: 4 },
+            ],
+          }),
+        )
+      if (url.endsWith('/store/dead-stock'))
+        return Promise.resolve(
+          jsonOk({
+            ...dead,
+            articles: [
+              {
+                article_id: 'a1',
+                kind: 'post_consumable',
+                code: 'RES-CL',
+                name: 'Смола прозрачная',
+                unit: 'litre',
+                on_hand: '2.00',
+                idle_days: '122.0',
+                value: '5400.00',
+              },
+            ],
+            unpriced_articles: 2,
+          }),
+        )
+      return Promise.reject(new Error(`unexpected request: ${url}`))
+    }
+
+    render(<StoreMeasures locale="ru" />)
+
+    const packaging = (await screen.findByText('Упаковка', { selector: 'td' })).closest('tr')
+    expect(packaging?.textContent).toMatch(/30\.0 дн/)
+    // Nothing used in the window: a dash, with the idle ones counted beside it.
+    const parts = screen.getByText('Запчасти', { selector: 'td' }).closest('tr')
+    const cells = within(parts as HTMLElement).getAllByRole('cell')
+    expect(cells[2]?.textContent).toBe('—')
+    expect(cells[3]?.textContent).toBe('4')
+
+    const resin = (await screen.findByText(/RES-CL/)).closest('tr')
+    expect(resin?.textContent).toMatch(/2 л/)
+    expect(resin?.textContent).toMatch(/5\s?400 ₽/)
+    // One unpriced lot and two unpriced articles: three left out of the sum.
+    expect(screen.getByText(/БЕЗ ЦЕНЫ: 3/)).toBeInTheDocument()
   })
 })

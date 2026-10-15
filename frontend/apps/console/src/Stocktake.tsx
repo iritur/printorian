@@ -5,6 +5,8 @@ import type { Locale, MessageKey } from '@printorian/ui'
 import { api, translate, translateError, useSession } from '@printorian/ui'
 
 import { Field } from './FleetAdmin'
+import { ArticleCountTable } from './StocktakeArticles'
+import type { ArticleLine } from './StocktakeArticles'
 
 /**
  * «Инвентаризация» and the «Расхождения» tile (design/store.html), over
@@ -58,6 +60,8 @@ interface Line {
 interface Detail extends StocktakeSummary {
   note: string | null
   lines: Line[]
+  /** Packaging, consumables and parts in the counted cells, in their own units (#35). */
+  article_lines: ArticleLine[]
 }
 
 interface Value {
@@ -97,7 +101,9 @@ export function StocktakeTile({
       <span className="hv-label">{translate(locale, 'store.variances')}</span>
       <span className="hv-kpi__v">{last ? last.short + last.over : '—'}</span>
       <span className="hv-micro">
-        {last ? translate(locale, 'store.variances.hint') : translate(locale, 'store.stocktake.none')}
+        {last
+          ? translate(locale, 'store.variances.hint')
+          : translate(locale, 'store.stocktake.none')}
       </span>
     </div>
   )
@@ -227,7 +233,9 @@ export function StocktakePanel({
           </ul>
         )}
         {value && value.unpriced_lines > 0 && (
-          <p className="hv-micro">{t('store.stocktake.unpriced', { count: value.unpriced_lines })}</p>
+          <p className="hv-micro">
+            {t('store.stocktake.unpriced', { count: value.unpriced_lines })}
+          </p>
         )}
         {open && detail && (
           <CountTable
@@ -237,6 +245,20 @@ export function StocktakePanel({
             onCount={(lotId, grams) =>
               send(() =>
                 api.post(`/store/stocktakes/${open.id}/lines/${lotId}`, { counted_grams: grams }),
+              )
+            }
+          />
+        )}
+        {open && detail && (
+          <ArticleCountTable
+            lines={detail.article_lines}
+            locale={locale}
+            mayManage={mayManage}
+            onCount={(articleId, quantity) =>
+              send(() =>
+                api.post(`/store/stocktakes/${open.id}/articles/${articleId}`, {
+                  counted: quantity,
+                }),
               )
             }
           />
@@ -254,7 +276,10 @@ export function StocktakePanel({
               {t('store.stocktake.close')}
             </button>
           ) : (
-            <StartForm locale={locale} onStart={(zone) => send(() => api.post('/store/stocktakes', zone))} />
+            <StartForm
+              locale={locale}
+              onStart={(zone) => send(() => api.post('/store/stocktakes', zone))}
+            />
           )}
         </div>
       )}

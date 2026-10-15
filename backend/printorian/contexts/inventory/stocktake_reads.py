@@ -25,8 +25,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from printorian.contexts.inventory.article_models import StockArticle
 from printorian.contexts.inventory.models import MaterialLot
 from printorian.contexts.inventory.schemas import (
+    StocktakeArticleLineView,
     StocktakeDetail,
     StocktakeLineView,
     StocktakeSummary,
@@ -43,12 +45,15 @@ _MONEY_PLACES = Decimal("0.01")
 
 
 def summary_of(stocktake: Stocktake) -> StocktakeSummary:
-    """The panel's five figures, folded from the lines."""
+    """The panel's five figures, folded from the lines — spools and articles (#35)."""
     lines = stocktake.lines
+    articles = stocktake.article_lines
     counted = [line for line in lines if line.counted_grams is not None]
+    counted_articles = [line for line in articles if line.counted is not None]
     # Variance is written at close. While the count is open the comparison is
     # against the book as it was snapshotted — the only figure available and the
-    # one the person counting is looking at.
+    # one the person counting is looking at. Only the sign is folded here, so
+    # grams and pieces can sit in one tally without being added together.
     signed = [
         (
             line.variance_grams
@@ -56,6 +61,13 @@ def summary_of(stocktake: Stocktake) -> StocktakeSummary:
             else (line.counted_grams or Decimal(0)) - line.expected_grams
         )
         for line in counted
+    ] + [
+        (
+            line.variance
+            if line.variance is not None
+            else (line.counted or Decimal(0)) - line.expected
+        )
+        for line in counted_articles
     ]
     return StocktakeSummary(
         id=stocktake.id,
@@ -64,8 +76,8 @@ def summary_of(stocktake: Stocktake) -> StocktakeSummary:
         zone_code=stocktake.zone_code,
         opened_at=stocktake.opened_at,
         closed_at=stocktake.closed_at,
-        positions=len(lines),
-        counted=len(counted),
+        positions=len(lines) + len(articles),
+        counted=len(counted) + len(counted_articles),
         matched=sum(1 for v in signed if v == 0),
         short=sum(1 for v in signed if v < 0),
         over=sum(1 for v in signed if v > 0),
@@ -89,11 +101,27 @@ def detail_of(stocktake: Stocktake) -> StocktakeDetail:
             )
             for line in stocktake.lines
         ],
+        article_lines=[
+            StocktakeArticleLineView(
+                article_id=line.article_id,
+                code=line.code,
+                name=line.name,
+                unit=line.unit,
+                cell_address=line.cell_address,
+                expected=line.expected,
+                counted=line.counted,
+                counted_at=line.counted_at,
+                variance=line.variance,
+            )
+            for line in stocktake.article_lines
+        ],
     )
 
 
 def value_of(
-    stocktake: Stocktake, prices: dict[EntityId, tuple[Decimal | None, Decimal]]
+    stocktake: Stocktake,
+    prices: dict[EntityId, tuple[Decimal | None, Decimal]],
+    unit_costs: dict[EntityId, Decimal | None] | None = None,
 ) -> StocktakeValue:
     """Shortage and surplus in money, where a price exists to cost them with.
 
@@ -117,6 +145,22 @@ def value_of(
             short += value
         else:
             over += value
+    # Articles (#35): a unit cost times the difference, where a receipt recorded a
+    # cost; counted and not costed otherwise, by the same rule.
+    costs = unit_costs or {}
+    for article_line in stocktake.article_lines:
+        difference = article_line.variance
+        if difference is None or difference == 0:
+            continue
+        unit_cost = costs.get(article_line.article_id)
+        if unit_cost is None:
+            unpriced += 1
+            continue
+        value = (unit_cost * abs(difference)).quantize(_MONEY_PLACES)
+        if difference < 0:
+            short += value
+        else:
+            over += value
     return StocktakeValue(
         id=stocktake.id,
         number=stocktake.number,
@@ -134,7 +178,7 @@ class StocktakeReads:
         """Newest first. The open one, if any, is first because it opened last."""
         rows = await self._db.scalars(
             select(Stocktake)
-            .options(selectinload(Stocktake.lines))
+            .options(selectinload(Stocktake.lines), selectinload(Stocktake.article_lines))
             .order_by(Stocktake.opened_at.desc())
             .limit(min(limit, HISTORY_LIMIT))
         )
@@ -154,12 +198,21 @@ class StocktakeReads:
                 )
             )
             prices = {lot_id: (price, initial) for lot_id, price, initial in rows}
-        return value_of(stocktake, prices)
+        article_ids = [line.article_id for line in stocktake.article_lines]
+        unit_costs: dict[EntityId, Decimal | None] = {}
+        if article_ids:
+            cost_rows = await self._db.execute(
+                select(StockArticle.id, StockArticle.unit_cost).where(
+                    StockArticle.id.in_(article_ids)
+                )
+            )
+            unit_costs = {row[0]: row[1] for row in cost_rows.all()}
+        return value_of(stocktake, prices, unit_costs)
 
     async def _one(self, stocktake_id: EntityId) -> Stocktake:
         stocktake = await self._db.scalar(
             select(Stocktake)
-            .options(selectinload(Stocktake.lines))
+            .options(selectinload(Stocktake.lines), selectinload(Stocktake.article_lines))
             .where(Stocktake.id == stocktake_id)
         )
         if stocktake is None:

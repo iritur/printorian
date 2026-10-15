@@ -10,7 +10,7 @@ checking it. A rule flipped to ``CASCADE`` in a model is one word, would have pa
 all six gates and the whole suite, and the first evidence of it would have been a
 retention sweep deleting an order's lines.
 
-The inventory below is every key rather than the interesting ones — eighty-one
+The inventory below is every key rather than the interesting ones — eighty-four
 on 2026-10-15 — because a spot check leaves the rest unwatched and because the next
 key should not be addable without somebody deciding what it does on delete. Rules
 are grouped by *rule* rather than listed per table: the reason for a rule is shared,
@@ -97,6 +97,7 @@ CASCADE: frozenset[str] = frozenset(
         "sla_credit_entries.order_id",
         "storage_cells.zone_id",
         "stocktake_lines.stocktake_id",
+        "stocktake_article_lines.stocktake_id",
         "wait_list_entries.job_id",
         "wait_list_entries.order_id",
     }
@@ -126,6 +127,7 @@ SET_NULL: frozenset[str] = frozenset(
         "stocktakes.opened_by",
         "stocktakes.closed_by",
         "stocktake_lines.counted_by",
+        "stocktake_article_lines.counted_by",
         "material_lots.printer_id",
         "material_movements.actor_id",
         "model_assets.uploaded_by",
@@ -192,6 +194,7 @@ RESTRICT: frozenset[str] = frozenset(
         # The same rule for the non-filament ledger (#35).
         "article_movements.article_id",
         "stocktake_lines.lot_id",
+        "stocktake_article_lines.article_id",
         "order_lines.model_asset_id",
         "orders.rate_snapshot_id",
         "packaging_task_tara.tara_id",
