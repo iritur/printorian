@@ -42,7 +42,7 @@
 # `tests/api/test_events_ws.py` pulls in. Dependabot raised `anyio` on its own
 # because nothing in the pair says they move together, `main` went red, and every
 # later pull request failed the backend job before it ran a single test. The
-# answer was `starlette==1.7.0`, which imports the portal from
+# answer was `starlette==1.8.0`, which imports the portal from
 # `anyio.from_thread`; a `filterwarnings` ignore would have passed the same gate
 # while leaving the farm on a version that the next `anyio` will actually break.
 #
@@ -55,7 +55,7 @@ Mako==1.4.3
 MarkupSafe==3.0.4
 PyYAML==6.0.3
 Pygments==2.21.0
-SQLAlchemy==2.1.4
+SQLAlchemy==2.1.5
 aiosqlite==0.22.1
 alembic==1.20.0
 annotated-doc==0.0.5
@@ -63,7 +63,7 @@ annotated-types==0.8.0
 anyio==4.15.1
 argon2-cffi-bindings==26.1.0
 argon2-cffi==25.1.0
-ast_serialize==0.12.1
+ast_serialize==0.13.1
 asyncpg==0.32.0
 certifi==2026.10.19
 cffi==2.1.1
@@ -73,7 +73,7 @@ coverage==7.16.2
 cryptography==50.0.2
 dnspython==2.9.0
 email-validator==2.3.0
-fastapi==0.143.0
+fastapi==0.144.0
 greenlet==3.5.6
 grimp==3.17
 h11==0.16.0
@@ -94,11 +94,11 @@ numpy==2.5.4
 packaging==26.3
 paho-mqtt==2.1.0
 pathspec==1.1.1
-pluggy==1.6.0
+pluggy==1.7.0
 prometheus_client==0.26.0
 psycopg2-binary==2.9.13
 pycparser==3.11
-pydantic-settings==2.15.0
+pydantic-settings==2.16.0
 pydantic==2.14.1
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
@@ -107,10 +107,10 @@ python-dotenv==1.2.4
 python-multipart==0.0.32
 redis==8.1.0
 rich==15.0.0
-ruff==0.17.0
-starlette==1.7.0
+ruff==0.17.1
+starlette==1.8.0
 structlog==26.1.0
-truststore==0.10.4
+truststore==0.10.5
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.5
