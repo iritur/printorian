@@ -7,6 +7,47 @@ Standing rules are in [CLAUDE.md](CLAUDE.md); this file is the part that changes
 it is read as current, and this repository has already been bitten twice by
 status documents that described built features as missing.
 
+## 2026-11-17 — the ZCode harness lands, and the first gated change is READY
+
+**As of:** 2026-11-17 · branched from `main` at `0043bdc` (#162).
+
+**A `.zcode/` harness and `AGENTS.md` now exist** (this commit): nine role
+agents, five skills, eleven seeded memory records, a generated-path guard
+hook, and three saved workflows — `printorian-gated-change`,
+`printorian-development-studio`, `printorian-docs-audit`. Its architecture
+is ported from lumen's harness and rebuilt around this repo's own rules:
+GitHub issues stay the only tracker, the six gates replace ctest, HANDOFF.md
+is the session state. Owner rulings are recorded in it verbatim: the
+deployment shape (containers under systemd, no microservices, no host
+installs) and the `printorian-server` charter (the host layer pivots from
+INFRASTRUCTURE §3's Debian choice to a custom minimal Arch system — that
+doc amendment is still to be filed as a `type:docs` issue, deliberately
+not edited unasked).
+
+**The first gated change is READY and awaiting review:** branch
+`zcode/docs-linux-venv-layout` (`a519a93`, +12/−7 in backend/CLAUDE.md)
+documents the Linux venv layout alongside the Windows one. Six gates green
+before and after; full suite exit 0; independent review clean with one
+pre-existing NOTE deferred (bare `alembic` paths in the Traps section; and
+docs/DEVELOPMENT.md carries the same Windows-only paths throughout — drift
+candidates). PR text is ready; nothing pushed. Execution disclosure: the
+run was orchestrated manually (the workflow tool was not exposed in these
+sessions), following the saved workflow's phases exactly.
+
+**Dev environment on the fastvm Arch VM is green**, disclosed deviations
+and all: Python 3.14.10 (CI uses 3.13), native PostgreSQL 18 + valkey on
+5433/6380 (the compose files pin `postgres:17-alpine`; Docker Hub blob CDNs
+are unreachable from this network — measured, recorded in
+`.zcode/memories/printorian-host-layouts.md`). The baseline comes from
+`printorian-server`'s `tools/psrv_bootstrap.py` — the same script the real
+server hardware will run. The app's test role needed `CREATEDB` natively
+(25 suite errors → green, measured).
+
+**What needs a person:** review/merge `zcode/docs-linux-venv-layout`; push
+it (SSH remote); create the GitHub `iritur/printorian-server` repo before
+its first push; decide when the harness rides to origin (committed here,
+pushed with your next approval).
+
 ## 2026-10-15 — why no issue had closed since September, and #27 closed
 
 **As of:** 2026-10-15 · branched from `main` at `27a0c56` (#141).

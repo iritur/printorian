@@ -9,20 +9,25 @@ repeated here.
 All six run in CI on every push. Run each separately and read its **own** exit
 code — see the root file on why piping hides failure.
 
+The interpreter path follows the host's venv layout: `./.venv/bin/python` and
+`./.venv/bin/lint-imports` on Linux, `./.venv/Scripts/python.exe` and
+`./.venv/Scripts/lint-imports.exe` on Windows. The commands below are the
+Linux form.
+
 ```bash
 cd backend
-./.venv/Scripts/python.exe -m ruff check .
-./.venv/Scripts/python.exe -m ruff format --check .
-./.venv/Scripts/python.exe -m mypy                        # strict
-./.venv/Scripts/lint-imports.exe                          # architecture contracts
-./.venv/Scripts/python.exe tools/check_context_isolation.py
-./.venv/Scripts/python.exe tools/check_file_length.py      # 400 lines, hard
+./.venv/bin/python -m ruff check .
+./.venv/bin/python -m ruff format --check .
+./.venv/bin/python -m mypy                        # strict
+./.venv/bin/lint-imports                          # architecture contracts
+./.venv/bin/python tools/check_context_isolation.py
+./.venv/bin/python tools/check_file_length.py     # 400 lines, hard
 ```
 
 ```bash
 PRINTORIAN_ENVIRONMENT=test \
 PRINTORIAN_DATABASE_URL="postgresql+asyncpg://printorian:printorian@localhost:5433/printorian" \
-./.venv/Scripts/python.exe -m pytest -q
+./.venv/bin/python -m pytest -q
 ```
 
 The full suite is ~1100 tests and takes about fifteen minutes. Budget for it
