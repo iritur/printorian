@@ -19,8 +19,10 @@ session state.
 ├── skills/                      build-test, decisions, testing, studio (router),
 │                                memory-writer (format)
 ├── memories/                    evidence archive + MEMORY.md index
-└── workflows/                   printorian-gated-change, printorian-development-studio,
-                                 printorian-docs-audit (.dwf.ts, saved)
+├── workflows/                   printorian-gated-change, printorian-development-studio,
+│                                printorian-docs-audit (.dwf.ts, saved)
+└── commands/                    /gated-change, /studio, /docs-audit — slash
+                                 commands that launch the workflows above
 ```
 
 ## Precedence
